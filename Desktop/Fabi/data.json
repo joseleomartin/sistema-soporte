@@ -1,0 +1,3049 @@
+{
+  "empleados": [
+    {
+      "nombre": "Hernan",
+      "valor_hora": 5000.0,
+      "dias_trabajados": 261,
+      "horas_dia": 9.0,
+      "ausencias": 0,
+      "vacaciones": 14,
+      "feriados": 16,
+      "lic_enfermedad": 6,
+      "otras_licencias": 0,
+      "horas_descanso": 1.0,
+      "carga_social": 43.0,
+      "horas_extras": 0.0,
+      "feriados_trabajados": 0
+    }
+  ],
+  "productos": [
+    {
+      "nombre": "prueba - 1x15 - blanco",
+      "material": "",
+      "peso_unidad": 0.6,
+      "precio_venta": 5000.0,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 50.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.1,
+          "precio_manual": 3000.0
+        },
+        {
+          "nombre": "asdasd",
+          "kg_por_unidad": 0.5,
+          "precio_manual": 2000.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 360 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 10908.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 2.68,
+          "moneda_original": "USD",
+          "precio_manual": 4060.2000000000003
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    }
+  ],
+  "stock_mp": [
+    {
+      "nombre": "Construcción - 50kg - Portland",
+      "kg": 1000.0,
+      "costo_kilo_usd": 0.5,
+      "valor_dolar": 1000.0,
+      "stock_minimo": 100.0
+    },
+    {
+      "nombre": "Construcción - 1m3 - Fina",
+      "kg": 5000.0,
+      "costo_kilo_usd": 0.3,
+      "valor_dolar": 1000.0,
+      "stock_minimo": 1000.0
+    },
+    {
+      "nombre": "Construcción - 25kg - Hidratada",
+      "kg": 500.0,
+      "costo_kilo_usd": 0.4,
+      "valor_dolar": 1000.0,
+      "stock_minimo": 50.0
+    },
+    {
+      "nombre": "Plásticos - 25kg - LDPE",
+      "kg": 2000.0,
+      "costo_kilo_usd": 1.5,
+      "valor_dolar": 1000.0,
+      "stock_minimo": 200.0
+    },
+    {
+      "nombre": "Plásticos - 25kg - PP",
+      "kg": 1500.0,
+      "costo_kilo_usd": 2.0,
+      "valor_dolar": 1000.0,
+      "stock_minimo": 150.0
+    },
+    {
+      "nombre": "Ejemplo: Polietileno - 1000 kg - Alta densidad",
+      "kg": 500.0,
+      "costo_kilo_usd": 1.5,
+      "valor_dolar": 1000.0,
+      "stock_minimo": 100.0
+    },
+    {
+      "nombre": "Ejemplo: Resina PVC - 500 kg - Transparente",
+      "kg": 250.0,
+      "costo_kilo_usd": 2.0,
+      "valor_dolar": 1000.0,
+      "stock_minimo": 50.0
+    },
+    {
+      "nombre": "VARIOS - VARIOS - VARIOS",
+      "kg": 60000.0,
+      "costo_kilo_usd": 6.0,
+      "valor_dolar": 1.0
+    },
+    {
+      "nombre": "123 - Sin Medida - Sin Característica",
+      "kg": 1.0,
+      "stock_minimo": 1000.0,
+      "costo_kilo_usd": 1.0,
+      "valor_dolar": 1500.0
+    },
+    {
+      "nombre": "asd - asd - asd",
+      "kg": 233.0,
+      "costo_kilo_usd": 123.0,
+      "valor_dolar": 1.0
+    },
+    {
+      "nombre": "Chapa - asd - asd",
+      "kg": 96740.0,
+      "stock_minimo": 1000000.0,
+      "costo_kilo_usd": 1.66,
+      "valor_dolar": 1500.0
+    }
+  ],
+  "stock_prod": [
+    {
+      "nombre": "asd",
+      "cantidad": 124,
+      "peso_unidad": 1.0,
+      "costo_unit_total": 2552.373462580645
+    },
+    {
+      "nombre": "silla",
+      "cantidad": 104,
+      "peso_unidad": 1.0,
+      "costo_unit_total": 2552.373462580645
+    },
+    {
+      "nombre": "adsd - 15x145 - blanco",
+      "cantidad": 12323,
+      "peso_unidad": 0.1,
+      "costo_unit_total": 1627.3391815384614
+    },
+    {
+      "nombre": "ASD - ASD - ASD",
+      "cantidad": 123123,
+      "peso_unidad": 1.0,
+      "costo_unit_total": 1425.1272187272727
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 -ATORNILLAR",
+      "cantidad": 2000,
+      "peso_unidad": 0.101,
+      "costo_unit_total": 282.13579945714287
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 -AMURAR",
+      "cantidad": 2000,
+      "peso_unidad": 0.18,
+      "costo_unit_total": 472.37362962000003
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 X 15 - 100cm2 -MARCO DE VIDRIO",
+      "cantidad": 100300,
+      "peso_unidad": 0.3,
+      "costo_unit_total": 1554.7476851249999
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 - ATORNILLAR",
+      "cantidad": 11000,
+      "peso_unidad": 0.18,
+      "costo_unit_total": 477.2965370250001
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 X 20 - APROBADO 200 cm2",
+      "cantidad": 5000,
+      "peso_unidad": 0.176,
+      "costo_unit_total": 464.50198846666666
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 x 30 - COMUN 100 cm2 - AMURAR",
+      "cantidad": 1000,
+      "peso_unidad": 0.198,
+      "costo_unit_total": 517.6418296200001
+    },
+    {
+      "nombre": "Mensula Refriferacion - 40 cm - Corta",
+      "cantidad": 2000,
+      "peso_unidad": 0.9,
+      "costo_unit_total": 1737.9427747619047
+    }
+  ],
+  "productos_reventa": [
+    {
+      "nombre": "Producto Ejemplo 1",
+      "cantidad": 100,
+      "costo_total": 10500.0,
+      "moneda": "ARS",
+      "costo_unitario": 105.0
+    },
+    {
+      "nombre": "Producto Ejemplo 2",
+      "cantidad": 50,
+      "costo_total": 25000.0,
+      "moneda": "ARS",
+      "costo_unitario": 500.0
+    },
+    {
+      "nombre": "Producto Ejemplo 3",
+      "cantidad": 200,
+      "costo_total": 11500.0,
+      "moneda": "ARS",
+      "costo_unitario": 57.5
+    },
+    {
+      "nombre": "Ejemplo: Tornillos - M8 - Acero inoxidable",
+      "cantidad": 2000,
+      "costo_unitario": 50.0,
+      "otros_costos": 0,
+      "moneda": "ARS",
+      "valor_dolar": null,
+      "costo_unitario_ars": 50.0
+    },
+    {
+      "nombre": "Ejemplo: Tuercas - M10 - Acero galvanizado",
+      "cantidad": 1000,
+      "costo_unitario": 75.0,
+      "otros_costos": 0,
+      "moneda": "ARS",
+      "valor_dolar": null,
+      "costo_unitario_ars": 75.0
+    },
+    {
+      "nombre": "Ejemplo: Válvulas - 1/2 pulgada - Bronce",
+      "cantidad": 100,
+      "costo_unitario": 25.0,
+      "otros_costos": 0,
+      "moneda": "USD",
+      "valor_dolar": 1000.0,
+      "costo_unitario_ars": 25000.0
+    },
+    {
+      "nombre": "Ejemplo: Filtros - 10 micrones - Filtro HEPA",
+      "cantidad": 50,
+      "costo_unitario": 15.0,
+      "otros_costos": 0,
+      "moneda": "USD",
+      "valor_dolar": 1000.0,
+      "costo_unitario_ars": 15000.0
+    },
+    {
+      "nombre": "123 - Sin Medida - Sin Característica",
+      "cantidad": 1500,
+      "costo_unitario": 5.0,
+      "otros_costos": 0.0,
+      "moneda": "USD",
+      "valor_dolar": 1450.0,
+      "costo_unitario_final": 5.0
+    },
+    {
+      "nombre": "434 - Sin Medida - Sin Característica",
+      "cantidad": 300,
+      "costo_unitario": 5000.0,
+      "otros_costos": 0.0,
+      "moneda": "ARS",
+      "valor_dolar": null,
+      "costo_unitario_final": 5000.0
+    },
+    {
+      "nombre": "Salud - N/A - N/A",
+      "cantidad": 15000,
+      "costo_unitario": 20.0,
+      "otros_costos": 0,
+      "moneda": "ARS",
+      "valor_dolar": 1.0,
+      "costo_total": 300000.0
+    },
+    {
+      "nombre": "coca - N/A - N/A",
+      "cantidad": 1500,
+      "costo_unitario": 20.0,
+      "otros_costos": 0,
+      "moneda": "USD",
+      "valor_dolar": 1450.0,
+      "costo_unitario_final": 20.0,
+      "costo_total": 30000.0
+    },
+    {
+      "nombre": "pepsi - N/A - N/A",
+      "cantidad": 1,
+      "costo_unitario": 10.0,
+      "otros_costos": 0,
+      "moneda": "USD",
+      "valor_dolar": 1000.0,
+      "costo_unitario_final": 10.0,
+      "costo_total": 10.0
+    },
+    {
+      "nombre": "tina - N/A - N/A",
+      "cantidad": 1,
+      "costo_unitario": 14000.0,
+      "otros_costos": 0,
+      "moneda": "ARS",
+      "valor_dolar": null,
+      "costo_unitario_final": 14000.0,
+      "costo_total": 14000.0
+    },
+    {
+      "nombre": "12312 - 3221 - 123",
+      "cantidad": 1123,
+      "costo_unitario": 123.0,
+      "otros_costos": 0,
+      "moneda": "ARS",
+      "valor_dolar": null,
+      "costo_unitario_final": 123.0,
+      "costo_total": 138129.0
+    },
+    {
+      "nombre": "123 - 123 - 213",
+      "cantidad": 123,
+      "costo_unitario": 123.0,
+      "otros_costos": 0,
+      "moneda": "ARS",
+      "valor_dolar": null,
+      "costo_unitario_final": 123.0,
+      "costo_total": 15129.0
+    },
+    {
+      "nombre": "123 - 213 - 123",
+      "cantidad": 123,
+      "costo_unitario": 123.0,
+      "otros_costos": 0,
+      "moneda": "USD",
+      "valor_dolar": 1500.0,
+      "costo_unitario_final": 123.0,
+      "costo_total": 15129.0
+    },
+    {
+      "nombre": "asd - asdasd - asd",
+      "cantidad": 10,
+      "costo_unitario": 2.0,
+      "otros_costos": 0,
+      "moneda": "USD",
+      "valor_dolar": 1500.0,
+      "costo_unitario_final": 2.0,
+      "costo_total": 20.0
+    },
+    {
+      "nombre": "asd - asd - asd",
+      "cantidad": 20,
+      "costo_unitario": 2490.0,
+      "otros_costos": 0,
+      "moneda": "USD",
+      "valor_dolar": 1500.0,
+      "costo_unitario_final": 2490.0,
+      "costo_total": 30000.0
+    }
+  ],
+  "metricas": [
+    {
+      "Fecha": "2025-10-08 02:58:19",
+      "Tipo": "Ingreso MP",
+      "Producto": "madera",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": 1000.0,
+      "Costo unitario MP": 2407.0,
+      "Costo total MP": 2407000.0,
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": ""
+    },
+    {
+      "Fecha": "2025-10-10 15:16:24",
+      "Tipo": "Ingreso stock",
+      "Producto": "asd",
+      "Cantidad (u)": 124,
+      "Peso unidad (kg)": 1.0,
+      "Kg consumidos": 124.0,
+      "Costo unitario MP": 2407.0,
+      "Costo unitario MO": 145.37346,
+      "Costo total MP": 298468.0,
+      "Precio de venta": 123123.0,
+      "Rentabilidad neta": 120570.62654,
+      "Rentabilidad total": 14950757.69064
+    },
+    {
+      "Fecha": "2025-10-10 15:28:21",
+      "Tipo": "Ingreso stock",
+      "Producto": "silla",
+      "Cantidad (u)": 124,
+      "Peso unidad (kg)": 1.0,
+      "Kg consumidos": 124.0,
+      "Costo unitario MP": 2407.0,
+      "Costo unitario MO": 145.37346,
+      "Costo total MP": 298468.0,
+      "Precio de venta": 12312.0,
+      "Rentabilidad neta": 9759.62654,
+      "Rentabilidad total": 1210193.69064
+    },
+    {
+      "Fecha": "2025-10-13 12:41:35",
+      "Tipo": "Ingreso MP",
+      "Producto": "piedra - 15X15 - LINDO",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": 1000.0,
+      "Costo unitario MP": 2407.0,
+      "Costo total MP": 2407000.0,
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": ""
+    },
+    {
+      "Fecha": "2025-10-13 12:58:35",
+      "Tipo": "Ingreso MP",
+      "Producto": "casa - 1x1 - lindo",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": 1000.0,
+      "Costo unitario MP": 2407.0,
+      "Costo total MP": 2407000.0,
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": ""
+    },
+    {
+      "Fecha": "2025-10-13 13:04:20",
+      "Tipo": "Ingreso MP",
+      "Producto": "madera - asd - asd",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": 100000.0,
+      "Costo unitario MP": 2407.0,
+      "Costo total MP": 240700000.0,
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": ""
+    },
+    {
+      "Fecha": "2025-10-13 13:05:03",
+      "Tipo": "Ingreso stock",
+      "Producto": "adsd - 15x145 - blanco",
+      "Cantidad (u)": 12323,
+      "Peso unidad (kg)": 0.1,
+      "Kg consumidos": 1232.3000000000002,
+      "Costo unitario MP": 240.7,
+      "Costo unitario MO": 1386.63918,
+      "Costo total MP": 2966146.1,
+      "Precio de venta": 5000.0,
+      "Rentabilidad neta": 3372.66082,
+      "Rentabilidad total": 41561299.2659
+    },
+    {
+      "Fecha": "2025-10-13 13:17:32",
+      "Tipo": "Ingreso MP",
+      "Producto": "MATERIA - 0 - PERLADO",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": 10000.0,
+      "Costo unitario MP": 2407.0,
+      "Costo total MP": 24070000.0,
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": ""
+    },
+    {
+      "Fecha": "2025-10-13 14:33:07",
+      "Tipo": "Ingreso stock",
+      "Producto": "ASD - ASD - ASD",
+      "Cantidad (u)": 123123,
+      "Peso unidad (kg)": 1.0,
+      "Kg consumidos": 123123.0,
+      "Costo unitario MP": 11.0,
+      "Costo unitario MO": 1414.12722,
+      "Costo total MP": 1354353.0,
+      "Precio de venta": 12312.0,
+      "Rentabilidad neta": 10886.87278,
+      "Rentabilidad total": 1340424437.44864
+    },
+    {
+      "Fecha": "2025-10-13 19:35:09",
+      "Tipo": "Ingreso MP",
+      "Producto": "123 - 21 - 123",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": 4999.0,
+      "Costo unitario MP": 2407.0,
+      "Costo total MP": 12032593.0,
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": ""
+    },
+    {
+      "Fecha": "2025-10-27 10:49:13",
+      "Tipo": "Ingreso MP",
+      "Producto": "123 - Sin Medida - Sin Característica",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": 1.0,
+      "Costo unitario MP": 1500.0,
+      "Costo total MP": 1500.0,
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": ""
+    },
+    {
+      "Fecha": "2025-11-02 22:08:29",
+      "Tipo": "Ingreso MP",
+      "Producto": "Chapa - asd - asd",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": 100000.0,
+      "Costo unitario MP": 2490.0,
+      "Costo total MP": 249000000.0,
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": ""
+    },
+    {
+      "Fecha": "2025-11-02 22:15:43",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 -ATORNILLAR",
+      "Cantidad (u)": 1000,
+      "Peso unidad (kg)": 0.101,
+      "Kg consumidos": 101.0,
+      "Costo unitario MP": 254.0049,
+      "Costo unitario MO": 28.1309,
+      "Costo total MP": 254004.9,
+      "Precio de venta": 577.33,
+      "Rentabilidad neta": 295.1942,
+      "Rentabilidad total": 295194.20054
+    },
+    {
+      "Fecha": "2025-11-02 22:16:23",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 -AMURAR",
+      "Cantidad (u)": 1000,
+      "Peso unidad (kg)": 0.18,
+      "Kg consumidos": 180.0,
+      "Costo unitario MP": 452.682,
+      "Costo unitario MO": 19.69163,
+      "Costo total MP": 452682.0,
+      "Precio de venta": 974.67,
+      "Rentabilidad neta": 502.29637,
+      "Rentabilidad total": 502296.37038
+    },
+    {
+      "__revenue": true,
+      "Fecha": "",
+      "Tipo": "Revenue",
+      "Producto": "REVENUE",
+      "Cantidad (u)": "",
+      "Peso unidad (kg)": "",
+      "Kg consumidos": "",
+      "Costo unitario MP": "",
+      "Costo total MP": "",
+      "Precio de venta": "",
+      "Rentabilidad neta": "",
+      "Rentabilidad total": 1336950.0
+    },
+    {
+      "Fecha": "2025-11-03 12:02:45",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 -AMURAR",
+      "Cantidad (u)": 1000,
+      "Peso unidad (kg)": 0.18,
+      "Kg consumidos": 180.0,
+      "Costo unitario MP": 452.682,
+      "Costo unitario MO": 19.69163,
+      "Costo total MP": 452682.0,
+      "Precio de venta": 974.67,
+      "Rentabilidad neta": 502.29637,
+      "Rentabilidad total": 502296.37038
+    },
+    {
+      "Fecha": "2025-11-03 12:02:49",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 15 X 15 - 100cm2 -MARCO DE VIDRIO",
+      "Cantidad (u)": 300,
+      "Peso unidad (kg)": 0.3,
+      "Kg consumidos": 90.0,
+      "Costo unitario MP": 1431.675,
+      "Costo unitario MO": 123.07269,
+      "Costo total MP": 429502.5,
+      "Precio de venta": 2348.0,
+      "Rentabilidad neta": 793.25231,
+      "Rentabilidad total": 237975.69446
+    },
+    {
+      "Fecha": "2025-11-03 12:03:56",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 15 X 15 - 100cm2 -MARCO DE VIDRIO",
+      "Cantidad (u)": 100000,
+      "Peso unidad (kg)": 0.3,
+      "Kg consumidos": 30000.0,
+      "Costo unitario MP": 1431.675,
+      "Costo unitario MO": 123.07269,
+      "Costo total MP": 143167500.0,
+      "Precio de venta": 2348.0,
+      "Rentabilidad neta": 793.25231,
+      "Rentabilidad total": 79325231.4875
+    },
+    {
+      "Fecha": "2025-11-03 12:05:28",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 - ATORNILLAR",
+      "Cantidad (u)": 10000,
+      "Peso unidad (kg)": 0.18,
+      "Kg consumidos": 1800.0,
+      "Costo unitario MP": 452.682,
+      "Costo unitario MO": 24.61454,
+      "Costo total MP": 4526820.0,
+      "Precio de venta": 974.67,
+      "Rentabilidad neta": 497.37346,
+      "Rentabilidad total": 4973734.62975
+    },
+    {
+      "Fecha": "2025-11-03 12:05:57",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 - ATORNILLAR",
+      "Cantidad (u)": 1000,
+      "Peso unidad (kg)": 0.18,
+      "Kg consumidos": 180.0,
+      "Costo unitario MP": 452.682,
+      "Costo unitario MO": 24.61454,
+      "Costo total MP": 452682.0,
+      "Precio de venta": 974.67,
+      "Rentabilidad neta": 497.37346,
+      "Rentabilidad total": 497373.46297
+    },
+    {
+      "Fecha": "2025-11-03 12:13:22",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 20 X 20 - APROBADO 200 cm2",
+      "Cantidad (u)": 5000,
+      "Peso unidad (kg)": 0.176,
+      "Kg consumidos": 880.0,
+      "Costo unitario MP": 442.6224,
+      "Costo unitario MO": 21.87959,
+      "Costo total MP": 2213112.0,
+      "Precio de venta": 1174.53,
+      "Rentabilidad neta": 710.02801,
+      "Rentabilidad total": 3550140.05767
+    },
+    {
+      "Fecha": "2025-11-03 12:13:38",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 -ATORNILLAR",
+      "Cantidad (u)": 1000,
+      "Peso unidad (kg)": 0.101,
+      "Kg consumidos": 101.0,
+      "Costo unitario MP": 254.0049,
+      "Costo unitario MO": 28.1309,
+      "Costo total MP": 254004.9,
+      "Precio de venta": 577.33,
+      "Rentabilidad neta": 295.1942,
+      "Rentabilidad total": 295194.20054
+    },
+    {
+      "Fecha": "2025-11-03 12:13:52",
+      "Tipo": "Ingreso stock",
+      "Producto": "Rejilla Ventilacion - 15 x 30 - COMUN 100 cm2 - AMURAR",
+      "Cantidad (u)": 1000,
+      "Peso unidad (kg)": 0.198,
+      "Kg consumidos": 198.0,
+      "Costo unitario MP": 497.9502,
+      "Costo unitario MO": 19.69163,
+      "Costo total MP": 497950.2,
+      "Precio de venta": 1065.33,
+      "Rentabilidad neta": 547.68817,
+      "Rentabilidad total": 547688.17038
+    },
+    {
+      "Fecha": "2025-11-03 12:14:36",
+      "Tipo": "Ingreso stock",
+      "Producto": "Mensula Refriferacion - 40 cm - Corta",
+      "Cantidad (u)": 2000,
+      "Peso unidad (kg)": 0.9,
+      "Kg consumidos": 1800.0,
+      "Costo unitario MP": 1581.66,
+      "Costo unitario MO": 156.28277,
+      "Costo total MP": 3163320.0,
+      "Precio de venta": 11166.67,
+      "Rentabilidad neta": 9428.72723,
+      "Rentabilidad total": 18857454.45048
+    }
+  ],
+  "ventas": [
+    {
+      "Fecha": "2025-10-13 14:21:47",
+      "Producto": "AMAMCA FAMILIAR - 180X50 - BLANCA",
+      "Cantidad (u)": 400,
+      "Precio unitario": 1000.0,
+      "Descuento (%)": 15.0,
+      "IIB (%)": 4.5,
+      "Precio final": 811.75,
+      "Costo unitario": 0.0,
+      "Ingreso bruto": 400000.0,
+      "Ingreso neto": 324700.0,
+      "Ganancia un.": 811.75,
+      "Ganancia total": 324700.0,
+      "Stock antes": 700,
+      "Stock después": 300
+    },
+    {
+      "Fecha": "2025-10-13 14:22:22",
+      "Producto": "silla",
+      "Cantidad (u)": 20,
+      "Precio unitario": 5000.0,
+      "Descuento (%)": 0.0,
+      "IIB (%)": 4.5,
+      "Precio final": 4775.0,
+      "Costo unitario": 2552.37346,
+      "Ingreso bruto": 100000.0,
+      "Ingreso neto": 95500.0,
+      "Ganancia un.": 2222.62654,
+      "Ganancia total": 44452.53075,
+      "Stock antes": 124,
+      "Stock después": 104
+    },
+    {
+      "Fecha": "2025-11-02 22:18:53",
+      "Producto": "asd - asd - asd",
+      "Cantidad (u)": 1000,
+      "Precio unitario": 500.0,
+      "Descuento (%)": 0.0,
+      "IIB (%)": 3.5,
+      "Precio final": 482.5,
+      "Costo unitario": 2490.0,
+      "Ingreso bruto": 500000.0,
+      "Ingreso neto": 482500.0,
+      "Ganancia un.": -2007.5,
+      "Ganancia total": -2007500.0,
+      "Stock antes": 1110,
+      "Stock después": 110
+    },
+    {
+      "Fecha": "2025-11-02 22:19:38",
+      "Producto": "asd - asd - asd",
+      "Cantidad (u)": 90,
+      "Precio unitario": 5000.0,
+      "Descuento (%)": 0.0,
+      "IIB (%)": 3.5,
+      "Precio final": 4825.0,
+      "Costo unitario": 2490.0,
+      "Ingreso bruto": 450000.0,
+      "Ingreso neto": 434250.0,
+      "Ganancia un.": 2335.0,
+      "Ganancia total": 210150.0,
+      "Stock antes": 110,
+      "Stock después": 20
+    }
+  ],
+  "items_costos": [
+    {
+      "nombre": "Producto A - 100x50 - Estándar",
+      "material": "",
+      "peso_unidad": 2.5,
+      "precio_venta": 15000.0,
+      "cantidad_fabricar": 100,
+      "cantidad_por_hora": 10.0,
+      "materiales": [
+        {
+          "nombre": "Acero",
+          "kg_por_unidad": 2.5,
+          "precio_original": 800.0,
+          "moneda_original": "ARS",
+          "precio_manual": 800.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Producto B - 200x100 - Premium",
+      "material": "",
+      "peso_unidad": 0.5,
+      "precio_venta": 25000.0,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 8.0,
+      "materiales": [
+        {
+          "nombre": "Pintura",
+          "kg_por_unidad": 0.5,
+          "precio_original": 200.0,
+          "moneda_original": "ARS",
+          "precio_manual": 200.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 X 15 - APROBADO 100 cm2",
+      "material": "",
+      "peso_unidad": 0.103,
+      "precio_venta": 689.33,
+      "cantidad_fabricar": 20000,
+      "cantidad_por_hora": 600.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.103,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 x 30 - APROBADO 200 cm",
+      "material": "",
+      "peso_unidad": 0.29,
+      "precio_venta": 1429.6,
+      "cantidad_fabricar": 5000,
+      "cantidad_por_hora": 275.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.29,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 x 20 - APROBADO 100 cm2 -Amurar",
+      "material": "",
+      "peso_unidad": 0.18,
+      "precio_venta": 974.67,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.18,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 x 20 - APROBADO 100 cm2 -Atornillar",
+      "material": "",
+      "peso_unidad": 0.18,
+      "precio_venta": 974.67,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 400.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.18,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 X 20 - APROBADO 200 cm2",
+      "material": "",
+      "peso_unidad": 0.176,
+      "precio_venta": 1174.53,
+      "cantidad_fabricar": 5000,
+      "cantidad_por_hora": 450.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.176,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 AMURAR",
+      "material": "",
+      "peso_unidad": 0.101,
+      "precio_venta": 577.33,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.101,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 -ATORNILLAR",
+      "material": "",
+      "peso_unidad": 0.101,
+      "precio_venta": 577.33,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 350.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.101,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 x 30 - COMUN 100 cm2 - AMURAR",
+      "material": "",
+      "peso_unidad": 0.198,
+      "precio_venta": 1065.33,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.198,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 x 30 - COMUN 100 cm2-ATORNILLAR",
+      "material": "",
+      "peso_unidad": 0.198,
+      "precio_venta": 1065.33,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 400.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.198,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 -AMURAR",
+      "material": "",
+      "peso_unidad": 0.18,
+      "precio_venta": 974.67,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.18,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 - ATORNILLAR",
+      "material": "",
+      "peso_unidad": 0.18,
+      "precio_venta": 974.67,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 400.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.18,
+          "precio_original": 1.66,
+          "moneda_original": "USD",
+          "precio_manual": 2514.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 15 X 15 - 100cm2 -MARCO DE VIDRIO",
+      "material": "",
+      "peso_unidad": 0.3,
+      "precio_venta": 2348.0,
+      "cantidad_fabricar": 300,
+      "cantidad_por_hora": 80.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.3,
+          "precio_original": 3.15,
+          "moneda_original": "USD",
+          "precio_manual": 4772.25
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 X 20 - Metal Desplegable",
+      "material": "",
+      "peso_unidad": 0.3,
+      "precio_venta": 6230.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 25.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.3,
+          "precio_original": 3.15,
+          "moneda_original": "USD",
+          "precio_manual": 4772.25
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Acero Inoxidable - 15 X 15 - Atornillar",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Acero Inoxidable - 15x30 - Atornillar",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Reja para Sala de Medidor - 20 x 40 - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": 13209.0,
+      "cantidad_fabricar": 100,
+      "cantidad_por_hora": 25.0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Reja para Sala de Medidor - 40 x 40 - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 3 ml - Galvanizado",
+      "material": "",
+      "peso_unidad": 0.19,
+      "precio_venta": 1213.33,
+      "cantidad_fabricar": 100,
+      "cantidad_por_hora": 35.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 0.19,
+          "precio_original": 1.81,
+          "moneda_original": "USD",
+          "precio_manual": 2742.15
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 5 ml - Galvanizado",
+      "material": "",
+      "peso_unidad": 0.315,
+      "precio_venta": 2020.0,
+      "cantidad_fabricar": 300,
+      "cantidad_por_hora": 30.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 0.315,
+          "precio_original": 1.81,
+          "moneda_original": "USD",
+          "precio_manual": 2742.15
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 10 ml - Galvanizado",
+      "material": "",
+      "peso_unidad": 0.63,
+      "precio_venta": 4046.67,
+      "cantidad_fabricar": 1200,
+      "cantidad_por_hora": 20.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 0.63,
+          "precio_original": 1.81,
+          "moneda_original": "USD",
+          "precio_manual": 2742.15
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 15 ml - Galvanizado",
+      "material": "",
+      "peso_unidad": 0.945,
+      "precio_venta": 6065.33,
+      "cantidad_fabricar": 200,
+      "cantidad_por_hora": 15.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 0.945,
+          "precio_original": 1.81,
+          "moneda_original": "USD",
+          "precio_manual": 2742.15
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 30 ml - Galvanizado",
+      "material": "",
+      "peso_unidad": 1.89,
+      "precio_venta": 12118.67,
+      "cantidad_fabricar": 1200,
+      "cantidad_por_hora": 13.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 1.89,
+          "precio_original": 1.81,
+          "moneda_original": "USD",
+          "precio_manual": 2742.15
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 3 ml - Blanco",
+      "material": "",
+      "peso_unidad": 0.19,
+      "precio_venta": 1213.33,
+      "cantidad_fabricar": 20,
+      "cantidad_por_hora": 35.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 0.19,
+          "precio_original": 1.71,
+          "moneda_original": "USD",
+          "precio_manual": 2590.65
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 5 ml - Blanco",
+      "material": "",
+      "peso_unidad": 0.315,
+      "precio_venta": 2020.0,
+      "cantidad_fabricar": 20,
+      "cantidad_por_hora": 30.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 0.315,
+          "precio_original": 1.71,
+          "moneda_original": "USD",
+          "precio_manual": 2590.65
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 10 ml - Blanco",
+      "material": "",
+      "peso_unidad": 0.63,
+      "precio_venta": 4046.67,
+      "cantidad_fabricar": 20,
+      "cantidad_por_hora": 20.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 0.63,
+          "precio_original": 1.71,
+          "moneda_original": "USD",
+          "precio_manual": 2590.65
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 15 ml - Blanco",
+      "material": "",
+      "peso_unidad": 0.945,
+      "precio_venta": 6065.33,
+      "cantidad_fabricar": 20,
+      "cantidad_por_hora": 15.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 0.945,
+          "precio_original": 1.71,
+          "moneda_original": "USD",
+          "precio_manual": 2590.65
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rollo Perforado - 30 ml - Blanco",
+      "material": "",
+      "peso_unidad": 1.89,
+      "precio_venta": 12118.67,
+      "cantidad_fabricar": 20,
+      "cantidad_por_hora": 13.0,
+      "materiales": [
+        {
+          "nombre": "Fleje",
+          "kg_por_unidad": 1.89,
+          "precio_original": 1.71,
+          "moneda_original": "USD",
+          "precio_manual": 2590.65
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Omega Zincada - 1/2\" - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.017,
+      "precio_venta": 106.65,
+      "cantidad_fabricar": 4500,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.017,
+          "precio_original": 1.2,
+          "moneda_original": "USD",
+          "precio_manual": 1818.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Omega Zincada - 3/4\" - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.019,
+      "precio_venta": 114.65,
+      "cantidad_fabricar": 4200,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.019,
+          "precio_original": 1.2,
+          "moneda_original": "USD",
+          "precio_manual": 1818.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Omega Zincada - 1\" - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.021,
+      "precio_venta": 119.99,
+      "cantidad_fabricar": 2000,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.021,
+          "precio_original": 1.2,
+          "moneda_original": "USD",
+          "precio_manual": 1818.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Omega Zincada - 1 1/4\" - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.026,
+      "precio_venta": 138.65,
+      "cantidad_fabricar": 700,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.026,
+          "precio_original": 1.2,
+          "moneda_original": "USD",
+          "precio_manual": 1818.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Media Omega Zincada - 1/2\" - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.01,
+      "precio_venta": 83.99,
+      "cantidad_fabricar": 5000,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.01,
+          "precio_original": 1.2,
+          "moneda_original": "USD",
+          "precio_manual": 1818.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Media Omega Zincada - 3/4\" - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.015,
+      "precio_venta": 101.32,
+      "cantidad_fabricar": 4000,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.015,
+          "precio_original": 1.2,
+          "moneda_original": "USD",
+          "precio_manual": 1818.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Filtro Enterizo - Sin Medida - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": 692.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Filtro Patas - Sin Medida - Sin Característica",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": 495.99,
+      "cantidad_fabricar": 4000,
+      "cantidad_por_hora": 500.0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Mensula Refriferacion - 40 cm - Corta",
+      "material": "",
+      "peso_unidad": 0.9,
+      "precio_venta": 11166.67,
+      "cantidad_fabricar": 2000,
+      "cantidad_por_hora": 63.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.9,
+          "precio_original": 1.16,
+          "moneda_original": "USD",
+          "precio_manual": 1757.3999999999999
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Mensula Refrigerancion - 52 cm - Larga",
+      "material": "",
+      "peso_unidad": 0.95,
+      "precio_venta": 11666.67,
+      "cantidad_fabricar": 2000,
+      "cantidad_por_hora": 63.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.95,
+          "precio_original": 1.16,
+          "moneda_original": "USD",
+          "precio_manual": 1757.3999999999999
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Mensula Refrigeracion - 60 cm - Extra Larga",
+      "material": "",
+      "peso_unidad": 1.3,
+      "precio_venta": 14166.67,
+      "cantidad_fabricar": 1000,
+      "cantidad_por_hora": 55.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 1.3,
+          "precio_original": 1.16,
+          "moneda_original": "USD",
+          "precio_manual": 1757.3999999999999
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Mensula de Piso - 40 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.2,
+      "precio_venta": 12500.0,
+      "cantidad_fabricar": 100,
+      "cantidad_por_hora": 30.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 1.2,
+          "precio_original": 1.16,
+          "moneda_original": "USD",
+          "precio_manual": 1757.3999999999999
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Ducto ventilacion - 15 cm - 15x15 pared",
+      "material": "",
+      "peso_unidad": 0.35,
+      "precio_venta": 2942.13,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 50.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.35,
+          "precio_original": 1.22,
+          "moneda_original": "USD",
+          "precio_manual": 1848.3
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Ducto ventilacion - 30 cm - 15x15 pared",
+      "material": "",
+      "peso_unidad": 0.7,
+      "precio_venta": 4180.87,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 50.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.7,
+          "precio_original": 1.22,
+          "moneda_original": "USD",
+          "precio_manual": 1848.3
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Ducto ventilacion - 15 cm - 15x30 pared",
+      "material": "",
+      "peso_unidad": 0.6,
+      "precio_venta": 6732.4,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 50.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.6,
+          "precio_original": 1.22,
+          "moneda_original": "USD",
+          "precio_manual": 1848.3
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Ducto ventilacion - 30 cm - 15x30 pared",
+      "material": "",
+      "peso_unidad": 1.1,
+      "precio_venta": 9438.4,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 50.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 1.1,
+          "precio_original": 1.22,
+          "moneda_original": "USD",
+          "precio_manual": 1848.3
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Ducto ventilacion - 15 cm - 20x20 pared",
+      "material": "",
+      "peso_unidad": 0.5,
+      "precio_venta": 3881.67,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 50.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 0.5,
+          "precio_original": 1.22,
+          "moneda_original": "USD",
+          "precio_manual": 1848.3
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Ducto ventilacion - 30 cm - 20x20 pared",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 5615.67,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 50.0,
+      "materiales": [
+        {
+          "nombre": "Chapa",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1.22,
+          "moneda_original": "USD",
+          "precio_manual": 1848.3
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rejilla Ventilacion - 20 x 20 - 100cm2 -MARCO DE VIDRIO",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 50,
+      "cantidad_por_hora": 50.0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 360 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 10908.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 2.68,
+          "moneda_original": "USD",
+          "precio_manual": 4060.2000000000003
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 500 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 13635.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 3.19,
+          "moneda_original": "USD",
+          "precio_manual": 4832.85
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 600 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 15150.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 3.63,
+          "moneda_original": "USD",
+          "precio_manual": 5499.45
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 660 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 16543.8,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 3.89,
+          "moneda_original": "USD",
+          "precio_manual": 5893.35
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 700 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 17619.45,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 3.92,
+          "moneda_original": "USD",
+          "precio_manual": 5938.8
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 750 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 18361.8,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 4.26,
+          "moneda_original": "USD",
+          "precio_manual": 6453.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 1000 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 23376.45,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 5.18,
+          "moneda_original": "USD",
+          "precio_manual": 7847.7
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 1100 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 25255.050000000003,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 5.6,
+          "moneda_original": "USD",
+          "precio_manual": 8484.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo de Magnesio - 1300 cm - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 29315.250000000004,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 6.61,
+          "moneda_original": "USD",
+          "precio_manual": 10014.15
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo Articulado - 2 Tramos - 430",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 17271.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 4.56,
+          "moneda_original": "USD",
+          "precio_manual": 6908.4
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo Articulado - 2 Tramos - 650",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 20528.25,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 5.6,
+          "moneda_original": "USD",
+          "precio_manual": 8484.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Anodo Articulado - 3 Tramos - 970",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 31315.050000000003,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 8.31,
+          "moneda_original": "USD",
+          "precio_manual": 12589.650000000001
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Valvula de Alivio - Sin Medida - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 1345.33,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 630.0,
+          "moneda_original": "ARS",
+          "precio_manual": 630.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Válvula - 1/2\" - Eitar",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Válvula - 3/4\" - Eitar",
+      "material": "",
+      "peso_unidad": 0.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material por defecto",
+          "kg_por_unidad": 0.0,
+          "precio_original": 0.0,
+          "moneda_original": "ARS",
+          "precio_manual": 0.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Grifo - 90 - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 1476.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 735.0,
+          "moneda_original": "ARS",
+          "precio_manual": 735.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Grifo - 180 - Corto",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 1075.6,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 525.0,
+          "moneda_original": "ARS",
+          "precio_manual": 525.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Grigo - 180 - Largo",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 1190.67,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 578.0,
+          "moneda_original": "ARS",
+          "precio_manual": 578.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Termostato - Sin Medida - Eitar",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 22.0,
+          "moneda_original": "USD",
+          "precio_manual": 33330.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Termostato - ST - Economico ST",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 46449.9,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 18.5,
+          "moneda_original": "USD",
+          "precio_manual": 28027.5
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Termostato - TL - Economico TL",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 46449.9,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 18.5,
+          "moneda_original": "USD",
+          "precio_manual": 28027.5
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Resistencia Termostato - Sin Medida - Recco Italiano",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 31815.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 11.76,
+          "moneda_original": "USD",
+          "precio_manual": 17816.4
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Resistencia Termostato - Sin Medida - China",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 18180.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1.05,
+          "moneda_original": "USD",
+          "precio_manual": 1590.75
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Unidad Magnética - Sin Medida - Eitar",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 14786.4,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 4.6,
+          "moneda_original": "USD",
+          "precio_manual": 6968.999999999999
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Unidad Magnética - Sin Medida - UM11",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 4029.9,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1.53,
+          "moneda_original": "USD",
+          "precio_manual": 2317.95
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Unidad Magnética - Sin Medida - UM14",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 5575.2,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 2.11,
+          "moneda_original": "USD",
+          "precio_manual": 3196.6499999999996
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Unidad Magnética - Sin Medida - 11PIN",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 4029.9,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1.54,
+          "moneda_original": "USD",
+          "precio_manual": 2333.1
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Unidad Magnética - Sin Medida - Con Pala",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 4135.95,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1.56,
+          "moneda_original": "USD",
+          "precio_manual": 2363.4
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "USD"
+    },
+    {
+      "nombre": "Chispero Estrella - Sin Medida - Con Maza",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1.05,
+          "moneda_original": "USD",
+          "precio_manual": 1590.75
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Chispero Estrella - Sin Medida - Sin Maza",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 0.93,
+          "moneda_original": "USD",
+          "precio_manual": 1408.95
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Chispero Euro - Sin Medida - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": null,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1.06,
+          "moneda_original": "USD",
+          "precio_manual": 1605.9
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Tornillo Inodoro - 22*70 - Bronce",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 549.73,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 327.0,
+          "moneda_original": "ARS",
+          "precio_manual": 327.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Tornillo Inodoro - 22*80 - Bronce",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 584.35,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 344.0,
+          "moneda_original": "ARS",
+          "precio_manual": 344.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Tornillo Inodoro - 22*70 - Hierro",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 347.24,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 199.0,
+          "moneda_original": "ARS",
+          "precio_manual": 199.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Tornillo Inodoro - 22*80 - Hierro",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 347.24,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 199.0,
+          "moneda_original": "ARS",
+          "precio_manual": 199.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rosca con Tuerca - 1/2 - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 1198.67,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 705.6,
+          "moneda_original": "ARS",
+          "precio_manual": 705.6
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Rosca con Tuerca - 3/4 - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 1598.67,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 964.8,
+          "moneda_original": "ARS",
+          "precio_manual": 964.8
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Reduccion - 3/4 a 1/2 - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 1598.67,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 964.8,
+          "moneda_original": "ARS",
+          "precio_manual": 964.8
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Buje - 3/4 a 1/2 - Sin Característica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 1125.33,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1068.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1068.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Bidet Lisa - 1/2 - Económica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 2796.67,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1460.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1460.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Bidet Lisa - 3/8 - Económica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 2786.67,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1460.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1460.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Bidet Mallada - 1/2 - Económica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 2892.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1560.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1560.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Bidet Mallada - 3/8 - Económica",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 2892.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1560.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1560.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Bidet Lisa - 1/2 - Bronce",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 3113.33,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1670.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1670.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Bidet Lisa - 45872 - Bronce",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 3198.67,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1570.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1570.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Bidet Mallada - 1/2 - Bronce",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 3212.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1810.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1810.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    },
+    {
+      "nombre": "Bidet Mallada - 3/8 - Bronce",
+      "material": "",
+      "peso_unidad": 1.0,
+      "precio_venta": 3092.0,
+      "cantidad_fabricar": 0,
+      "cantidad_por_hora": 0,
+      "materiales": [
+        {
+          "nombre": "Material 1",
+          "kg_por_unidad": 1.0,
+          "precio_original": 1710.0,
+          "moneda_original": "ARS",
+          "precio_manual": 1710.0
+        }
+      ],
+      "iibb_porcentaje": 0.0,
+      "moneda_precio": "ARS"
+    }
+  ],
+  "log_ingresos_mp": [
+    {
+      "fecha": "2025-10-13 13:17:32",
+      "tipo": "Ingreso",
+      "familia": "MATERIA",
+      "medida": "0",
+      "caracteristica": "PERLADO",
+      "cantidad": 10000.0,
+      "motivo": "Compra de materia prima"
+    },
+    {
+      "fecha": "2025-10-13 14:32:13",
+      "tipo": "Ingreso",
+      "familia": "ASD",
+      "medida": "ASASD",
+      "caracteristica": "ASD",
+      "cantidad": 12312.0,
+      "motivo": "Compra de materia prima - Proveedor: ASDASD"
+    },
+    {
+      "fecha": "2025-10-13 14:38:15",
+      "tipo": "Ingreso",
+      "familia": "1231",
+      "medida": "12312",
+      "caracteristica": "123123",
+      "cantidad": 11231231.0,
+      "motivo": "Compra de materia prima - Proveedor: GABI"
+    },
+    {
+      "fecha": "2025-10-13 19:34:27",
+      "tipo": "Ingreso",
+      "familia": "asd",
+      "medida": "asd",
+      "caracteristica": "asd",
+      "cantidad": 1000.0,
+      "motivo": "Compra de materia prima - Proveedor: asd"
+    },
+    {
+      "fecha": "2025-10-13 19:35:09",
+      "tipo": "Ingreso",
+      "familia": "123",
+      "medida": "21",
+      "caracteristica": "123",
+      "cantidad": 4999.0,
+      "motivo": "Compra de materia prima"
+    },
+    {
+      "fecha": "2025-10-13 21:08:30",
+      "tipo": "Ingreso",
+      "familia": "VARIOS",
+      "medida": "VARIOS",
+      "caracteristica": "VARIOS",
+      "cantidad": 10000.0,
+      "motivo": "Compra de materia prima - Proveedor: VARIOS"
+    },
+    {
+      "fecha": "2025-10-13 21:09:05",
+      "tipo": "Ingreso",
+      "familia": "VARIOS",
+      "medida": "VARIOS",
+      "caracteristica": "VARIOS",
+      "cantidad": 50000.0,
+      "motivo": "Compra de materia prima - Proveedor: SANTI"
+    },
+    {
+      "fecha": "2025-10-27 10:49:13",
+      "tipo": "Ingreso",
+      "familia": "123",
+      "medida": "Sin Medida",
+      "caracteristica": "Sin Característica",
+      "cantidad": 1.0,
+      "motivo": "Compra de materia prima"
+    },
+    {
+      "fecha": "2025-10-28 15:42:08",
+      "tipo": "Ingreso",
+      "familia": "asd",
+      "medida": "asd",
+      "caracteristica": "asd",
+      "cantidad": 213.0,
+      "motivo": "Compra de materia prima - Proveedor: 123"
+    },
+    {
+      "fecha": "2025-11-02 22:01:41",
+      "tipo": "Ingreso",
+      "familia": "asd",
+      "medida": "asd",
+      "caracteristica": "asd",
+      "cantidad": 10.0,
+      "motivo": "Compra de materia prima - Proveedor: asd"
+    },
+    {
+      "fecha": "2025-11-02 22:05:05",
+      "tipo": "Ingreso",
+      "familia": "asd",
+      "medida": "asd",
+      "caracteristica": "asd",
+      "cantidad": 10.0,
+      "motivo": "Compra de materia prima - Proveedor: asd"
+    },
+    {
+      "fecha": "2025-11-02 22:08:29",
+      "tipo": "Ingreso",
+      "familia": "Chapa",
+      "medida": "asd",
+      "caracteristica": "asd",
+      "cantidad": 100000.0,
+      "motivo": "Compra de materia prima"
+    }
+  ],
+  "log_egresos_mp": [
+    {
+      "fecha": "2025-10-13 14:38:42",
+      "tipo": "Egreso",
+      "familia": "MATERIA",
+      "medida": "0",
+      "caracteristica": "PERLADO",
+      "cantidad": 5000.0,
+      "motivo": "Consumo para producción: hola - 10X50 - RUSA"
+    },
+    {
+      "fecha": "2025-11-02 22:15:30",
+      "tipo": "Egreso",
+      "familia": "Chapa",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 101.0,
+      "motivo": "Consumo para producción: Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 -ATORNILLAR"
+    },
+    {
+      "fecha": "2025-11-02 22:16:20",
+      "tipo": "Egreso",
+      "familia": "Chapa",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 180.0,
+      "motivo": "Consumo para producción: Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 -AMURAR"
+    },
+    {
+      "fecha": "2025-11-03 12:13:20",
+      "tipo": "Egreso",
+      "familia": "Chapa",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 880.0,
+      "motivo": "Consumo para producción: Rejilla Ventilacion - 20 X 20 - APROBADO 200 cm2"
+    },
+    {
+      "fecha": "2025-11-03 12:13:33",
+      "tipo": "Egreso",
+      "familia": "Chapa",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 101.0,
+      "motivo": "Consumo para producción: Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 -ATORNILLAR"
+    },
+    {
+      "fecha": "2025-11-03 12:13:51",
+      "tipo": "Egreso",
+      "familia": "Chapa",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 198.0,
+      "motivo": "Consumo para producción: Rejilla Ventilacion - 15 x 30 - COMUN 100 cm2 - AMURAR"
+    },
+    {
+      "fecha": "2025-11-03 12:14:35",
+      "tipo": "Egreso",
+      "familia": "Chapa",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 1800.0,
+      "motivo": "Consumo para producción: Mensula Refriferacion - 40 cm - Corta"
+    }
+  ],
+  "log_ingresos_pr": [
+    {
+      "fecha": "2025-10-13 14:39:52",
+      "tipo": "Ingreso",
+      "familia": "123",
+      "medida": "123",
+      "caracteristica": "123",
+      "cantidad": 14124,
+      "motivo": "Compra de producto - Proveedor: FSD"
+    },
+    {
+      "fecha": "2025-10-27 11:18:31",
+      "tipo": "Ingreso",
+      "familia": "Salud",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 15000,
+      "motivo": "Compra de producto - Proveedor: regueton"
+    },
+    {
+      "fecha": "2025-10-27 11:34:32",
+      "tipo": "Ingreso",
+      "familia": "coca",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 1500,
+      "motivo": "Compra de producto - Proveedor: femsa"
+    },
+    {
+      "fecha": "2025-10-27 11:35:27",
+      "tipo": "Ingreso",
+      "familia": "pepsi",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 1,
+      "motivo": "Compra de producto - Proveedor: hola"
+    },
+    {
+      "fecha": "2025-10-27 11:35:47",
+      "tipo": "Ingreso",
+      "familia": "tina",
+      "medida": "N/A",
+      "caracteristica": "N/A",
+      "cantidad": 1,
+      "motivo": "Compra de producto - Proveedor: 123"
+    },
+    {
+      "fecha": "2025-10-28 15:34:57",
+      "tipo": "Ingreso",
+      "familia": "12312",
+      "medida": "3221",
+      "caracteristica": "123",
+      "cantidad": 1123,
+      "motivo": "Compra de producto - Proveedor: 123"
+    },
+    {
+      "fecha": "2025-10-28 15:42:14",
+      "tipo": "Ingreso",
+      "familia": "123",
+      "medida": "123",
+      "caracteristica": "213",
+      "cantidad": 123,
+      "motivo": "Compra de producto - Proveedor: 123"
+    },
+    {
+      "fecha": "2025-11-02 21:55:35",
+      "tipo": "Ingreso",
+      "familia": "123",
+      "medida": "213",
+      "caracteristica": "123",
+      "cantidad": 123,
+      "motivo": "Compra de producto - Proveedor: 123"
+    },
+    {
+      "fecha": "2025-11-02 22:02:10",
+      "tipo": "Ingreso",
+      "familia": "asd",
+      "medida": "asdasd",
+      "caracteristica": "asd",
+      "cantidad": 10,
+      "motivo": "Compra de producto - Proveedor: zsasd"
+    },
+    {
+      "fecha": "2025-11-02 22:05:45",
+      "tipo": "Ingreso",
+      "familia": "asd",
+      "medida": "asd",
+      "caracteristica": "asd",
+      "cantidad": 10,
+      "motivo": "Compra de producto - Proveedor: asd"
+    },
+    {
+      "fecha": "2025-11-02 22:05:58",
+      "tipo": "Ingreso",
+      "familia": "asd",
+      "medida": "asd",
+      "caracteristica": "asd",
+      "cantidad": 100,
+      "motivo": "Compra de producto - Proveedor: asd"
+    },
+    {
+      "fecha": "2025-11-02 22:18:13",
+      "tipo": "Ingreso",
+      "familia": "asd",
+      "medida": "asd",
+      "caracteristica": "asd",
+      "cantidad": 1000,
+      "motivo": "Compra de producto - Proveedor: asda"
+    }
+  ],
+  "log_egresos_pr": [],
+  "log_ingresos_fab": [
+    {
+      "fecha": "2025-10-13 14:38:42",
+      "tipo": "Ingreso",
+      "familia": "Mhola",
+      "medida": "10X50",
+      "caracteristica": "RUSA",
+      "cantidad": 5000,
+      "motivo": "Producción completada: hola - 10X50 - RUSA"
+    },
+    {
+      "fecha": "2025-11-02 22:15:43",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "15 X 15",
+      "caracteristica": "COMUN 100 cm2 -ATORNILLAR",
+      "cantidad": 1000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 -ATORNILLAR"
+    },
+    {
+      "fecha": "2025-11-02 22:16:23",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "20 X 20",
+      "caracteristica": "COMUN 100 cm2 -AMURAR",
+      "cantidad": 1000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 -AMURAR"
+    },
+    {
+      "fecha": "2025-11-03 12:02:45",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "20 X 20",
+      "caracteristica": "COMUN 100 cm2 -AMURAR",
+      "cantidad": 1000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 -AMURAR"
+    },
+    {
+      "fecha": "2025-11-03 12:02:49",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "15 X 15",
+      "caracteristica": "100cm2 -MARCO DE VIDRIO",
+      "cantidad": 300,
+      "motivo": "Producción completada: Rejilla Ventilacion - 15 X 15 - 100cm2 -MARCO DE VIDRIO"
+    },
+    {
+      "fecha": "2025-11-03 12:03:56",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "15 X 15",
+      "caracteristica": "100cm2 -MARCO DE VIDRIO",
+      "cantidad": 100000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 15 X 15 - 100cm2 -MARCO DE VIDRIO"
+    },
+    {
+      "fecha": "2025-11-03 12:05:28",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "20 X 20",
+      "caracteristica": "COMUN 100 cm2 - ATORNILLAR",
+      "cantidad": 10000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 - ATORNILLAR"
+    },
+    {
+      "fecha": "2025-11-03 12:05:57",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "20 X 20",
+      "caracteristica": "COMUN 100 cm2 - ATORNILLAR",
+      "cantidad": 1000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 20 X 20 - COMUN 100 cm2 - ATORNILLAR"
+    },
+    {
+      "fecha": "2025-11-03 12:13:22",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "20 X 20",
+      "caracteristica": "APROBADO 200 cm2",
+      "cantidad": 5000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 20 X 20 - APROBADO 200 cm2"
+    },
+    {
+      "fecha": "2025-11-03 12:13:38",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "15 X 15",
+      "caracteristica": "COMUN 100 cm2 -ATORNILLAR",
+      "cantidad": 1000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 15 X 15 - COMUN 100 cm2 -ATORNILLAR"
+    },
+    {
+      "fecha": "2025-11-03 12:13:52",
+      "tipo": "Ingreso",
+      "familia": "Rejilla Ventilacion",
+      "medida": "15 x 30",
+      "caracteristica": "COMUN 100 cm2 - AMURAR",
+      "cantidad": 1000,
+      "motivo": "Producción completada: Rejilla Ventilacion - 15 x 30 - COMUN 100 cm2 - AMURAR"
+    },
+    {
+      "fecha": "2025-11-03 12:14:36",
+      "tipo": "Ingreso",
+      "familia": "Mensula Refriferacion",
+      "medida": "40 cm",
+      "caracteristica": "Corta",
+      "cantidad": 2000,
+      "motivo": "Producción completada: Mensula Refriferacion - 40 cm - Corta"
+    }
+  ],
+  "log_egresos_fab": [],
+  "logs_compra_mp": [
+    {
+      "fecha": "asd",
+      "material": "asd",
+      "cantidad": 10.0,
+      "precio": 3000.0,
+      "proveedor": "asd",
+      "total": 30000.0
+    },
+    {
+      "fecha": "123",
+      "material": "prueba1",
+      "cantidad": 10.0,
+      "precio": 2.0,
+      "proveedor": "asd",
+      "total": 20.0
+    },
+    {
+      "fecha": "123",
+      "material": "asd",
+      "cantidad": 213.0,
+      "precio": 123.0,
+      "proveedor": "123",
+      "total": 26199.0
+    }
+  ],
+  "logs_compra_prod": [
+    {
+      "fecha": "asd",
+      "producto": "asd",
+      "cantidad": 1000,
+      "precio": 2490.0,
+      "proveedor": "asda",
+      "total": 2490000.0
+    },
+    {
+      "fecha": "asd",
+      "producto": "asd",
+      "cantidad": 100,
+      "precio": 10.0,
+      "proveedor": "asd",
+      "total": 1000.0
+    },
+    {
+      "fecha": "12",
+      "producto": "asd",
+      "cantidad": 10,
+      "precio": 3000.0,
+      "proveedor": "asd",
+      "total": 30000.0
+    },
+    {
+      "fecha": "asd",
+      "producto": "asd",
+      "cantidad": 10,
+      "precio": 2.0,
+      "proveedor": "zsasd",
+      "total": 20.0
+    },
+    {
+      "fecha": "123",
+      "producto": "123",
+      "cantidad": 123,
+      "precio": 123.0,
+      "proveedor": "123",
+      "total": 15129.0
+    },
+    {
+      "fecha": "123",
+      "producto": "123",
+      "cantidad": 123,
+      "precio": 123.0,
+      "proveedor": "123",
+      "total": 15129.0
+    }
+  ]
+}

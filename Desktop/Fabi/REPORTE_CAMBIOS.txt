@@ -1,0 +1,34 @@
+╔════════════════════════════════════════════════════════════════╗
+║          FABINSA CONTROL - REPORTE DE CAMBIOS                  ║
+╚════════════════════════════════════════════════════════════════╝
+
+Fecha: 7 de Octubre, 2025
+Versión: 1.1
+
+════════════════════════════════════════════════════════════════
+CAMBIOS REALIZADOS:
+════════════════════════════════════════════════════════════════
+
+✓ INTERFAZ DE USUARIO:
+  • Cambio en el nombre de pestaña: "Productos" ahora se llama "Produccion"
+  • Mejora en la claridad de la nomenclatura del sistema
+
+════════════════════════════════════════════════════════════════
+NOTAS:
+════════════════════════════════════════════════════════════════
+
+• Este cambio afecta únicamente al nombre visible de la pestaña
+• Todas las funcionalidades permanecen iguales
+• No se requiere migración de datos
+
+════════════════════════════════════════════════════════════════
+INSTALACIÓN:
+════════════════════════════════════════════════════════════════
+
+1. Cerrar la versión anterior si está ejecutándose
+2. Reemplazar el archivo FABINSA_CONTROL.exe con la nueva versión
+3. Ejecutar el nuevo archivo
+
+════════════════════════════════════════════════════════════════
+
+

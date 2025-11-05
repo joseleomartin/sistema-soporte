@@ -1,0 +1,165 @@
+========================================
+   FABINSA CONTROL v0.7 - DISTRIBUCIÓN
+========================================
+
+📦 ARCHIVOS PARA DISTRIBUIR:
+============================
+
+1. FABINSA_0.7.exe (Ejecutable principal - 224 MB)
+2. data.json (Base de datos - se crea automáticamente)
+3. logo_fabinsa.png (Logo de la empresa)
+4. plantilla_stock.xlsx (Plantilla para importar stock)
+5. INSTRUCCIONES_IMPORTACION_STOCK.md (Guía de importación)
+6. README_FABINSA_0.7.md (Documentación completa)
+
+========================================
+   INSTRUCCIONES DE DISTRIBUCIÓN
+========================================
+
+📁 CREAR PAQUETE DE DISTRIBUCIÓN:
+================================
+
+1. Crear una carpeta llamada "FABINSA_CONTROL_v0.7"
+2. Copiar los siguientes archivos a la carpeta:
+   - FABINSA_0.7.exe
+   - logo_fabinsa.png
+   - plantilla_stock.xlsx
+   - INSTRUCCIONES_IMPORTACION_STOCK.md
+   - README_FABINSA_0.7.md
+
+3. Comprimir la carpeta en un archivo ZIP o RAR
+4. El archivo comprimido será el paquete de distribución
+
+========================================
+   INSTRUCCIONES PARA EL USUARIO FINAL
+========================================
+
+🚀 INSTALACIÓN:
+===============
+
+1. Descargar el archivo comprimido
+2. Extraer todos los archivos en una carpeta
+3. Ejecutar FABINSA_0.7.exe
+4. ¡Listo! No requiere instalación adicional
+
+📋 REQUISITOS DEL SISTEMA:
+===========================
+
+- Windows 10/11 (64-bit)
+- Mínimo 4GB RAM
+- 100MB espacio libre en disco
+- No requiere Python instalado
+
+========================================
+   CARACTERÍSTICAS DE v0.7
+========================================
+
+✅ MEJORAS IMPLEMENTADAS:
+=========================
+
+🏭 MÓDULO DE PRODUCCIÓN:
+- Interfaz ultra compacta
+- Formularios con campos reducidos (20 caracteres)
+- Dashboard de métricas optimizado
+- Espaciado mínimo entre elementos
+- Tabla de materiales reducida (3 filas)
+
+👥 MÓDULO DE EMPLEADOS:
+- Formulario compacto con campos de 20 caracteres
+- Dashboard de métricas ultra compacto
+- Espaciado vertical reducido
+- Tabla optimizada para mejor visualización
+
+📦 MÓDULO DE STOCK:
+- Gestión completa de inventario
+- Importación desde Excel
+- Alertas de stock mínimo
+- Control de materias primas y productos
+
+📊 MÓDULO DE MÉTRICAS:
+- Análisis de rentabilidad
+- Reportes automáticos
+- Exportación a Excel
+- Gráficos interactivos
+
+💵 MÓDULO DE VENTAS:
+- Registro de ventas con descuentos
+- Cálculo automático de ganancias
+- Control de stock post-venta
+
+🛒 MÓDULO DE COMPRAS:
+- Registro de compras
+- Control de proveedores
+- Historial de adquisiciones
+
+💰 MÓDULO DE COSTOS:
+- Análisis detallado de costos
+- Transferencia a producción
+- Gráficos de distribución
+
+========================================
+   ARCHIVOS INCLUIDOS EN EL EXECUTABLE
+========================================
+
+El ejecutable FABINSA_0.7.exe incluye:
+- Aplicación principal (app_rentabilidad.py)
+- Todas las librerías necesarias
+- Base de datos (data.json)
+- Logo de la empresa
+- Plantilla de stock
+- Instrucciones de importación
+- Documentación completa
+
+========================================
+   SOPORTE TÉCNICO
+========================================
+
+🔧 PROBLEMAS COMUNES:
+=====================
+
+1. Error al iniciar:
+   - Verificar que todos los archivos estén en la misma carpeta
+   - Ejecutar como administrador si es necesario
+
+2. Datos no se guardan:
+   - Verificar permisos de escritura en la carpeta
+   - No ejecutar desde ubicaciones protegidas
+
+3. Excel no se abre:
+   - Instalar Microsoft Excel o usar LibreOffice
+   - Verificar que las plantillas estén presentes
+
+📞 CONTACTO:
+=============
+- Desarrollado por: Equipo de Desarrollo FABINSA
+- Versión: 0.7
+- Fecha: Enero 2025
+
+========================================
+   NOTAS IMPORTANTES
+========================================
+
+⚠️ IMPORTANTE:
+==============
+
+1. HACER RESPALDO REGULAR del archivo data.json
+2. NO eliminar ningún archivo de la carpeta
+3. Mantener todos los archivos en la misma ubicación
+4. El ejecutable es portable (no requiere instalación)
+
+🎯 OPTIMIZACIONES v0.7:
+========================
+
+- Interfaz ultra compacta para pantallas pequeñas
+- Formularios optimizados con campos reducidos
+- Dashboard de métricas más eficiente
+- Navegación mejorada con sidebar moderno
+- Rendimiento optimizado y carga más rápida
+- Espaciado mínimo entre elementos
+- Tablas optimizadas para mejor visualización
+
+========================================
+
+© 2025 FABINSA - Todos los derechos reservados
+FABINSA CONTROL v0.7 - Sistema Profesional de Gestión y Análisis Empresarial
+

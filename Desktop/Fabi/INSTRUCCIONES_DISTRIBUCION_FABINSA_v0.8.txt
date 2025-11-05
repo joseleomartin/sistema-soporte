@@ -1,0 +1,50 @@
+========================================
+    FABINSA CONTROL v0.8 - EJECUTABLE
+========================================
+
+📁 ARCHIVOS INCLUIDOS:
+- FABINSA_CONTROL_v0.8.exe (Ejecutable principal)
+- logo_fabinsa.png (Logo de la empresa)
+- plantilla_stock.xlsx (Plantilla para importar stock)
+
+🚀 INSTALACIÓN:
+1. Copia toda la carpeta "dist" a la computadora donde quieras usar el programa
+2. Ejecuta FABINSA_CONTROL_v0.8.exe haciendo doble clic
+3. ¡Listo! El programa se ejecutará automáticamente
+
+✨ NUEVAS FUNCIONALIDADES v0.8:
+- ✅ Doble clic para editar items de la planilla de costos
+- ✅ Doble clic para editar materiales en la planilla
+- ✅ Logs de compras guardados permanentemente en data.json
+- ✅ Importación mejorada de Excel con detección automática de monedas
+- ✅ Conversión automática de precios USD a ARS
+- ✅ Materiales opcionales en formularios
+- ✅ Edición de materiales con doble clic
+- ✅ Interfaz mejorada y más intuitiva
+
+📋 FUNCIONALIDADES PRINCIPALES:
+- Gestión de empleados y cálculo de costos de mano de obra
+- Control de stock de materia prima y productos
+- Planilla de costos con análisis de rentabilidad
+- Importación de datos desde Excel
+- Exportación de reportes a Excel
+- Logs de compras y movimientos de stock
+- Métricas y análisis de producción
+
+🔧 REQUISITOS DEL SISTEMA:
+- Windows 10 o superior
+- No requiere instalación de Python ni dependencias adicionales
+- El programa es completamente portable
+
+📞 SOPORTE:
+Si tienes algún problema con el programa, contacta al desarrollador.
+
+========================================
+    ¡Disfruta usando FABINSA CONTROL!
+========================================
+
+
+
+
+
+

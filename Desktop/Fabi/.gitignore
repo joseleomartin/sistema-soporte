@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+myenv/
+nuevo_entorno/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Archivos compilados y ejecutables
+*.exe
+*.spec
+*.rar
+*.zip
+
+# Archivos de datos temporales
+*.tmp
+*.bak
+
+# Archivos de backup
+backup/
+
+# Archivos de distribución
+dist/
+FABINSA_CONTROL*/
+*.rar
+
