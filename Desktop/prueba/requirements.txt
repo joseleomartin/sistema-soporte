@@ -1,0 +1,17 @@
+selenium
+webdriver-manager
+lxml
+pandas
+numpy
+openpyxl
+gspread
+oauth2client
+xlwings
+PyDrive
+google-api-python-client
+google-auth
+requests
+yfinance
+scikit-learn
+scipy
+matplotlib
