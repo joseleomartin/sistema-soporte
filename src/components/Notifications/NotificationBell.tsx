@@ -29,10 +29,17 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar }: N
   useEffect(() => {
     if (!profile?.id) return;
 
+    console.log('🔔 NotificationBell: Inicializando suscripción para usuario:', profile.id);
     loadNotifications();
 
+    // Crear canal con configuración específica
     const channel = supabase
-      .channel('notifications')
+      .channel(`notifications:${profile.id}`, {
+        config: {
+          broadcast: { self: true },
+          presence: { key: profile.id }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -42,16 +49,35 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar }: N
           filter: `user_id=eq.${profile.id}`,
         },
         (payload) => {
+          console.log('🔔 Nueva notificación recibida:', payload);
           const newNotification = payload.new as Notification;
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
 
-          showBrowserNotification(newNotification.message);
+          showBrowserNotification(newNotification.title);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Suscripción a notificaciones activa');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error en canal de notificaciones:', err);
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ Timeout en suscripción de notificaciones');
+        } else {
+          console.log('🔔 Estado de suscripción:', status);
+        }
+      });
+
+    // Polling de respaldo cada 30 segundos
+    const pollingInterval = setInterval(() => {
+      console.log('🔄 Polling de notificaciones (respaldo)');
+      loadNotifications();
+    }, 30000);
 
     return () => {
+      console.log('🔔 Limpiando suscripción y polling');
+      clearInterval(pollingInterval);
       supabase.removeChannel(channel);
     };
   }, [profile?.id]);
