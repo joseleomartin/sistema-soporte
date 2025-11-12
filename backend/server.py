@@ -16,20 +16,38 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Middleware para logging de todas las peticiones
+@app.before_request
+def log_request_info():
+    logger.info(f"Request recibido: {request.method} {request.path}")
+    logger.info(f"Headers: {dict(request.headers)}")
+
+@app.after_request
+def log_response_info(response):
+    logger.info(f"Response enviado: {response.status_code} para {request.path}")
+    return response
+
 logger.info("Inicializando aplicación Flask...")
 
 @app.route('/', methods=['GET'])
 def root():
     """Endpoint raíz"""
-    return jsonify({
-        'message': 'Servidor de Extractores de Bancos',
-        'status': 'running',
-        'endpoints': {
-            'health': '/health',
-            'extractors': '/extractors',
-            'extract': '/extract'
-        }
-    }), 200
+    logger.info("Request recibido en endpoint raíz")
+    try:
+        response = jsonify({
+            'message': 'Servidor de Extractores de Bancos',
+            'status': 'running',
+            'endpoints': {
+                'health': '/health',
+                'extractors': '/extractors',
+                'extract': '/extract'
+            }
+        })
+        logger.info("Response enviado desde endpoint raíz")
+        return response, 200
+    except Exception as e:
+        logger.error(f"Error en endpoint raíz: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 # Directorio de extractores
 EXTRACTORES_DIR = Path(__file__).parent / 'extractores'
@@ -128,12 +146,16 @@ def load_extractor_module(script_name):
 def health():
     """Endpoint de salud"""
     try:
-        return jsonify({
+        logger.info("Health check recibido")
+        response = jsonify({
             'status': 'ok',
             'message': 'Servidor funcionando correctamente',
             'extractors_count': len(BANCO_EXTRACTORS)
-        }), 200
+        })
+        logger.info("Health check respondido exitosamente")
+        return response, 200
     except Exception as e:
+        logger.error(f"Error en health check: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
             'message': str(e)
