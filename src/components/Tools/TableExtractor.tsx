@@ -50,9 +50,9 @@ export function TableExtractor() {
       const file = e.dataTransfer.files[0];
       if (file.type === 'application/pdf') {
         setSelectedFile(file);
-        setResult(null);
+        setLocalMessage(null);
       } else {
-        setResult({ success: false, message: 'Solo se permiten archivos PDF' });
+        setLocalMessage({ type: 'error', text: 'Solo se permiten archivos PDF' });
       }
     }
   };
@@ -62,9 +62,9 @@ export function TableExtractor() {
       const file = e.target.files[0];
       if (file.type === 'application/pdf') {
         setSelectedFile(file);
-        setResult(null);
+        setLocalMessage(null);
       } else {
-        setResult({ success: false, message: 'Solo se permiten archivos PDF' });
+        setLocalMessage({ type: 'error', text: 'Solo se permiten archivos PDF' });
       }
     }
   };
