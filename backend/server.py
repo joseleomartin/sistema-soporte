@@ -318,8 +318,9 @@ def cleanup():
 
 if __name__ == '__main__':
     host = os.environ.get('EXTRACTOR_HOST', '0.0.0.0')
-    port = int(os.environ.get('EXTRACTOR_PORT', '5000'))
-    debug = os.environ.get('EXTRACTOR_DEBUG', 'true').lower() == 'true'
+    # Railway usa la variable PORT, si no existe usa EXTRACTOR_PORT o 5000
+    port = int(os.environ.get('PORT', os.environ.get('EXTRACTOR_PORT', '5000')))
+    debug = os.environ.get('EXTRACTOR_DEBUG', 'false').lower() == 'true'
 
     print("=" * 50)
     print("Servidor de Extractores de Bancos")
