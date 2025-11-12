@@ -11,6 +11,14 @@ if not exist "venv\" (
     echo Entorno virtual creado.
 )
 
+REM Configuración de red (puedes cambiar estos valores)
+if "%EXTRACTOR_HOST%"=="" (
+    set EXTRACTOR_HOST=0.0.0.0
+)
+if "%EXTRACTOR_PORT%"=="" (
+    set EXTRACTOR_PORT=5000
+)
+
 REM Activar entorno virtual
 echo.
 echo Activando entorno virtual...
@@ -36,7 +44,8 @@ if %ERRORLEVEL% NEQ 0 (
 REM Iniciar servidor
 echo.
 echo ==========================================
-echo Iniciando servidor en http://localhost:5000
+echo Iniciando servidor en http://%EXTRACTOR_HOST%:%EXTRACTOR_PORT%
+echo (Para acceder desde otra PC usa la IP de esta máquina)
 echo ==========================================
 echo.
 python server.py

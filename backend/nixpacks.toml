@@ -1,0 +1,9 @@
+[phases.setup]
+aptPkgs = ["tesseract-ocr", "tesseract-ocr-spa", "ghostscript", "poppler-utils"]
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[start]
+cmd = "gunicorn server:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2"
+

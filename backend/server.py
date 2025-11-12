@@ -155,13 +155,15 @@ def extract():
             
             # Obtener información del resultado
             rows = len(df) if df is not None and hasattr(df, '__len__') else 0
-            
+
+            base_url = request.host_url.rstrip('/')
+
             return jsonify({
                 'success': True,
                 'message': 'Extracción completada exitosamente',
                 'filename': excel_filename,
                 'rows': rows,
-                'downloadUrl': f'http://localhost:5000/download/{excel_filename}'
+                'downloadUrl': f'{base_url}/download/{excel_filename}'
             })
             
         except Exception as e:
@@ -222,11 +224,13 @@ def pdf_to_ocr():
                     'message': 'No se pudo generar el archivo PDF con OCR'
                 }), 500
             
+            base_url = request.host_url.rstrip('/')
+
             return jsonify({
                 'success': True,
                 'message': 'Conversión OCR completada exitosamente',
                 'filename': output_filename,
-                'downloadUrl': f'http://localhost:5000/download-pdf/{output_filename}'
+                'downloadUrl': f'{base_url}/download-pdf/{output_filename}'
             })
             
         except Exception as e:
@@ -313,11 +317,16 @@ def cleanup():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 if __name__ == '__main__':
+    host = os.environ.get('EXTRACTOR_HOST', '0.0.0.0')
+    port = int(os.environ.get('EXTRACTOR_PORT', '5000'))
+    debug = os.environ.get('EXTRACTOR_DEBUG', 'true').lower() == 'true'
+
     print("=" * 50)
     print("Servidor de Extractores de Bancos")
     print("=" * 50)
     print(f"Extractores disponibles: {len(BANCO_EXTRACTORS)}")
     print(f"Directorio temporal: {TEMP_DIR}")
+    print(f"Escuchando en http://{host}:{port}")
     print("=" * 50)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host=host, port=port, debug=debug)
 
