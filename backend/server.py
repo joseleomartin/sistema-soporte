@@ -11,6 +11,13 @@ from pathlib import Path
 app = Flask(__name__)
 CORS(app)
 
+# Logging para diagnóstico
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+logger.info("Inicializando aplicación Flask...")
+
 @app.route('/', methods=['GET'])
 def root():
     """Endpoint raíz"""
@@ -29,7 +36,12 @@ EXTRACTORES_DIR = Path(__file__).parent / 'extractores'
 TEMP_DIR = Path(tempfile.gettempdir()) / 'extractores_temp'
 TEMP_DIR.mkdir(exist_ok=True)
 
+logger.info(f"Directorio de extractores: {EXTRACTORES_DIR}")
+logger.info(f"Directorio temporal: {TEMP_DIR}")
+logger.info(f"Directorio de extractores existe: {EXTRACTORES_DIR.exists()}")
+
 # Mapeo de bancos a sus extractores
+logger.info("Cargando configuración de extractores...")
 BANCO_EXTRACTORS = {
     'banco_galicia': {
         'script': 'extractor_banco_galicia.py',
@@ -100,6 +112,9 @@ BANCO_EXTRACTORS = {
         'function': 'extraer_datos_banco_nacion'
     },
 }
+
+logger.info(f"Extractores configurados: {len(BANCO_EXTRACTORS)}")
+logger.info("Aplicación Flask inicializada correctamente")
 
 def load_extractor_module(script_name):
     """Carga dinámicamente un módulo extractor"""
