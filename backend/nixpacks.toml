@@ -1,12 +1,13 @@
 [phases.setup]
 aptPkgs = ["tesseract-ocr", "tesseract-ocr-spa", "ghostscript", "poppler-utils"]
 nixPkgs = ["python311", "python311Packages.pip", "python311Packages.setuptools", "python311Packages.wheel"]
+cmds = ["python3 -m venv /opt/venv"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = ["/opt/venv/bin/pip install --upgrade pip", "/opt/venv/bin/pip install -r requirements.txt"]
 
 [start]
-cmd = "gunicorn server:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2"
+cmd = "/opt/venv/bin/gunicorn server:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2"
 
 
 
