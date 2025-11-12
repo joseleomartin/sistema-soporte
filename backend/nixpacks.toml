@@ -11,6 +11,6 @@ cmds = [
 ]
 
 [start]
-# Railway proporciona $PORT dinámicamente - NUNCA usar puerto fijo
-# Usar 1 worker para evitar problemas de memoria y procesos duplicados
-cmd = "/opt/venv/bin/gunicorn server:app --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --log-level info --access-logfile - --error-logfile - --preload"
+# Opción simple: Flask directo (solo para desarrollo/testing)
+# Railway proporciona $PORT dinámicamente
+cmd = "/opt/venv/bin/python server.py"
