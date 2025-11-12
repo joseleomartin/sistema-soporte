@@ -58,3 +58,5 @@ $$;
 COMMENT ON TABLE public.room_presence IS 'Rastrea qué usuarios están actualmente en cada sala de reunión';
 COMMENT ON COLUMN public.room_presence.last_seen IS 'Última vez que el usuario envió un heartbeat';
 
+
+

@@ -7,29 +7,47 @@ import os
 import tempfile
 import importlib.util
 from pathlib import Path
-
-app = Flask(__name__)
-CORS(app)
+import sys
 
 # Logging para diagnóstico
 import logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
 logger = logging.getLogger(__name__)
+
+# Información de inicio
+logger.info("=" * 60)
+logger.info("SERVIDOR DE EXTRACTORES DE BANCOS - INICIANDO")
+logger.info("=" * 60)
+logger.info(f"Python Version: {sys.version}")
+logger.info(f"Working Directory: {os.getcwd()}")
+logger.info(f"Variable PORT: {os.environ.get('PORT', 'NO DEFINIDA')}")
+logger.info(f"Variable EXTRACTOR_PORT: {os.environ.get('EXTRACTOR_PORT', 'NO DEFINIDA')}")
+
+# Crear aplicación Flask
+app = Flask(__name__)
+
+# Configurar CORS - permitir todos los orígenes en producción
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+logger.info("Flask app creada correctamente")
+logger.info("CORS configurado para permitir todos los orígenes")
 
 # Middleware para logging de todas las peticiones
 @app.before_request
 def log_request_info():
     logger.info(f"Request recibido: {request.method} {request.path}")
-    logger.info(f"Headers: {dict(request.headers)}")
+    if request.method == 'POST':
+        logger.info(f"Form data keys: {list(request.form.keys())}")
+        logger.info(f"Files: {list(request.files.keys())}")
 
 @app.after_request
 def log_response_info(response):
     logger.info(f"Response enviado: {response.status_code} para {request.path}")
     return response
-
-logger.info("Inicializando aplicación Flask...")
-logger.info(f"Variable PORT: {os.environ.get('PORT', 'NO DEFINIDA')}")
-logger.info(f"Variable EXTRACTOR_PORT: {os.environ.get('EXTRACTOR_PORT', 'NO DEFINIDA')}")
 
 @app.route('/', methods=['GET'])
 def root():
@@ -383,17 +401,23 @@ def cleanup():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 if __name__ == '__main__':
+    # NOTA: Este bloque SOLO se ejecuta cuando se corre directamente con python server.py
+    # Railway/Gunicorn NO ejecuta este bloque, importa la app directamente
+    
     host = os.environ.get('EXTRACTOR_HOST', '0.0.0.0')
     # Railway usa la variable PORT, si no existe usa EXTRACTOR_PORT o 5000
     port = int(os.environ.get('PORT', os.environ.get('EXTRACTOR_PORT', '5000')))
     debug = os.environ.get('EXTRACTOR_DEBUG', 'false').lower() == 'true'
 
-    print("=" * 50)
-    print("Servidor de Extractores de Bancos")
-    print("=" * 50)
-    print(f"Extractores disponibles: {len(BANCO_EXTRACTORS)}")
-    print(f"Directorio temporal: {TEMP_DIR}")
-    print(f"Escuchando en http://{host}:{port}")
-    print("=" * 50)
+    logger.info("=" * 50)
+    logger.info("MODO DESARROLLO - Servidor Flask Directo")
+    logger.info("=" * 50)
+    logger.info(f"Extractores disponibles: {len(BANCO_EXTRACTORS)}")
+    logger.info(f"Directorio temporal: {TEMP_DIR}")
+    logger.info(f"Escuchando en http://{host}:{port}")
+    logger.info(f"Debug mode: {debug}")
+    logger.info("=" * 50)
+    logger.warning("ADVERTENCIA: En producción usa Gunicorn, no este modo")
+    
     app.run(host=host, port=port, debug=debug)
 

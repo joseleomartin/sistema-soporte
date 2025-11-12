@@ -225,3 +225,5 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Comentario: Para ejecutar la limpieza automáticamente, puedes usar pg_cron o llamarla manualmente
 -- SELECT cleanup_old_notifications();
 
+
+

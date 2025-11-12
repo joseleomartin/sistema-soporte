@@ -1,0 +1,24 @@
+# Ignorar archivos locales
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Ignorar archivos de desarrollo
+.env
+.env.local
+*.log
+.DS_Store
+
+# Ignorar scripts locales
+start.bat
+*.db
+*.sqlite
+

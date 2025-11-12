@@ -92,3 +92,5 @@ Si todos los checkboxes están marcados, ¡el sistema está funcionando!
 **Tiempo estimado de configuración:** 5-10 minutos (primera vez)
 **Tiempo de inicio subsecuente:** 30 segundos
 
+
+

@@ -335,3 +335,5 @@ Si aún tienes problemas después de estos cambios:
 
 Si sigues teniendo problemas, abre la consola del navegador (F12) y comparte los logs que aparecen cuando intentas descargar un archivo.
 
+
+

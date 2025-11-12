@@ -87,3 +87,5 @@ En producción, configura la misma variable en Vercel (`Project Settings → Env
 
 Con esto, los extractores quedan disponibles para toda tu red local. 🚀
 
+
+

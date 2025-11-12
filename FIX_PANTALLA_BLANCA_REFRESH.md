@@ -296,3 +296,5 @@ App.tsx detecta → Muestra LoginForm ✅
 
 La aplicación ahora maneja correctamente todos los casos de error y siempre muestra algo al usuario, nunca una pantalla en blanco.
 
+
+

@@ -431,3 +431,5 @@ La herramienta está completamente integrada con:
 **Fecha:** 11 de Noviembre, 2025  
 **Estado:** ✅ Funcional (requiere instalación de Tesseract)
 
+
+

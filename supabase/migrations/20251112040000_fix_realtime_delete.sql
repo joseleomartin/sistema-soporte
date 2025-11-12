@@ -45,3 +45,5 @@ ALTER TABLE user_departments ENABLE ROW LEVEL SECURITY;
 -- Ahora los eventos DELETE deberían funcionar correctamente
 -- ============================================
 
+
+

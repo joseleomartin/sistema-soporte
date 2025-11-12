@@ -136,3 +136,5 @@ ALTER PUBLICATION supabase_realtime ADD TABLE department_forum_permissions;
 -- a departamentos, y todos los usuarios del departamento tendrán acceso
 -- ============================================
 
+
+

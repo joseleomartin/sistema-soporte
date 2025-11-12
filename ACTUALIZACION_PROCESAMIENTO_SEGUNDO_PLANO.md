@@ -289,3 +289,5 @@ interface ExtractionJob {
 **Característica:** Procesamiento en Segundo Plano
 **Estado:** ✅ Implementado y Funcional
 
+
+

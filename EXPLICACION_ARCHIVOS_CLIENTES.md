@@ -361,3 +361,5 @@ Cliente Yanpay
 
 **¡El sistema permite acceder a todos los archivos de un cliente sin necesidad de entrar al chat, mostrando exactamente los mismos archivos que los usuarios suben!** 📁✨
 
+
+

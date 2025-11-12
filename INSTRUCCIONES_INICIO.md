@@ -303,3 +303,5 @@ Si seguiste estos pasos, el sistema debería estar funcionando. Ahora puedes:
 
 **Última actualización:** 11 de Noviembre, 2025
 
+
+

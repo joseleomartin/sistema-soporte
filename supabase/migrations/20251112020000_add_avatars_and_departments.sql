@@ -139,3 +139,5 @@ CREATE POLICY "Users can delete their own avatar"
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
+
+

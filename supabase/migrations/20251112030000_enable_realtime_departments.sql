@@ -15,3 +15,5 @@ ALTER PUBLICATION supabase_realtime ADD TABLE user_departments;
 -- Ahora los cambios se verán automáticamente sin necesidad de F5
 -- ============================================
 
+
+

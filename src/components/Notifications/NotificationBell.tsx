@@ -69,11 +69,11 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar }: N
         }
       });
 
-    // Polling de respaldo cada 30 segundos
+    // Polling de respaldo cada 10 segundos
     const pollingInterval = setInterval(() => {
       console.log('🔄 Polling de notificaciones (respaldo)');
       loadNotifications();
-    }, 30000);
+    }, 10000);
 
     return () => {
       console.log('🔔 Limpiando suscripción y polling');
@@ -85,16 +85,31 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar }: N
   const loadNotifications = async () => {
     if (!profile?.id) return;
 
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', profile.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
 
-    if (!error && data) {
-      setNotifications(data);
-      setUnreadCount(data.filter(n => !n.read).length);
+      if (error) {
+        console.error('Error cargando notificaciones:', error);
+        return;
+      }
+
+      if (data) {
+        const newUnreadCount = data.filter(n => !n.read).length;
+        
+        // Solo actualizar si hay cambios
+        if (JSON.stringify(data) !== JSON.stringify(notifications)) {
+          console.log('📥 Notificaciones actualizadas:', data.length, 'total,', newUnreadCount, 'no leídas');
+          setNotifications(data);
+          setUnreadCount(newUnreadCount);
+        }
+      }
+    } catch (error) {
+      console.error('Error en loadNotifications:', error);
     }
   };
 

@@ -110,3 +110,5 @@ Ahora todas las peticiones de `TableExtractor` van al túnel y Cloudflare las re
 
 ¡Listo! Con Cloudflare Tunnel tu backend local queda accesible de forma segura y reversible, sin tocar el firewall del router. 🚀
 
+
+

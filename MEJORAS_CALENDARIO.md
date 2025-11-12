@@ -323,3 +323,5 @@ Ahora puedes:
 - ✅ Ver errores detallados
 - ✅ Mejor experiencia de usuario
 
+
+

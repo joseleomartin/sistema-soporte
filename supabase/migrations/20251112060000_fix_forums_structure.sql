@@ -215,3 +215,5 @@ END $$;
 -- 2. Gestionar permisos de clientes por departamentos
 -- ============================================
 
+
+

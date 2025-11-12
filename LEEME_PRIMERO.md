@@ -131,3 +131,5 @@ Para soporte o preguntas, contacta al equipo de desarrollo.
 **Fecha:** 11 de Noviembre, 2025
 **Estado:** ✅ Listo para usar
 
+
+

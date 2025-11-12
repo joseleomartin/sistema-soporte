@@ -290,3 +290,5 @@ Solo necesitas iniciar el backend y el frontend para comenzar a procesar extract
 
 **¡Disfruta del sistema de extractores!** 🚀
 
+
+

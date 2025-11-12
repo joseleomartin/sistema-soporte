@@ -216,3 +216,5 @@ Para soporte técnico, crea un ticket en el sistema o contacta al administrador.
 **Versión**: 1.0.0  
 **Última actualización**: Noviembre 2025
 
+
+

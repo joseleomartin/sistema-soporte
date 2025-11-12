@@ -39,3 +39,5 @@ $$;
 REVOKE ALL ON FUNCTION delete_subforum(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION delete_subforum(uuid) TO authenticated;
 
+
+
