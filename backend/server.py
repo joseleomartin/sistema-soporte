@@ -11,6 +11,19 @@ from pathlib import Path
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/', methods=['GET'])
+def root():
+    """Endpoint raíz"""
+    return jsonify({
+        'message': 'Servidor de Extractores de Bancos',
+        'status': 'running',
+        'endpoints': {
+            'health': '/health',
+            'extractors': '/extractors',
+            'extract': '/extract'
+        }
+    }), 200
+
 # Directorio de extractores
 EXTRACTORES_DIR = Path(__file__).parent / 'extractores'
 TEMP_DIR = Path(tempfile.gettempdir()) / 'extractores_temp'
@@ -99,7 +112,17 @@ def load_extractor_module(script_name):
 @app.route('/health', methods=['GET'])
 def health():
     """Endpoint de salud"""
-    return jsonify({'status': 'ok'})
+    try:
+        return jsonify({
+            'status': 'ok',
+            'message': 'Servidor funcionando correctamente',
+            'extractors_count': len(BANCO_EXTRACTORS)
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @app.route('/extractors', methods=['GET'])
 def list_extractors():
