@@ -1,43 +1,17 @@
 #!/bin/bash
+set -e
 
-echo "=========================================="
-echo "Iniciando Backend de Extractores"
-echo "=========================================="
+echo "Iniciando servidor..."
 
-# Verificar si existe el entorno virtual
-if [ ! -d "venv" ]; then
-    echo ""
-    echo "No se encontró el entorno virtual. Creándolo..."
-    python3 -m venv venv
-    echo "Entorno virtual creado."
-fi
+# Cambiar al directorio de la aplicación
+cd /app
 
-# Activar entorno virtual
-echo ""
-echo "Activando entorno virtual..."
-source venv/bin/activate
-
-# Instalar dependencias
-echo ""
-echo "Instalando dependencias..."
-pip install -r requirements.txt
-
-# Verificar configuración
-echo ""
-echo "Verificando configuración..."
-python check_setup.py
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "ERROR: La configuración tiene problemas."
-    echo "Por favor revisa los mensajes arriba."
-    exit 1
-fi
-
-# Iniciar servidor
-echo ""
-echo "=========================================="
-echo "Iniciando servidor en http://localhost:5000"
-echo "=========================================="
-echo ""
-python server.py
-
+# Iniciar gunicorn
+exec /opt/venv/bin/gunicorn server:app \
+  --bind 0.0.0.0:${PORT:-5000} \
+  --timeout 300 \
+  --workers 2 \
+  --log-level info \
+  --access-logfile - \
+  --error-logfile - \
+  --preload

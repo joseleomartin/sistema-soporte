@@ -7,7 +7,7 @@ cmds = ["python3 -m venv /opt/venv"]
 cmds = ["/opt/venv/bin/pip install --upgrade pip", "/opt/venv/bin/pip install -r requirements.txt"]
 
 [start]
-cmd = "/opt/venv/bin/gunicorn server:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2"
+cmd = "cd /app && /opt/venv/bin/gunicorn server:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2 --log-level info --access-logfile - --error-logfile - --preload"
 
 
 
