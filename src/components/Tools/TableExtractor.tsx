@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useExtraction } from '../../contexts/ExtractionContext';
 
+const API_BASE_URL = (import.meta.env.VITE_EXTRACTOR_API_URL as string | undefined) ?? window.location.origin;
+
 const bancos = [
   { id: 'banco_galicia', name: 'Banco Galicia', script: 'extractor_banco_galicia.py' },
   { id: 'banco_galicia_mas', name: 'Banco Galicia Más', script: 'extractor_banco_galicia_mas.py' },
@@ -105,7 +107,7 @@ export function TableExtractor() {
       // Simular progreso inicial
       updateJob(jobId, { progress: 10, message: 'Cargando archivo...' });
 
-      const response = await fetch('http://localhost:5000/extract', {
+      const response = await fetch(`${API_BASE_URL}/extract`, {
         method: 'POST',
         body: formData,
       });
@@ -138,7 +140,7 @@ export function TableExtractor() {
       updateJob(jobId, {
         status: 'error',
         progress: 0,
-        message: 'Error de conexión con el servidor',
+          message: 'Error de conexión con el servidor de extractores',
       });
     }
   };
