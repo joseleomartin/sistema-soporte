@@ -1,2 +1,4 @@
-web: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 300 server:app
+web: cd /app && /opt/venv/bin/gunicorn server:app --bind 0.0.0.0:$PORT --timeout 300 --workers 2 --log-level info --access-logfile - --error-logfile -
+
+
 
