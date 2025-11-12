@@ -28,6 +28,8 @@ def log_response_info(response):
     return response
 
 logger.info("Inicializando aplicación Flask...")
+logger.info(f"Variable PORT: {os.environ.get('PORT', 'NO DEFINIDA')}")
+logger.info(f"Variable EXTRACTOR_PORT: {os.environ.get('EXTRACTOR_PORT', 'NO DEFINIDA')}")
 
 @app.route('/', methods=['GET'])
 def root():
@@ -147,10 +149,14 @@ def health():
     """Endpoint de salud"""
     try:
         logger.info("Health check recibido")
+        port = os.environ.get('PORT', os.environ.get('EXTRACTOR_PORT', 'NO DEFINIDA'))
         response = jsonify({
             'status': 'ok',
             'message': 'Servidor funcionando correctamente',
-            'extractors_count': len(BANCO_EXTRACTORS)
+            'extractors_count': len(BANCO_EXTRACTORS),
+            'port': port,
+            'host': request.host,
+            'remote_addr': request.remote_addr
         })
         logger.info("Health check respondido exitosamente")
         return response, 200
