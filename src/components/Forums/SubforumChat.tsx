@@ -275,17 +275,16 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
 
   const handleDeleteForum = async () => {
     try {
-      const { error } = await supabase
-        .from('subforums')
-        .delete()
-        .eq('id', subforumId);
+      const { error } = await supabase.rpc('delete_subforum', {
+        subforum_uuid: subforumId,
+      });
 
       if (error) throw error;
 
       onBack();
     } catch (error) {
       console.error('Error deleting subforum:', error);
-      alert('Error al eliminar el subforo');
+      alert('Error al eliminar el subforo: ' + (error as Error).message);
     }
   };
 

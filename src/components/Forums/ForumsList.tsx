@@ -87,14 +87,23 @@ export function ForumsList() {
       if (data) {
         const forumsWithCounts = await Promise.all(
           data.map(async (forum) => {
-            const { count } = await supabase
+            // Contar archivos adjuntos en los mensajes
+            const { data: messages } = await supabase
               .from('forum_messages')
-              .select('*', { count: 'exact', head: true })
+              .select('attachments')
               .eq('subforum_id', forum.id);
+
+            // Contar el total de archivos en todos los mensajes
+            let fileCount = 0;
+            messages?.forEach((message: any) => {
+              if (message.attachments && Array.isArray(message.attachments)) {
+                fileCount += message.attachments.length;
+              }
+            });
 
             return {
               ...forum,
-              message_count: count || 0,
+              message_count: fileCount, // Ahora es cantidad de archivos
             };
           })
         );

@@ -33,11 +33,11 @@ interface Attachment {
 
 interface Comment {
   id: string;
-  content: string;
+  message: string;
   created_at: string;
-  created_by: string;
+  user_id: string;
   attachments?: Attachment[];
-  profiles: {
+  profiles?: {
     full_name: string;
     role: string;
   };
@@ -102,8 +102,12 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
         profiles: creatorProfile
       };
 
-      const commentsWithProfiles = commentsData?.map(comment => ({
-        ...comment,
+      const commentsWithProfiles: Comment[] = commentsData?.map(comment => ({
+        id: comment.id,
+        message: comment.message,
+        created_at: comment.created_at,
+        user_id: comment.user_id,
+        attachments: comment.attachments,
         profiles: usersMap.get(comment.user_id)
       })) || [];
 
@@ -375,9 +379,13 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                           <User className="w-4 h-4 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{comment.profiles.full_name}</p>
+                          <p className="font-medium text-gray-900">{comment.profiles?.full_name ?? 'Usuario'}</p>
                           <p className="text-xs text-gray-500">
-                            {comment.profiles.role === 'admin' ? 'Administrador' : comment.profiles.role === 'support' ? 'Soporte' : 'Usuario'}
+                            {comment.profiles?.role === 'admin'
+                              ? 'Administrador'
+                              : comment.profiles?.role === 'support'
+                                ? 'Soporte'
+                                : 'Usuario'}
                           </p>
                         </div>
                       </div>

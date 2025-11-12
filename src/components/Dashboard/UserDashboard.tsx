@@ -36,7 +36,11 @@ interface RecentActivity {
   icon: any;
 }
 
-export function UserDashboard() {
+interface UserDashboardProps {
+  onNavigate?: (view: string) => void;
+}
+
+export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const { profile } = useAuth();
   const [stats, setStats] = useState<UserStats>({
     clientsAccess: 0,
@@ -54,6 +58,7 @@ export function UserDashboard() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedDayEvents, setSelectedDayEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   console.log('🟣 UserDashboard: Renderizando, profile:', profile?.full_name);
 
@@ -62,8 +67,11 @@ export function UserDashboard() {
     if (profile?.id) {
       loadDashboardData();
       loadEvents();
+      if (profile.avatar_url) {
+        setAvatarUrl(profile.avatar_url);
+      }
     }
-  }, [profile?.id]);
+  }, [profile?.id, profile?.avatar_url]);
 
   useEffect(() => {
     // Recargar eventos cuando cambia el mes
@@ -314,8 +322,12 @@ export function UserDashboard() {
       {/* Header con información del perfil */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-8 mb-8 text-white">
         <div className="flex items-center gap-6">
-          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
-            <User className="w-10 h-10 text-blue-600" />
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-white flex items-center justify-center flex-shrink-0 ring-4 ring-white ring-opacity-50">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-10 h-10 text-blue-600" />
+            )}
           </div>
           <div className="flex-1">
             <h2 className="text-3xl font-bold mb-2">¡Hola, {profile?.full_name}!</h2>
@@ -475,27 +487,36 @@ export function UserDashboard() {
             <h3 className="text-lg font-semibold text-gray-900">Accesos Rápidos</h3>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition cursor-pointer">
+            <button
+              onClick={() => onNavigate?.('forums')}
+              className="w-full flex items-center gap-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition cursor-pointer"
+            >
               <FolderOpen className="w-5 h-5 text-blue-600" />
-              <div>
+              <div className="text-left">
                 <p className="font-medium text-gray-900">Mis Clientes</p>
                 <p className="text-sm text-gray-600">Ver archivos y comunicación</p>
               </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg hover:bg-green-100 transition cursor-pointer">
+            </button>
+            <button
+              onClick={() => onNavigate?.('meetings')}
+              className="w-full flex items-center gap-3 p-4 bg-green-50 rounded-lg hover:bg-green-100 transition cursor-pointer"
+            >
               <Video className="w-5 h-5 text-green-600" />
-              <div>
+              <div className="text-left">
                 <p className="font-medium text-gray-900">Salas de Reunión</p>
                 <p className="text-sm text-gray-600">Únete a videollamadas</p>
               </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition cursor-pointer">
+            </button>
+            <button
+              onClick={() => onNavigate?.('tools')}
+              className="w-full flex items-center gap-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition cursor-pointer"
+            >
               <Wrench className="w-5 h-5 text-purple-600" />
-              <div>
+              <div className="text-left">
                 <p className="font-medium text-gray-900">Herramientas</p>
                 <p className="text-sm text-gray-600">Extractor de tablas y OCR</p>
               </div>
-            </div>
+            </button>
           </div>
         </div>
 

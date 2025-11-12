@@ -1,22 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Bell, X } from 'lucide-react';
+import { Bell, X, Calendar, MessageSquare, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
-  ticket_id: string;
+  type: 'calendar_event' | 'ticket_comment' | 'ticket_status';
+  title: string;
   message: string;
   read: boolean;
   created_at: string;
-  type: string;
+  ticket_id?: string;
+  event_id?: string;
+  metadata?: any;
 }
 
 interface NotificationBellProps {
   onNavigateToTicket?: (ticketId: string) => void;
+  onNavigateToCalendar?: () => void;
 }
 
-export function NotificationBell({ onNavigateToTicket }: NotificationBellProps) {
+export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar }: NotificationBellProps) {
   const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -115,8 +119,25 @@ export function NotificationBell({ onNavigateToTicket }: NotificationBellProps) 
   const handleNotificationClick = async (notification: Notification) => {
     await markAsRead(notification.id);
     setShowDropdown(false);
-    if (onNavigateToTicket) {
+    
+    // Navegar según el tipo de notificación
+    if (notification.type === 'calendar_event' && onNavigateToCalendar) {
+      onNavigateToCalendar();
+    } else if ((notification.type === 'ticket_comment' || notification.type === 'ticket_status') && notification.ticket_id && onNavigateToTicket) {
       onNavigateToTicket(notification.ticket_id);
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'calendar_event':
+        return <Calendar className="w-5 h-5 text-blue-600" />;
+      case 'ticket_comment':
+        return <MessageSquare className="w-5 h-5 text-green-600" />;
+      case 'ticket_status':
+        return <AlertCircle className="w-5 h-5 text-orange-600" />;
+      default:
+        return <Bell className="w-5 h-5 text-gray-600" />;
     }
   };
 
@@ -135,26 +156,34 @@ export function NotificationBell({ onNavigateToTicket }: NotificationBellProps) 
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900">Notificaciones</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
+        <>
+          {/* Overlay para cerrar al hacer clic fuera */}
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setShowDropdown(false)}
+          />
+          
+          {/* Dropdown de notificaciones */}
+          <div className="absolute top-full mt-2 right-0 sm:left-1/2 sm:-translate-x-1/2 transform w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-50 origin-top-right sm:origin-top">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900">Notificaciones</h3>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap"
+                  >
+                    Marcar todas leídas
+                  </button>
+                )}
                 <button
-                  onClick={markAllAsRead}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  onClick={() => setShowDropdown(false)}
+                  className="text-gray-400 hover:text-gray-600 flex-shrink-0"
                 >
-                  Marcar todas como leídas
+                  <X className="w-4 h-4" />
                 </button>
-              )}
-              <button
-                onClick={() => setShowDropdown(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              </div>
             </div>
-          </div>
 
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
@@ -172,23 +201,34 @@ export function NotificationBell({ onNavigateToTicket }: NotificationBellProps) 
                       !notification.read ? 'bg-blue-50' : ''
                     }`}
                   >
-                    <p className={`text-sm ${!notification.read ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(notification.created_at).toLocaleString('es-ES', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
+                          {notification.title}
+                        </p>
+                        <p className={`text-sm mt-0.5 ${!notification.read ? 'text-gray-700' : 'text-gray-600'}`}>
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(notification.created_at).toLocaleString('es-ES', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

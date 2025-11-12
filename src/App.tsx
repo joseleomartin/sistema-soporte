@@ -17,6 +17,7 @@ function MainApp() {
   const { user, profile, loading } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [viewKey, setViewKey] = useState(0); // Key para forzar recarga
 
   console.log('🟡 MainApp: Estado actual:', { 
     loading, 
@@ -41,32 +42,38 @@ function MainApp() {
 
   console.log('🟡 MainApp: Usuario autenticado, mostrando app');
 
+  const handleViewChange = (view: string) => {
+    setCurrentView(view);
+    setViewKey(prev => prev + 1); // Incrementar key para forzar recarga
+  };
+
   const handleNavigateToTicket = (ticketId: string) => {
     setSelectedTicketId(ticketId);
     setCurrentView('tickets');
+    setViewKey(prev => prev + 1);
   };
 
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
         // Todos los roles usan el mismo dashboard personalizado
-        return <UserDashboard />;
+        return <UserDashboard key={`dashboard-${viewKey}`} onNavigate={handleViewChange} />;
       case 'tickets':
-        return <TicketsList selectedTicketId={selectedTicketId} onClearSelection={() => setSelectedTicketId(null)} />;
+        return <TicketsList key={`tickets-${viewKey}`} selectedTicketId={selectedTicketId} onClearSelection={() => setSelectedTicketId(null)} />;
       case 'forums':
-        return <ForumsList />;
+        return <ForumsList key={`forums-${viewKey}`} />;
       case 'meetings':
-        return <MeetingRoomsList />;
+        return <MeetingRoomsList key={`meetings-${viewKey}`} />;
       case 'tools':
-        return <ToolsPanel />;
+        return <ToolsPanel key={`tools-${viewKey}`} />;
       case 'users':
-        return profile.role === 'admin' ? <UserManagement /> : <div>No autorizado</div>;
+        return profile.role === 'admin' ? <UserManagement key={`users-${viewKey}`} /> : <div>No autorizado</div>;
       case 'departments':
-        return <DepartmentManagement />;
+        return <DepartmentManagement key={`departments-${viewKey}`} />;
       case 'settings':
-        return <ProfileSettings />;
+        return <ProfileSettings key={`settings-${viewKey}`} />;
       default:
-        return <UserDashboard />;
+        return <UserDashboard key={`dashboard-${viewKey}`} onNavigate={handleViewChange} />;
     }
   };
 
@@ -74,7 +81,7 @@ function MainApp() {
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={handleViewChange}
         onNavigateToTicket={handleNavigateToTicket}
       />
       <main className="flex-1 overflow-auto">

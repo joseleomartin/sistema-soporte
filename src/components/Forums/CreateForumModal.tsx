@@ -24,10 +24,42 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
     setError('');
 
     try {
+      // Primero, obtener o crear un forum para este cliente
+      let forumId: string;
+
+      // Buscar si ya existe un forum con este nombre de cliente
+      const { data: existingForum } = await supabase
+        .from('forums')
+        .select('id')
+        .eq('name', clientName.trim())
+        .single();
+
+      if (existingForum) {
+        forumId = existingForum.id;
+      } else {
+        // Crear un nuevo forum para este cliente
+        const { data: newForum, error: forumError } = await supabase
+          .from('forums')
+          .insert({
+            name: clientName.trim(),
+            description: `Foro del cliente ${clientName.trim()}`,
+            created_by: profile.id,
+          })
+          .select('id')
+          .single();
+
+        if (forumError) throw forumError;
+        if (!newForum) throw new Error('No se pudo crear el forum');
+
+        forumId = newForum.id;
+      }
+
+      // Ahora crear el subforum con el forum_id
       const { error: createError } = await supabase.from('subforums').insert({
         name: name.trim(),
         description: description.trim() || null,
         client_name: clientName.trim(),
+        forum_id: forumId,
         created_by: profile.id,
       });
 

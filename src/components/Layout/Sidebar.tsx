@@ -3,7 +3,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { NotificationBell } from '../Notifications/NotificationBell';
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
 
 type MenuItem = {
   icon: typeof Home;
@@ -14,13 +13,13 @@ type MenuItem = {
 
 const menuItems: MenuItem[] = [
   { icon: Home, label: 'Dashboard', view: 'dashboard', roles: ['admin', 'support', 'user'] },
-  { icon: Ticket, label: 'Tickets', view: 'tickets', roles: ['admin', 'support', 'user'] },
   { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
   { icon: Video, label: 'Salas de Reunión', view: 'meetings', roles: ['admin', 'support', 'user'] },
   { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
   { icon: Building2, label: 'Departamentos', view: 'departments', roles: ['admin', 'support', 'user'] },
   { icon: Users, label: 'Usuarios', view: 'users', roles: ['admin'] },
   { icon: Settings, label: 'Mi Perfil', view: 'settings', roles: ['admin', 'support', 'user'] },
+  { icon: Ticket, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
 ];
 
 interface SidebarProps {
@@ -44,12 +43,19 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket }: Sideb
     profile && item.roles.includes(profile.role)
   );
 
+  const handleNavigateToCalendar = () => {
+    onViewChange('dashboard'); // El calendario está en el dashboard
+  };
+
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Sistema Soporte</h1>
-          <NotificationBell onNavigateToTicket={onNavigateToTicket} />
+          <h1 className="text-2xl font-bold text-gray-900">EmaGroup</h1>
+          <NotificationBell 
+            onNavigateToTicket={onNavigateToTicket}
+            onNavigateToCalendar={handleNavigateToCalendar}
+          />
         </div>
         {profile && (
           <div className="pt-4 border-t border-gray-100">
