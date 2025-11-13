@@ -333,3 +333,4 @@ Una vez que Realtime funcione:
 
 Ahora Realtime debería funcionar correctamente. Si sigues teniendo problemas, revisa los logs de Supabase en el Dashboard (Settings → Logs).
 
+

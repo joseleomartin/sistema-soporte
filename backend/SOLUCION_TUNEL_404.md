@@ -246,3 +246,4 @@ verificar-servidor.bat               ← Verificar que funciona
 3. El resultado de `curl http://localhost:5000/health` 🔍
 
 
+

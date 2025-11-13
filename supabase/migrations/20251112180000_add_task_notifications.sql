@@ -165,3 +165,4 @@ WHERE tgname = 'trigger_notify_task_assigned';
 
 -- ✅ Sistema de notificaciones para tareas configurado correctamente
 
+

@@ -76,3 +76,4 @@ echo "    -F 'pdf=@/ruta/a/tu/archivo.pdf' \\"
 echo "    -F 'banco=banco_galicia'"
 
 
+

@@ -462,3 +462,4 @@ fetch(`${API_URL}/extract`, {
 ¿Problemas? Comparte el error y te ayudo. 🚀
 
 
+

@@ -348,3 +348,4 @@ Ahora:
 
 **¡Recarga la aplicación y prueba ambos fixes!** 🎉
 
+

@@ -54,10 +54,28 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const channelRef = useRef<any>(null);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadTicketData();
+    const channel = subscribeToComments();
+    channelRef.current = channel;
+
+    return () => {
+      // Cleanup: unsubscribe cuando el componente se desmonte o cambie el ticketId
+      if (channelRef.current) {
+        console.log('🔌 Unsubscribing from ticket_comments channel');
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [ticketId]);
+
+  // Scroll automático al último comentario cuando se agregan nuevos
+  useEffect(() => {
+    scrollToBottom();
+  }, [comments]);
 
   const loadTicketData = async () => {
     try {
@@ -119,6 +137,85 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const subscribeToComments = () => {
+    console.log('🔔 Subscribing to ticket_comments for ticket:', ticketId);
+    
+    const channel = supabase
+      .channel(`ticket_comments:${ticketId}:${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ticket_comments',
+          filter: `ticket_id=eq.${ticketId}`
+        },
+        async (payload) => {
+          console.log('📨 New comment received via Realtime:', payload);
+          
+          try {
+            // Fetch el comentario completo con relaciones
+            const { data, error } = await supabase
+              .from('ticket_comments')
+              .select('*')
+              .eq('id', payload.new.id)
+              .single();
+
+            if (error) {
+              console.error('❌ Error fetching new comment:', error);
+              return;
+            }
+
+            if (data) {
+              // Cargar perfil del usuario que comentó
+              const { data: userData } = await supabase
+                .from('profiles')
+                .select('id, full_name, role')
+                .eq('id', data.user_id)
+                .single();
+
+              const newComment: Comment = {
+                id: data.id,
+                message: data.message,
+                created_at: data.created_at,
+                user_id: data.user_id,
+                attachments: data.attachments,
+                profiles: userData || undefined
+              };
+
+              console.log('✅ Adding comment to state:', newComment);
+              setComments((prev) => {
+                // Evitar duplicados
+                if (prev.some(comment => comment.id === newComment.id)) {
+                  console.log('⚠️ Comment already exists, skipping');
+                  return prev;
+                }
+                return [...prev, newComment];
+              });
+            }
+          } catch (error) {
+            console.error('❌ Error in Realtime handler:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to ticket_comments');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Channel subscription error');
+        } else if (status === 'TIMED_OUT') {
+          console.error('❌ Subscription timed out');
+        }
+      });
+
+    return channel;
+  };
+
+  const scrollToBottom = () => {
+    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,7 +284,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
       setNewComment('');
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      await loadTicketData();
+      // No necesitamos recargar manualmente, Realtime lo hará automáticamente
     } catch (error) {
       console.error('Error adding comment:', error);
       setError('Error al agregar el comentario');
@@ -413,6 +510,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                   </div>
                 ))
               )}
+              <div ref={commentsEndRef} />
             </div>
 
             <form onSubmit={handleAddComment} className="border-t border-gray-200 pt-4">
