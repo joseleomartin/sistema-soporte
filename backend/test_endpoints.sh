@@ -75,3 +75,4 @@ echo "  curl -X POST $BASE_URL/extract \\"
 echo "    -F 'pdf=@/ruta/a/tu/archivo.pdf' \\"
 echo "    -F 'banco=banco_galicia'"
 
+

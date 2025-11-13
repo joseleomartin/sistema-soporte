@@ -72,7 +72,16 @@ def root():
 # Directorio de extractores
 EXTRACTORES_DIR = Path(__file__).parent / 'extractores'
 TEMP_DIR = Path(tempfile.gettempdir()) / 'extractores_temp'
-TEMP_DIR.mkdir(exist_ok=True)
+# Crear directorio temporal si no existe (con permisos completos)
+try:
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Directorio temporal creado/verificado: {TEMP_DIR}")
+except Exception as e:
+    logger.error(f"Error al crear directorio temporal: {e}")
+    # Fallback a directorio en la carpeta del proyecto
+    TEMP_DIR = Path(__file__).parent / 'temp'
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Usando directorio temporal alternativo: {TEMP_DIR}")
 
 logger.info(f"Directorio de extractores: {EXTRACTORES_DIR}")
 logger.info(f"Directorio temporal: {TEMP_DIR}")
@@ -213,8 +222,16 @@ def extract():
         
         # Guardar el PDF temporalmente
         pdf_filename = f"{banco_id}_{pdf_file.filename}"
+        # Limpiar nombre de archivo (remover caracteres problemáticos)
+        pdf_filename = pdf_filename.replace(' ', '_').replace('/', '_').replace('\\', '_')
         pdf_path = TEMP_DIR / pdf_filename
+        
+        # Asegurar que el directorio existe
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Guardar archivo
         pdf_file.save(str(pdf_path))
+        logger.info(f"PDF guardado temporalmente en: {pdf_path}")
         
         # Generar nombre del archivo Excel de salida
         excel_filename = pdf_filename.replace('.pdf', '_extraido.xlsx')
@@ -284,8 +301,16 @@ def pdf_to_ocr():
         
         # Guardar el PDF temporalmente
         pdf_filename = f"ocr_input_{pdf_file.filename}"
+        # Limpiar nombre de archivo (remover caracteres problemáticos)
+        pdf_filename = pdf_filename.replace(' ', '_').replace('/', '_').replace('\\', '_')
         pdf_path = TEMP_DIR / pdf_filename
+        
+        # Asegurar que el directorio existe
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Guardar archivo
         pdf_file.save(str(pdf_path))
+        logger.info(f"PDF guardado temporalmente en: {pdf_path}")
         
         # Generar nombre del archivo PDF de salida
         output_filename = pdf_filename.replace('ocr_input_', 'ocr_output_').replace('.pdf', '_OCR.pdf')

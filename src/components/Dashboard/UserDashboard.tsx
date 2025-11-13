@@ -14,7 +14,8 @@ import {
   Users,
   Wrench,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckSquare
 } from 'lucide-react';
 import { CreateEventModal } from '../Calendar/CreateEventModal';
 import { EventDetailsModal } from '../Calendar/EventDetailsModal';
@@ -24,7 +25,7 @@ interface UserStats {
   meetingsAttended: number;
   filesShared: number;
   forumPosts: number;
-  accountAge: string;
+  tasksAssigned: number;
   lastActivity: string;
 }
 
@@ -47,7 +48,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     meetingsAttended: 0,
     filesShared: 0,
     forumPosts: 0,
-    accountAge: '0 días',
+    tasksAssigned: 0,
     lastActivity: 'Hoy',
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -97,16 +98,82 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         .select('*', { count: 'exact', head: true })
         .eq('created_by', profile.id);
 
-      // Calcular antigüedad de cuenta
-      const accountCreated = new Date(profile.created_at);
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - accountCreated.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const accountAge = diffDays < 30 
-        ? `${diffDays} días` 
-        : diffDays < 365 
-          ? `${Math.floor(diffDays / 30)} meses`
-          : `${Math.floor(diffDays / 365)} años`;
+      // Contar tareas asignadas al usuario
+      let tasksCount = 0;
+      
+      console.log('👤 User role:', profile.role, 'User ID:', profile.id);
+      
+      if (profile.role === 'admin') {
+        console.log('✅ Admin detected, counting ALL tasks...');
+        // Admin ve todas las tareas (sin filtros)
+        const { count: allTasksCount, error: tasksError } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true });
+        
+        console.log('📊 Admin tasks count result:', allTasksCount, 'Error:', tasksError);
+        
+        if (tasksError) {
+          console.error('❌ Error counting tasks for admin:', tasksError);
+          // Si hay error, intentar contar de otra manera
+          const { data: allTasks, error: tasksDataError } = await supabase
+            .from('tasks')
+            .select('id');
+          console.log('📊 Fallback: All tasks data:', allTasks?.length, 'Error:', tasksDataError);
+          if (!tasksDataError && allTasks) {
+            tasksCount = allTasks.length;
+          }
+        } else {
+          tasksCount = allTasksCount || 0;
+        }
+        
+        console.log('📊 Final admin tasks count:', tasksCount);
+      } else {
+        // Usuario regular: contar tareas asignadas directamente o por departamento
+        // Obtener departamentos del usuario
+        const { data: userDepts } = await supabase
+          .from('user_departments')
+          .select('department_id')
+          .eq('user_id', profile.id);
+
+        const departmentIds = userDepts?.map(d => d.department_id) || [];
+
+        // Contar asignaciones directas
+        const { count: directAssignments } = await supabase
+          .from('task_assignments')
+          .select('*', { count: 'exact', head: true })
+          .eq('assigned_to_user', profile.id);
+
+        // Contar asignaciones por departamento
+        let deptAssignmentsCount = 0;
+        if (departmentIds.length > 0) {
+          const { count: deptCount } = await supabase
+            .from('task_assignments')
+            .select('*', { count: 'exact', head: true })
+            .in('assigned_to_department', departmentIds);
+          deptAssignmentsCount = deptCount || 0;
+        }
+
+        // Obtener task_ids únicos (puede haber duplicados si está asignado directo y por dept)
+        const { data: directTasks } = await supabase
+          .from('task_assignments')
+          .select('task_id')
+          .eq('assigned_to_user', profile.id);
+
+        const { data: deptTasks } = departmentIds.length > 0
+          ? await supabase
+              .from('task_assignments')
+              .select('task_id')
+              .in('assigned_to_department', departmentIds)
+          : { data: [] };
+
+        // Combinar y obtener únicos
+        const allTaskIds = new Set([
+          ...(directTasks?.map(t => t.task_id) || []),
+          ...(deptTasks?.map(t => t.task_id) || [])
+        ]);
+
+        tasksCount = allTaskIds.size;
+      }
 
       // Obtener actividad reciente
       const { data: recentMessages } = await supabase
@@ -129,7 +196,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         meetingsAttended: 0, // TODO: Implementar tracking de reuniones
         filesShared: 0, // TODO: Contar archivos subidos
         forumPosts: forumPostsCount || 0,
-        accountAge,
+        tasksAssigned: tasksCount,
         lastActivity: activities.length > 0 ? 'Hoy' : 'Hace tiempo',
       });
 
@@ -165,10 +232,82 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         .gte('start_date', startOfMonth.toISOString())
         .lte('start_date', endOfMonth.toISOString());
 
-      // Combinar ambos tipos de eventos
+      // Obtener tareas asignadas al usuario para el mes actual
+      let tasks: any[] = [];
+      
+      if (profile.role === 'admin') {
+        // Admin ve todas las tareas
+        const { data: allTasks } = await supabase
+          .from('tasks')
+          .select('*, created_by_profile:profiles!tasks_created_by_fkey(full_name)')
+          .not('due_date', 'is', null)
+          .gte('due_date', startOfMonth.toISOString())
+          .lte('due_date', endOfMonth.toISOString());
+        tasks = allTasks || [];
+      } else {
+        // Usuario regular: obtener tareas asignadas
+        const { data: userDepts } = await supabase
+          .from('user_departments')
+          .select('department_id')
+          .eq('user_id', profile.id);
+
+        const departmentIds = userDepts?.map(d => d.department_id) || [];
+
+        // Obtener task_ids asignadas
+        const { data: directTasks } = await supabase
+          .from('task_assignments')
+          .select('task_id')
+          .eq('assigned_to_user', profile.id);
+
+        const { data: deptTasks } = departmentIds.length > 0
+          ? await supabase
+              .from('task_assignments')
+              .select('task_id')
+              .in('assigned_to_department', departmentIds)
+          : { data: [] };
+
+        // Combinar y obtener únicos
+        const allTaskIds = new Set([
+          ...(directTasks?.map(t => t.task_id) || []),
+          ...(deptTasks?.map(t => t.task_id) || [])
+        ]);
+
+        if (allTaskIds.size > 0) {
+          const { data: userTasks } = await supabase
+            .from('tasks')
+            .select('*, created_by_profile:profiles!tasks_created_by_fkey(full_name)')
+            .in('id', Array.from(allTaskIds))
+            .not('due_date', 'is', null)
+            .gte('due_date', startOfMonth.toISOString())
+            .lte('due_date', endOfMonth.toISOString());
+          tasks = userTasks || [];
+        }
+      }
+
+      // Convertir tareas a formato de evento para el calendario
+      // Solo incluir tareas que tengan due_date
+      const tasksAsEvents = (tasks || [])
+        .filter(task => task.due_date) // Filtrar tareas sin fecha de vencimiento
+        .map(task => ({
+          id: `task-${task.id}`,
+          title: task.title,
+          start_date: task.due_date,
+          end_date: task.due_date,
+          color: task.priority === 'urgent' ? '#EF4444' : task.priority === 'medium' ? '#3B82F6' : '#10B981',
+          isPersonal: false,
+          isTask: true,
+          taskId: task.id,
+          taskPriority: task.priority,
+          taskStatus: task.status,
+          taskClient: task.client_name,
+          created_by_profile: task.created_by_profile
+        }));
+
+      // Combinar eventos y tareas
       const allEvents = [
-        ...(personalEvents || []).map(e => ({ ...e, isPersonal: true })),
-        ...(assignedEvents || []).map(e => ({ ...e, isPersonal: false }))
+        ...(personalEvents || []).map(e => ({ ...e, isPersonal: true, isTask: false })),
+        ...(assignedEvents || []).map(e => ({ ...e, isPersonal: false, isTask: false })),
+        ...tasksAsEvents
       ];
 
       setEvents(allEvents);
@@ -187,6 +326,12 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         eventDate.getFullYear() === date.getFullYear()
       );
     });
+  };
+  
+  const handleTaskClick = (taskId: string) => {
+    if (onNavigate) {
+      onNavigate('tasks');
+    }
   };
 
   const handleDayClick = (day: number) => {
@@ -239,12 +384,11 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       description: 'En chats de clientes'
     },
     { 
-      icon: CalendarIcon, 
-      label: 'Antigüedad', 
-      value: stats.accountAge, 
-      color: 'bg-green-50 text-green-600',
-      description: 'Tiempo en la plataforma',
-      isText: true
+      icon: CheckSquare, 
+      label: 'Tareas Asignadas', 
+      value: stats.tasksAssigned, 
+      color: 'bg-indigo-50 text-indigo-600',
+      description: 'Tareas pendientes'
     },
     { 
       icon: Activity, 
@@ -337,7 +481,17 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           </div>
           <div className="text-right">
             <p className="text-sm text-blue-100 mb-1">Miembro desde</p>
-            <p className="text-xl font-semibold">{stats.accountAge}</p>
+            <p className="text-xl font-semibold">
+              {(() => {
+                const accountCreated = new Date(profile?.created_at || new Date());
+                const now = new Date();
+                const diffTime = Math.abs(now.getTime() - accountCreated.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays < 30) return `${diffDays} días`;
+                if (diffDays < 365) return `${Math.floor(diffDays / 30)} meses`;
+                return `${Math.floor(diffDays / 365)} años`;
+              })()}
+            </p>
           </div>
         </div>
       </div>
@@ -435,9 +589,23 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                         <div
                           key={idx}
                           className={`w-1 h-1 rounded-full ${
-                            event.isPersonal ? 'bg-blue-500' : 'bg-purple-500'
+                            event.isTask 
+                              ? event.taskPriority === 'urgent' 
+                                ? 'bg-red-500' 
+                                : event.taskPriority === 'medium' 
+                                  ? 'bg-blue-500' 
+                                  : 'bg-green-500'
+                              : event.isPersonal 
+                                ? 'bg-blue-500' 
+                                : 'bg-purple-500'
                           }`}
-                          title={event.isPersonal ? 'Evento personal' : 'Evento asignado'}
+                          title={
+                            event.isTask 
+                              ? `Tarea: ${event.title}` 
+                              : event.isPersonal 
+                                ? 'Evento personal' 
+                                : 'Evento asignado'
+                          }
                         />
                       ))}
                     </div>
@@ -452,22 +620,61 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
               {selectedDayEvents.map((event) => (
                 <button
                   key={event.id}
-                  onClick={() => setSelectedEvent(event)}
+                  onClick={() => {
+                    if (event.isTask) {
+                      handleTaskClick(event.taskId);
+                    } else {
+                      setSelectedEvent(event);
+                    }
+                  }}
                   className={`w-full text-left p-2 rounded-lg text-xs transition hover:shadow-md ${
-                    event.isPersonal 
-                      ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100' 
-                      : 'bg-purple-50 border border-purple-200 hover:bg-purple-100'
+                    event.isTask
+                      ? event.taskPriority === 'urgent'
+                        ? 'bg-red-50 border border-red-200 hover:bg-red-100'
+                        : event.taskPriority === 'medium'
+                          ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
+                          : 'bg-green-50 border border-green-200 hover:bg-green-100'
+                      : event.isPersonal 
+                        ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100' 
+                        : 'bg-purple-50 border border-purple-200 hover:bg-purple-100'
                   }`}
                 >
-                  <p className={`font-medium ${event.isPersonal ? 'text-blue-900' : 'text-purple-900'}`}>
-                    {event.title}
-                  </p>
-                  {!event.isPersonal && event.created_by_profile && (
+                  <div className="flex items-center gap-2">
+                    {event.isTask && (
+                      <CheckSquare className={`w-3 h-3 flex-shrink-0 ${
+                        event.taskPriority === 'urgent' ? 'text-red-600' :
+                        event.taskPriority === 'medium' ? 'text-blue-600' : 'text-green-600'
+                      }`} />
+                    )}
+                    <p className={`font-medium flex-1 ${
+                      event.isTask
+                        ? event.taskPriority === 'urgent' ? 'text-red-900' :
+                          event.taskPriority === 'medium' ? 'text-blue-900' : 'text-green-900'
+                        : event.isPersonal ? 'text-blue-900' : 'text-purple-900'
+                    }`}>
+                      {event.title}
+                    </p>
+                  </div>
+                  {event.isTask && (
+                    <>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Cliente: {event.taskClient}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Estado: {event.taskStatus === 'pending' ? 'Pendiente' :
+                                 event.taskStatus === 'in_progress' ? 'En Progreso' :
+                                 event.taskStatus === 'completed' ? 'Completada' : 'Cancelada'}
+                      </p>
+                    </>
+                  )}
+                  {!event.isTask && !event.isPersonal && event.created_by_profile && (
                     <p className="text-xs text-purple-600 mt-1">
                       Asignado por: {event.created_by_profile.full_name}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">Click para ver detalles</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {event.isTask ? 'Click para ir a Tareas' : 'Click para ver detalles'}
+                  </p>
                 </button>
               ))}
               <button

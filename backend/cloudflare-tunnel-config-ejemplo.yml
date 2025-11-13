@@ -1,0 +1,111 @@
+# Archivo de configuración para Cloudflare Tunnel
+# Ubicación: C:\Users\TU_USUARIO\.cloudflared\config.yml
+#
+# INSTRUCCIONES:
+# 1. Copia este archivo a: C:\Users\relim\.cloudflared\config.yml
+# 2. Reemplaza los valores entre < > con tus datos reales
+# 3. Elimina las líneas de comentarios si quieres
+
+# ID del túnel (obtienes este ID al crear el túnel)
+tunnel: <TU_TUNNEL_ID_O_NOMBRE>
+
+# Ruta al archivo de credenciales (se crea automáticamente)
+credentials-file: C:\Users\relim\.cloudflared\<TU_TUNNEL_ID>.json
+
+# Reglas de enrutamiento (ingress)
+ingress:
+  # Regla principal: tu servidor Flask
+  - hostname: <tu-subdominio>.tudominio.com
+    service: http://localhost:5000
+    originRequest:
+      noTLSVerify: false
+      connectTimeout: 30s
+      # Opcional: timeouts más largos para procesamiento de PDFs
+      readTimeout: 300s
+      writeTimeout: 300s
+
+  # Regla por defecto: devolver 404 para otros requests
+  - service: http_status:404
+
+# Opciones adicionales (opcional)
+# Descomentar si necesitas
+
+# metrics: localhost:2000  # Métricas para monitoreo
+# loglevel: info           # Nivel de logs: debug, info, warn, error
+# transport-loglevel: warn # Logs de transporte
+
+
+# EJEMPLOS DE CONFIGURACIONES:
+
+# ==================================================
+# EJEMPLO 1: Configuración Simple (1 servicio)
+# ==================================================
+# tunnel: extractores-backend
+# credentials-file: C:\Users\relim\.cloudflared\abc123-def456.json
+# ingress:
+#   - hostname: extractores.midominio.com
+#     service: http://localhost:5000
+#   - service: http_status:404
+
+
+# ==================================================
+# EJEMPLO 2: Múltiples Servicios
+# ==================================================
+# tunnel: mi-tunnel
+# credentials-file: C:\Users\relim\.cloudflared\abc123.json
+# ingress:
+#   # Backend extractores
+#   - hostname: api.midominio.com
+#     service: http://localhost:5000
+#   # Otro servicio (ej: frontend)
+#   - hostname: app.midominio.com
+#     service: http://localhost:3000
+#   # Regla por defecto
+#   - service: http_status:404
+
+
+# ==================================================
+# EJEMPLO 3: Con Opciones Avanzadas
+# ==================================================
+# tunnel: extractores
+# credentials-file: C:\Users\relim\.cloudflared\abc123.json
+# ingress:
+#   - hostname: extractores.midominio.com
+#     service: http://localhost:5000
+#     originRequest:
+#       # Timeouts más largos para procesamiento pesado
+#       connectTimeout: 60s
+#       readTimeout: 600s
+#       writeTimeout: 600s
+#       # Headers personalizados
+#       httpHostHeader: localhost
+#   - service: http_status:404
+# loglevel: info
+# metrics: localhost:2000
+
+
+# ==================================================
+# NOTAS IMPORTANTES:
+# ==================================================
+# 
+# 1. Para crear el túnel:
+#    cloudflared tunnel create extractores-backend
+#
+# 2. Para configurar DNS (asociar dominio):
+#    cloudflared tunnel route dns extractores-backend extractores.tudominio.com
+#
+# 3. Para iniciar el túnel:
+#    cloudflared tunnel run extractores-backend
+#
+# 4. Para ver túneles existentes:
+#    cloudflared tunnel list
+#
+# 5. Para ver información del túnel:
+#    cloudflared tunnel info extractores-backend
+#
+# 6. El archivo credentials .json NO debe compartirse (contiene secretos)
+#
+# 7. Si no tienes dominio propio, puedes usar subdominios .trycloudflare.com
+#
+
+

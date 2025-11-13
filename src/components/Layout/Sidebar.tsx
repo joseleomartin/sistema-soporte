@@ -1,4 +1,4 @@
-import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User } from 'lucide-react';
+import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { NotificationBell } from '../Notifications/NotificationBell';
@@ -16,6 +16,7 @@ const menuItems: MenuItem[] = [
   { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
   { icon: Video, label: 'Salas de Reunión', view: 'meetings', roles: ['admin', 'support', 'user'] },
   { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
+  { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
   { icon: Building2, label: 'Departamentos', view: 'departments', roles: ['admin', 'support', 'user'] },
   { icon: Users, label: 'Usuarios', view: 'users', roles: ['admin'] },
   { icon: Settings, label: 'Mi Perfil', view: 'settings', roles: ['admin', 'support', 'user'] },
@@ -26,9 +27,10 @@ interface SidebarProps {
   currentView: string;
   onViewChange: (view: string) => void;
   onNavigateToTicket?: (ticketId: string) => void;
+  onNavigateToTask?: (taskId: string) => void;
 }
 
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { activeJobsCount } = useExtraction();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket }: Sideb
           <NotificationBell 
             onNavigateToTicket={onNavigateToTicket}
             onNavigateToCalendar={handleNavigateToCalendar}
+            onNavigateToTasks={() => onViewChange('tasks')}
           />
         </div>
         {profile && (

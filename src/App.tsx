@@ -12,6 +12,7 @@ import { ToolsPanel } from './components/Tools/ToolsPanel';
 import { ExtractionNotifications } from './components/Notifications/ExtractionNotifications';
 import { DepartmentManagement } from './components/Departments/DepartmentManagement';
 import { ProfileSettings } from './components/Profile/ProfileSettings';
+import { TasksList } from './components/Tasks/TasksList';
 
 function MainApp() {
   const { user, profile, loading } = useAuth();
@@ -66,6 +67,8 @@ function MainApp() {
         return <MeetingRoomsList key={`meetings-${viewKey}`} />;
       case 'tools':
         return <ToolsPanel key={`tools-${viewKey}`} />;
+      case 'tasks':
+        return <TasksList key={`tasks-${viewKey}`} />;
       case 'users':
         return profile.role === 'admin' ? <UserManagement key={`users-${viewKey}`} /> : <div>No autorizado</div>;
       case 'departments':

@@ -80,7 +80,9 @@ export function PDFtoOCR() {
       // Simular progreso inicial
       updateJob(jobId, { progress: 10, message: 'Cargando PDF...' });
 
-      const response = await fetch('http://localhost:5000/pdf-to-ocr', {
+      const API_BASE_URL = (import.meta.env.VITE_EXTRACTOR_API_URL as string | undefined) ?? window.location.origin;
+      
+      const response = await fetch(`${API_BASE_URL}/pdf-to-ocr`, {
         method: 'POST',
         body: formData,
       });

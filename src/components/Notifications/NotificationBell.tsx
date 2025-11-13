@@ -1,26 +1,28 @@
 import { useEffect, useState } from 'react';
-import { Bell, X, Calendar, MessageSquare, AlertCircle } from 'lucide-react';
+import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
-  type: 'calendar_event' | 'ticket_comment' | 'ticket_status';
+  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned';
   title: string;
   message: string;
   read: boolean;
   created_at: string;
   ticket_id?: string;
   event_id?: string;
+  task_id?: string;
   metadata?: any;
 }
 
 interface NotificationBellProps {
   onNavigateToTicket?: (ticketId: string) => void;
   onNavigateToCalendar?: () => void;
+  onNavigateToTasks?: () => void;
 }
 
-export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar }: NotificationBellProps) {
+export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks }: NotificationBellProps) {
   const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -166,6 +168,14 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar }: N
       onNavigateToCalendar();
     } else if ((notification.type === 'ticket_comment' || notification.type === 'ticket_status') && notification.ticket_id && onNavigateToTicket) {
       onNavigateToTicket(notification.ticket_id);
+    } else if (notification.type === 'task_assigned' && notification.task_id) {
+      // Navegar a tareas
+      if (onNavigateToTasks) {
+        onNavigateToTasks();
+      } else {
+        // Fallback: usar window.location si no hay callback
+        window.location.hash = 'tasks';
+      }
     }
   };
 
@@ -177,6 +187,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar }: N
         return <MessageSquare className="w-5 h-5 text-green-600" />;
       case 'ticket_status':
         return <AlertCircle className="w-5 h-5 text-orange-600" />;
+      case 'task_assigned':
+        return <CheckSquare className="w-5 h-5 text-indigo-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
