@@ -301,3 +301,4 @@ Ahora los usuarios pueden ver correctamente:
 **¡El sistema funciona completamente!** 🚀
 
 
+

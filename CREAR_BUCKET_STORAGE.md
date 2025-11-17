@@ -366,3 +366,4 @@ Ahora puedes adjuntar archivos en el chat de tareas sin errores. 🚀
 **¿Necesitas ayuda con algo más?** Revisa `FIX_CHAT_REALTIME.md` para el error de suscripción de canal.
 
 
+

@@ -62,3 +62,4 @@ COMMENT ON COLUMN public.room_presence.last_seen IS 'Última vez que el usuario 
 
 
 
+

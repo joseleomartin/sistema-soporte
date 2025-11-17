@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckSquare, Plus, Search, Filter, Calendar, User, AlertCircle, Users } from 'lucide-react';
+import { CheckSquare, Plus, Search, Filter, Calendar, User, AlertCircle, Users, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateTaskModal } from './CreateTaskModal';
@@ -9,16 +9,35 @@ interface Task {
   id: string;
   title: string;
   description: string;
-  client_name: string;
+  client_name: string | null;
   due_date: string;
   priority: 'low' | 'medium' | 'urgent';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   created_by: string;
   created_at: string;
   updated_at: string;
+  completed_at?: string | null;
   assigned_users?: Array<{ id: string; full_name: string; avatar_url?: string }>;
   assigned_departments?: Array<{ id: string; name: string }>;
 }
+
+// Función para formatear duración
+const formatDuration = (startDate: string, endDate?: string | null): string => {
+  const start = new Date(startDate);
+  const end = endDate ? new Date(endDate) : new Date();
+  const diffMs = end.getTime() - start.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (diffDays > 0) {
+    return `${diffDays} día${diffDays !== 1 ? 's' : ''}`;
+  } else if (diffHours > 0) {
+    return `${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
+  } else {
+    return `${diffMinutes} minuto${diffMinutes !== 1 ? 's' : ''}`;
+  }
+};
 
 const priorityConfig = {
   urgent: {
@@ -233,7 +252,7 @@ export function TasksList() {
     if (searchQuery) {
       filtered = filtered.filter(task =>
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.client_name.toLowerCase().includes(searchQuery.toLowerCase())
+        (task.client_name && task.client_name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -391,9 +410,20 @@ export function TasksList() {
                     </div>
 
                     {/* Cliente */}
-                    <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
-                      <User className="w-4 h-4" />
-                      <span>{task.client_name}</span>
+                    {task.client_name && (
+                      <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
+                        <User className="w-4 h-4" />
+                        <span>{task.client_name}</span>
+                      </div>
+                    )}
+
+                    {/* Timer de Tarea */}
+                    <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>⏱️ Creada hace {formatDuration(task.created_at)}</span>
+                      {task.completed_at && (
+                        <span className="ml-2">✅ Completada en {formatDuration(task.created_at, task.completed_at)}</span>
+                      )}
                     </div>
 
                     {/* Fecha límite */}
@@ -460,7 +490,7 @@ export function TasksList() {
                             <div
                               key={dept.id}
                               className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 rounded-full text-xs text-purple-700"
-                              title={`Departamento: ${dept.name}`}
+                              title={`Área: ${dept.name}`}
                             >
                               <Users className="w-3.5 h-3.5" />
                               <span className="font-medium">{dept.name}</span>

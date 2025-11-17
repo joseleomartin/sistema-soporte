@@ -84,10 +84,10 @@ export function DepartmentManagement() {
         <div>
           <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Building2 className="w-8 h-8 text-blue-600" />
-            Gestión de Departamentos
+            Gestión de Areas
           </h2>
           <p className="text-gray-600 mt-2">
-            Organiza usuarios en departamentos y grupos de trabajo
+            Organiza usuarios en Areas y grupos de trabajo
           </p>
         </div>
         {profile?.role === 'admin' && (

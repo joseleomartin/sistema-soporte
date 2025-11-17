@@ -38,10 +38,21 @@ export function TaskChat({ taskId }: TaskChatProps) {
   const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     fetchMessages();
-    subscribeToMessages();
+    const channel = subscribeToMessages();
+    channelRef.current = channel;
+
+    return () => {
+      // Cleanup: unsubscribe cuando el componente se desmonte o cambie el taskId
+      if (channelRef.current) {
+        console.log('🔌 Unsubscribing from task_messages channel');
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [taskId]);
 
   useEffect(() => {
@@ -149,10 +160,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
         }
       });
 
-    return () => {
-      console.log('🔌 Unsubscribing from task_messages channel');
-      supabase.removeChannel(channel);
-    };
+    return channel;
   };
 
   const scrollToBottom = () => {

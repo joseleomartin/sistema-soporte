@@ -30,19 +30,28 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [clientName, setClientName] = useState('');
+  const [clientNameInput, setClientNameInput] = useState('');
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'urgent'>('medium');
   const [assignmentType, setAssignmentType] = useState<'user' | 'department'>('user');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
+  const [taskManagerId, setTaskManagerId] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   
   // Data
   const [users, setUsers] = useState<Profile[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [clients, setClients] = useState<{client_name: string}[]>([]);
 
   useEffect(() => {
     fetchUsers();
     fetchDepartments();
+    fetchClients();
   }, []);
 
   const fetchUsers = async () => {
@@ -73,10 +82,34 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
     }
   };
 
+  const fetchClients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('subforums')
+        .select('client_name')
+        .order('client_name');
+
+      if (error) throw error;
+      
+      // Obtener valores únicos
+      const uniqueClients = Array.from(
+        new Set(data?.map(s => s.client_name).filter(Boolean) || [])
+      ).map(name => ({ client_name: name }));
+
+      setClients(uniqueClients);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
+  };
+
+  const filteredClients = clients.filter(c => 
+    c.client_name.toLowerCase().includes(clientNameInput.toLowerCase())
+  );
+
   const validateForm = (): string | null => {
     if (!title.trim()) return 'El título es requerido';
     if (!description.trim()) return 'La descripción es requerida';
-    if (!clientName.trim()) return 'El nombre del cliente es requerido';
+    // clientName ahora es opcional
     if (!dueDate) return 'La fecha límite es requerida';
     
     const selectedDate = new Date(dueDate);
@@ -90,7 +123,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
     }
 
     if (assignmentType === 'department' && !selectedDepartmentId) {
-      return 'Debes seleccionar un departamento';
+      return 'Debes seleccionar un área';
     }
 
     return null;
@@ -111,6 +144,13 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
       setLoading(true);
       setError('');
 
+      // Preparar patrón de recurrencia si es necesario
+      const recurrencePattern = isRecurring ? {
+        type: recurrenceType,
+        interval: recurrenceInterval,
+        end_date: recurrenceEndDate || null
+      } : null;
+
       // Crear la tarea
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
@@ -118,11 +158,14 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
           {
             title: title.trim(),
             description: description.trim(),
-            client_name: clientName.trim(),
+            client_name: clientName.trim() || null, // Permitir null
             due_date: dueDate,
             priority,
             status: 'pending',
-            created_by: profile.id
+            created_by: profile.id,
+            task_manager_id: taskManagerId || null,
+            is_recurring: isRecurring,
+            recurrence_pattern: recurrencePattern
           }
         ])
         .select()
@@ -220,19 +263,60 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             />
           </div>
 
-          {/* Cliente */}
-          <div>
+          {/* Cliente (Opcional) */}
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Cliente <span className="text-red-500">*</span>
+              Cliente <span className="text-gray-400 text-xs">(Opcional)</span>
             </label>
-            <input
-              type="text"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              placeholder="Nombre del cliente"
-              required
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={clientNameInput}
+                onChange={(e) => {
+                  setClientNameInput(e.target.value);
+                  setClientName(e.target.value);
+                  setShowClientDropdown(e.target.value.length > 0 && filteredClients.length > 0);
+                }}
+                onFocus={() => {
+                  if (filteredClients.length > 0) setShowClientDropdown(true);
+                }}
+                onBlur={() => {
+                  // Delay para permitir click en el dropdown
+                  setTimeout(() => setShowClientDropdown(false), 200);
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                placeholder="Escribe o selecciona un cliente"
+              />
+              {showClientDropdown && filteredClients.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClientName('');
+                      setClientNameInput('');
+                      setShowClientDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-500"
+                  >
+                    Sin cliente
+                  </button>
+                  {filteredClients.map((client, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setClientName(client.client_name);
+                        setClientNameInput(client.client_name);
+                        setShowClientDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm text-gray-900"
+                    >
+                      {client.client_name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Fecha y Hora de Finalización */}
@@ -328,7 +412,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 }`}
               >
                 <Users className="w-5 h-5" />
-                <span className="font-medium">Departamento</span>
+                <span className="font-medium">Área</span>
               </button>
             </div>
 
@@ -381,13 +465,97 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 required
               >
-                <option value="">Selecciona un departamento</option>
+                <option value="">Selecciona un área</option>
                 {departments.map((dept) => (
                   <option key={dept.id} value={dept.id}>
                     {dept.name}
                   </option>
                 ))}
               </select>
+            )}
+          </div>
+
+          {/* Administrador de Tarea (Opcional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Administrador de Tarea <span className="text-gray-400 text-xs">(Opcional)</span>
+            </label>
+            <select
+              value={taskManagerId}
+              onChange={(e) => setTaskManagerId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="">Sin administrador</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.full_name} {user.role === 'admin' ? '(Admin)' : user.role === 'support' ? '(Soporte)' : '(Usuario)'}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              El administrador puede cambiar el estado de la tarea. Puede ser cualquier usuario.
+            </p>
+          </div>
+
+          {/* Tarea Recurrente */}
+          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(e) => setIsRecurring(e.target.checked)}
+                className="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Tarea recurrente</span>
+            </label>
+            {isRecurring && (
+              <div className="mt-4 space-y-4 pl-7">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de recurrencia
+                  </label>
+                  <select
+                    value={recurrenceType}
+                    onChange={(e) => setRecurrenceType(e.target.value as 'daily' | 'weekly' | 'monthly')}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="daily">Diaria</option>
+                    <option value="weekly">Semanal</option>
+                    <option value="monthly">Mensual</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Intervalo
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={recurrenceInterval}
+                    onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Cada X días/semanas/meses"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Cada {recurrenceInterval} {recurrenceType === 'daily' ? 'día(s)' : recurrenceType === 'weekly' ? 'semana(s)' : 'mes(es)'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha de fin <span className="text-gray-400 text-xs">(Opcional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={recurrenceEndDate}
+                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                    min={dueDate.split('T')[0]}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Dejar vacío para recurrencia infinita
+                  </p>
+                </div>
+              </div>
             )}
           </div>
 
