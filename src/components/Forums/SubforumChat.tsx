@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft, Send, Paperclip, X, Download, FileText, Search, Filter, Trash2 } from 'lucide-react';
+import { MentionAutocomplete } from './MentionAutocomplete';
 
 interface Attachment {
   name: string;
@@ -20,6 +21,11 @@ interface Message {
     full_name: string;
     role: string;
   };
+}
+
+interface MentionedUser {
+  id: string;
+  full_name: string;
 }
 
 interface Subforum {
@@ -47,8 +53,14 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
   const [fileSearchTerm, setFileSearchTerm] = useState('');
   const [deletingMessage, setDeletingMessage] = useState<string | null>(null);
   const [showDeleteForumConfirm, setShowDeleteForumConfirm] = useState(false);
+  const [showMentionAutocomplete, setShowMentionAutocomplete] = useState(false);
+  const [mentionSearchTerm, setMentionSearchTerm] = useState('');
+  const [mentionCursorPosition, setMentionCursorPosition] = useState(0);
+  const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
+  const [mentionedUsers, setMentionedUsers] = useState<Map<string, MentionedUser>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const canModerate = profile?.role === 'admin' || profile?.role === 'support';
 
@@ -185,6 +197,61 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
     return attachments;
   };
 
+  // Función para extraer menciones del texto
+  const extractMentions = (text: string): string[] => {
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+    const userIds: string[] = [];
+    let match;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      userIds.push(match[2]); // El segundo grupo captura el user_id
+    }
+
+    return [...new Set(userIds)]; // Eliminar duplicados
+  };
+
+  // Función para reemplazar @nombre con formato de mención
+  const formatMentions = (text: string): string => {
+    // Reemplazar @Nombre Usuario con @[Nombre Usuario](user_id)
+    let formatted = text;
+    mentionedUsers.forEach((user, userId) => {
+      const regex = new RegExp(`@${user.full_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi');
+      formatted = formatted.replace(regex, `@[${user.full_name}](${userId})`);
+    });
+    return formatted;
+  };
+
+  // Función para renderizar menciones en el mensaje
+  const renderMessageWithMentions = (content: string) => {
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(content)) !== null) {
+      // Agregar texto antes de la mención
+      if (match.index > lastIndex) {
+        parts.push(content.substring(lastIndex, match.index));
+      }
+
+      // Agregar la mención resaltada
+      parts.push(
+        <span key={match.index} className="text-blue-600 font-medium bg-blue-50 px-1 rounded">
+          @{match[1]}
+        </span>
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Agregar texto restante
+    if (lastIndex < content.length) {
+      parts.push(content.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : content;
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && selectedFiles.length === 0) || !profile?.id) return;
@@ -194,17 +261,41 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
     try {
       const attachments = await uploadFiles();
 
-      const { error } = await supabase.from('forum_messages').insert({
-        subforum_id: subforumId,
-        content: newMessage.trim(),
-        created_by: profile.id,
-        attachments,
-      });
+      // Formatear menciones en el mensaje
+      const formattedMessage = formatMentions(newMessage.trim());
+
+      // Insertar mensaje
+      const { data: messageData, error } = await supabase
+        .from('forum_messages')
+        .insert({
+          subforum_id: subforumId,
+          content: formattedMessage,
+          created_by: profile.id,
+          attachments,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
+      // Extraer menciones y crear notificaciones
+      const mentionedUserIds = extractMentions(formattedMessage);
+      if (mentionedUserIds.length > 0 && messageData) {
+        const messagePreview = formattedMessage.substring(0, 100);
+        await supabase.rpc('create_forum_mention_notifications', {
+          p_subforum_id: subforumId,
+          p_mentioned_user_ids: mentionedUserIds,
+          p_mentioner_id: profile.id,
+          p_message_preview: messagePreview.length < formattedMessage.length 
+            ? messagePreview + '...' 
+            : messagePreview,
+        });
+      }
+
       setNewMessage('');
       setSelectedFiles([]);
+      setMentionedUsers(new Map());
+      setShowMentionAutocomplete(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       console.error('Error sending message:', error);
@@ -435,7 +526,9 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
                       </button>
                     )}
                   </div>
-                  <p className="text-gray-700 whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">
+                    {renderMessageWithMentions(message.content)}
+                  </p>
                   {message.attachments && message.attachments.length > 0 && (
                     <div className="mt-2 space-y-2">
                       {message.attachments.map((attachment, idx) => (
@@ -482,14 +575,137 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
             </div>
           )}
 
-          <div className="flex items-end gap-2">
-            <textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Escribe un mensaje..."
-              rows={2}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            />
+          <div className="flex items-end gap-2 relative">
+            <div className="flex-1 relative">
+              <textarea
+                ref={textareaRef}
+                value={newMessage}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const cursorPos = e.target.selectionStart || 0;
+                  setNewMessage(value);
+
+                  // Detectar @ para mostrar autocompletado
+                  const textBeforeCursor = value.substring(0, cursorPos);
+                  const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+                  
+                    if (lastAtIndex !== -1) {
+                      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+                      // Si no hay espacio después del @, mostrar autocompletado
+                      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+                        setMentionSearchTerm(textAfterAt);
+                        setMentionCursorPosition(cursorPos);
+                        setShowMentionAutocomplete(true);
+                        // Resetear índice cuando se detecta un nuevo @
+                        if (textAfterAt === '') {
+                          setMentionSelectedIndex(0);
+                        }
+                      } else {
+                        setShowMentionAutocomplete(false);
+                        setMentionSearchTerm('');
+                        setMentionSelectedIndex(0);
+                      }
+                    } else {
+                      setShowMentionAutocomplete(false);
+                      setMentionSearchTerm('');
+                      setMentionSelectedIndex(0);
+                    }
+                }}
+                onKeyDown={(e) => {
+                  // Si el autocompletado está visible, manejar teclas especiales
+                  if (showMentionAutocomplete) {
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      setShowMentionAutocomplete(false);
+                    } else if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setMentionSelectedIndex((prev) => {
+                        // El límite se manejará en MentionAutocomplete
+                        return prev + 1;
+                      });
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setMentionSelectedIndex((prev) => Math.max(0, prev - 1));
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault();
+                      // Intentar seleccionar usuario del autocompletado si hay uno disponible
+                      const selectFunction = (window as any).__mentionAutocompleteSelect;
+                      if (selectFunction && typeof selectFunction === 'function') {
+                        selectFunction();
+                      } else {
+                        // Si no hay función disponible, cerrar autocompletado y enviar mensaje
+                        setShowMentionAutocomplete(false);
+                        // Permitir que el formulario se envíe normalmente
+                        const form = textareaRef.current?.closest('form');
+                        if (form) {
+                          form.requestSubmit();
+                        }
+                      }
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  // Cerrar autocompletado al perder foco (con delay para permitir click en autocompletado)
+                  setTimeout(() => setShowMentionAutocomplete(false), 200);
+                }}
+                placeholder="Escribe un mensaje... (usa @ para mencionar usuarios)"
+                rows={2}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+              {showMentionAutocomplete && (
+                <MentionAutocomplete
+                  subforumId={subforumId}
+                  searchTerm={mentionSearchTerm}
+                  cursorPosition={mentionCursorPosition}
+                  selectedIndex={mentionSelectedIndex}
+                  onNavigate={(direction, maxIndex) => {
+                    if (direction === 'down') {
+                      setMentionSelectedIndex((prev) => Math.min(maxIndex, prev + 1));
+                    } else {
+                      setMentionSelectedIndex((prev) => Math.max(0, prev - 1));
+                    }
+                  }}
+                  onSelect={(user) => {
+                    const textarea = textareaRef.current;
+                    if (!textarea) return;
+
+                    const currentCursorPos = textarea.selectionStart || 0;
+                    const textBeforeCursor = newMessage.substring(0, currentCursorPos);
+                    const textAfterCursor = newMessage.substring(currentCursorPos);
+                    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+                    
+                    if (lastAtIndex !== -1) {
+                      // Reemplazar desde el @ hasta la posición actual del cursor
+                      const textBeforeAt = newMessage.substring(0, lastAtIndex);
+                      const newText = 
+                        textBeforeAt +
+                        `@${user.full_name} ` +
+                        textAfterCursor;
+                      
+                      setNewMessage(newText);
+                      setMentionedUsers((prev) => {
+                        const updated = new Map(prev);
+                        updated.set(user.id, { id: user.id, full_name: user.full_name });
+                        return updated;
+                      });
+                      setShowMentionAutocomplete(false);
+                      setMentionSearchTerm('');
+                      setMentionSelectedIndex(0);
+                      
+                      // Restaurar foco y posición del cursor
+                      setTimeout(() => {
+                        if (textarea) {
+                          const newCursorPos = textBeforeAt.length + user.full_name.length + 2; // +2 por @ y espacio
+                          textarea.focus();
+                          textarea.setSelectionRange(newCursorPos, newCursorPos);
+                        }
+                      }, 0);
+                    }
+                  }}
+                  onClose={() => setShowMentionAutocomplete(false)}
+                />
+              )}
+            </div>
             <input
               ref={fileInputRef}
               type="file"
