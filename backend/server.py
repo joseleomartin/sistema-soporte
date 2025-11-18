@@ -551,5 +551,23 @@ if __name__ == '__main__':
     logger.info("=" * 50)
     logger.warning("ADVERTENCIA: En producción usa Gunicorn, no este modo")
     
-    app.run(host=host, port=port, debug=debug)
+    # Deshabilitar carga automática de .env para evitar errores de codificación
+    # Flask 3.0 intenta cargar .env automáticamente, pero si el archivo está corrupto falla
+    # Las variables de entorno se pueden configurar manualmente o en el sistema
+    try:
+        # Intentar deshabilitar la carga de .env
+        import flask.cli
+        original_load_dotenv = flask.cli.load_dotenv
+        flask.cli.load_dotenv = lambda *args, **kwargs: None
+    except Exception as e:
+        logger.warning(f"No se pudo deshabilitar load_dotenv: {e}")
+    
+    try:
+        app.run(host=host, port=port, debug=debug)
+    finally:
+        # Restaurar función original si fue modificada
+        try:
+            flask.cli.load_dotenv = original_load_dotenv
+        except:
+            pass
 
