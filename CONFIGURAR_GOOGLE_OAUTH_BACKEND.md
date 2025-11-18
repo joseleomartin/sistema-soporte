@@ -8,9 +8,23 @@ Esta guía explica cómo configurar Google OAuth usando el backend, que es **má
 
 ## 🚀 Pasos de Configuración
 
+### PASO 0: Iniciar el Backend con ngrok
+
+Si usas el backend localmente con ngrok:
+
+1. Ejecuta `8-iniciar-todo-ngrok.bat` en la carpeta `backend/`
+2. Espera a que ngrok muestre la URL pública (ej: `https://xxxxx.ngrok-free.app`)
+3. Copia esa URL, la necesitarás en el siguiente paso
+
+---
+
 ### PASO 1: Configurar Variables de Entorno en el Backend
 
-En **Railway** o **Render** (donde está tu backend), agrega estas variables de entorno:
+**Si usas backend local con ngrok:**
+- Las variables se configuran en el archivo `.env` local o como variables de entorno del sistema
+- O puedes configurarlas directamente en el script `8-iniciar-todo-ngrok.bat`
+
+**Si usas Railway o Render:**
 
 **En Railway:**
 1. Ve a tu proyecto → **Variables**
@@ -30,9 +44,11 @@ En **Railway** o **Render** (donde está tu backend), agrega estas variables de 
 ### PASO 2: Obtener la URL de tu Backend
 
 Tu backend tiene una URL como:
+- **Local con ngrok**: `https://xxxxx.ngrok-free.app` (la que muestra ngrok al ejecutar `8-iniciar-todo-ngrok.bat`)
 - Railway: `https://tu-proyecto.up.railway.app`
 - Render: `https://tu-proyecto.onrender.com`
-- Local con ngrok: `https://xxxxx.ngrok-free.app`
+
+**⚠️ IMPORTANTE**: Si usas ngrok, la URL cambia cada vez que reinicias ngrok. Debes actualizar `VITE_BACKEND_URL` en Vercel cada vez.
 
 ---
 
@@ -42,9 +58,14 @@ Tu backend tiene una URL como:
 2. Tu proyecto → **Settings** → **Environment Variables**
 3. Agrega:
    - **Name**: `VITE_BACKEND_URL`
-   - **Value**: `https://tu-proyecto.up.railway.app` (o tu URL de backend)
+   - **Value**: 
+     - Si usas ngrok: `https://xxxxx.ngrok-free.app` (la URL que muestra ngrok)
+     - Si usas Railway: `https://tu-proyecto.up.railway.app`
+     - Si usas Render: `https://tu-proyecto.onrender.com`
    - **Environments**: Production, Preview, Development
-4. **IMPORTANTE**: NO necesitas `VITE_GOOGLE_CLIENT_SECRET` si usas el backend
+4. **IMPORTANTE**: 
+   - NO necesitas `VITE_GOOGLE_CLIENT_SECRET` si usas el backend
+   - Si usas ngrok, actualiza esta URL cada vez que reinicies ngrok
 5. Guarda y redesplega
 
 ---
@@ -82,9 +103,11 @@ Esto asegura que la aplicación funcione incluso si el backend no está disponib
 ### Problema: El backend no responde
 
 **Solución**: 
+- Si usas ngrok: Verifica que `8-iniciar-todo-ngrok.bat` esté corriendo y que ngrok muestre la URL
 - Verifica que el backend esté desplegado y funcionando
-- Verifica que la URL en `VITE_BACKEND_URL` sea correcta
+- Verifica que la URL en `VITE_BACKEND_URL` sea correcta (y actualizada si usas ngrok)
 - Verifica que CORS esté configurado en el backend (ya está configurado en `server.py`)
+- Prueba acceder a `https://tu-url-ngrok.ngrok-free.app/health` en el navegador para verificar que responde
 
 ### Problema: Error 500 en el backend
 
@@ -112,11 +135,15 @@ GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
 ### Frontend (Vercel):
 ```
 VITE_GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
-VITE_BACKEND_URL=https://tu-proyecto.up.railway.app
+VITE_BACKEND_URL=https://xxxxx.ngrok-free.app  # Si usas ngrok
+# O
+VITE_BACKEND_URL=https://tu-proyecto.up.railway.app  # Si usas Railway
 ```
 ⚠️ Obtén el Client ID de Google Cloud Console → Credenciales → Tu Client ID
 
-**⚠️ NO necesitas `VITE_GOOGLE_CLIENT_SECRET` si usas el backend**
+**⚠️ IMPORTANTE**: 
+- NO necesitas `VITE_GOOGLE_CLIENT_SECRET` si usas el backend
+- Si usas ngrok, actualiza `VITE_BACKEND_URL` en Vercel cada vez que reinicies ngrok
 
 ---
 
