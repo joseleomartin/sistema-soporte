@@ -149,11 +149,21 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
   if (backendUrl) {
     // Usar backend para intercambio de tokens (recomendado)
     try {
+      // Headers para evitar la página de interceptación de ngrok
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      
+      // Si es ngrok, agregar headers adicionales
+      if (backendUrl.includes('ngrok')) {
+        headers['ngrok-skip-browser-warning'] = 'true';
+        headers['User-Agent'] = 'Mozilla/5.0';
+      }
+      
       const tokenResponse = await fetch(`${backendUrl}/api/google/oauth/token`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           code,
           redirect_uri: redirectUri,
@@ -161,8 +171,25 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
       });
       
       if (!tokenResponse.ok) {
-        const error = await tokenResponse.json();
-        throw new Error(`Error al obtener token: ${error.error_description || error.error || error.message || 'Error desconocido'}`);
+        let errorMessage = 'Error desconocido';
+        try {
+          const error = await tokenResponse.json();
+          errorMessage = error.error_description || error.error || error.message || JSON.stringify(error);
+          
+          // Mensajes más específicos según el error
+          if (error.error === 'invalid_grant') {
+            errorMessage = 'El código de autorización es inválido o expiró. Por favor, intenta autenticarte nuevamente.';
+          } else if (error.error === 'invalid_client') {
+            errorMessage = 'Las credenciales de Google (Client ID o Client Secret) son incorrectas. Verifica la configuración en el backend.';
+          } else if (error.error === 'redirect_uri_mismatch') {
+            errorMessage = `La URL de redirección no coincide. Verifica que ${redirectUri} esté configurada en Google Cloud Console.`;
+          }
+        } catch (e) {
+          // Si no se puede parsear el JSON, usar el texto de respuesta
+          const text = await tokenResponse.text();
+          errorMessage = `Error ${tokenResponse.status}: ${text.substring(0, 200)}`;
+        }
+        throw new Error(`Error al obtener token: ${errorMessage}`);
       }
       
       const tokenData = await tokenResponse.json();

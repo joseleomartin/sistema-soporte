@@ -470,9 +470,24 @@ def exchange_google_token():
         })
         
         if token_response.status_code != 200:
-            error_data = token_response.json()
-            logger.error(f"Error de Google OAuth: {error_data}")
-            return jsonify(error_data), token_response.status_code
+            try:
+                error_data = token_response.json()
+                logger.error(f"Error de Google OAuth: {error_data}")
+                # Incluir información adicional para debugging
+                error_data['debug_info'] = {
+                    'client_id_configured': bool(client_id),
+                    'client_secret_configured': bool(client_secret),
+                    'redirect_uri_used': redirect_uri,
+                }
+                return jsonify(error_data), token_response.status_code
+            except:
+                # Si no se puede parsear JSON, devolver el texto
+                logger.error(f"Error de Google OAuth (no JSON): {token_response.text}")
+                return jsonify({
+                    'error': 'oauth_error',
+                    'error_description': token_response.text[:200],
+                    'status_code': token_response.status_code
+                }), token_response.status_code
         
         token_data = token_response.json()
         logger.info("Token obtenido exitosamente")
