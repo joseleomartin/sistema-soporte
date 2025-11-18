@@ -3,10 +3,19 @@
  * Evita problemas con popups y Cross-Origin-Opener-Policy
  */
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-if (!GOOGLE_CLIENT_ID) {
-  throw new Error('VITE_GOOGLE_CLIENT_ID no está configurada en las variables de entorno');
+/**
+ * Obtiene el Client ID de Google desde las variables de entorno
+ * Lanza un error solo cuando se intenta usar, no al cargar el módulo
+ */
+function getGoogleClientId(): string {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    throw new Error(
+      'VITE_GOOGLE_CLIENT_ID no está configurada en las variables de entorno. ' +
+      'Por favor, agrega VITE_GOOGLE_CLIENT_ID=tu_client_id en tu archivo .env'
+    );
+  }
+  return clientId;
 }
 
 // Scope para leer y escribir archivos en Drive
@@ -41,7 +50,7 @@ export function startGoogleAuth(): void {
   
   // Construir URL de autorización
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+  authUrl.searchParams.set('client_id', getGoogleClientId());
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('scope', DRIVE_SCOPE);
