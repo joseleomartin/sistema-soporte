@@ -17,19 +17,59 @@ if %ERRORLEVEL% NEQ 0 (
 
 REM Activar entorno virtual si existe
 if exist "venv\Scripts\activate.bat" (
+    echo Activando entorno virtual...
     call venv\Scripts\activate.bat
+    echo.
+) else (
+    echo ADVERTENCIA: No se encontro entorno virtual
+    echo Continuando sin entorno virtual...
+    echo.
+)
+
+REM Verificar que Python este disponible
+python --version >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: Python no esta instalado o no esta en el PATH
+    pause
+    exit /b 1
+)
+
+REM Verificar que server.py existe
+if not exist "server.py" (
+    echo ERROR: No se encontro server.py
+    echo Asegurate de ejecutar este script desde la carpeta backend/
+    pause
+    exit /b 1
 )
 
 REM Configurar puerto
 set PORT=5000
+set EXTRACTOR_PORT=5000
 
 echo ================================================
 echo  PASO 1: Iniciando servidor Flask
 echo ================================================
 echo.
 
-REM Iniciar servidor en segundo plano
-start "Servidor Flask" /MIN python server.py
+REM Verificar que el puerto no este en uso
+netstat -an | findstr ":%PORT%" | findstr "LISTENING" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo ADVERTENCIA: El puerto %PORT% ya esta en uso
+    echo Intentando detener procesos anteriores...
+    for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":%PORT%" ^| findstr "LISTENING"') do (
+        taskkill /F /PID %%a >nul 2>&1
+    )
+    timeout /t 2 /nobreak >nul
+    echo.
+)
+
+REM Iniciar servidor en una ventana visible para ver errores
+echo Iniciando servidor Flask...
+echo.
+echo NOTA: Se abrira una ventana "Servidor Flask" donde veras los logs
+echo Si hay errores, apareceran en esa ventana
+echo.
+start "Servidor Flask" cmd /k "python server.py"
 
 echo Servidor iniciando...
 echo Esperando a que el servidor este listo...
@@ -42,14 +82,37 @@ set ATTEMPT=0
 :wait_loop
 set /a ATTEMPT+=1
 if %ATTEMPT% GTR %MAX_ATTEMPTS% (
-    echo ERROR: El servidor no respondio
+    echo.
+    echo ================================================
+    echo  ERROR: El servidor no respondio
+    echo ================================================
+    echo.
+    echo Posibles causas:
+    echo   1. Error al iniciar el servidor (revisa la ventana "Servidor Flask")
+    echo   2. Dependencias faltantes (ejecuta: pip install -r requirements.txt)
+    echo   3. Puerto en uso (cierra otros procesos en el puerto 5000)
+    echo.
+    echo Revisa la ventana "Servidor Flask" para ver el error
+    echo.
     pause
     exit /b 1
 )
 
-curl -s http://localhost:5000/health >nul 2>&1
+REM Verificar si curl esta disponible, si no usar PowerShell
+where curl >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    curl -s http://localhost:5000/health | findstr "ok" >nul 2>&1
+    curl -s http://localhost:5000/health >nul 2>&1
+    if %ERRORLEVEL% EQU 0 (
+        curl -s http://localhost:5000/health | findstr "ok" >nul 2>&1
+        if %ERRORLEVEL% EQU 0 (
+            echo Servidor verificado y respondiendo
+            echo.
+            goto :ngrok_start
+        )
+    )
+) else (
+    REM Usar PowerShell como alternativa
+    powershell -Command "try { $response = Invoke-WebRequest -Uri 'http://localhost:5000/health' -UseBasicParsing -TimeoutSec 2; if ($response.Content -match 'ok') { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
     if %ERRORLEVEL% EQU 0 (
         echo Servidor verificado y respondiendo
         echo.
@@ -60,6 +123,10 @@ if %ERRORLEVEL% EQU 0 (
 timeout /t 1 /nobreak >nul
 if %ATTEMPT% LSS 10 (
     echo Esperando servidor... (%ATTEMPT%/%MAX_ATTEMPTS%)
+) else if %ATTEMPT% EQU 10 (
+    echo.
+    echo Si el servidor no inicia, revisa la ventana "Servidor Flask" para ver errores
+    echo.
 )
 goto :wait_loop
 
