@@ -81,17 +81,29 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
   const redirectUri = `${window.location.origin}/google-oauth-callback`;
   
   // Intercambiar código por token
-  // NOTA: Esto debe hacerse en el backend por seguridad
-  // Llamar al endpoint del backend que maneja el intercambio
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-  const tokenResponse = await fetch(`${backendUrl}/api/google/oauth/token`, {
+  // NOTA: En producción, esto debería hacerse en el backend por seguridad
+  // Por ahora lo hacemos directamente desde el frontend
+  const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
+  
+  if (!clientSecret) {
+    throw new Error(
+      'VITE_GOOGLE_CLIENT_SECRET no está configurada. ' +
+      'Por favor, agrega esta variable en Vercel (Settings → Environment Variables). ' +
+      'NOTA: En el futuro, esto debería manejarse en el backend por seguridad.'
+    );
+  }
+  
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({
+    body: new URLSearchParams({
       code,
+      client_id: getGoogleClientId(),
+      client_secret: clientSecret,
       redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
     }),
   });
   
@@ -154,15 +166,24 @@ export async function getAccessToken(): Promise<string> {
  * Refresca el token de acceso usando el refresh token
  */
 async function refreshAccessToken(refreshToken: string): Promise<string> {
-  // NOTA: Esto debe hacerse en el backend por seguridad
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-  const tokenResponse = await fetch(`${backendUrl}/api/google/oauth/refresh`, {
+  // NOTA: En producción, esto debería hacerse en el backend por seguridad
+  // Por ahora lo hacemos directamente desde el frontend
+  const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
+  
+  if (!clientSecret) {
+    throw new Error('VITE_GOOGLE_CLIENT_SECRET no está configurada');
+  }
+  
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({
+    body: new URLSearchParams({
+      client_id: getGoogleClientId(),
+      client_secret: clientSecret,
       refresh_token: refreshToken,
+      grant_type: 'refresh_token',
     }),
   });
   
