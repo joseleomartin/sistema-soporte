@@ -37,6 +37,9 @@ backend/uploads/
 *.tmp
 *.temp
 
+# Google OAuth secrets
+backend/client_secret_*.json
+
 # Python
 *.py[cod]
 *$py.class

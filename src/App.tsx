@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ExtractionProvider } from './contexts/ExtractionContext';
 import { LoginForm } from './components/Auth/LoginForm';
@@ -13,6 +13,7 @@ import { ExtractionNotifications } from './components/Notifications/ExtractionNo
 import { DepartmentManagement } from './components/Departments/DepartmentManagement';
 import { ProfileSettings } from './components/Profile/ProfileSettings';
 import { TasksList } from './components/Tasks/TasksList';
+import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 
 function MainApp() {
   const { user, profile, loading } = useAuth();
@@ -20,15 +21,25 @@ function MainApp() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [viewKey, setViewKey] = useState(0); // Key para forzar recarga
 
-  console.log('🟡 MainApp: Estado actual:', { 
-    loading, 
-    hasUser: !!user, 
-    hasProfile: !!profile,
-    profileRole: profile?.role 
-  });
+  // Verificar si estamos en el callback de OAuth
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    
+    if (code && state && window.location.pathname.includes('google-oauth-callback')) {
+      // Estamos en el callback, no hacer nada más aquí
+      // El componente GoogleOAuthCallback se encargará
+      return;
+    }
+  }, []);
+
+  // Si estamos en la ruta de callback, mostrar el componente de callback
+  if (window.location.pathname.includes('google-oauth-callback')) {
+    return <GoogleOAuthCallback />;
+  }
 
   if (loading) {
-    console.log('🟡 MainApp: Mostrando spinner de carga');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -37,11 +48,8 @@ function MainApp() {
   }
 
   if (!user || !profile) {
-    console.log('🟡 MainApp: No hay usuario o perfil, mostrando LoginForm');
     return <LoginForm />;
   }
-
-  console.log('🟡 MainApp: Usuario autenticado, mostrando app');
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);

@@ -58,6 +58,11 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
             onNavigateToTicket={onNavigateToTicket}
             onNavigateToCalendar={handleNavigateToCalendar}
             onNavigateToTasks={() => onViewChange('tasks')}
+            onNavigateToForum={(subforumId) => {
+              onViewChange('forums');
+              // TODO: Navegar directamente al subforo cuando se implemente
+              // Por ahora, navega a la lista de foros
+            }}
           />
         </div>
         {profile && (

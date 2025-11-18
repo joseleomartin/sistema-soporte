@@ -61,10 +61,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  console.log('🟣 UserDashboard: Renderizando, profile:', profile?.full_name);
-
   useEffect(() => {
-    console.log('🟣 UserDashboard: useEffect ejecutado, profile.id:', profile?.id);
     if (profile?.id) {
       loadDashboardData();
       loadEvents();
@@ -101,32 +98,23 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       // Contar tareas asignadas al usuario
       let tasksCount = 0;
       
-      console.log('👤 User role:', profile.role, 'User ID:', profile.id);
-      
       if (profile.role === 'admin') {
-        console.log('✅ Admin detected, counting ALL tasks...');
         // Admin ve todas las tareas (sin filtros)
         const { count: allTasksCount, error: tasksError } = await supabase
           .from('tasks')
           .select('*', { count: 'exact', head: true });
         
-        console.log('📊 Admin tasks count result:', allTasksCount, 'Error:', tasksError);
-        
         if (tasksError) {
-          console.error('❌ Error counting tasks for admin:', tasksError);
           // Si hay error, intentar contar de otra manera
           const { data: allTasks, error: tasksDataError } = await supabase
             .from('tasks')
             .select('id');
-          console.log('📊 Fallback: All tasks data:', allTasks?.length, 'Error:', tasksDataError);
           if (!tasksDataError && allTasks) {
             tasksCount = allTasks.length;
           }
         } else {
           tasksCount = allTasksCount || 0;
         }
-        
-        console.log('📊 Final admin tasks count:', tasksCount);
       } else {
         // Usuario regular: contar tareas asignadas directamente o por departamento
         // Obtener departamentos del usuario

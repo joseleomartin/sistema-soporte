@@ -51,7 +51,7 @@ export function DepartmentManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este departamento?')) return;
+    if (!confirm('¿Estás seguro de eliminar esta área?')) return;
 
     try {
       const { error } = await supabase
@@ -61,11 +61,11 @@ export function DepartmentManagement() {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Departamento eliminado correctamente' });
+      setMessage({ type: 'success', text: 'Área eliminada correctamente' });
       setTimeout(() => setMessage(null), 3000);
       loadDepartments();
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Error al eliminar departamento' });
+      setMessage({ type: 'error', text: error.message || 'Error al eliminar área' });
       setTimeout(() => setMessage(null), 5000);
     }
   };
@@ -96,7 +96,7 @@ export function DepartmentManagement() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
           >
             <Plus className="w-5 h-5" />
-            Nuevo Departamento
+            Nueva Área
           </button>
         )}
       </div>
@@ -143,7 +143,7 @@ export function DepartmentManagement() {
           onSuccess={() => {
             setShowCreateModal(false);
             loadDepartments();
-            setMessage({ type: 'success', text: 'Departamento creado correctamente' });
+            setMessage({ type: 'success', text: 'Área creada correctamente' });
             setTimeout(() => setMessage(null), 3000);
           }}
         />
@@ -160,7 +160,7 @@ export function DepartmentManagement() {
             setShowEditModal(false);
             setSelectedDepartment(null);
             loadDepartments();
-            setMessage({ type: 'success', text: 'Departamento actualizado correctamente' });
+            setMessage({ type: 'success', text: 'Área actualizada correctamente' });
             setTimeout(() => setMessage(null), 3000);
           }}
         />
@@ -330,7 +330,7 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
         <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Nuevo Departamento</h2>
+          <h2 className="text-xl font-bold text-gray-900">Nueva Área</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
           </button>
@@ -365,7 +365,7 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descripción del departamento"
+              placeholder="Descripción del área"
               rows={3}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
@@ -462,7 +462,7 @@ function EditDepartmentModal({ department, onClose, onSuccess }: {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
         <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Editar Departamento</h2>
+          <h2 className="text-xl font-bold text-gray-900">Editar Área</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
           </button>
@@ -604,7 +604,7 @@ function AssignUsersModal({ department, onClose, onUpdate }: {
           return newSet;
         });
 
-        setMessage({ type: 'success', text: 'Usuario removido del departamento' });
+        setMessage({ type: 'success', text: 'Usuario removido del área' });
       } else {
         // Agregar asignación
         console.log('➕ Agregando usuario al departamento:', { userId, departmentId: department.id });
@@ -623,7 +623,7 @@ function AssignUsersModal({ department, onClose, onUpdate }: {
         if (error) throw error;
 
         setAssignedUsers(prev => new Set([...prev, userId]));
-        setMessage({ type: 'success', text: 'Usuario asignado al departamento' });
+        setMessage({ type: 'success', text: 'Usuario asignado al área' });
       }
 
       // Llamar al callback para actualizar el componente padre

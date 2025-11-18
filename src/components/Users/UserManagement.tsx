@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Users, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import { Users, Search, CheckCircle, AlertCircle, Building2 } from 'lucide-react';
+
+interface Department {
+  id: string;
+  name: string;
+  color: string;
+}
 
 interface User {
   id: string;
@@ -8,6 +14,7 @@ interface User {
   full_name: string;
   role: 'admin' | 'support' | 'user';
   created_at: string;
+  departments?: Department[];
 }
 
 export function UserManagement() {
@@ -34,7 +41,22 @@ export function UserManagement() {
 
       if (error) throw error;
       if (data) {
-        setUsers(data);
+        // Cargar áreas para cada usuario
+        const usersWithDepartments = await Promise.all(
+          data.map(async (user) => {
+            const { data: deptData } = await supabase
+              .from('user_departments')
+              .select(`
+                department_id,
+                departments:department_id (id, name, color)
+              `)
+              .eq('user_id', user.id);
+
+            const departments = deptData?.map((d: any) => d.departments).filter(Boolean) || [];
+            return { ...user, departments };
+          })
+        );
+        setUsers(usersWithDepartments);
       }
     } catch (error) {
       console.error('Error loading users:', error);
@@ -142,6 +164,9 @@ export function UserManagement() {
                 Rol
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Áreas
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Fecha de Registro
               </th>
             </tr>
@@ -149,7 +174,7 @@ export function UserManagement() {
           <tbody className="divide-y divide-gray-200">
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                   <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
                   <p>No se encontraron usuarios</p>
                 </td>
@@ -177,6 +202,24 @@ export function UserManagement() {
                       <option value="support">Soporte</option>
                       <option value="admin">Admin</option>
                     </select>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-2">
+                      {user.departments && user.departments.length > 0 ? (
+                        user.departments.map((dept) => (
+                          <span
+                            key={dept.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200"
+                            style={{ borderColor: dept.color || '#9333EA' }}
+                          >
+                            <Building2 className="w-3 h-3" />
+                            {dept.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400">Sin áreas</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {new Date(user.created_at).toLocaleDateString('es-ES')}

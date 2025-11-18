@@ -23,29 +23,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔵 AuthContext: Iniciando...');
-    
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔵 AuthContext: Sesión obtenida:', session?.user?.email || 'No hay sesión');
       setUser(session?.user ?? null);
       if (session?.user) {
-        console.log('🔵 AuthContext: Cargando perfil para:', session.user.id);
         loadProfile(session.user.id);
       } else {
-        console.log('🔵 AuthContext: No hay usuario, terminando carga');
         setLoading(false);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('🔵 AuthContext: Cambio de auth detectado:', _event);
       (async () => {
         setUser(session?.user ?? null);
         if (session?.user) {
-          console.log('🔵 AuthContext: Cargando perfil (onAuthStateChange):', session.user.id);
           await loadProfile(session.user.id);
         } else {
-          console.log('🔵 AuthContext: Usuario deslogueado');
           setProfile(null);
           setLoading(false);
         }
@@ -56,7 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadProfile = async (userId: string) => {
-    console.log('🟢 loadProfile: Iniciando para userId:', userId);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -64,10 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      console.log('🟢 loadProfile: Respuesta recibida:', { data, error });
-
       if (error) {
-        console.error('🔴 loadProfile: Error al cargar perfil:', error);
         // Si hay error, cerrar sesión para evitar estado inconsistente
         await supabase.auth.signOut();
         setProfile(null);
@@ -77,7 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!data) {
-        console.error('🔴 loadProfile: Perfil no encontrado para userId:', userId);
         // Si no existe el perfil, cerrar sesión
         await supabase.auth.signOut();
         setProfile(null);
@@ -86,11 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log('✅ loadProfile: Perfil cargado exitosamente:', data.full_name, data.role);
       setProfile(data);
       setLoading(false);
     } catch (error) {
-      console.error('🔴 loadProfile: Error inesperado:', error);
       await supabase.auth.signOut();
       setProfile(null);
       setUser(null);

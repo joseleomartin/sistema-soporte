@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X, FileText, Image, File, Download, Calendar, User, Loader2, Search, ExternalLink } from 'lucide-react';
+import { X, FileText, Image, File, Download, Calendar, User, Loader2, Search, ExternalLink, Folder } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { GoogleDriveFolderSelector } from './GoogleDriveFolderSelector';
+import { GoogleDriveViewer } from './GoogleDriveViewer';
+import { DriveFolder } from '../../lib/googleDriveAPI';
 
 interface FileAttachment {
   id: string;
@@ -19,14 +22,90 @@ interface ClientFilesModalProps {
 }
 
 export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFilesModalProps) {
+  const [activeTab, setActiveTab] = useState<'chat' | 'drive'>('chat');
   const [files, setFiles] = useState<FileAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Google Drive states
+  const [driveFolderId, setDriveFolderId] = useState<string | null>(null);
+  const [driveFolderName, setDriveFolderName] = useState<string | null>(null);
+  const [driveFolderLink, setDriveFolderLink] = useState<string | null>(null);
+  const [loadingDriveMapping, setLoadingDriveMapping] = useState(true);
 
   useEffect(() => {
     loadFiles();
+    loadDriveMapping();
   }, [subforumId]);
+
+  const loadDriveMapping = async () => {
+    try {
+      setLoadingDriveMapping(true);
+      // Usar maybeSingle() en lugar de single() para evitar error 406 cuando no hay datos
+      const { data, error } = await supabase
+        .from('client_drive_mapping')
+        .select('google_drive_folder_id, folder_name')
+        .eq('subforum_id', subforumId)
+        .maybeSingle();
+
+      if (error) {
+        // Si es error 406 o de tabla no encontrada, puede ser que la migración no se haya ejecutado
+        if (error.code === 'PGRST301' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          console.warn('Tabla client_drive_mapping no encontrada. Asegúrate de ejecutar la migración SQL.');
+        } else if (error.code !== 'PGRST116') {
+          // PGRST116 = no rows returned, es normal si no hay mapeo
+          console.error('Error loading drive mapping:', error);
+        }
+      } else if (data) {
+        setDriveFolderId(data.google_drive_folder_id);
+        setDriveFolderName(data.folder_name);
+        // Construir el enlace si no está guardado
+        if (data.google_drive_folder_id) {
+          setDriveFolderLink(`https://drive.google.com/drive/folders/${data.google_drive_folder_id}`);
+        }
+      }
+    } catch (err: any) {
+      console.error('Error loading drive mapping:', err);
+      // Si es error 406, probablemente la tabla no existe
+      if (err.message?.includes('406') || err.status === 406) {
+        console.warn('Error 406: La tabla client_drive_mapping puede no existir. Ejecuta la migración SQL.');
+      }
+    } finally {
+      setLoadingDriveMapping(false);
+    }
+  };
+
+  const handleSelectFolder = async (folder: DriveFolder) => {
+    try {
+      // Usar función RPC para guardar mapeo (evita problemas con RLS)
+      const { data, error } = await supabase.rpc('save_client_drive_mapping', {
+        p_subforum_id: subforumId,
+        p_google_drive_folder_id: folder.id,
+        p_folder_name: folder.name,
+      });
+
+      if (error) {
+        // Si es error de función no encontrada
+        if (error.code === '42883' || error.message?.includes('function') || error.message?.includes('does not exist')) {
+          throw new Error('La función save_client_drive_mapping no existe. Por favor, ejecuta la migración SQL en Supabase.');
+        }
+        // Si es error de permisos
+        if (error.message?.includes('Solo administradores')) {
+          throw new Error('Solo administradores y soporte pueden configurar carpetas de Drive.');
+        }
+        throw error;
+      }
+
+      setDriveFolderId(folder.id);
+      setDriveFolderName(folder.name);
+      setDriveFolderLink(folder.webViewLink);
+    } catch (err: any) {
+      console.error('Error saving drive mapping:', err);
+      const errorMessage = err.message || 'Error desconocido';
+      alert(`Error al guardar carpeta: ${errorMessage}`);
+    }
+  };
 
   const loadFiles = async () => {
     try {
@@ -98,7 +177,6 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
         });
       }
 
-      console.log(`✅ Total de archivos cargados: ${allFiles.length}`);
       setFiles(allFiles);
     } catch (err: any) {
       console.error('Error loading files:', err);
@@ -192,8 +270,15 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
                 Archivos de {subforumName}
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                {files.length} {files.length === 1 ? 'archivo' : 'archivos'} en total
-                {searchTerm && ` • ${filteredFiles.length} ${filteredFiles.length === 1 ? 'resultado' : 'resultados'}`}
+                {activeTab === 'chat' && (
+                  <>
+                    {files.length} {files.length === 1 ? 'archivo' : 'archivos'} en total
+                    {searchTerm && ` • ${filteredFiles.length} ${filteredFiles.length === 1 ? 'resultado' : 'resultados'}`}
+                  </>
+                )}
+                {activeTab === 'drive' && driveFolderName && (
+                  <>Carpeta: {driveFolderName}</>
+                )}
               </p>
             </div>
             <button
@@ -204,30 +289,60 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
             </button>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre de archivo o usuario..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+          {/* Tabs */}
+          <div className="flex gap-1 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`px-4 py-2 font-medium text-sm transition ${
+                activeTab === 'chat'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <FileText className="w-4 h-4 inline mr-2" />
+              Archivos del Chat
+            </button>
+            <button
+              onClick={() => setActiveTab('drive')}
+              className={`px-4 py-2 font-medium text-sm transition ${
+                activeTab === 'drive'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Folder className="w-4 h-4 inline mr-2" />
+              Google Drive
+            </button>
           </div>
+
+          {/* Search Bar - Solo en pestaña de chat */}
+          {activeTab === 'chat' && (
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre de archivo o usuario..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {loading ? (
+          {activeTab === 'chat' ? (
+            <>
+              {loading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
             </div>
@@ -322,6 +437,35 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
                 </div>
               ))}
             </div>
+          )}
+            </>
+          ) : (
+            <>
+              {loadingDriveMapping ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                </div>
+              ) : driveFolderId ? (
+                <GoogleDriveViewer
+                  folderId={driveFolderId}
+                  folderName={driveFolderName || undefined}
+                  webViewLink={driveFolderLink || undefined}
+                  onError={(err) => {
+                    setError(err);
+                    // Si hay error, permitir seleccionar nueva carpeta
+                    setDriveFolderId(null);
+                    setDriveFolderName(null);
+                    setDriveFolderLink(null);
+                  }}
+                />
+              ) : (
+                <GoogleDriveFolderSelector
+                  clientName={subforumName}
+                  onSelectFolder={handleSelectFolder}
+                  onError={(err) => setError(err)}
+                />
+              )}
+            </>
           )}
         </div>
 

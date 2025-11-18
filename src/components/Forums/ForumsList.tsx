@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2 } from 'lucide-react';
+import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar } from 'lucide-react';
 import { CreateForumModal } from './CreateForumModal';
 import { SubforumChat } from './SubforumChat';
 import { ManagePermissionsModal } from './ManagePermissionsModal';
@@ -29,12 +29,24 @@ export function ForumsList() {
   const [managePermissionsFor, setManagePermissionsFor] = useState<Subforum | null>(null);
   const [manageDeptPermissionsFor, setManageDeptPermissionsFor] = useState<{ forumId: string, forumName: string } | null>(null);
   const [showFilesFor, setShowFilesFor] = useState<Subforum | null>(null);
+  const [pendingTasksCount, setPendingTasksCount] = useState<Map<string, number>>(new Map());
+  const [showPendingTasksModal, setShowPendingTasksModal] = useState<{ clientName: string; tasks: any[] } | null>(null);
 
   const canCreateForum = profile?.role === 'admin' || profile?.role === 'support';
 
   useEffect(() => {
     loadSubforums();
+    loadPendingTasks();
   }, [profile?.id]);
+
+  useEffect(() => {
+    // Recargar tareas pendientes cada 30 segundos
+    const interval = setInterval(() => {
+      loadPendingTasks();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     filterSubforums();
@@ -115,6 +127,56 @@ export function ForumsList() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPendingTasks = async () => {
+    if (!profile) return;
+
+    try {
+      // Obtener todas las tareas pendientes o en progreso
+      const { data: tasks, error } = await supabase
+        .from('tasks')
+        .select('id, title, client_name, status, due_date')
+        .in('status', ['pending', 'in_progress'])
+        .not('client_name', 'is', null);
+
+      if (error) throw error;
+
+      // Agrupar por cliente
+      const tasksByClient = new Map<string, number>();
+      tasks?.forEach(task => {
+        if (task.client_name) {
+          const current = tasksByClient.get(task.client_name) || 0;
+          tasksByClient.set(task.client_name, current + 1);
+        }
+      });
+
+      setPendingTasksCount(tasksByClient);
+    } catch (error) {
+      console.error('Error loading pending tasks:', error);
+    }
+  };
+
+  const getPendingTasksForClient = async (clientName: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('client_name', clientName)
+        .in('status', ['pending', 'in_progress'])
+        .order('due_date', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching tasks for client:', error);
+      return [];
+    }
+  };
+
+  const handleShowPendingTasks = async (clientName: string) => {
+    const tasks = await getPendingTasksForClient(clientName);
+    setShowPendingTasksModal({ clientName, tasks });
   };
 
   const filterSubforums = () => {
@@ -306,7 +368,7 @@ export function ForumsList() {
                   </p>
                 )}
 
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100 mb-2">
                   <span className="text-xs font-medium text-gray-500">
                     Cliente: {forum.client_name}
                   </span>
@@ -314,6 +376,19 @@ export function ForumsList() {
                     {new Date(forum.created_at).toLocaleDateString('es-ES')}
                   </span>
                 </div>
+                {/* Badge de Tareas Pendientes */}
+                {pendingTasksCount.get(forum.client_name) && pendingTasksCount.get(forum.client_name)! > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShowPendingTasks(forum.client_name);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-700 text-sm font-medium transition-colors mt-2"
+                  >
+                    <CheckSquare className="w-4 h-4" />
+                    <span>{pendingTasksCount.get(forum.client_name)} tarea{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''} pendiente{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''}</span>
+                  </button>
+                )}
               </button>
             </div>
           ))}
@@ -352,6 +427,67 @@ export function ForumsList() {
           forumName={manageDeptPermissionsFor.forumName}
           onClose={() => setManageDeptPermissionsFor(null)}
         />
+      )}
+
+      {/* Modal de Tareas Pendientes */}
+      {showPendingTasksModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Tareas Pendientes - {showPendingTasksModal.clientName}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {showPendingTasksModal.tasks.length} tarea{showPendingTasksModal.tasks.length !== 1 ? 's' : ''} pendiente{showPendingTasksModal.tasks.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPendingTasksModal(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              {showPendingTasksModal.tasks.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay tareas pendientes para este cliente</p>
+              ) : (
+                showPendingTasksModal.tasks.map((task: any) => (
+                  <div
+                    key={task.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">{task.title}</h3>
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            task.status === 'pending' 
+                              ? 'bg-gray-100 text-gray-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {task.status === 'pending' ? 'Pendiente' : 'En Progreso'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(task.due_date).toLocaleDateString('es-ES', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

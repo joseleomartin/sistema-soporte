@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
-  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned';
+  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention';
   title: string;
   message: string;
   read: boolean;
@@ -13,6 +13,7 @@ interface Notification {
   ticket_id?: string;
   event_id?: string;
   task_id?: string;
+  subforum_id?: string;
   metadata?: any;
 }
 
@@ -20,9 +21,10 @@ interface NotificationBellProps {
   onNavigateToTicket?: (ticketId: string) => void;
   onNavigateToCalendar?: () => void;
   onNavigateToTasks?: () => void;
+  onNavigateToForum?: (subforumId: string) => void;
 }
 
-export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks }: NotificationBellProps) {
+export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum }: NotificationBellProps) {
   const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -31,7 +33,6 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
   useEffect(() => {
     if (!profile?.id) return;
 
-    console.log('🔔 NotificationBell: Inicializando suscripción para usuario:', profile.id);
     loadNotifications();
 
     // Crear canal con configuración específica
@@ -51,7 +52,6 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
           filter: `user_id=eq.${profile.id}`,
         },
         (payload) => {
-          console.log('🔔 Nueva notificación recibida:', payload);
           const newNotification = payload.new as Notification;
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
@@ -60,25 +60,19 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         }
       )
       .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Suscripción a notificaciones activa');
-        } else if (status === 'CHANNEL_ERROR') {
+        if (status === 'CHANNEL_ERROR') {
           console.error('❌ Error en canal de notificaciones:', err);
         } else if (status === 'TIMED_OUT') {
           console.error('⏱️ Timeout en suscripción de notificaciones');
-        } else {
-          console.log('🔔 Estado de suscripción:', status);
         }
       });
 
     // Polling de respaldo cada 10 segundos
     const pollingInterval = setInterval(() => {
-      console.log('🔄 Polling de notificaciones (respaldo)');
       loadNotifications();
     }, 10000);
 
     return () => {
-      console.log('🔔 Limpiando suscripción y polling');
       clearInterval(pollingInterval);
       supabase.removeChannel(channel);
     };
@@ -105,7 +99,6 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         
         // Solo actualizar si hay cambios
         if (JSON.stringify(data) !== JSON.stringify(notifications)) {
-          console.log('📥 Notificaciones actualizadas:', data.length, 'total,', newUnreadCount, 'no leídas');
           setNotifications(data);
           setUnreadCount(newUnreadCount);
         }
@@ -176,7 +169,21 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         // Fallback: usar window.location si no hay callback
         window.location.hash = 'tasks';
       }
+    } else if (notification.type === 'forum_mention' && notification.subforum_id) {
+      // Navegar al foro/cliente
+      if (onNavigateToForum) {
+        onNavigateToForum(notification.subforum_id);
+      } else {
+        // Fallback: usar window.location si no hay callback
+        window.location.hash = 'forums';
+      }
     }
+  };
+
+  // Función para limpiar menciones del mensaje (remover UUID)
+  const cleanMentionMessage = (message: string): string => {
+    // Reemplazar @[Nombre](uuid) con @Nombre
+    return message.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1');
   };
 
   const getNotificationIcon = (type: string) => {
@@ -189,6 +196,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         return <AlertCircle className="w-5 h-5 text-orange-600" />;
       case 'task_assigned':
         return <CheckSquare className="w-5 h-5 text-indigo-600" />;
+      case 'forum_mention':
+        return <MessageSquare className="w-5 h-5 text-purple-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
@@ -263,7 +272,9 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                           {notification.title}
                         </p>
                         <p className={`text-sm mt-0.5 ${!notification.read ? 'text-gray-700' : 'text-gray-600'}`}>
-                          {notification.message}
+                          {notification.type === 'forum_mention' 
+                            ? cleanMentionMessage(notification.message)
+                            : notification.message}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {new Date(notification.created_at).toLocaleString('es-ES', {
