@@ -192,8 +192,8 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
     }
   };
 
-  const handleAuthenticate = () => {
-    startGoogleAuth();
+  const handleAuthenticate = async () => {
+    await startGoogleAuth();
   };
 
   const handleRefresh = async () => {

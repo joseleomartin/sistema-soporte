@@ -62,6 +62,7 @@ def root():
                 'health': '/health',
                 'extractors': '/extractors',
                 'extract': '/extract',
+                'google_client_id': '/api/google/client-id',
                 'google_oauth_token': '/api/google/oauth/token',
                 'google_oauth_refresh': '/api/google/oauth/refresh'
             }
@@ -530,6 +531,28 @@ def refresh_google_token():
         
     except Exception as e:
         logger.error(f"Error en refresh_google_token: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/google/client-id', methods=['GET'])
+def get_google_client_id():
+    """Devuelve el Client ID de Google (sin el secret)"""
+    try:
+        logger.info("Request recibido en /api/google/client-id")
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        
+        if not client_id:
+            logger.error("GOOGLE_CLIENT_ID no configurado en variables de entorno")
+            return jsonify({
+                'error': 'Client ID no configurado',
+                'message': 'Configura GOOGLE_CLIENT_ID en las variables de entorno del backend'
+            }), 500
+        
+        logger.info("Client ID devuelto exitosamente")
+        # Solo devolvemos el Client ID, nunca el secret
+        return jsonify({'client_id': client_id}), 200
+        
+    except Exception as e:
+        logger.error(f"Error en get_google_client_id: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

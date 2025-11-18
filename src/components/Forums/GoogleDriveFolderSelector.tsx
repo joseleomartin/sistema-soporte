@@ -37,9 +37,9 @@ export function GoogleDriveFolderSelector({
     checkAuth();
   }, [clientName]);
 
-  const handleAuthenticate = () => {
+  const handleAuthenticate = async () => {
     // Usar redirección en lugar de popup
-    startGoogleAuth();
+    await startGoogleAuth();
   };
 
   const loadSuggestedFolders = async () => {

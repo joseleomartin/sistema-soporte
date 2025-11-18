@@ -3,18 +3,48 @@
  * Evita problemas con popups y Cross-Origin-Opener-Policy
  */
 
+// Cache para el Client ID obtenido del backend
+let cachedClientId: string | null = null;
+
 /**
- * Obtiene el Client ID de Google desde las variables de entorno
+ * Obtiene el Client ID de Google desde el backend o variables de entorno
  * Lanza un error solo cuando se intenta usar, no al cargar el módulo
  */
-function getGoogleClientId(): string {
+async function getGoogleClientId(): Promise<string> {
+  // Si ya tenemos el Client ID en caché, usarlo
+  if (cachedClientId) {
+    return cachedClientId;
+  }
+
+  // Intentar obtener del backend primero (si está configurado)
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  
+  if (backendUrl) {
+    try {
+      const response = await fetch(`${backendUrl}/api/google/client-id`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.client_id) {
+          cachedClientId = data.client_id;
+          return cachedClientId;
+        }
+      }
+    } catch (error) {
+      console.warn('No se pudo obtener Client ID del backend, usando variable de entorno:', error);
+    }
+  }
+
+  // Fallback: usar variable de entorno del frontend
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   if (!clientId) {
     throw new Error(
       'VITE_GOOGLE_CLIENT_ID no está configurada en las variables de entorno. ' +
-      'Por favor, agrega VITE_GOOGLE_CLIENT_ID=tu_client_id en tu archivo .env'
+      'Por favor, agrega VITE_GOOGLE_CLIENT_ID=tu_client_id en tu archivo .env ' +
+      'o configura VITE_BACKEND_URL para obtenerlo del backend.'
     );
   }
+  
+  cachedClientId = clientId;
   return clientId;
 }
 
@@ -38,7 +68,8 @@ function generateState(): string {
 /**
  * Inicia el flujo de autenticación OAuth con redirección
  */
-export function startGoogleAuth(): void {
+export async function startGoogleAuth(): Promise<void> {
+  const clientId = await getGoogleClientId();
   const state = generateState();
   const redirectUri = `${window.location.origin}/google-oauth-callback`;
   
@@ -50,7 +81,7 @@ export function startGoogleAuth(): void {
   
   // Construir URL de autorización
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  authUrl.searchParams.set('client_id', getGoogleClientId());
+  authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('scope', DRIVE_SCOPE);
