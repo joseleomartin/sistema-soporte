@@ -169,14 +169,30 @@ echo.
 echo IMPORTANTE: ngrok mostrara una URL tipo:
 echo   https://xxxx-xx-xx-xx-xx.ngrok-free.app
 echo.
-echo Copia esa URL y usala en tu frontend
+echo Copia esa URL y usala en VITE_BACKEND_URL en Vercel
 echo.
 echo Presiona Ctrl+C para detener todo
 echo ================================================
 echo.
+echo Iniciando ngrok en 3 segundos...
+timeout /t 3 /nobreak >nul
 
-REM Iniciar túnel de ngrok
-ngrok http 5000
+REM Iniciar túnel de ngrok en una ventana visible
+start "ngrok - Túnel Público" cmd /k "ngrok http 5000"
+echo.
+echo ngrok iniciado en una ventana separada
+echo.
+echo Busca la ventana "ngrok - Túnel Público" para ver la URL
+echo.
+echo La URL aparecera en esa ventana, busca una linea como:
+echo   Forwarding  https://xxxxx.ngrok-free.app -^> http://localhost:5000
+echo.
+echo Tambien puedes abrir http://localhost:4040 en tu navegador
+echo para ver el dashboard de ngrok con la URL
+echo.
+echo Presiona cualquier tecla para mantener esta ventana abierta
+echo (o cierra esta ventana si ya copiaste la URL)
+pause >nul
 
 REM Limpiar
 echo.
