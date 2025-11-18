@@ -21,16 +21,37 @@ async function getGoogleClientId(): Promise<string> {
   
   if (backendUrl) {
     try {
-      const response = await fetch(`${backendUrl}/api/google/client-id`);
+      const response = await fetch(`${backendUrl}/api/google/client-id`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
       if (response.ok) {
-        const data = await response.json();
-        if (data.client_id) {
-          cachedClientId = data.client_id;
-          return cachedClientId;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          if (data.client_id) {
+            cachedClientId = data.client_id;
+            console.log('✅ Client ID obtenido del backend');
+            return cachedClientId;
+          }
+        } else {
+          // El backend devolvió HTML en lugar de JSON (probablemente un error 404 o similar)
+          const text = await response.text();
+          console.warn('⚠️ El backend devolvió HTML en lugar de JSON. URL:', `${backendUrl}/api/google/client-id`);
+          console.warn('⚠️ Respuesta:', text.substring(0, 200));
         }
+      } else {
+        // El backend respondió con un error HTTP
+        const errorText = await response.text().catch(() => 'Error desconocido');
+        console.warn(`⚠️ El backend respondió con error ${response.status}:`, errorText.substring(0, 200));
       }
-    } catch (error) {
-      console.warn('No se pudo obtener Client ID del backend, usando variable de entorno:', error);
+    } catch (error: any) {
+      console.warn('⚠️ No se pudo obtener Client ID del backend:', error.message);
+      console.warn('⚠️ URL intentada:', `${backendUrl}/api/google/client-id`);
+      console.warn('⚠️ Verifica que VITE_BACKEND_URL esté correctamente configurado y que el backend esté accesible');
     }
   }
 
