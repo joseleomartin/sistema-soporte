@@ -81,15 +81,58 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
   const redirectUri = `${window.location.origin}/google-oauth-callback`;
   
   // Intercambiar código por token
-  // NOTA: En producción, esto debería hacerse en el backend por seguridad
-  // Por ahora lo hacemos directamente desde el frontend
+  // Intentar usar el backend primero (más seguro)
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  
+  if (backendUrl) {
+    // Usar backend para intercambio de tokens (recomendado)
+    try {
+      const tokenResponse = await fetch(`${backendUrl}/api/google/oauth/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code,
+          redirect_uri: redirectUri,
+        }),
+      });
+      
+      if (!tokenResponse.ok) {
+        const error = await tokenResponse.json();
+        throw new Error(`Error al obtener token: ${error.error_description || error.error || error.message || 'Error desconocido'}`);
+      }
+      
+      const tokenData = await tokenResponse.json();
+      
+      // Guardar token
+      const expiryTime = Date.now() + (tokenData.expires_in * 1000);
+      localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.access_token);
+      localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+      
+      if (tokenData.refresh_token) {
+        localStorage.setItem('google_drive_refresh_token', tokenData.refresh_token);
+      }
+      
+      return tokenData.access_token;
+    } catch (error: any) {
+      // Si el backend falla, intentar método directo como fallback
+      console.warn('Backend no disponible, usando método directo (menos seguro):', error.message);
+    }
+  }
+  
+  // Fallback: método directo (menos seguro, pero funciona)
   const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
   
   if (!clientSecret) {
     throw new Error(
-      'VITE_GOOGLE_CLIENT_SECRET no está configurada. ' +
-      'Por favor, agrega esta variable en Vercel (Settings → Environment Variables). ' +
-      'NOTA: En el futuro, esto debería manejarse en el backend por seguridad.'
+      'No se puede autenticar: ' +
+      (backendUrl 
+        ? 'El backend no está disponible y VITE_GOOGLE_CLIENT_SECRET no está configurada. ' +
+          'Configura VITE_BACKEND_URL o VITE_GOOGLE_CLIENT_SECRET en Vercel.'
+        : 'VITE_GOOGLE_CLIENT_SECRET no está configurada. ' +
+          'Por favor, agrega esta variable en Vercel (Settings → Environment Variables). ' +
+          'NOTA: Para mayor seguridad, configura VITE_BACKEND_URL para usar el backend.')
     );
   }
   
@@ -114,7 +157,7 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
   
   const tokenData = await tokenResponse.json();
   
-  // Guardar token
+  // Guardar token (solo si no se guardó antes en el bloque del backend)
   const expiryTime = Date.now() + (tokenData.expires_in * 1000);
   localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.access_token);
   localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
@@ -122,8 +165,6 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
   if (tokenData.refresh_token) {
     localStorage.setItem('google_drive_refresh_token', tokenData.refresh_token);
   }
-  
-  console.log('✅ Token guardado exitosamente');
   
   return tokenData.access_token;
 }
@@ -166,12 +207,50 @@ export async function getAccessToken(): Promise<string> {
  * Refresca el token de acceso usando el refresh token
  */
 async function refreshAccessToken(refreshToken: string): Promise<string> {
-  // NOTA: En producción, esto debería hacerse en el backend por seguridad
-  // Por ahora lo hacemos directamente desde el frontend
+  // Intentar usar el backend primero (más seguro)
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  
+  if (backendUrl) {
+    try {
+      const tokenResponse = await fetch(`${backendUrl}/api/google/oauth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+        }),
+      });
+      
+      if (!tokenResponse.ok) {
+        const error = await tokenResponse.json();
+        throw new Error(`Error al refrescar token: ${error.error_description || error.error || error.message || 'Error desconocido'}`);
+      }
+      
+      const tokenData = await tokenResponse.json();
+      
+      // Guardar nuevo token
+      const expiryTime = Date.now() + (tokenData.expires_in * 1000);
+      localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.access_token);
+      localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+      
+      return tokenData.access_token;
+    } catch (error: any) {
+      // Si el backend falla, intentar método directo como fallback
+      console.warn('Backend no disponible para refresh, usando método directo:', error.message);
+    }
+  }
+  
+  // Fallback: método directo (menos seguro)
   const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
   
   if (!clientSecret) {
-    throw new Error('VITE_GOOGLE_CLIENT_SECRET no está configurada');
+    throw new Error(
+      'No se puede refrescar token: ' +
+      (backendUrl 
+        ? 'El backend no está disponible y VITE_GOOGLE_CLIENT_SECRET no está configurada.'
+        : 'VITE_GOOGLE_CLIENT_SECRET no está configurada.')
+    );
   }
   
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {

@@ -8,6 +8,7 @@ import tempfile
 import importlib.util
 from pathlib import Path
 import sys
+import requests
 
 # Logging para diagnóstico
 import logging
@@ -60,7 +61,9 @@ def root():
             'endpoints': {
                 'health': '/health',
                 'extractors': '/extractors',
-                'extract': '/extract'
+                'extract': '/extract',
+                'google_oauth_token': '/api/google/oauth/token',
+                'google_oauth_refresh': '/api/google/oauth/refresh'
             }
         })
         logger.info("Response enviado desde endpoint raíz")
@@ -424,6 +427,110 @@ def cleanup():
     
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/google/oauth/token', methods=['POST'])
+def exchange_google_token():
+    """Intercambia código de autorización por token de acceso"""
+    try:
+        logger.info("Request recibido en /api/google/oauth/token")
+        data = request.json
+        
+        if not data:
+            logger.error("No se recibió JSON en el request")
+            return jsonify({'error': 'Se requiere JSON en el body'}), 400
+        
+        code = data.get('code')
+        redirect_uri = data.get('redirect_uri')
+        
+        if not code or not redirect_uri:
+            logger.error(f"Faltan parámetros: code={bool(code)}, redirect_uri={bool(redirect_uri)}")
+            return jsonify({'error': 'code y redirect_uri son requeridos'}), 400
+        
+        # Obtener credenciales desde variables de entorno del backend
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+        
+        if not client_id or not client_secret:
+            logger.error("Credenciales de Google no configuradas en variables de entorno")
+            return jsonify({
+                'error': 'Credenciales de Google no configuradas',
+                'message': 'Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en las variables de entorno del backend'
+            }), 500
+        
+        logger.info(f"Intercambiando código por token (redirect_uri: {redirect_uri})")
+        
+        # Intercambiar código por token
+        token_response = requests.post('https://oauth2.googleapis.com/token', data={
+            'code': code,
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'redirect_uri': redirect_uri,
+            'grant_type': 'authorization_code',
+        })
+        
+        if token_response.status_code != 200:
+            error_data = token_response.json()
+            logger.error(f"Error de Google OAuth: {error_data}")
+            return jsonify(error_data), token_response.status_code
+        
+        token_data = token_response.json()
+        logger.info("Token obtenido exitosamente")
+        
+        return jsonify(token_data), 200
+        
+    except Exception as e:
+        logger.error(f"Error en exchange_google_token: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/google/oauth/refresh', methods=['POST'])
+def refresh_google_token():
+    """Refresca un token de acceso usando refresh token"""
+    try:
+        logger.info("Request recibido en /api/google/oauth/refresh")
+        data = request.json
+        
+        if not data:
+            logger.error("No se recibió JSON en el request")
+            return jsonify({'error': 'Se requiere JSON en el body'}), 400
+        
+        refresh_token = data.get('refresh_token')
+        
+        if not refresh_token:
+            logger.error("No se recibió refresh_token")
+            return jsonify({'error': 'refresh_token es requerido'}), 400
+        
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+        
+        if not client_id or not client_secret:
+            logger.error("Credenciales de Google no configuradas en variables de entorno")
+            return jsonify({
+                'error': 'Credenciales de Google no configuradas',
+                'message': 'Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en las variables de entorno del backend'
+            }), 500
+        
+        logger.info("Refrescando token de acceso")
+        
+        token_response = requests.post('https://oauth2.googleapis.com/token', data={
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'refresh_token': refresh_token,
+            'grant_type': 'refresh_token',
+        })
+        
+        if token_response.status_code != 200:
+            error_data = token_response.json()
+            logger.error(f"Error al refrescar token: {error_data}")
+            return jsonify(error_data), token_response.status_code
+        
+        token_data = token_response.json()
+        logger.info("Token refrescado exitosamente")
+        
+        return jsonify(token_data), 200
+        
+    except Exception as e:
+        logger.error(f"Error en refresh_google_token: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     # NOTA: Este bloque SOLO se ejecuta cuando se corre directamente con python server.py
