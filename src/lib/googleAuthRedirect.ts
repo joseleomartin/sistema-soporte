@@ -21,11 +21,21 @@ async function getGoogleClientId(): Promise<string> {
   
   if (backendUrl) {
     try {
+      // Headers para evitar la página de interceptación de ngrok
+      const headers: HeadersInit = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      
+      // Si es ngrok, agregar headers adicionales para evitar la página de interceptación
+      if (backendUrl.includes('ngrok')) {
+        headers['ngrok-skip-browser-warning'] = 'true';
+        headers['User-Agent'] = 'Mozilla/5.0';
+      }
+      
       const response = await fetch(`${backendUrl}/api/google/client-id`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers,
       });
       
       if (response.ok) {
