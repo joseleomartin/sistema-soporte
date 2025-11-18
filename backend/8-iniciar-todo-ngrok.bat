@@ -75,8 +75,19 @@ echo Servidor iniciando...
 echo Esperando a que el servidor este listo...
 echo.
 
+REM Verificar primero si el servidor ya está corriendo
+echo Verificando si el servidor ya esta corriendo...
+netstat -an | findstr ":5000" | findstr "LISTENING" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo Servidor detectado en puerto 5000 (ya estaba corriendo)
+    echo Continuando directamente con ngrok...
+    echo.
+    goto :ngrok_start
+)
+
 REM Esperar y verificar
-set MAX_ATTEMPTS=60
+set MAX_ATTEMPTS=30
 set ATTEMPT=0
 
 :wait_loop
@@ -84,13 +95,22 @@ set /a ATTEMPT+=1
 if %ATTEMPT% GTR %MAX_ATTEMPTS% (
     echo.
     echo ================================================
-    echo  ERROR: El servidor no respondio
+    echo  ADVERTENCIA: El servidor no respondio en /health
     echo ================================================
+    echo.
+    echo Verificando si el puerto esta en uso...
+    netstat -an | findstr ":5000" | findstr "LISTENING" >nul 2>&1
+    if %ERRORLEVEL% EQU 0 (
+        echo Puerto 5000 esta en uso - continuando con ngrok de todas formas
+        echo.
+        goto :ngrok_start
+    )
+    echo.
+    echo ERROR: El servidor no esta corriendo
     echo.
     echo Posibles causas:
     echo   1. Error al iniciar el servidor (revisa la ventana "Servidor Flask")
     echo   2. Dependencias faltantes (ejecuta: pip install -r requirements.txt)
-    echo   3. Puerto en uso (cierra otros procesos en el puerto 5000)
     echo.
     echo Revisa la ventana "Servidor Flask" para ver el error
     echo.
@@ -99,7 +119,6 @@ if %ATTEMPT% GTR %MAX_ATTEMPTS% (
 )
 
 REM Verificar si el servidor está respondiendo
-REM Usar PowerShell para verificar el endpoint /health
 powershell -Command "$ErrorActionPreference='Stop'; try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:5000/health' -UseBasicParsing -TimeoutSec 2; if ($r.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo Servidor verificado y respondiendo
@@ -115,7 +134,7 @@ if %ERRORLEVEL% EQU 0 (
     goto :ngrok_start
 )
 
-REM Si aún falla, verificar que el puerto esté en uso (servidor corriendo)
+REM Verificar que el puerto esté en uso (servidor corriendo)
 netstat -an | findstr ":5000" | findstr "LISTENING" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo Servidor detectado en puerto 5000, continuando con ngrok...
@@ -123,8 +142,8 @@ if %ERRORLEVEL% EQU 0 (
     goto :ngrok_start
 )
 
-timeout /t 2 /nobreak >nul
-if %ATTEMPT% LSS 10 (
+timeout /t 1 /nobreak >nul
+if %ATTEMPT% LSS 5 (
     echo Esperando servidor... (%ATTEMPT%/%MAX_ATTEMPTS%)
 ) else if %ATTEMPT% EQU 5 (
     echo.
@@ -136,21 +155,6 @@ if %ATTEMPT% LSS 10 (
         echo.
         goto :ngrok_start
     )
-    echo.
-) else if %ATTEMPT% EQU 10 (
-    echo.
-    echo Intentando verificar manualmente el endpoint /health...
-    powershell -Command "try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:5000/health' -UseBasicParsing -TimeoutSec 2; Write-Host 'Status:' $r.StatusCode; Write-Host 'Content:' $r.Content } catch { Write-Host 'Error:' $_.Exception.Message }"
-    echo.
-    echo Verificando si el puerto esta en uso...
-    netstat -an | findstr ":5000" | findstr "LISTENING"
-    if %ERRORLEVEL% EQU 0 (
-        echo Puerto 5000 esta en uso - continuando con ngrok...
-        echo.
-        goto :ngrok_start
-    )
-    echo.
-    echo Si el servidor no inicia, revisa la ventana "Servidor Flask" para ver errores
     echo.
 )
 goto :wait_loop
