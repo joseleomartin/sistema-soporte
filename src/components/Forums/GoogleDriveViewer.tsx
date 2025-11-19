@@ -241,6 +241,31 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
     setShowUpload(false);
   };
 
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) {
+      setError('Por favor, ingresa un nombre para la carpeta');
+      return;
+    }
+
+    try {
+      setCreatingFolder(true);
+      setError(null);
+      const token = await getAccessToken();
+      
+      await createFolder(newFolderName.trim(), currentFolderId, token);
+      
+      // Limpiar y refrescar
+      setNewFolderName('');
+      setShowCreateFolder(false);
+      await loadFiles();
+    } catch (err: any) {
+      setError(err.message || 'Error al crear carpeta');
+      onError?.(err.message || 'Error al crear carpeta');
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
   const handleFolderClick = async (folder: DriveFile) => {
     try {
       setLoading(true);
