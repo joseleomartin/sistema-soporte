@@ -14,9 +14,10 @@ import {
   Home,
   Search,
   X,
+  FolderPlus,
 } from 'lucide-react';
 import { startGoogleAuth, getAccessToken, isAuthenticated } from '../../lib/googleAuthRedirect';
-import { listFilesInFolder, downloadFileFromDrive, getFolderInfo, searchFilesRecursively, DriveFile, DriveFolder } from '../../lib/googleDriveAPI';
+import { listFilesInFolder, downloadFileFromDrive, getFolderInfo, searchFilesRecursively, createFolder, DriveFile, DriveFolder } from '../../lib/googleDriveAPI';
 import { GoogleDriveUpload } from './GoogleDriveUpload';
 
 interface GoogleDriveViewerProps {
@@ -45,6 +46,9 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
   const [authenticated, setAuthenticated] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<{ folders: DriveFile[]; files: DriveFile[] } | null>(null);
@@ -459,6 +463,13 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowCreateFolder(true)}
+            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center gap-2"
+          >
+            <FolderPlus className="w-4 h-4" />
+            Nueva Carpeta
+          </button>
+          <button
             onClick={() => setShowUpload(!showUpload)}
             className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center gap-2"
           >
@@ -511,6 +522,64 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       {searchTerm.trim() && searchResults && (
         <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-2">
           🔍 Buscando en todas las subcarpetas de "{rootFolderName}"...
+        </div>
+      )}
+
+      {/* Modal para crear carpeta */}
+      {showCreateFolder && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <FolderPlus className="w-5 h-5 text-green-600" />
+            <h3 className="font-semibold text-gray-900">Crear Nueva Carpeta</h3>
+          </div>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !creatingFolder) {
+                  handleCreateFolder();
+                } else if (e.key === 'Escape') {
+                  setShowCreateFolder(false);
+                  setNewFolderName('');
+                }
+              }}
+              placeholder="Nombre de la carpeta..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              autoFocus
+              disabled={creatingFolder}
+            />
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowCreateFolder(false);
+                  setNewFolderName('');
+                }}
+                disabled={creatingFolder}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateFolder}
+                disabled={creatingFolder || !newFolderName.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {creatingFolder ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <FolderPlus className="w-4 h-4" />
+                    Crear Carpeta
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

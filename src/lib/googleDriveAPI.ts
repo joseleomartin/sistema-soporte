@@ -575,6 +575,57 @@ async function uploadFileResumable(
 }
 
 /**
+ * Crea una carpeta en Google Drive
+ */
+export async function createFolder(
+  folderName: string,
+  parentFolderId: string,
+  accessToken: string
+): Promise<DriveFile> {
+  try {
+    const metadata = {
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [parentFolderId],
+    };
+
+    const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(metadata),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Token expirado. Por favor, autentica nuevamente.');
+      }
+      if (response.status === 403) {
+        throw new Error('No tienes permisos para crear carpetas en esta ubicación.');
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Error al crear carpeta: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const folderData = await response.json();
+    
+    return {
+      id: folderData.id,
+      name: folderData.name,
+      mimeType: folderData.mimeType,
+      modifiedTime: folderData.modifiedTime,
+      webViewLink: folderData.webViewLink,
+      isFolder: true,
+    };
+  } catch (error: any) {
+    console.error('Error creando carpeta:', error);
+    throw error;
+  }
+}
+
+/**
  * Elimina un archivo de Google Drive (opcional)
  */
 export async function deleteFileFromDrive(
