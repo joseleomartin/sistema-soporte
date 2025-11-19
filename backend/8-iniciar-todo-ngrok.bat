@@ -49,7 +49,7 @@ set EXTRACTOR_PORT=5000
 REM Configurar Google OAuth (obtén estos valores de Google Cloud Console)
 REM Si no los configuras aquí, asegúrate de tenerlos en variables de entorno del sistema
 REM o en un archivo .env en la carpeta backend/
-set GOOGLE_CLIENT_ID=398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com
+set GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
 set GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
 REM ⚠️ IMPORTANTE: Reemplaza TU_CLIENT_SECRET_AQUI con tu Client Secret real
 REM Obténlo de: Google Cloud Console → APIs y servicios → Credenciales → Tu Client ID → Client Secret

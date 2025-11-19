@@ -110,14 +110,22 @@ export async function startGoogleAuth(): Promise<void> {
   // Guardar la URL de retorno
   localStorage.setItem('google_oauth_return_url', window.location.href);
   
+  // Verificar si ya tenemos un refresh token
+  // Si lo tenemos, no forzar consent (para mantener sesión)
+  // Si no lo tenemos, forzar consent para obtener refresh token
+  const hasRefreshToken = !!localStorage.getItem('google_drive_refresh_token');
+  
   // Construir URL de autorización
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('scope', DRIVE_SCOPE);
-  authUrl.searchParams.set('access_type', 'offline');
-  authUrl.searchParams.set('prompt', 'consent');
+  authUrl.searchParams.set('access_type', 'offline'); // Necesario para obtener refresh token
+  // Solo forzar consent si no tenemos refresh token (primera vez)
+  if (!hasRefreshToken) {
+    authUrl.searchParams.set('prompt', 'consent');
+  }
   authUrl.searchParams.set('state', state);
   
   console.log('🔐 Redirigiendo a Google para autenticación...');
@@ -371,11 +379,19 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
 
 /**
  * Verifica si el usuario está autenticado
+ * Considera autenticado si tiene un token válido O un refresh token (puede refrescar)
  */
 export function isAuthenticated(): boolean {
   const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
   const storedExpiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  const refreshToken = localStorage.getItem('google_drive_refresh_token');
   
+  // Si tiene refresh token, está autenticado (puede refrescar el access token)
+  if (refreshToken) {
+    return true;
+  }
+  
+  // Si no tiene refresh token, verificar si el access token es válido
   if (!storedToken || !storedExpiry) {
     return false;
   }
