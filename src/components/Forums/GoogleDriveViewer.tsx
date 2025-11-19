@@ -81,6 +81,11 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
         setSearchResults(results);
       } catch (err: any) {
         console.error('Error en búsqueda recursiva:', err);
+        // Si es error de autenticación, marcar como no autenticado
+        if (err.message?.includes('401') || err.message?.includes('expirado') || err.message?.includes('Unauthorized')) {
+          setAuthenticated(false);
+          setError('Tu sesión expiró. Por favor, autentica nuevamente.');
+        }
         setSearchResults({ folders: [], files: [] });
       } finally {
         setSearching(false);
@@ -112,11 +117,28 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
     }
   };
 
-  const loadFiles = async () => {
+  const loadFiles = async (retryCount = 0) => {
     try {
       setError(null);
       setLoading(true);
-      const token = await getAccessToken();
+      let token: string;
+      try {
+        token = await getAccessToken();
+      } catch (tokenError: any) {
+        // Si el token expiró, intentar refrescar
+        if (tokenError.message.includes('expirado') || tokenError.message.includes('No hay token')) {
+          console.log('🔄 Token expirado, intentando reconectar...');
+          setAuthenticated(false);
+          // Si hay refresh token, intentar autenticar de nuevo automáticamente
+          const refreshToken = localStorage.getItem('google_drive_refresh_token');
+          if (refreshToken && retryCount === 0) {
+            // Esperar un momento y reintentar
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return loadFiles(1);
+          }
+        }
+        throw tokenError;
+      }
       
       // Primero intentar cargar contenido (lo más importante)
       let content;
@@ -181,8 +203,17 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       const errorMessage = err.message || 'Error al cargar archivos';
       setError(errorMessage);
       
-      if (errorMessage.includes('Token expirado') || errorMessage.includes('401')) {
+      if (errorMessage.includes('Token expirado') || errorMessage.includes('401') || 
+          errorMessage.includes('Unauthorized') || errorMessage.includes('No hay token')) {
         setAuthenticated(false);
+        // Si hay refresh token, intentar reconectar automáticamente
+        const refreshToken = localStorage.getItem('google_drive_refresh_token');
+        if (refreshToken && retryCount === 0) {
+          console.log('🔄 Intentando reconectar automáticamente...');
+          setTimeout(() => {
+            checkAuthAndLoadFiles();
+          }, 2000);
+        }
       }
       
       onError?.(errorMessage);
