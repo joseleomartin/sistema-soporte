@@ -32,6 +32,7 @@ logger.info(f"Variable EXTRACTOR_PORT: {os.environ.get('EXTRACTOR_PORT', 'NO DEF
 app = Flask(__name__)
 
 # Configurar CORS - permitir todos los orígenes en producción
+# Flask-CORS manejará los headers automáticamente, no agregar manualmente
 CORS(app, resources={r"/*": {
     "origins": "*",
     "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -51,25 +52,11 @@ def log_request_info():
     if request.method == 'POST':
         logger.info(f"Form data keys: {list(request.form.keys())}")
         logger.info(f"Files: {list(request.files.keys())}")
-    
-    # Manejar preflight OPTIONS requests
-    if request.method == 'OPTIONS':
-        response = jsonify({})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, User-Agent')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        return response
 
 @app.after_request
 def log_response_info(response):
     logger.info(f"Response enviado: {response.status_code} para {request.path}")
-    
-    # Agregar headers CORS manualmente para asegurar que funcionen con ngrok
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, User-Agent')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    
+    # Flask-CORS ya maneja los headers CORS, no agregar manualmente para evitar duplicados
     return response
 
 @app.route('/', methods=['GET'])
