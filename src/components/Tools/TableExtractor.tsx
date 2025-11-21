@@ -2,7 +2,21 @@ import { useState } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useExtraction } from '../../contexts/ExtractionContext';
 
-const API_BASE_URL = (import.meta.env.VITE_EXTRACTOR_API_URL as string | undefined) ?? window.location.origin;
+// URL del backend de extractores
+// En desarrollo local, usa http://localhost:5000 si no está configurada la variable
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_EXTRACTOR_API_URL) {
+    return import.meta.env.VITE_EXTRACTOR_API_URL;
+  }
+  // En desarrollo local, asumir que el backend está en localhost:5000
+  if (import.meta.env.DEV) {
+    return 'http://localhost:5000';
+  }
+  // En producción, usar el mismo origen
+  return window.location.origin;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const bancos = [
   { id: 'banco_galicia', name: 'Banco Galicia', script: 'extractor_banco_galicia.py' },
@@ -22,6 +36,7 @@ const bancos = [
   { id: 'banco_icbc', name: 'Banco ICBC', script: 'extractor_banco_icbc.py' },
   { id: 'banco_macro', name: 'Banco Macro', script: 'extractor_banco_macro.py' },
   { id: 'banco_nacion', name: 'Banco Nación', script: 'nacion.py' },
+  { id: 'colppy', name: 'Colppy', script: 'Colppy.py' },
 ];
 
 export function TableExtractor() {

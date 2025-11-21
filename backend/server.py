@@ -162,6 +162,10 @@ BANCO_EXTRACTORS = {
         'script': 'nacion.py',
         'function': 'extraer_datos_banco_nacion'
     },
+    'colppy': {
+        'script': 'Colppy.py',
+        'function': 'extraer_datos_colppy'
+    },
 }
 
 logger.info(f"Extractores configurados: {len(BANCO_EXTRACTORS)}")
@@ -170,10 +174,24 @@ logger.info("Aplicación Flask inicializada correctamente")
 def load_extractor_module(script_name):
     """Carga dinámicamente un módulo extractor"""
     script_path = EXTRACTORES_DIR / script_name
-    spec = importlib.util.spec_from_file_location(script_name.replace('.py', ''), script_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    
+    if not script_path.exists():
+        raise FileNotFoundError(f"El archivo extractor no existe: {script_path}")
+    
+    logger.info(f"Cargando módulo desde: {script_path}")
+    
+    try:
+        spec = importlib.util.spec_from_file_location(script_name.replace('.py', ''), script_path)
+        if spec is None:
+            raise ImportError(f"No se pudo crear el spec para {script_name}")
+        
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        logger.info(f"Módulo {script_name} cargado exitosamente")
+        return module
+    except Exception as e:
+        logger.error(f"Error cargando módulo {script_name}: {str(e)}", exc_info=True)
+        raise
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -244,15 +262,40 @@ def extract():
         try:
             # Cargar el módulo extractor
             extractor_info = BANCO_EXTRACTORS[banco_id]
-            module = load_extractor_module(extractor_info['script'])
-            extractor_function = getattr(module, extractor_info['function'])
+            logger.info(f"Cargando extractor: {extractor_info['script']}")
+            
+            try:
+                module = load_extractor_module(extractor_info['script'])
+            except Exception as load_error:
+                logger.error(f"Error cargando módulo {extractor_info['script']}: {str(load_error)}", exc_info=True)
+                return jsonify({
+                    'success': False,
+                    'message': f'Error al cargar el extractor: {str(load_error)}'
+                }), 500
+            
+            try:
+                extractor_function = getattr(module, extractor_info['function'])
+            except AttributeError as attr_error:
+                logger.error(f"Función {extractor_info['function']} no encontrada en {extractor_info['script']}: {str(attr_error)}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Función {extractor_info["function"]} no encontrada en el extractor'
+                }), 500
             
             # Ejecutar la extracción
-            print(f"Extrayendo datos de {banco_id}...")
-            df = extractor_function(str(pdf_path), str(excel_path))
+            logger.info(f"Extrayendo datos de {banco_id}...")
+            try:
+                df = extractor_function(str(pdf_path), str(excel_path))
+            except Exception as extract_error:
+                logger.error(f"Error durante la extracción: {str(extract_error)}", exc_info=True)
+                return jsonify({
+                    'success': False,
+                    'message': f'Error al extraer datos: {str(extract_error)}'
+                }), 500
             
             # Verificar que se generó el archivo Excel
             if not excel_path.exists():
+                logger.warning(f"El archivo Excel no se generó en: {excel_path}")
                 return jsonify({
                     'success': False,
                     'message': 'No se pudo generar el archivo Excel'
@@ -260,6 +303,7 @@ def extract():
             
             # Obtener información del resultado
             rows = len(df) if df is not None and hasattr(df, '__len__') else 0
+            logger.info(f"Extracción completada: {rows} filas extraídas")
 
             base_url = request.host_url.rstrip('/')
 
@@ -272,7 +316,7 @@ def extract():
             })
             
         except Exception as e:
-            print(f"Error durante la extracción: {str(e)}")
+            logger.error(f"Error durante la extracción: {str(e)}", exc_info=True)
             return jsonify({
                 'success': False,
                 'message': f'Error al procesar el PDF: {str(e)}'

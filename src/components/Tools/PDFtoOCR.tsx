@@ -80,7 +80,21 @@ export function PDFtoOCR() {
       // Simular progreso inicial
       updateJob(jobId, { progress: 10, message: 'Cargando PDF...' });
 
-      const API_BASE_URL = (import.meta.env.VITE_EXTRACTOR_API_URL as string | undefined) ?? window.location.origin;
+      // URL del backend de extractores
+      // En desarrollo local, usa http://localhost:5000 si no está configurada la variable
+      const getApiBaseUrl = () => {
+        if (import.meta.env.VITE_EXTRACTOR_API_URL) {
+          return import.meta.env.VITE_EXTRACTOR_API_URL;
+        }
+        // En desarrollo local, asumir que el backend está en localhost:5000
+        if (import.meta.env.DEV) {
+          return 'http://localhost:5000';
+        }
+        // En producción, usar el mismo origen
+        return window.location.origin;
+      };
+      
+      const API_BASE_URL = getApiBaseUrl();
       
       const response = await fetch(`${API_BASE_URL}/pdf-to-ocr`, {
         method: 'POST',

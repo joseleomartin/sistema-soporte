@@ -85,6 +85,7 @@ def check_extractors():
         'extractor_banco_icbc.py',
         'extractor_banco_macro.py',
         'nacion.py',
+        'Colppy.py',
     ]
     
     found = 0
@@ -189,6 +190,9 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
+
+
+
 
 
 
