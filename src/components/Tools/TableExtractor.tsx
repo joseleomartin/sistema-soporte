@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useExtraction } from '../../contexts/ExtractionContext';
 
-const API_BASE_URL = (import.meta.env.VITE_EXTRACTOR_API_URL as string | undefined) ?? window.location.origin;
+// Usar VITE_BACKEND_URL si está disponible, sino VITE_EXTRACTOR_API_URL, sino localhost
+const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL as string | undefined) 
+  ?? (import.meta.env.VITE_EXTRACTOR_API_URL as string | undefined) 
+  ?? window.location.origin;
 
 const bancos = [
   { id: 'banco_galicia', name: 'Banco Galicia', script: 'extractor_banco_galicia.py' },
@@ -108,8 +111,16 @@ export function TableExtractor() {
       // Simular progreso inicial
       updateJob(jobId, { progress: 10, message: 'Cargando archivo...' });
 
+      // Headers para ngrok si es necesario
+      const headers: HeadersInit = {};
+      if (API_BASE_URL.includes('ngrok')) {
+        headers['ngrok-skip-browser-warning'] = 'true';
+        headers['User-Agent'] = 'Mozilla/5.0';
+      }
+
       const response = await fetch(`${API_BASE_URL}/extract`, {
         method: 'POST',
+        headers,
         body: formData,
       });
 

@@ -32,7 +32,13 @@ logger.info(f"Variable EXTRACTOR_PORT: {os.environ.get('EXTRACTOR_PORT', 'NO DEF
 app = Flask(__name__)
 
 # Configurar CORS - permitir todos los orígenes en producción
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {
+    "origins": "*",
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "ngrok-skip-browser-warning", "User-Agent"],
+    "expose_headers": ["Content-Type"],
+    "supports_credentials": True
+}})
 
 logger.info("Flask app creada correctamente")
 logger.info("CORS configurado para permitir todos los orígenes")
@@ -41,13 +47,29 @@ logger.info("CORS configurado para permitir todos los orígenes")
 @app.before_request
 def log_request_info():
     logger.info(f"Request recibido: {request.method} {request.path}")
+    logger.info(f"Origin: {request.headers.get('Origin', 'No Origin')}")
     if request.method == 'POST':
         logger.info(f"Form data keys: {list(request.form.keys())}")
         logger.info(f"Files: {list(request.files.keys())}")
+    
+    # Manejar preflight OPTIONS requests
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, User-Agent')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        return response
 
 @app.after_request
 def log_response_info(response):
     logger.info(f"Response enviado: {response.status_code} para {request.path}")
+    
+    # Agregar headers CORS manualmente para asegurar que funcionen con ngrok
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning, User-Agent')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    
     return response
 
 @app.route('/', methods=['GET'])
