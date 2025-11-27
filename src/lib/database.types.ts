@@ -43,10 +43,12 @@ export interface Database {
           id: string
           title: string
           description: string
-          status: 'open' | 'in_progress' | 'resolved'
+          status: 'open' | 'in_progress' | 'resolved' | 'closed'
           priority: 'low' | 'medium' | 'high'
+          category: string
           created_by: string
           assigned_to: string | null
+          attachments: Json | null
           created_at: string
           updated_at: string
         }
@@ -54,10 +56,12 @@ export interface Database {
           id?: string
           title: string
           description: string
-          status?: 'open' | 'in_progress' | 'resolved'
+          status?: 'open' | 'in_progress' | 'resolved' | 'closed'
           priority?: 'low' | 'medium' | 'high'
+          category: string
           created_by: string
           assigned_to?: string | null
+          attachments?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -65,10 +69,12 @@ export interface Database {
           id?: string
           title?: string
           description?: string
-          status?: 'open' | 'in_progress' | 'resolved'
+          status?: 'open' | 'in_progress' | 'resolved' | 'closed'
           priority?: 'low' | 'medium' | 'high'
+          category?: string
           created_by?: string
           assigned_to?: string | null
+          attachments?: Json | null
           created_at?: string
           updated_at?: string
         }

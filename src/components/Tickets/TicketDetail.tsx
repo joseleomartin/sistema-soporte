@@ -18,6 +18,7 @@ interface Ticket {
   created_at: string;
   created_by: string;
   assigned_to: string | null;
+  attachments?: Attachment[];
   profiles: {
     full_name: string;
     email: string;
@@ -117,6 +118,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
       // Combinar datos
       const ticketWithProfile = {
         ...ticketData,
+        attachments: ticketData.attachments || [],
         profiles: creatorProfile
       };
 
@@ -456,6 +458,27 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
             <div className="prose max-w-none">
               <p className="text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
             </div>
+
+            {/* Archivos Adjuntos del Ticket */}
+            {ticket.attachments && ticket.attachments.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Archivos Adjuntos</h3>
+                <div className="space-y-2">
+                  {ticket.attachments.map((attachment, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => downloadFile(attachment)}
+                      className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm transition group w-full text-left"
+                    >
+                      <FileText className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-700 flex-1">{attachment.name}</span>
+                      <span className="text-gray-500 text-xs">{formatFileSize(attachment.size)}</span>
+                      <Download className="w-4 h-4 text-gray-400 group-hover:text-blue-600" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

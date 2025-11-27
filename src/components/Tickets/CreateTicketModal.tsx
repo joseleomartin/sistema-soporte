@@ -1,10 +1,17 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { X, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, AlertCircle, CheckCircle, Paperclip, FileText, Image } from 'lucide-react';
 
 interface CreateTicketModalProps {
   onClose: () => void;
+}
+
+interface Attachment {
+  name: string;
+  path: string;
+  size: number;
+  type: string;
 }
 
 export function CreateTicketModal({ onClose }: CreateTicketModalProps) {
@@ -16,6 +23,73 @@ export function CreateTicketModal({ onClose }: CreateTicketModalProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) {
+      return <Image className="w-5 h-5 text-green-600" />;
+    } else if (fileType.includes('pdf')) {
+      return <FileText className="w-5 h-5 text-red-600" />;
+    } else if (fileType.includes('sheet') || fileType.includes('excel')) {
+      return <FileText className="w-5 h-5 text-green-600" />;
+    } else if (fileType.includes('word') || fileType.includes('document')) {
+      return <FileText className="w-5 h-5 text-blue-600" />;
+    } else {
+      return <FileText className="w-5 h-5 text-gray-600" />;
+    }
+  };
+
+  const uploadFiles = async (): Promise<Attachment[]> => {
+    if (selectedFiles.length === 0) return [];
+
+    setUploading(true);
+    const attachments: Attachment[] = [];
+
+    try {
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${profile?.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('ticket-attachments')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        attachments.push({
+          name: file.name,
+          path: fileName,
+          size: file.size,
+          type: file.type,
+        });
+      }
+    } finally {
+      setUploading(false);
+    }
+
+    return attachments;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,14 +118,21 @@ export function CreateTicketModal({ onClose }: CreateTicketModalProps) {
     setLoading(true);
 
     try {
-      const { error: insertError } = await supabase.from('tickets').insert({
+      // Subir archivos primero
+      const attachments = await uploadFiles();
+
+      // Crear el ticket con los archivos adjuntos
+      const ticketData: any = {
         title: title.trim(),
         description: description.trim(),
         priority,
         category: category.trim(),
         status: 'open',
         created_by: profile.id,
-      });
+        attachments: attachments.length > 0 ? attachments : [],
+      };
+      
+      const { error: insertError } = await supabase.from('tickets').insert(ticketData);
 
       if (insertError) throw insertError;
 
@@ -201,6 +282,57 @@ export function CreateTicketModal({ onClose }: CreateTicketModalProps) {
             </p>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Archivos Adjuntos
+            </label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              multiple
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+            >
+              <Paperclip className="w-5 h-5" />
+              <span className="font-medium">Seleccionar archivos</span>
+            </button>
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {getFileIcon(file.type)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="ml-3 p-1 text-gray-400 hover:text-red-600 transition"
+                      disabled={uploading || loading}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              Puedes adjuntar imágenes, documentos PDF, Excel, Word y otros archivos
+            </p>
+          </div>
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
               <strong>Nota:</strong> Una vez enviado, nuestro equipo de soporte revisará tu ticket y te contactará.
@@ -219,10 +351,10 @@ export function CreateTicketModal({ onClose }: CreateTicketModalProps) {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creando...' : 'Crear Ticket'}
+              {uploading ? 'Subiendo archivos...' : loading ? 'Creando...' : 'Crear Ticket'}
             </button>
           </div>
         </form>
