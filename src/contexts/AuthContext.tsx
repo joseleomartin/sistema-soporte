@@ -93,40 +93,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     // Determinar la URL de redirección
-    // Prioridad: 1) VITE_APP_URL (producción), 2) Detectar si estamos en localhost y usar producción, 3) URL actual
-    let redirectUrl: string;
+    // Si la URL no está permitida en Supabase, no enviará el email
+    // Por eso, solo usamos emailRedirectTo si estamos seguros de que la URL está permitida
+    let redirectUrl: string | undefined;
     
+    // Solo configurar redirect si no estamos en localhost o si tenemos URL de producción configurada
     if (import.meta.env.VITE_APP_URL) {
       // Si hay una variable de entorno configurada, usarla
       redirectUrl = `${import.meta.env.VITE_APP_URL}/confirm-email`;
-    } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      // Si estamos en localhost, intentar usar la URL de producción desde Vercel
-      // Esto es importante porque los emails de confirmación deben apuntar a producción
-      const vercelUrl = import.meta.env.VITE_VERCEL_URL || import.meta.env.VERCEL_URL;
-      if (vercelUrl) {
-        redirectUrl = `https://${vercelUrl}/confirm-email`;
-      } else {
-        // Si no hay URL de producción, usar la URL actual (pero esto causará problemas)
-        // Mejor usar una URL de producción hardcodeada o mostrar un error
-        console.warn('⚠️ Registro desde localhost sin URL de producción configurada. El email de confirmación puede no funcionar correctamente.');
-        redirectUrl = `${window.location.origin}/confirm-email`;
-      }
-    } else {
-      // Si no estamos en localhost, usar la URL actual (debería ser producción)
+    } else if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      // Solo usar redirect si NO estamos en localhost (es decir, estamos en producción)
       redirectUrl = `${window.location.origin}/confirm-email`;
+    }
+    // Si estamos en localhost y no hay VITE_APP_URL, no configuramos redirect
+    // Esto permite que Supabase use su configuración por defecto
+    
+    const signUpOptions: any = {
+      data: {
+        full_name: fullName,
+        role: 'user',
+      },
+    };
+    
+    // Solo agregar emailRedirectTo si tenemos una URL válida
+    if (redirectUrl) {
+      signUpOptions.emailRedirectTo = redirectUrl;
+      console.log('📧 Usando URL de redirección:', redirectUrl);
+    } else {
+      console.log('📧 No se configuró emailRedirectTo - Supabase usará su configuración por defecto');
     }
     
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          role: 'user',
-        },
-        emailRedirectTo: redirectUrl,
-      },
+      options: signUpOptions,
     });
+    
+    // Si hay error relacionado con la URL de redirección, intentar sin ella
+    if (error && redirectUrl && (error.message.includes('redirect') || error.message.includes('URL'))) {
+      console.warn('⚠️ Error con URL de redirección, intentando sin ella:', error.message);
+      const { error: retryError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: 'user',
+          },
+        },
+      });
+      return { error: retryError };
+    }
+    
     return { error };
   };
 
