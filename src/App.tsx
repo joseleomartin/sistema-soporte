@@ -14,6 +14,7 @@ import { DepartmentManagement } from './components/Departments/DepartmentManagem
 import { ProfileSettings } from './components/Profile/ProfileSettings';
 import { TasksList } from './components/Tasks/TasksList';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
+import { EmailConfirmation } from './pages/EmailConfirmation';
 
 function MainApp() {
   const { user, profile, loading } = useAuth();
@@ -37,6 +38,19 @@ function MainApp() {
   // Si estamos en la ruta de callback, mostrar el componente de callback
   if (window.location.pathname.includes('google-oauth-callback')) {
     return <GoogleOAuthCallback />;
+  }
+
+  // Si estamos en la ruta de confirmación de email, mostrar el componente de confirmación
+  // Supabase puede redirigir con hash fragments (#access_token=...) o con query params
+  const isEmailConfirmation = 
+    window.location.pathname.includes('confirm-email') || 
+    window.location.hash.includes('access_token') || 
+    window.location.hash.includes('type=signup') ||
+    window.location.hash.includes('type=recovery') ||
+    (window.location.search.includes('token') && window.location.search.includes('type=signup'));
+  
+  if (isEmailConfirmation) {
+    return <EmailConfirmation />;
   }
 
   if (loading) {

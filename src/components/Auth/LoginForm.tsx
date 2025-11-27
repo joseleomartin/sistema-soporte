@@ -34,6 +34,12 @@ export function LoginForm() {
         }
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
+        // Mostrar mensaje de éxito indicando que se envió el email
+        setSuccess(`Se ha enviado un correo de verificación a ${email}. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para confirmar tu cuenta.`);
+        // Limpiar el formulario
+        setEmail('');
+        setPassword('');
+        setFullName('');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al autenticar');

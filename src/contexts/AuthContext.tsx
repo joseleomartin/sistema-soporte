@@ -100,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: fullName,
           role: 'user',
         },
+        emailRedirectTo: `${window.location.origin}/confirm-email`,
       },
     });
     return { error };
