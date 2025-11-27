@@ -43,11 +43,21 @@ export function EmailConfirmation() {
               setErrorMessage(verifyError.message || 'Error al verificar el email');
               return;
             }
+
+            // Después de verificar, cerrar sesión para que el usuario inicie sesión manualmente
+            await supabase.auth.signOut();
+            setStatus('success');
+            setTimeout(() => {
+              window.location.href = window.location.origin;
+            }, 3000);
+            return;
           } else {
             // Si no hay tokens ni parámetros, puede ser que ya esté confirmado
             // Verificar el estado de la sesión
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
+              // Si ya hay sesión, cerrarla para que el usuario inicie sesión manualmente
+              await supabase.auth.signOut();
               setStatus('success');
               setTimeout(() => {
                 window.location.href = window.location.origin;
@@ -61,7 +71,7 @@ export function EmailConfirmation() {
           }
         }
 
-        // Si hay tokens, establecer la sesión
+        // Si hay tokens, establecer la sesión para confirmar el email
         if (accessToken && refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -73,6 +83,9 @@ export function EmailConfirmation() {
             setErrorMessage(sessionError.message || 'Error al establecer la sesión');
             return;
           }
+
+          // Después de confirmar el email, cerrar sesión para que el usuario inicie sesión manualmente
+          await supabase.auth.signOut();
         }
 
         // Si todo salió bien
@@ -82,8 +95,15 @@ export function EmailConfirmation() {
         window.history.replaceState({}, document.title, window.location.pathname);
 
         // Redirigir al login después de 3 segundos
+        // Siempre usar la URL de origen actual (será la correcta si el usuario hace clic desde el email)
         setTimeout(() => {
-          window.location.href = window.location.origin;
+          // Si estamos en localhost y el servidor no está corriendo, mostrar mensaje
+          if (window.location.hostname === 'localhost') {
+            // Intentar redirigir, pero si falla, el usuario puede usar el botón
+            window.location.href = window.location.origin;
+          } else {
+            window.location.href = window.location.origin;
+          }
         }, 3000);
       } catch (err: any) {
         console.error('Error procesando confirmación de email:', err);

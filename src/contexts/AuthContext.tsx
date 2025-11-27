@@ -92,6 +92,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
+    // Usar la URL de producción si está disponible, sino la URL actual
+    // Esto asegura que el email de confirmación redirija a la URL correcta
+    const redirectUrl = import.meta.env.VITE_APP_URL 
+      ? `${import.meta.env.VITE_APP_URL}/confirm-email`
+      : `${window.location.origin}/confirm-email`;
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -100,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: fullName,
           role: 'user',
         },
-        emailRedirectTo: `${window.location.origin}/confirm-email`,
+        emailRedirectTo: redirectUrl,
       },
     });
     return { error };
