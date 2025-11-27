@@ -92,11 +92,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // Usar la URL de producción si está disponible, sino la URL actual
-    // Esto asegura que el email de confirmación redirija a la URL correcta
-    const redirectUrl = import.meta.env.VITE_APP_URL 
-      ? `${import.meta.env.VITE_APP_URL}/confirm-email`
-      : `${window.location.origin}/confirm-email`;
+    // Determinar la URL de redirección
+    // Prioridad: 1) VITE_APP_URL (producción), 2) Detectar si estamos en localhost y usar producción, 3) URL actual
+    let redirectUrl: string;
+    
+    if (import.meta.env.VITE_APP_URL) {
+      // Si hay una variable de entorno configurada, usarla
+      redirectUrl = `${import.meta.env.VITE_APP_URL}/confirm-email`;
+    } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      // Si estamos en localhost, intentar usar la URL de producción desde Vercel
+      // Esto es importante porque los emails de confirmación deben apuntar a producción
+      const vercelUrl = import.meta.env.VITE_VERCEL_URL || import.meta.env.VERCEL_URL;
+      if (vercelUrl) {
+        redirectUrl = `https://${vercelUrl}/confirm-email`;
+      } else {
+        // Si no hay URL de producción, usar la URL actual (pero esto causará problemas)
+        // Mejor usar una URL de producción hardcodeada o mostrar un error
+        console.warn('⚠️ Registro desde localhost sin URL de producción configurada. El email de confirmación puede no funcionar correctamente.');
+        redirectUrl = `${window.location.origin}/confirm-email`;
+      }
+    } else {
+      // Si no estamos en localhost, usar la URL actual (debería ser producción)
+      redirectUrl = `${window.location.origin}/confirm-email`;
+    }
     
     const { error } = await supabase.auth.signUp({
       email,

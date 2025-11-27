@@ -95,15 +95,22 @@ export function EmailConfirmation() {
         window.history.replaceState({}, document.title, window.location.pathname);
 
         // Redirigir al login después de 3 segundos
-        // Siempre usar la URL de origen actual (será la correcta si el usuario hace clic desde el email)
+        // Si estamos en localhost, redirigir a la URL de producción
         setTimeout(() => {
-          // Si estamos en localhost y el servidor no está corriendo, mostrar mensaje
-          if (window.location.hostname === 'localhost') {
-            // Intentar redirigir, pero si falla, el usuario puede usar el botón
-            window.location.href = window.location.origin;
-          } else {
-            window.location.href = window.location.origin;
+          let redirectUrl = window.location.origin;
+          
+          // Si estamos en localhost, intentar usar la URL de producción
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            const productionUrl = import.meta.env.VITE_APP_URL || import.meta.env.VITE_VERCEL_URL;
+            if (productionUrl) {
+              redirectUrl = productionUrl.startsWith('http') ? productionUrl : `https://${productionUrl}`;
+            } else {
+              // Si no hay URL de producción configurada, mostrar mensaje
+              console.warn('⚠️ Confirmación desde localhost sin URL de producción. Redirigiendo a origen actual.');
+            }
           }
+          
+          window.location.href = redirectUrl;
         }, 3000);
       } catch (err: any) {
         console.error('Error procesando confirmación de email:', err);
@@ -143,7 +150,14 @@ export function EmailConfirmation() {
             </p>
             <button
               onClick={() => {
-                window.location.href = window.location.origin;
+                let redirectUrl = window.location.origin;
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                  const productionUrl = import.meta.env.VITE_APP_URL || import.meta.env.VITE_VERCEL_URL;
+                  if (productionUrl) {
+                    redirectUrl = productionUrl.startsWith('http') ? productionUrl : `https://${productionUrl}`;
+                  }
+                }
+                window.location.href = redirectUrl;
               }}
               className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
             >
@@ -165,7 +179,14 @@ export function EmailConfirmation() {
             </p>
             <button
               onClick={() => {
-                window.location.href = window.location.origin;
+                let redirectUrl = window.location.origin;
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                  const productionUrl = import.meta.env.VITE_APP_URL || import.meta.env.VITE_VERCEL_URL;
+                  if (productionUrl) {
+                    redirectUrl = productionUrl.startsWith('http') ? productionUrl : `https://${productionUrl}`;
+                  }
+                }
+                window.location.href = redirectUrl;
               }}
               className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
             >
