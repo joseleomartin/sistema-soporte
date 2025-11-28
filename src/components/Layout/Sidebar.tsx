@@ -17,7 +17,7 @@ const menuItems: MenuItem[] = [
   { icon: Video, label: 'Salas de Reunión', view: 'meetings', roles: ['admin', 'support', 'user'] },
   { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
   { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
-  { icon: Building2, label: 'Areas', view: 'departments', roles: ['admin', 'support', 'user'] },
+  { icon: Building2, label: 'Areas', view: 'departments', roles: ['admin', 'support'] },
   { icon: Calendar, label: 'Vacaciones/licencias', view: 'vacations', roles: ['admin', 'support'] },
   { icon: Users, label: 'Usuarios', view: 'users', roles: ['admin'] },
   { icon: Settings, label: 'Mi Perfil', view: 'settings', roles: ['admin', 'support', 'user'] },
@@ -52,8 +52,8 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-200">
+    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0">
+      <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center justify-between mb-3 gap-2">
           <div className="flex items-center flex-1 min-w-0">
             {logoError ? (
@@ -105,7 +105,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         )}
       </div>
 
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto min-h-0">
         <ul className="space-y-1">
           {filteredItems.map((item) => {
             const Icon = item.icon;
@@ -135,7 +135,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 flex-shrink-0 mt-auto">
         <button
           onClick={signOut}
           className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition"
