@@ -82,7 +82,6 @@ export function MessagesBell() {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Error loading admins:', error);
       return [];
     }
   };
@@ -93,7 +92,7 @@ export function MessagesBell() {
       
       // Para usuarios normales, cargar admin/support disponibles
       if (profile.role === 'user') {
-        getAvailableAdmins().then(setAvailableAdmins).catch(console.error);
+        getAvailableAdmins().then(setAvailableAdmins);
       }
       
       // Actualizar conversaciones periódicamente cuando el dropdown está abierto
@@ -101,7 +100,7 @@ export function MessagesBell() {
         if (showDropdown) {
           loadConversations();
           if (profile.role === 'user') {
-            getAvailableAdmins().then(setAvailableAdmins).catch(console.error);
+            getAvailableAdmins().then(setAvailableAdmins);
           }
         }
       }, 5000); // Cada 5 segundos
@@ -222,7 +221,6 @@ export function MessagesBell() {
         return conversationsWithAvatars;
       });
     } catch (error) {
-      console.error('Error loading conversations:', error);
     }
   };
 
@@ -256,14 +254,12 @@ export function MessagesBell() {
       
       setMessages(processedMessages);
     } catch (error) {
-      console.error('Error loading messages:', error);
     }
   };
 
   const subscribeToMessages = (otherUserId: string) => {
     if (!profile?.id) return null;
 
-    console.log('🔔 Subscribing to direct_messages for conversation with:', otherUserId);
 
     // Suscribirse a mensajes donde el usuario es remitente
     const channel1 = supabase
@@ -277,19 +273,13 @@ export function MessagesBell() {
           filter: `sender_id=eq.${profile.id}`
         },
         async (payload: any) => {
-          console.log('📨 New message received (as sender):', payload);
           if (payload.new.receiver_id === otherUserId) {
             await handleNewMessage(payload.new.id, otherUserId);
           }
         }
       )
       .subscribe((status) => {
-        console.log('📡 Sender subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to sender messages');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('❌ Error subscribing to sender messages:', status);
-        }
+        // Subscription status handled silently
       });
 
     // Suscribirse a mensajes donde el usuario es destinatario
@@ -304,7 +294,6 @@ export function MessagesBell() {
           filter: `receiver_id=eq.${profile.id}`
         },
         async (payload: any) => {
-          console.log('📨 New message received (as receiver):', payload);
           if (payload.new.sender_id === otherUserId) {
             await handleNewMessage(payload.new.id, otherUserId);
           }
@@ -338,7 +327,6 @@ export function MessagesBell() {
           table: 'direct_message_attachments'
         },
         async (payload: any) => {
-          console.log('📎 New attachment received:', payload);
           // Recargar el mensaje para obtener los archivos adjuntos
           if (payload.new.message_id) {
             // Recargar el mensaje completo con los archivos adjuntos
@@ -347,12 +335,7 @@ export function MessagesBell() {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Receiver subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to receiver messages');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('❌ Error subscribing to receiver messages:', status);
-        }
+        // Subscription status handled silently
       });
 
     return { channel1, channel2 };
@@ -380,7 +363,6 @@ export function MessagesBell() {
           .single();
 
         if (error) {
-          console.error('❌ Error fetching new message:', error);
           // Si es el primer intento y hay error, esperar un poco antes de reintentar
           if (attempts === 0) {
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -449,7 +431,6 @@ export function MessagesBell() {
         loadConversations();
       }
     } catch (error) {
-      console.error('❌ Error in Realtime handler:', error);
     }
   };
 
@@ -462,7 +443,6 @@ export function MessagesBell() {
       });
       loadConversations();
     } catch (error) {
-      console.error('Error marking messages as read:', error);
     }
   };
 
@@ -525,7 +505,6 @@ export function MessagesBell() {
         if (dbError) throw dbError;
       }
     } catch (error) {
-      console.error('Error uploading files:', error);
       throw error;
     } finally {
       setUploading(false);
@@ -597,7 +576,6 @@ export function MessagesBell() {
           // Esperar un momento para que los archivos se asocien correctamente
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (fileError) {
-          console.error('Error uploading files:', fileError);
           // Si falla la subida, mantener el mensaje pero sin archivos
         }
       }
@@ -634,7 +612,6 @@ export function MessagesBell() {
           }
           break;
         } else if (fetchError) {
-          console.error('Error fetching updated message:', fetchError);
         }
         attempts++;
         if (attempts < maxAttempts) {
@@ -673,7 +650,6 @@ export function MessagesBell() {
 
       setSelectedFiles([]); // Limpiar archivos seleccionados
     } catch (error) {
-      console.error('Error sending message:', error);
       // Remover el mensaje temporal en caso de error
       setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
       setNewMessage(messageText); // Restaurar el texto del mensaje
@@ -693,7 +669,6 @@ export function MessagesBell() {
 
       if (error) throw error;
       if (data) {
-        console.log('📸 Perfil cargado:', { id: data.id, name: data.full_name, avatar_url: data.avatar_url });
         setSelectedConversationProfile(data);
         
         // Actualizar también la conversación en la lista si existe
@@ -711,7 +686,6 @@ export function MessagesBell() {
         ));
       }
     } catch (error) {
-      console.error('Error loading user profile:', error);
       setSelectedConversationProfile(null);
     }
   };
@@ -754,7 +728,6 @@ export function MessagesBell() {
       if (error) throw error;
       setSearchResults(data || []);
     } catch (error) {
-      console.error('Error searching users:', error);
       setSearchResults([]);
     } finally {
       setSearchingUsers(false);
@@ -851,7 +824,7 @@ export function MessagesBell() {
         // Marcar como cargado para evitar múltiples llamadas
         loadedProfilesRef.current.add(conv.other_user_id);
         // Cargar perfil en background para obtener avatar_url actualizado
-        loadUserProfile(conv.other_user_id).catch(console.error);
+        loadUserProfile(conv.other_user_id);
       }
     });
   }, [conversations, allConversations, isNormalUser]);
@@ -984,7 +957,6 @@ export function MessagesBell() {
                               className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                               onError={(e) => {
                                 // Si la imagen falla al cargar, ocultar y mostrar fallback
-                                console.error('❌ Error cargando avatar:', conv.avatar_url);
                                 e.currentTarget.style.display = 'none';
                                 const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                                 if (fallback) {
@@ -993,11 +965,10 @@ export function MessagesBell() {
                                 }
                                 // Intentar recargar el perfil
                                 if (conv.other_user_id) {
-                                  loadUserProfile(conv.other_user_id).catch(console.error);
+                                  loadUserProfile(conv.other_user_id);
                                 }
                               }}
                               onLoad={() => {
-                                console.log('✅ Avatar cargado correctamente:', conv.avatar_url);
                               }}
                             />
                           ) : null}
