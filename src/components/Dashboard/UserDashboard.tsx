@@ -29,7 +29,7 @@ interface UserStats {
   filesShared: number;
   forumPosts: number;
   tasksAssigned: number;
-  lastActivity: string;
+  totalHours: number;
 }
 
 interface RecentActivity {
@@ -52,7 +52,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     filesShared: 0,
     forumPosts: 0,
     tasksAssigned: 0,
-    lastActivity: 'Hoy',
+    totalHours: 0,
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,13 +205,32 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         icon: MessageSquare,
       }));
 
+      // Obtener total de horas cargadas (del mes actual)
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const endOfMonth = new Date();
+      endOfMonth.setMonth(endOfMonth.getMonth() + 1);
+      endOfMonth.setDate(0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      const { data: timeEntries } = await supabase
+        .from('time_entries')
+        .select('hours_worked')
+        .eq('user_id', profile.id)
+        .gte('entry_date', startOfMonth.toISOString().split('T')[0])
+        .lte('entry_date', endOfMonth.toISOString().split('T')[0]);
+
+      const totalHours = timeEntries?.reduce((sum, entry) => 
+        sum + parseFloat(entry.hours_worked.toString()), 0) || 0;
+
       setStats({
         clientsAccess: clientsCount || 0,
         meetingsAttended: 0, // TODO: Implementar tracking de reuniones
         filesShared: 0, // TODO: Contar archivos subidos
         forumPosts: forumPostsCount || 0,
         tasksAssigned: tasksCount,
-        lastActivity: activities.length > 0 ? 'Hoy' : 'Hace tiempo',
+        totalHours: totalHours,
       });
 
       setRecentActivities(activities);
@@ -458,12 +477,12 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       description: 'Tareas pendientes'
     },
     { 
-      icon: Activity, 
-      label: 'Última Actividad', 
-      value: stats.lastActivity, 
+      icon: Clock, 
+      label: 'Horas Cargadas', 
+      value: `${stats.totalHours.toFixed(2)}h`, 
       color: 'bg-orange-50 text-orange-600',
-      description: 'Actividad reciente',
-      isText: true
+      description: 'Horas del mes actual',
+      isText: false
     },
   ];
 
