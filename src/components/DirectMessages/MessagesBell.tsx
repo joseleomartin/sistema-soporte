@@ -55,9 +55,8 @@ export function MessagesBell() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [userSearchTerm, setUserSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [totalUnread, setTotalUnread] = useState(0);
   const [availableAdmins, setAvailableAdmins] = useState<any[]>([]);
@@ -704,8 +703,8 @@ export function MessagesBell() {
     }
     
     await loadConversations();
-    setShowUserSearch(false);
-    setUserSearchTerm('');
+    setShowSearchResults(false);
+    setSearchTerm('');
     setSearchResults([]);
   };
 
@@ -735,22 +734,27 @@ export function MessagesBell() {
   };
 
   useEffect(() => {
-    if (userSearchTerm.trim()) {
+    if (searchTerm.trim() && isAdmin) {
       const timeoutId = setTimeout(() => {
-        searchUsers(userSearchTerm);
+        searchUsers(searchTerm);
+        setShowSearchResults(true);
       }, 300); // Debounce de 300ms
 
       return () => clearTimeout(timeoutId);
     } else {
       setSearchResults([]);
+      setShowSearchResults(false);
     }
-  }, [userSearchTerm]);
+  }, [searchTerm, isAdmin]);
 
   const conversationsToShow = isNormalUser ? allConversations : conversations;
-  const filteredConversations = conversationsToShow.filter(conv =>
-    conv.other_user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.other_user_email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar conversaciones solo si no hay resultados de búsqueda de usuarios mostrándose
+  const filteredConversations = showSearchResults && isAdmin && searchResults.length > 0 
+    ? [] 
+    : conversationsToShow.filter(conv =>
+        conv.other_user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conv.other_user_email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
   const [selectedConversationProfile, setSelectedConversationProfile] = useState<any>(null);
 
@@ -846,84 +850,84 @@ export function MessagesBell() {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                {isAdmin && (
-                  <div className="mb-3 relative">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Buscar usuarios..."
-                        value={userSearchTerm}
-                        onChange={(e) => {
-                          setUserSearchTerm(e.target.value);
-                          setShowUserSearch(e.target.value.trim().length > 0);
-                        }}
-                        onFocus={() => {
-                          if (userSearchTerm.trim().length > 0) {
-                            setShowUserSearch(true);
-                          }
-                        }}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      />
-                    </div>
-                    {showUserSearch && searchResults.length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
-                        {searchResults.map((user) => (
-                          <button
-                            key={user.id}
-                            onClick={() => startConversation(user.id)}
-                            className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0"
-                          >
-                            {user.avatar_url ? (
-                              <img
-                                src={user.avatar_url}
-                                alt={user.full_name}
-                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                  if (fallback) fallback.style.display = 'flex';
-                                }}
-                              />
-                            ) : null}
-                            <div 
-                              className={`w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 ${user.avatar_url ? 'hidden' : ''}`}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={isAdmin ? "Buscar usuarios o conversaciones..." : "Buscar conversaciones..."}
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      if (e.target.value.trim().length > 0 && isAdmin) {
+                        setShowSearchResults(true);
+                      } else {
+                        setShowSearchResults(false);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (searchTerm.trim().length > 0 && isAdmin) {
+                        setShowSearchResults(true);
+                      }
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowSearchResults(false), 200);
+                    }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  {showSearchResults && isAdmin && (
+                    <>
+                      {searchingUsers && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-gray-500 text-sm">
+                          Buscando...
+                        </div>
+                      )}
+                      {!searchingUsers && searchResults.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                          {searchResults.map((user) => (
+                            <button
+                              key={user.id}
+                              onClick={() => startConversation(user.id)}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0"
                             >
-                              <span className="text-blue-600 font-semibold">
-                                {user.full_name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="flex-1 text-left min-w-0">
-                              <p className="font-medium text-gray-900 text-sm truncate">{user.full_name}</p>
-                              <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                              <p className="text-xs text-gray-400">
-                                {user.role === 'admin' ? 'Administrador' : 
-                                 user.role === 'support' ? 'Soporte' : 'Usuario'}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {showUserSearch && userSearchTerm.trim().length > 0 && !searchingUsers && searchResults.length === 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-gray-500 text-sm">
-                        No se encontraron usuarios
-                      </div>
-                    )}
-                  </div>
-                )}
-                {isAdmin && (
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Buscar conversaciones..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    />
-                  </div>
-                )}
+                              {user.avatar_url ? (
+                                <img
+                                  src={user.avatar_url}
+                                  alt={user.full_name}
+                                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div 
+                                className={`w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 ${user.avatar_url ? 'hidden' : ''}`}
+                              >
+                                <span className="text-blue-600 font-semibold">
+                                  {user.full_name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="flex-1 text-left min-w-0">
+                                <p className="font-medium text-gray-900 text-sm truncate">{user.full_name}</p>
+                                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                                <p className="text-xs text-gray-400">
+                                  {user.role === 'admin' ? 'Administrador' : 
+                                   user.role === 'support' ? 'Soporte' : 'Usuario'}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {!searchingUsers && searchTerm.trim().length > 0 && searchResults.length === 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-gray-500 text-sm">
+                          No se encontraron usuarios
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto" style={{ minHeight: '400px', maxHeight: '500px' }}>
