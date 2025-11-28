@@ -118,12 +118,12 @@ export function VacationsManagement() {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Vacación aprobada correctamente' });
+      setMessage({ type: 'success', text: 'Vacación / Licencia aprobada correctamente' });
       setTimeout(() => setMessage(null), 3000);
       await loadVacations();
     } catch (error: any) {
       console.error('Error approving vacation:', error);
-      setMessage({ type: 'error', text: 'Error al aprobar la vacación' });
+      setMessage({ type: 'error', text: 'Error al aprobar la vacación / licencia' });
       setTimeout(() => setMessage(null), 5000);
     }
   };
@@ -148,18 +148,18 @@ export function VacationsManagement() {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Vacación rechazada' });
+      setMessage({ type: 'success', text: 'Vacación / Licencia rechazada' });
       setTimeout(() => setMessage(null), 3000);
       await loadVacations();
     } catch (error: any) {
       console.error('Error rejecting vacation:', error);
-      setMessage({ type: 'error', text: 'Error al rechazar la vacación' });
+      setMessage({ type: 'error', text: 'Error al rechazar la vacación / licencia' });
       setTimeout(() => setMessage(null), 5000);
     }
   };
 
   const handleDelete = async (vacationId: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta vacación?')) return;
+    if (!confirm('¿Estás seguro de que deseas eliminar esta vacación / licencia?')) return;
 
     try {
       const { error } = await supabase
@@ -169,12 +169,12 @@ export function VacationsManagement() {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Vacación eliminada correctamente' });
+      setMessage({ type: 'success', text: 'Vacación / Licencia eliminada correctamente' });
       setTimeout(() => setMessage(null), 3000);
       await loadVacations();
     } catch (error: any) {
       console.error('Error deleting vacation:', error);
-      setMessage({ type: 'error', text: 'Error al eliminar la vacación' });
+      setMessage({ type: 'error', text: 'Error al eliminar la vacación / licencia' });
       setTimeout(() => setMessage(null), 5000);
     }
   };
@@ -192,14 +192,14 @@ export function VacationsManagement() {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Gestión de Vacaciones/Licencias</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Gestión de Vacaciones / Licencias</h2>
         {isAdmin ? (
           <button
             onClick={() => setShowAssignModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Asignar Vacaciones/Licencias
+            Asignar Vacaciones / Licencias
           </button>
         ) : (
           <button
@@ -207,7 +207,7 @@ export function VacationsManagement() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Solicitar Vacaciones/Licencias
+            Solicitar Vacaciones / Licencias
           </button>
         )}
       </div>
@@ -263,7 +263,7 @@ export function VacationsManagement() {
         {filteredVacations.length === 0 ? (
           <div className="p-12 text-center">
             <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-            <p className="text-gray-500">No se encontraron vacaciones</p>
+            <p className="text-gray-500">No se encontraron vacaciones / licencias</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
@@ -449,9 +449,9 @@ function VacationCard({
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Rechazar Vacación</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Rechazar Vacación / Licencia</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Por favor, proporciona una razón para rechazar esta solicitud de vacaciones.
+              Por favor, proporciona una razón para rechazar esta solicitud de vacaciones / licencias.
             </p>
             <textarea
               value={rejectionReason}
@@ -536,7 +536,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
       onSuccess();
     } catch (err: any) {
       console.error('Error creating vacation:', err);
-      setError(err.message || 'Error al crear la solicitud de vacaciones');
+      setError(err.message || 'Error al crear la solicitud de vacaciones / licencias');
     } finally {
       setLoading(false);
     }
@@ -545,7 +545,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones/Licencias</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones / Licencias</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -583,7 +583,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Describe el motivo de tus vacaciones..."
+              placeholder="Describe el motivo de tus vacaciones / licencias..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
@@ -698,7 +698,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
       onSuccess();
     } catch (err: any) {
       console.error('Error assigning vacation:', err);
-      setError(err.message || 'Error al asignar la vacación');
+      setError(err.message || 'Error al asignar la vacación / licencia');
     } finally {
       setLoading(false);
     }
@@ -708,7 +708,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900">Asignar Vacaciones/Licencias</h3>
+          <h3 className="text-xl font-bold text-gray-900">Asignar Vacaciones / Licencias</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -777,7 +777,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Razón de las vacaciones..."
+              placeholder="Razón de las vacaciones / licencias..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
@@ -802,7 +802,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
               disabled={loading || loadingUsers}
               className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              {loading ? 'Asignando...' : 'Asignar Vacaciones/Licencias'}
+              {loading ? 'Asignando...' : 'Asignar Vacaciones / Licencias'}
             </button>
           </div>
         </form>

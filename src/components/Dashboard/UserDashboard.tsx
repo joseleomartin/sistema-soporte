@@ -350,8 +350,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
             vacationEvents.push({
               id: `vacation-${vacation.id}-${dayDate.toISOString().split('T')[0]}`,
               title: profile.role === 'admin' || profile.role === 'support'
-                ? `Vacaciones: ${vacation.user_profile?.full_name || 'Usuario'}`
-                : 'Vacaciones',
+                ? `Vacaciones / Licencias: ${vacation.user_profile?.full_name || 'Usuario'}`
+                : 'Vacaciones / Licencias',
               start_date: dayDate.toISOString(),
               end_date: dayDate.toISOString(),
               color: '#F59E0B', // Color naranja/ámbar para vacaciones
@@ -835,22 +835,22 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <CalendarIcon className="w-5 h-5 text-orange-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Mis Vacaciones/Licencias</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Mis Vacaciones / Licencias</h3>
             </div>
             <button
               onClick={() => setShowVacationModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
             >
               <Plus className="w-4 h-4" />
-              Solicitar Vacaciones/Licencias
+              Solicitar Vacaciones / Licencias
             </button>
           </div>
 
           {userVacations.length === 0 ? (
             <div className="text-center py-8">
               <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-              <p className="text-gray-500 mb-2">No tienes vacaciones registradas</p>
-              <p className="text-sm text-gray-400">Solicita tus vacaciones haciendo clic en el botón de arriba</p>
+              <p className="text-gray-500 mb-2">No tienes vacaciones / licencias registradas</p>
+              <p className="text-sm text-gray-400">Solicita tus vacaciones / licencias haciendo clic en el botón de arriba</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -1028,7 +1028,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
       onSuccess();
     } catch (err: any) {
       console.error('Error creating vacation:', err);
-      setError(err.message || 'Error al crear la solicitud de vacaciones');
+      setError(err.message || 'Error al crear la solicitud de vacaciones / licencias');
     } finally {
       setLoading(false);
     }
@@ -1037,7 +1037,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones/Licencias</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones / Licencias</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -1075,7 +1075,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Describe el motivo de tus vacaciones..."
+              placeholder="Describe el motivo de tus vacaciones / licencias..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               rows={3}
             />

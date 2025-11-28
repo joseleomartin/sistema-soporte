@@ -14,6 +14,7 @@ import { DepartmentManagement } from './components/Departments/DepartmentManagem
 import { ProfileSettings } from './components/Profile/ProfileSettings';
 import { TasksList } from './components/Tasks/TasksList';
 import { VacationsManagement } from './components/Vacations/VacationsManagement';
+import { TimeTracking } from './components/TimeTracking/TimeTracking';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
 
@@ -98,6 +99,8 @@ function MainApp() {
         return <DepartmentManagement key={`departments-${viewKey}`} />;
       case 'vacations':
         return <VacationsManagement key={`vacations-${viewKey}`} />;
+      case 'time-tracking':
+        return <TimeTracking key={`time-tracking-${viewKey}`} />;
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
       default:
