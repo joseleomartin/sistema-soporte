@@ -993,9 +993,11 @@ export function MessagesBell() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 truncate">
-                            {conv.last_message || (isNormalUser ? 'Disponible para chatear' : 'Sin mensajes')}
-                          </p>
+                          {conv.last_message && (
+                            <p className="text-xs text-gray-500 truncate">
+                              {conv.last_message}
+                            </p>
+                          )}
                         </div>
                       </button>
                     ))}
