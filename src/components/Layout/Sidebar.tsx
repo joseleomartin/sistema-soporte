@@ -1,4 +1,4 @@
-import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare } from 'lucide-react';
+import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { NotificationBell } from '../Notifications/NotificationBell';
@@ -18,6 +18,7 @@ const menuItems: MenuItem[] = [
   { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
   { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
   { icon: Building2, label: 'Areas', view: 'departments', roles: ['admin', 'support', 'user'] },
+  { icon: Calendar, label: 'Vacaciones/licencias', view: 'vacations', roles: ['admin', 'support'] },
   { icon: Users, label: 'Usuarios', view: 'users', roles: ['admin'] },
   { icon: Settings, label: 'Mi Perfil', view: 'settings', roles: ['admin', 'support', 'user'] },
   { icon: Ticket, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
@@ -34,6 +35,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   const { profile, signOut } = useAuth();
   const { activeJobsCount } = useExtraction();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
 
   useEffect(() => {
     if (profile?.avatar_url) {
@@ -51,9 +53,20 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">EmaGroup</h1>
+      <div className="px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center flex-1 min-w-0">
+            {logoError ? (
+              <h1 className="text-2xl font-bold text-gray-900">EmaGroup</h1>
+            ) : (
+              <img 
+                src="/logo%20ema.png" 
+                alt="EmaGroup" 
+                className="h-16 w-auto object-contain"
+                onError={() => setLogoError(true)}
+              />
+            )}
+          </div>
           <NotificationBell 
             onNavigateToTicket={onNavigateToTicket}
             onNavigateToCalendar={handleNavigateToCalendar}

@@ -15,7 +15,10 @@ import {
   Wrench,
   ChevronLeft,
   ChevronRight,
-  CheckSquare
+  CheckSquare,
+  Plus,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { CreateEventModal } from '../Calendar/CreateEventModal';
 import { EventDetailsModal } from '../Calendar/EventDetailsModal';
@@ -60,16 +63,21 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const [selectedDayEvents, setSelectedDayEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userVacations, setUserVacations] = useState<any[]>([]);
+  const [showVacationModal, setShowVacationModal] = useState(false);
 
   useEffect(() => {
     if (profile?.id) {
       loadDashboardData();
       loadEvents();
+      if (profile.role !== 'admin' && profile.role !== 'support') {
+        loadUserVacations();
+      }
       if (profile.avatar_url) {
         setAvatarUrl(profile.avatar_url);
       }
     }
-  }, [profile?.id, profile?.avatar_url]);
+  }, [profile?.id, profile?.avatar_url, profile?.role]);
 
   useEffect(() => {
     // Recargar eventos cuando cambia el mes
@@ -77,6 +85,24 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       loadEvents();
     }
   }, [currentDate, profile?.id]);
+
+  const loadUserVacations = async () => {
+    if (!profile?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('vacations')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('start_date', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setUserVacations(data || []);
+    } catch (error) {
+      console.error('Error loading vacations:', error);
+    }
+  };
 
   const loadDashboardData = async () => {
     if (!profile?.id) return;
@@ -291,11 +317,64 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           created_by_profile: task.created_by_profile
         }));
 
-      // Combinar eventos y tareas
+      // Obtener vacaciones aprobadas
+      let vacationsQuery = supabase
+        .from('vacations')
+        .select('*, user_profile:profiles!vacations_user_id_fkey(full_name)')
+        .eq('status', 'approved')
+        .lte('start_date', endOfMonth.toISOString().split('T')[0])
+        .gte('end_date', startOfMonth.toISOString().split('T')[0]);
+
+      // Si no es admin/support, solo ver sus propias vacaciones
+      if (profile.role !== 'admin' && profile.role !== 'support') {
+        vacationsQuery = vacationsQuery.eq('user_id', profile.id);
+      }
+
+      const { data: vacations } = await vacationsQuery;
+
+      // Convertir vacaciones a eventos del calendario
+      const vacationsAsEvents = (vacations || []).map((vacation: any) => {
+        // Crear un evento por cada día de vacaciones
+        const vacationEvents = [];
+        const start = new Date(vacation.start_date);
+        const end = new Date(vacation.end_date);
+        
+        // Solo crear eventos para días dentro del mes actual
+        const currentDay = new Date(start);
+        while (currentDay <= end) {
+          const dayDate = new Date(currentDay);
+          if (
+            dayDate.getMonth() === currentDate.getMonth() &&
+            dayDate.getFullYear() === currentDate.getFullYear()
+          ) {
+            vacationEvents.push({
+              id: `vacation-${vacation.id}-${dayDate.toISOString().split('T')[0]}`,
+              title: profile.role === 'admin' || profile.role === 'support'
+                ? `Vacaciones: ${vacation.user_profile?.full_name || 'Usuario'}`
+                : 'Vacaciones',
+              start_date: dayDate.toISOString(),
+              end_date: dayDate.toISOString(),
+              color: '#F59E0B', // Color naranja/ámbar para vacaciones
+              isPersonal: vacation.user_id === profile.id,
+              isTask: false,
+              isVacation: true,
+              vacationId: vacation.id,
+              vacationDays: vacation.days_count,
+              vacationUser: vacation.user_profile?.full_name
+            });
+          }
+          currentDay.setDate(currentDay.getDate() + 1);
+        }
+        
+        return vacationEvents;
+      }).flat();
+
+      // Combinar eventos, tareas y vacaciones
       const allEvents = [
-        ...(personalEvents || []).map(e => ({ ...e, isPersonal: true, isTask: false })),
-        ...(assignedEvents || []).map(e => ({ ...e, isPersonal: false, isTask: false })),
-        ...tasksAsEvents
+        ...(personalEvents || []).map(e => ({ ...e, isPersonal: true, isTask: false, isVacation: false })),
+        ...(assignedEvents || []).map(e => ({ ...e, isPersonal: false, isTask: false, isVacation: false })),
+        ...tasksAsEvents.map(e => ({ ...e, isVacation: false })),
+        ...vacationsAsEvents
       ];
 
       setEvents(allEvents);
@@ -750,6 +829,85 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         </div>
       </div>
 
+      {/* Sección de Vacaciones - Solo para usuarios normales */}
+      {profile?.role !== 'admin' && profile?.role !== 'support' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-orange-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Mis Vacaciones/Licencias</h3>
+            </div>
+            <button
+              onClick={() => setShowVacationModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Solicitar Vacaciones/Licencias
+            </button>
+          </div>
+
+          {userVacations.length === 0 ? (
+            <div className="text-center py-8">
+              <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <p className="text-gray-500 mb-2">No tienes vacaciones registradas</p>
+              <p className="text-sm text-gray-400">Solicita tus vacaciones haciendo clic en el botón de arriba</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {userVacations.map((vacation) => {
+                const startDate = new Date(vacation.start_date);
+                const endDate = new Date(vacation.end_date);
+                const getStatusBadge = () => {
+                  switch (vacation.status) {
+                    case 'approved':
+                      return (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          <CheckCircle className="w-3 h-3" />
+                          Aprobada
+                        </span>
+                      );
+                    case 'rejected':
+                      return (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                          <XCircle className="w-3 h-3" />
+                          Rechazada
+                        </span>
+                      );
+                    default:
+                      return (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                          <Clock className="w-3 h-3" />
+                          Pendiente
+                        </span>
+                      );
+                  }
+                };
+
+                return (
+                  <div key={vacation.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        {getStatusBadge()}
+                        <span className="text-sm font-medium text-gray-900">
+                          {startDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - {endDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        <span className="text-sm text-gray-500">({vacation.days_count} día{vacation.days_count !== 1 ? 's' : ''})</span>
+                      </div>
+                      {vacation.reason && (
+                        <p className="text-sm text-gray-600">{vacation.reason}</p>
+                      )}
+                      {vacation.status === 'rejected' && vacation.rejection_reason && (
+                        <p className="text-xs text-red-600 mt-1">Razón: {vacation.rejection_reason}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Información de Perfil */}
       <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-200 p-6">
         <div className="flex items-start gap-4">
@@ -804,6 +962,149 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           }}
         />
       )}
+
+      {/* Modal para solicitar vacaciones - Solo para usuarios normales */}
+      {showVacationModal && profile?.role !== 'admin' && profile?.role !== 'support' && (
+        <CreateVacationModal
+          onClose={() => {
+            setShowVacationModal(false);
+          }}
+          onSuccess={() => {
+            setShowVacationModal(false);
+            loadUserVacations();
+            loadEvents(); // Recargar eventos para mostrar las vacaciones en el calendario
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Modal simplificado para crear vacación (solo para usuarios normales)
+function CreateVacationModal({ onClose, onSuccess }: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { profile } = useAuth();
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!startDate || !endDate) {
+      setError('Debes seleccionar ambas fechas');
+      return;
+    }
+
+    if (new Date(endDate) < new Date(startDate)) {
+      setError('La fecha de fin debe ser posterior a la fecha de inicio');
+      return;
+    }
+
+    if (!profile?.id) {
+      setError('No se pudo identificar el usuario');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error: insertError } = await supabase
+        .from('vacations')
+        .insert({
+          user_id: profile.id,
+          start_date: startDate,
+          end_date: endDate,
+          reason: reason || null
+        });
+
+      if (insertError) throw insertError;
+
+      onSuccess();
+    } catch (err: any) {
+      console.error('Error creating vacation:', err);
+      setError(err.message || 'Error al crear la solicitud de vacaciones');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones/Licencias</h3>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha de inicio *
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha de fin *
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              min={startDate || new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Razón (opcional)
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Describe el motivo de tus vacaciones..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              rows={3}
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Enviando...' : 'Solicitar'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { ExtractionNotifications } from './components/Notifications/ExtractionNo
 import { DepartmentManagement } from './components/Departments/DepartmentManagement';
 import { ProfileSettings } from './components/Profile/ProfileSettings';
 import { TasksList } from './components/Tasks/TasksList';
+import { VacationsManagement } from './components/Vacations/VacationsManagement';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
 
@@ -95,6 +96,8 @@ function MainApp() {
         return profile.role === 'admin' ? <UserManagement key={`users-${viewKey}`} /> : <div>No autorizado</div>;
       case 'departments':
         return <DepartmentManagement key={`departments-${viewKey}`} />;
+      case 'vacations':
+        return <VacationsManagement key={`vacations-${viewKey}`} />;
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
       default:
