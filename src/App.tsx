@@ -15,6 +15,7 @@ import { ProfileSettings } from './components/Profile/ProfileSettings';
 import { TasksList } from './components/Tasks/TasksList';
 import { VacationsManagement } from './components/Vacations/VacationsManagement';
 import { TimeTracking } from './components/TimeTracking/TimeTracking';
+import { MessagesBell } from './components/DirectMessages/MessagesBell';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
 
@@ -121,6 +122,7 @@ function MainApp() {
         </div>
       </main>
       <ExtractionNotifications />
+      <MessagesBell />
     </div>
   );
 }
