@@ -1092,7 +1092,7 @@ export function MessagesBell() {
                       <p className="font-semibold text-gray-900 text-base truncate">{user.full_name}</p>
                       <p className="text-sm text-gray-500 truncate mt-0.5">{user.email}</p>
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 mt-2">
-                        {user.role === 'admin' ? '👑 Administrador' : '🛠️ Soporte'}
+                        {user.role === 'admin' ? 'Administrador' : '🛠️ Soporte'}
                       </span>
                     </div>
                     <div className="text-blue-600 flex-shrink-0">
