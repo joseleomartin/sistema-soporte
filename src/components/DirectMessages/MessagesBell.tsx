@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
-import { MessageSquare, X, Send, User, Search, Paperclip, FileText, Download, Image, File } from 'lucide-react';
+import { useEffect, useState, useRef, memo, useLayoutEffect } from 'react';
+import { MessageSquare, X, Send, Paperclip, Download, Image, FileText, File } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface Attachment {
   id: string;
@@ -11,7 +12,7 @@ interface Attachment {
   file_type: string;
 }
 
-interface DirectMessage {
+interface Message {
   id: string;
   sender_id: string;
   receiver_id: string;
@@ -31,6 +32,14 @@ interface DirectMessage {
   direct_message_attachments?: Attachment[];
 }
 
+interface UserProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  avatar_url?: string;
+}
+
 interface Conversation {
   other_user_id: string;
   other_user_name: string;
@@ -42,190 +51,486 @@ interface Conversation {
   avatar_url?: string;
 }
 
+// Componente de preview de imagen optimizado con memo
+const ImagePreview = memo(({ 
+  attachment, 
+  isMine, 
+  onDownload,
+  urlCache 
+}: { 
+  attachment: Attachment; 
+  isMine: boolean;
+  onDownload: () => void;
+  urlCache: React.MutableRefObject<Map<string, { url: string; expiresAt: number }>>;
+}) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        // Verificar sesión primero
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          console.error('❌ No hay sesión activa:', sessionError);
+          setError(true);
+          setLoading(false);
+          return;
+        }
+
+        console.log('🔍 Intentando cargar imagen:', {
+          file_path: attachment.file_path,
+          user_id: session.user.id,
+          path_parts: attachment.file_path.split('/')
+        });
+
+        // Verificar cache
+        const cached = urlCache.current.get(attachment.file_path);
+        const now = Date.now();
+
+        if (cached && cached.expiresAt > now) {
+          setImageUrl(cached.url);
+          setLoading(false);
+          return;
+        }
+
+        // Verificar permisos del usuario con el path
+        const pathParts = attachment.file_path.split('/');
+        const isSender = pathParts[0] === session.user.id;
+        const isReceiver = pathParts[1] === session.user.id;
+        
+        console.log('🔐 Verificación de permisos:', {
+          isSender,
+          isReceiver,
+          sender_id: pathParts[0],
+          receiver_id: pathParts[1],
+          current_user: session.user.id
+        });
+
+        if (!isSender && !isReceiver) {
+          console.error('❌ Usuario no tiene permisos para este archivo');
+          setError(true);
+          setLoading(false);
+          return;
+        }
+
+        const { data, error: signedUrlError } = await supabase.storage
+          .from('direct-message-attachments')
+          .createSignedUrl(attachment.file_path, 3600);
+
+        if (signedUrlError || !data?.signedUrl) {
+          // Si falla con 400, intentar con download como fallback
+          console.warn('⚠️ Error creando signed URL, intentando download directo:', {
+            error: signedUrlError,
+            message: signedUrlError?.message,
+            statusCode: (signedUrlError as any)?.statusCode,
+            file_path: attachment.file_path
+          });
+          
+          try {
+            const { data: downloadData, error: downloadError } = await supabase.storage
+              .from('direct-message-attachments')
+              .download(attachment.file_path);
+
+            if (downloadError) {
+              console.error('❌ Error en download también:', {
+                error: downloadError,
+                message: downloadError.message,
+                statusCode: (downloadError as any)?.statusCode,
+                file_path: attachment.file_path,
+                user_id: session.user.id,
+                path_parts: attachment.file_path.split('/')
+              });
+              
+              // Mostrar mensaje más descriptivo al usuario
+              console.error('💡 Posibles causas:');
+              console.error('   1. Las políticas RLS no están configuradas correctamente');
+              console.error('   2. El usuario no tiene permisos para este archivo');
+              console.error('   3. El archivo no existe en storage');
+              console.error('   4. El path del archivo no coincide con el usuario actual');
+              
+              setError(true);
+              setLoading(false);
+              return;
+            }
+
+            // Crear URL local desde el blob
+            const blobUrl = URL.createObjectURL(downloadData);
+            
+            // Cachear la URL del blob (válida mientras la página esté abierta)
+            urlCache.current.set(attachment.file_path, {
+              url: blobUrl,
+              expiresAt: now + 50 * 60 * 1000
+            });
+
+            setImageUrl(blobUrl);
+            setLoading(false);
+            return;
+          } catch (fallbackError) {
+            console.error('Error en fallback:', fallbackError);
+            setError(true);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Cachear
+        urlCache.current.set(attachment.file_path, {
+          url: data.signedUrl,
+          expiresAt: now + 50 * 60 * 1000
+        });
+
+        setImageUrl(data.signedUrl);
+        setLoading(false);
+      } catch (err) {
+        setError(true);
+        setLoading(false);
+      }
+    };
+
+    loadImage();
+  }, [attachment.file_path, urlCache]);
+
+  if (loading) {
+    return (
+      <div className={`p-3 rounded ${isMine ? 'bg-blue-500' : 'bg-gray-100'}`}>
+        <div className="flex items-center gap-2">
+          <div className={`w-4 h-4 border-2 ${isMine ? 'border-white' : 'border-gray-600'} border-t-transparent rounded-full animate-spin`} />
+          <span className={`text-xs ${isMine ? 'text-white' : 'text-gray-600'}`}>Cargando imagen...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !imageUrl) {
+    return (
+      <div className={`p-3 rounded ${isMine ? 'bg-blue-500' : 'bg-gray-100'}`}>
+        <p className={`text-xs ${isMine ? 'text-white' : 'text-gray-900'}`}>
+          No se pudo cargar la imagen
+        </p>
+      </div>
+    );
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  return (
+    <div className="relative group">
+      <img
+        src={imageUrl}
+        alt={attachment.file_name}
+        className="max-w-[280px] max-h-[300px] rounded-lg object-contain cursor-pointer shadow-md"
+        onClick={() => window.open(imageUrl, '_blank')}
+      />
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDownload();
+        }}
+        className={`absolute top-2 right-2 p-2 rounded-full shadow-lg ${
+          isMine ? 'bg-blue-600' : 'bg-gray-800'
+        } text-white opacity-0 group-hover:opacity-100 transition-opacity`}
+      >
+        <Download className="w-4 h-4" />
+      </button>
+      <p className={`text-xs mt-1 ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>
+        {attachment.file_name} ({formatFileSize(attachment.file_size)})
+      </p>
+    </div>
+  );
+});
+
+ImagePreview.displayName = 'ImagePreview';
+
 export function MessagesBell() {
   const { profile } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
-  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [showUserSelector, setShowUserSelector] = useState(false); // Nueva vista de selección
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [unreadByUser, setUnreadByUser] = useState<Map<string, number>>(new Map());
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [searchingUsers, setSearchingUsers] = useState(false);
-  const [totalUnread, setTotalUnread] = useState(0);
-  const [availableAdmins, setAvailableAdmins] = useState<any[]>([]);
-  const [allConversations, setAllConversations] = useState<Conversation[]>([]);
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [searching, setSearching] = useState(false);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const signedUrlCacheRef = useRef<Map<string, { url: string; expiresAt: number }>>(new Map());
+  const isInitialLoadRef = useRef<boolean>(true);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const lastMessageCountRef = useRef<number>(0);
+  const isScrollingRef = useRef<boolean>(false);
+  const addingTempMessageRef = useRef<boolean>(false);
   
   const isNormalUser = profile?.role === 'user';
   const isAdmin = profile?.role === 'admin' || profile?.role === 'support';
 
-  const getAvailableAdmins = async () => {
-    if (!profile?.id) return [];
+  // Cargar usuarios disponibles y conversaciones
+  useEffect(() => {
+    if (!profile?.id) return;
 
-    try {
-      const { data, error } = await supabase
+    const loadData = async () => {
+      if (isNormalUser) {
+        // Usuario normal: cargar lista de admin/support disponibles
+        const { data } = await supabase
         .from('profiles')
         .select('id, full_name, email, role, avatar_url')
         .in('role', ['admin', 'support'])
-        .neq('id', profile.id)
         .order('full_name');
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      return [];
-    }
-  };
-
-  useEffect(() => {
-    if (profile?.id) {
-      loadConversations();
-      
-      // Para usuarios normales, cargar admin/support disponibles
-      if (profile.role === 'user') {
-        getAvailableAdmins().then(setAvailableAdmins);
-      }
-      
-      // Actualizar conversaciones periódicamente cuando el dropdown está abierto
-      const interval = setInterval(() => {
-        if (showDropdown) {
-          loadConversations();
-          if (profile.role === 'user') {
-            getAvailableAdmins().then(setAvailableAdmins);
-          }
+        if (data) {
+          setAvailableUsers(data || []);
         }
-      }, 5000); // Cada 5 segundos
-      
+      } else if (isAdmin) {
+        // Admin: cargar conversaciones activas
+        const { data: convData } = await (supabase as any).rpc('get_conversations');
+        if (convData) {
+          // Enriquecer conversaciones con avatares de profiles
+          const conversationsWithAvatars = await Promise.all(
+            (convData || []).map(async (conv: Conversation) => {
+              // Si ya tiene avatar_url, usarlo
+              if (conv.avatar_url) return conv;
+              
+              // Si no, obtenerlo de profiles
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('avatar_url')
+                .eq('id', conv.other_user_id)
+                .single();
+              
+              return {
+                ...conv,
+                avatar_url: (profileData as any)?.avatar_url || null
+              };
+            })
+          );
+          
+          setConversations(conversationsWithAvatars);
+        }
+      }
+    };
+
+    loadData();
+
+    // Recargar inmediatamente cuando se abre el selector
+    if (showUserSelector) {
+      loadData();
+    }
+
+    // Actualizar cada 5 segundos cuando está en selector
+    if (showUserSelector) {
+      const interval = setInterval(loadData, 5000);
       return () => clearInterval(interval);
     }
-  }, [profile?.id, profile?.role, profile?.avatar_url, showDropdown]);
+  }, [profile?.id, isNormalUser, isAdmin, showUserSelector]);
 
+  // Resetear flags de scroll cuando cambia la conversación
   useEffect(() => {
-    let channels: any = null;
-    
-    if (showDropdown && selectedConversation) {
-      // Cargar perfil si no está en las conversaciones o recargar para obtener avatar actualizado
-      const existingConv = conversations.find(c => c.other_user_id === selectedConversation);
-      if (!existingConv) {
-        // Solo cargar si no tenemos el perfil ya cargado
-        if (!selectedConversationProfile || selectedConversationProfile.id !== selectedConversation) {
-          loadUserProfile(selectedConversation);
-        }
-      } else {
-        // Recargar el perfil para obtener el avatar_url más reciente incluso si existe la conversación
-        loadUserProfile(selectedConversation);
-      }
-
-      loadMessages(selectedConversation);
-      channels = subscribeToMessages(selectedConversation);
-      
-      // Solo marcar como leído si hay mensajes
-      const hasMessages = messages.length > 0;
-      if (hasMessages) {
-        markAsRead(selectedConversation);
-      }
+    if (otherUser?.id && isOpen) {
+      isInitialLoadRef.current = true;
+      lastMessageCountRef.current = 0;
+      isScrollingRef.current = false;
     }
-    
-    return () => {
-      if (channels) {
-        if (channels.channel1) {
-          supabase.removeChannel(channels.channel1);
-        }
-        if (channels.channel2) {
-          supabase.removeChannel(channels.channel2);
-        }
-      }
-    };
-  }, [selectedConversation, showDropdown, profile?.id]);
+  }, [otherUser?.id, isOpen]);
 
-  // Limpiar perfil cuando se cambia de conversación
+  // Cargar mensajes cuando se selecciona un usuario
   useEffect(() => {
-    if (!selectedConversation) {
-      setSelectedConversationProfile(null);
-    } else {
-      // Si la conversación está en la lista, limpiar el perfil temporal
-      const conv = conversations.find(c => c.other_user_id === selectedConversation);
-      if (conv) {
-        setSelectedConversationProfile(null);
-      }
-    }
-  }, [selectedConversation, conversations]);
+    if (!profile?.id || !otherUser?.id || !isOpen) return;
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom();
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    // Calcular total de mensajes no leídos
-    const total = conversations.reduce((sum, conv) => sum + conv.unread_count, 0);
-    setTotalUnread(total);
-  }, [conversations]);
-
-  useEffect(() => {
-    // Cerrar dropdown al hacer clic fuera
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-        setSelectedConversation(null);
-      }
-    };
-
-    if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    loadMessages();
+    subscribeToMessages();
+    markMessagesAsRead();
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      cleanupSubscription();
     };
-  }, [showDropdown]);
+  }, [profile?.id, otherUser?.id, isOpen]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const loadConversations = async () => {
+  // Cargar contador de no leídos
+  useEffect(() => {
     if (!profile?.id) return;
 
-    try {
-      // Obtener conversaciones con avatar_url actualizado
-      const { data, error } = await supabase.rpc('get_conversations');
+    const loadUnreadCount = async () => {
+      if (isNormalUser) {
+        // Usuario normal: contar mensajes no leídos de todos los admins/soporte
+        const { count } = await supabase
+          .from('direct_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', profile.id)
+          .eq('is_read', false);
 
-      if (error) throw error;
-      
-      // Preservar los avatar_url que ya se han cargado previamente
-      setConversations(prev => {
-        const prevMap = new Map(prev.map(conv => [conv.other_user_id, conv]));
-        
-        const conversationsWithAvatars = (data || []).map((conv: any) => {
-          // Si ya tenemos un avatar_url cargado previamente, preservarlo
-          const prevConv = prevMap.get(conv.other_user_id);
-          const preservedAvatarUrl = prevConv?.avatar_url || conv.avatar_url || null;
+        setUnreadCount(count || 0);
+
+        // Cargar contadores individuales por usuario
+        if (showUserSelector && availableUsers.length > 0) {
+          const unreadMap = new Map<string, number>();
           
-          return {
-            ...conv,
-            avatar_url: preservedAvatarUrl // Usar el preservado o el de la DB
-          };
-        });
+          for (const user of availableUsers) {
+            const { count: userCount } = await supabase
+              .from('direct_messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('receiver_id', profile.id)
+              .eq('sender_id', user.id)
+              .eq('is_read', false);
+            
+            if (userCount && userCount > 0) {
+              unreadMap.set(user.id, userCount);
+            }
+          }
+          
+          setUnreadByUser(unreadMap);
+        }
+      } else if (otherUser?.id) {
+        // Admin: contar solo del usuario seleccionado
+        const { count } = await supabase
+          .from('direct_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', profile.id)
+          .eq('sender_id', otherUser.id)
+          .eq('is_read', false);
+
+        setUnreadCount(count || 0);
+      }
+    };
+
+    loadUnreadCount();
+
+    // Actualizar cada 5 segundos cuando está cerrado o en selector
+    if (!isOpen || showUserSelector) {
+      const interval = setInterval(loadUnreadCount, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [profile?.id, otherUser?.id, isOpen, showUserSelector, isNormalUser, availableUsers]);
+
+  // Scroll automático - useLayoutEffect para carga inicial (sin flash)
+  useLayoutEffect(() => {
+    if (messages.length > 0 && !loading && isInitialLoadRef.current) {
+      // Scroll instantáneo en carga inicial (antes del paint)
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+      lastMessageCountRef.current = messages.length;
+      isInitialLoadRef.current = false;
+    }
+  }, [messages.length, loading]);
+
+  // useLayoutEffect para scroll cuando se agrega mensaje temporal (antes del paint)
+  useLayoutEffect(() => {
+    if (addingTempMessageRef.current && messagesContainerRef.current) {
+      // Scroll instantáneo antes del paint para evitar refresh visual
+      const container = messagesContainerRef.current;
+      // Usar scrollTop directamente para evitar cualquier animación
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages.length]);
+
+  // Scroll automático - useEffect para nuevos mensajes (con animación)
+  useEffect(() => {
+    // No hacer scroll si estamos agregando un mensaje temporal (useLayoutEffect lo maneja)
+    if (addingTempMessageRef.current) {
+      // Actualizar contador pero no hacer scroll
+      if (messages.length > lastMessageCountRef.current) {
+        lastMessageCountRef.current = messages.length;
+      }
+      return;
+    }
+    
+    // Solo hacer scroll si hay nuevos mensajes y no está en proceso de scroll
+    const hasNewMessages = messages.length > lastMessageCountRef.current;
+    
+    if (hasNewMessages && !loading && !sending && !isInitialLoadRef.current && !isScrollingRef.current) {
+      // Verificar si ya estamos cerca del final (evitar scroll innecesario)
+      if (messagesContainerRef.current) {
+        const container = messagesContainerRef.current;
+        const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
         
-        return conversationsWithAvatars;
+        // Solo hacer scroll si no estamos cerca del final (más de 100px de diferencia)
+        if (scrollBottom > 100) {
+          // El usuario está scrolleando hacia arriba, no hacer scroll automático
+          lastMessageCountRef.current = messages.length;
+          return;
+        }
+      }
+      
+      lastMessageCountRef.current = messages.length;
+      
+      // Usar requestAnimationFrame para scroll suave sin refresh
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
       });
-    } catch (error) {
+    } else if (messages.length > 0) {
+      // Actualizar contador siempre para mantener sincronizado
+      lastMessageCountRef.current = messages.length;
+    }
+  }, [messages.length, loading, sending]);
+
+  const scrollToBottom = (instant = false) => {
+    if (!messagesContainerRef.current || isScrollingRef.current) return;
+    
+    const container = messagesContainerRef.current;
+    const targetScroll = container.scrollHeight;
+    const currentScroll = container.scrollTop;
+    const distance = targetScroll - currentScroll;
+    
+    if (instant || Math.abs(distance) < 5) {
+      // Scroll instantáneo sin animación
+      container.scrollTop = targetScroll;
+      return;
+    }
+    
+    // Scroll suave pero muy rápido para minimizar movimiento de barra
+    isScrollingRef.current = true;
+    const duration = 150; // ms - muy rápido
+    let startTime: number | null = null;
+    
+    const animateScroll = (currentTime: number) => {
+      if (startTime === null) startTime = currentTime;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing más agresivo (ease-in-out-cubic) para movimiento más suave
+      const easeInOutCubic = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      container.scrollTop = currentScroll + (distance * easeInOutCubic);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateScroll);
+      } else {
+        container.scrollTop = targetScroll; // Asegurar posición final exacta
+        isScrollingRef.current = false;
+      }
+    };
+    
+    requestAnimationFrame(animateScroll);
+  };
+
+  const cleanupSubscription = () => {
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
   };
 
-  const loadMessages = async (otherUserId: string) => {
-    if (!profile?.id) return;
+  const loadMessages = async () => {
+    if (!profile?.id || !otherUser?.id) return;
 
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('direct_messages')
@@ -235,34 +540,56 @@ export function MessagesBell() {
           receiver_profile:profiles!direct_messages_receiver_id_fkey(full_name, email, avatar_url),
           direct_message_attachments(*)
         `)
-        .or(`and(sender_id.eq.${profile.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${profile.id})`)
+        .or(`and(sender_id.eq.${profile.id},receiver_id.eq.${otherUser.id}),and(sender_id.eq.${otherUser.id},receiver_id.eq.${profile.id})`)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
       
-      // Procesar mensajes para incluir URLs públicas de los archivos
-      const processedMessages = (data || []).map((msg: any) => ({
-        ...msg,
-        direct_message_attachments: msg.direct_message_attachments?.map((att: any) => ({
-          ...att,
-          file_url: supabase.storage
-            .from('direct-message-attachments')
-            .getPublicUrl(att.file_path).data.publicUrl
-        })) || []
-      }));
+      // Eliminar duplicados por ID antes de establecer
+      const messagesData = (data as any) || [];
+      const uniqueMessages = messagesData.reduce((acc: any[], msg: any) => {
+        if (!acc.find(m => m.id === msg.id)) {
+          // También eliminar attachments duplicados dentro de cada mensaje
+          if (msg.direct_message_attachments && Array.isArray(msg.direct_message_attachments)) {
+            msg.direct_message_attachments = msg.direct_message_attachments.filter(
+              (attachment: any, index: number, self: any[]) =>
+                index === self.findIndex((a: any) => a.id === attachment.id)
+            );
+          }
+          acc.push(msg);
+        }
+        return acc;
+      }, []);
       
-      setMessages(processedMessages);
+      setMessages(uniqueMessages);
     } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const subscribeToMessages = (otherUserId: string) => {
-    if (!profile?.id) return null;
+  const subscribeToMessages = () => {
+    if (!profile?.id || !otherUser?.id) return;
 
+    cleanupSubscription();
 
-    // Suscribirse a mensajes donde el usuario es remitente
-    const channel1 = supabase
-      .channel(`direct_messages_sender:${otherUserId}:${Date.now()}`)
+    const channel = supabase
+      .channel(`chat_${profile.id}_${otherUser.id}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `sender_id=eq.${otherUser.id}`
+        },
+        async (payload: any) => {
+          if (payload.new.receiver_id === profile.id) {
+            await handleNewMessage(payload.new.id);
+          }
+        }
+      )
       .on(
         'postgres_changes',
         {
@@ -272,52 +599,11 @@ export function MessagesBell() {
           filter: `sender_id=eq.${profile.id}`
         },
         async (payload: any) => {
-          if (payload.new.receiver_id === otherUserId) {
-            await handleNewMessage(payload.new.id, otherUserId);
+          if (payload.new.receiver_id === otherUser.id) {
+            await handleNewMessage(payload.new.id);
           }
         }
       )
-      .subscribe((status) => {
-        // Subscription status handled silently
-      });
-
-    // Suscribirse a mensajes donde el usuario es destinatario
-    const channel2 = supabase
-      .channel(`direct_messages_receiver:${otherUserId}:${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'direct_messages',
-          filter: `receiver_id=eq.${profile.id}`
-        },
-        async (payload: any) => {
-          if (payload.new.sender_id === otherUserId) {
-            await handleNewMessage(payload.new.id, otherUserId);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'direct_messages',
-          filter: `receiver_id=eq.${profile.id}`
-        },
-        (payload: any) => {
-          // Actualizar estado de lectura
-          if (payload.new.sender_id === otherUserId) {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === payload.new.id ? { ...msg, is_read: payload.new.is_read } : msg
-              )
-            );
-          }
-        }
-      )
-      // Suscribirse a cambios en archivos adjuntos para actualizar mensajes existentes
       .on(
         'postgres_changes',
         {
@@ -326,31 +612,26 @@ export function MessagesBell() {
           table: 'direct_message_attachments'
         },
         async (payload: any) => {
-          // Recargar el mensaje para obtener los archivos adjuntos
           if (payload.new.message_id) {
-            // Recargar el mensaje completo con los archivos adjuntos
-            await handleNewMessage(payload.new.message_id, otherUserId);
+            await handleNewMessage(payload.new.message_id);
           }
         }
       )
-      .subscribe((status) => {
-        // Subscription status handled silently
-      });
+      .subscribe();
 
-    return { channel1, channel2 };
+    channelRef.current = channel;
   };
 
-  const handleNewMessage = async (messageId: string, otherUserId: string) => {
+  const handleNewMessage = async (messageId: string) => {
     if (!profile?.id) return;
 
-    try {
-      // Intentar obtener el mensaje varias veces para asegurar que los archivos estén asociados
-      let messageData = null;
-      let attempts = 0;
-      const maxAttempts = 5;
-      
-      while (attempts < maxAttempts && !messageData) {
-        const { data, error } = await supabase
+    // Verificar si el mensaje ya existe en el estado actual
+    const messageExists = messages.some(m => m.id === messageId);
+    
+    if (messageExists) {
+      // Actualizar el mensaje existente (por si tiene nuevos attachments)
+      try {
+        const { data } = await supabase
           .from('direct_messages')
           .select(`
             *,
@@ -361,99 +642,239 @@ export function MessagesBell() {
           .eq('id', messageId)
           .single();
 
-        if (error) {
-          // Si es el primer intento y hay error, esperar un poco antes de reintentar
-          if (attempts === 0) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            attempts++;
-            continue;
-          }
-          return;
-        }
-
         if (data) {
-          messageData = data;
-          // Si el mensaje tiene archivos adjuntos, verificar que estén todos cargados
-          // Si no tiene archivos pero el mensaje dice "📎 Archivo adjunto", esperar un poco más
-          if (data.message === '📎 Archivo adjunto' && (!data.direct_message_attachments || data.direct_message_attachments.length === 0)) {
-            if (attempts < maxAttempts - 1) {
-              await new Promise(resolve => setTimeout(resolve, 500));
-              attempts++;
-              continue;
-            }
-          }
-          break;
-        }
-        
-        attempts++;
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-      }
-
-      if (messageData) {
-        // Procesar archivos adjuntos para incluir URLs públicas
-        const processedMessage = {
-          ...messageData,
-          direct_message_attachments: messageData.direct_message_attachments?.map((att: any) => ({
-            ...att,
-            file_url: supabase.storage
-              .from('direct-message-attachments')
-              .getPublicUrl(att.file_path).data.publicUrl
-          })) || []
-        };
-        
-        setMessages((prev) => {
-          // Evitar duplicados por ID
-          if (prev.some(msg => msg.id === processedMessage.id)) {
-            // Si el mensaje ya existe, actualizarlo con los archivos adjuntos
-            return prev.map(msg => 
-              msg.id === processedMessage.id 
-                ? processedMessage 
-                : msg
+          const messageData = data as any;
+          
+          // Eliminar attachments duplicados dentro del mensaje
+          if (messageData.direct_message_attachments && Array.isArray(messageData.direct_message_attachments)) {
+            messageData.direct_message_attachments = messageData.direct_message_attachments.filter(
+              (attachment: any, index: number, self: any[]) =>
+                index === self.findIndex((a: any) => a.id === attachment.id)
             );
           }
-          // Remover mensajes temporales que puedan ser del mismo mensaje
-          const filtered = prev.filter(msg => 
-            !msg.id.startsWith('temp-') || 
-            !(msg.sender_id === processedMessage.sender_id && 
-              msg.receiver_id === processedMessage.receiver_id && 
-              Math.abs(new Date(msg.created_at).getTime() - new Date(processedMessage.created_at).getTime()) < 5000)
-          );
-          return [...filtered, processedMessage];
-        });
-        
-        if (messageData.receiver_id === profile.id) {
-          markAsRead(otherUserId);
+          
+          setMessages(prev => {
+            // Asegurar que solo hay un mensaje con este ID
+            const filtered = prev.filter(msg => msg.id !== messageId);
+            return [...filtered, messageData];
+          });
         }
-        
-        loadConversations();
+      } catch (error) {
+        console.error('Error updating message:', error);
+      }
+      return;
+    }
+
+    // Cargar nuevo mensaje
+    try {
+      const { data } = await supabase
+        .from('direct_messages')
+        .select(`
+          *,
+          sender_profile:profiles!direct_messages_sender_id_fkey(full_name, email, avatar_url),
+          receiver_profile:profiles!direct_messages_receiver_id_fkey(full_name, email, avatar_url),
+          direct_message_attachments(*)
+        `)
+        .eq('id', messageId)
+        .single();
+
+      if (data) {
+        setMessages(prev => {
+          const messageData = data as any;
+          
+          // Eliminar attachments duplicados dentro del mensaje
+          if (messageData.direct_message_attachments && Array.isArray(messageData.direct_message_attachments)) {
+            messageData.direct_message_attachments = messageData.direct_message_attachments.filter(
+              (attachment: any, index: number, self: any[]) =>
+                index === self.findIndex((a: any) => a.id === attachment.id)
+            );
+          }
+          
+          // Verificar si el mensaje ya existe
+          const existingIndex = prev.findIndex(m => m.id === messageId);
+          
+          if (existingIndex !== -1) {
+            // Si existe, actualizarlo
+            return prev.map((msg, index) => 
+              index === existingIndex ? messageData : msg
+            );
+          }
+          
+          // Si no existe, filtrar mensajes temporales similares y agregarlo
+          // Buscar mensaje temporal que corresponde a este mensaje real
+          const tempMessageIndex = prev.findIndex(m => 
+            m.id.startsWith('temp-') && 
+            m.sender_id === messageData.sender_id &&
+            m.receiver_id === messageData.receiver_id &&
+            Math.abs(
+              new Date(m.created_at).getTime() - new Date(messageData.created_at).getTime()
+            ) < 5000
+          );
+          
+          if (tempMessageIndex !== -1) {
+            // Reemplazar mensaje temporal con el real en la misma posición
+            // Esto mantiene el mismo length, evitando scroll innecesario
+            const newMessages = [...prev];
+            newMessages[tempMessageIndex] = messageData;
+            // Desmarcar flag cuando se reemplaza el mensaje temporal
+            addingTempMessageRef.current = false;
+            return newMessages;
+          }
+          
+          // Si no hay mensaje temporal, agregar normalmente
+          const filtered = prev.filter(m => {
+            if (m.id === messageId) return false;
+            if (!m.id.startsWith('temp-')) return true;
+            const timeDiff = Math.abs(
+              new Date(m.created_at).getTime() - new Date(messageData.created_at).getTime()
+            );
+            return timeDiff > 5000;
+          });
+          
+          return [...filtered, messageData];
+        });
+
+        // Si es mensaje recibido, marcar como leído
+        if ((data as any).receiver_id === profile.id && isOpen) {
+          markMessagesAsRead();
+        }
       }
     } catch (error) {
+      console.error('Error handling new message:', error);
     }
   };
 
-  const markAsRead = async (otherUserId: string) => {
-    if (!profile?.id) return;
+  const markMessagesAsRead = async () => {
+    if (!profile?.id || !otherUser?.id || !isOpen) return;
 
     try {
-      await supabase.rpc('mark_messages_as_read', {
-        conversation_user_id: otherUserId
+      await (supabase as any).rpc('mark_messages_as_read', {
+        conversation_user_id: otherUser.id
       });
-      loadConversations();
+      setUnreadCount(0);
     } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if ((!newMessage.trim() && selectedFiles.length === 0) || !otherUser?.id || sending || uploading) return;
+
+    const messageText = newMessage.trim();
+    const tempId = `temp-${Date.now()}`;
+
+    setNewMessage('');
+    setSending(true);
+
+    // Mensaje optimista
+    const tempMessage: Message = {
+      id: tempId,
+      sender_id: profile!.id,
+      receiver_id: otherUser.id,
+      message: messageText || (selectedFiles.length > 0 ? '📎 Archivo adjunto' : ''),
+      is_read: false,
+      created_at: new Date().toISOString(),
+      sender_profile: {
+        full_name: profile!.full_name || '',
+        email: profile!.email || '',
+        avatar_url: profile!.avatar_url || undefined
+      },
+      direct_message_attachments: []
+    };
+
+    // Marcar que estamos agregando mensaje temporal
+    addingTempMessageRef.current = true;
+    
+    // Agregar mensaje temporal - useLayoutEffect manejará el scroll
+    setMessages(prev => [...prev, tempMessage]);
+
+    try {
+      // Crear mensaje
+      const { data, error } = await (supabase as any)
+        .from('direct_messages')
+        .insert({
+          sender_id: profile!.id,
+          receiver_id: otherUser.id,
+          message: messageText || (selectedFiles.length > 0 ? '📎 Archivo adjunto' : '')
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      const messageId = (data as any).id;
+
+      // Subir archivos si hay
+      if (selectedFiles.length > 0) {
+        await uploadFiles(messageId);
+      }
+
+      // NO remover el mensaje temporal aquí
+      // El mensaje real llegará por suscripción y reemplazará al temporal automáticamente
+      // Esto evita el cambio de length que causa el refresh
+      
+      // Limpiar archivos
+      setSelectedFiles([]);
+      
+      // El flag addingTempMessageRef se desmarcará cuando el mensaje real reemplace al temporal
+    } catch (error) {
+      console.error('Error sending message:', error);
+      addingTempMessageRef.current = false;
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setNewMessage(messageText);
+      alert('Error al enviar el mensaje');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const uploadFiles = async (messageId: string) => {
+    if (selectedFiles.length === 0 || !profile?.id || !otherUser?.id) return;
+
+    setUploading(true);
+    try {
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${profile.id}/${otherUser.id}/${fileName}`;
+
+        // Subir a storage
+        const { error: uploadError } = await supabase.storage
+          .from('direct-message-attachments')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // Guardar en BD
+        const { error: dbError } = await (supabase as any)
+          .from('direct_message_attachments')
+          .insert({
+            message_id: messageId,
+            file_name: file.name,
+            file_path: filePath,
+            file_size: file.size,
+            file_type: file.type,
+            uploaded_by: profile.id
+          });
+
+        if (dbError) throw dbError;
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      throw error;
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+      setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
     }
   };
 
   const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -472,589 +893,473 @@ export function MessagesBell() {
     }
   };
 
-  const uploadFiles = async (messageId: string): Promise<void> => {
-    if (selectedFiles.length === 0 || !profile?.id) return;
-
-    setUploading(true);
+  const handleDownloadFile = async (attachment: Attachment) => {
     try {
-      for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `${profile.id}/${selectedConversation}/${fileName}`;
+      // Verificar cache
+      const cached = signedUrlCacheRef.current.get(attachment.file_path);
+      const now = Date.now();
 
-        // Subir archivo a Storage
-        const { error: uploadError } = await supabase.storage
+      let signedUrl: string;
+
+      if (cached && cached.expiresAt > now) {
+        signedUrl = cached.url;
+      } else {
+        const { data, error } = await supabase.storage
           .from('direct-message-attachments')
-          .upload(filePath, file);
+          .createSignedUrl(attachment.file_path, 3600);
 
-        if (uploadError) throw uploadError;
-
-        // Guardar metadata en la base de datos
-        const { error: dbError } = await supabase
-          .from('direct_message_attachments')
-          .insert({
-            message_id: messageId,
-            file_name: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            file_type: file.type,
-            uploaded_by: profile.id
-          });
-
-        if (dbError) throw dbError;
-      }
-    } catch (error) {
-      throw error;
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const sendMessage = async () => {
-    if ((!newMessage.trim() && selectedFiles.length === 0) || !selectedConversation || !profile?.id || sending || uploading) return;
-
-    const messageText = newMessage.trim();
-    setNewMessage('');
-    setSending(true);
-
-    // Optimistic update: agregar el mensaje inmediatamente al estado
-    const tempMessage: DirectMessage = {
-      id: `temp-${Date.now()}`,
-      sender_id: profile.id,
-      receiver_id: selectedConversation,
-      message: messageText || (selectedFiles.length > 0 ? '📎 Archivo adjunto' : ''),
-      is_read: false,
-      created_at: new Date().toISOString(),
-      sender_profile: {
-        full_name: profile.full_name || '',
-        email: profile.email || '',
-        avatar_url: profile.avatar_url || undefined
-      },
-      direct_message_attachments: selectedFiles.map((file, index) => ({
-        id: `temp-${index}`,
-        file_name: file.name,
-        file_path: '',
-        file_size: file.size,
-        file_type: file.type
-      }))
-    };
-
-    setMessages(prev => [...prev, tempMessage]);
-    scrollToBottom();
-
-    try {
-      // Subir archivos primero si hay
-      let messageId: string | null = null;
-      
-      // Crear el mensaje primero
-      const { data, error } = await supabase
-        .from('direct_messages')
-        .insert({
-          sender_id: profile.id,
-          receiver_id: selectedConversation,
-          message: messageText || (selectedFiles.length > 0 ? '📎 Archivo adjunto' : '')
-        })
-        .select(`
-          *,
-          sender_profile:profiles!direct_messages_sender_id_fkey(full_name, email, avatar_url),
-          receiver_profile:profiles!direct_messages_receiver_id_fkey(full_name, email, avatar_url),
-          direct_message_attachments(*)
-        `)
-        .single();
-
-      if (error) throw error;
-      
-      if (!data) throw new Error('No se pudo crear el mensaje');
-
-      messageId = data.id;
-
-      // Subir archivos si hay
-      if (selectedFiles.length > 0 && messageId) {
-        try {
-          await uploadFiles(messageId);
-          // Esperar un momento para que los archivos se asocien correctamente
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (fileError) {
-          // Si falla la subida, mantener el mensaje pero sin archivos
+        if (error || !data?.signedUrl) {
+          throw new Error('No se pudo generar la URL de descarga');
         }
-      }
 
-      // Obtener el mensaje actualizado con los archivos adjuntos
-      // Intentar varias veces si es necesario para asegurar que los archivos estén asociados
-      let updatedMessage = null;
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      while (attempts < maxAttempts && !updatedMessage) {
-        const { data: messageData, error: fetchError } = await supabase
-          .from('direct_messages')
-          .select(`
-            *,
-            sender_profile:profiles!direct_messages_sender_id_fkey(full_name, email, avatar_url),
-            receiver_profile:profiles!direct_messages_receiver_id_fkey(full_name, email, avatar_url),
-            direct_message_attachments(*)
-          `)
-          .eq('id', messageId)
-          .single();
-
-        if (!fetchError && messageData) {
-          updatedMessage = messageData;
-          // Si hay archivos seleccionados, verificar que estén en el mensaje
-          if (selectedFiles.length > 0) {
-            const attachmentsCount = messageData.direct_message_attachments?.length || 0;
-            if (attachmentsCount < selectedFiles.length && attempts < maxAttempts - 1) {
-              // Esperar un poco más y reintentar
-              await new Promise(resolve => setTimeout(resolve, 500));
-              attempts++;
-              continue;
-            }
-          }
-          break;
-        } else if (fetchError) {
-        }
-        attempts++;
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-      }
-
-      // Reemplazar el mensaje temporal con el real (ahora con archivos)
-      if (updatedMessage) {
-        // Procesar los archivos adjuntos para incluir las URLs públicas
-        const processedMessage = {
-          ...updatedMessage,
-          direct_message_attachments: updatedMessage.direct_message_attachments?.map((att: any) => ({
-            ...att,
-            file_url: supabase.storage
-              .from('direct-message-attachments')
-              .getPublicUrl(att.file_path).data.publicUrl
-          })) || []
-        };
-        
-        setMessages(prev => {
-          // Remover mensaje temporal y cualquier duplicado del mensaje real
-          const filtered = prev.filter(m => 
-            m.id !== tempMessage.id && 
-            m.id !== processedMessage.id
-          );
-          return [...filtered, processedMessage];
+        signedUrl = data.signedUrl;
+        signedUrlCacheRef.current.set(attachment.file_path, {
+          url: signedUrl,
+          expiresAt: now + 50 * 60 * 1000
         });
-      } else if (data) {
-        // Si no se pudo obtener el mensaje actualizado, recargar todos los mensajes
-        await loadMessages(selectedConversation);
       }
 
-      // Recargar conversaciones para actualizar el último mensaje
-      loadConversations();
+      // Descargar
+      const response = await fetch(signedUrl);
+      if (!response.ok) throw new Error('Error al descargar');
 
-      setSelectedFiles([]); // Limpiar archivos seleccionados
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      // Remover el mensaje temporal en caso de error
-      setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
-      setNewMessage(messageText); // Restaurar el texto del mensaje
-      alert('Error al enviar el mensaje');
-    } finally {
-      setSending(false);
+      console.error('Error downloading file:', error);
+      alert('Error al descargar el archivo');
     }
   };
 
-  const loadUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, email, role, avatar_url')
-        .eq('id', userId)
-        .single();
 
-      if (error) throw error;
-      if (data) {
-        setSelectedConversationProfile(data);
-        
-        // Actualizar también la conversación en la lista si existe
-        setConversations(prev => prev.map(conv => 
-          conv.other_user_id === userId 
-            ? { ...conv, avatar_url: data.avatar_url }
-            : conv
-        ));
-        
-        // Actualizar también en allConversations si existe
-        setAllConversations(prev => prev.map(conv => 
-          conv.other_user_id === userId 
-            ? { ...conv, avatar_url: data.avatar_url }
-            : conv
-        ));
-      }
-    } catch (error) {
-      setSelectedConversationProfile(null);
-    }
-  };
-
-  const startConversation = async (userId: string) => {
-    setSelectedConversation(userId);
-    setMessages([]); // Limpiar mensajes anteriores
-    setSelectedFiles([]); // Limpiar archivos seleccionados
+  // Función para seleccionar usuario y abrir chat
+  const selectUserAndOpenChat = (user: UserProfile | Conversation) => {
+    const userData: UserProfile = 'other_user_id' in user ? {
+      id: user.other_user_id,
+      full_name: user.other_user_name,
+      email: user.other_user_email,
+      role: user.other_user_role,
+      avatar_url: user.avatar_url
+    } : user;
     
-    // Cargar perfil del usuario si no está en las conversaciones
-    const existingConv = conversations.find(c => c.other_user_id === userId);
-    if (!existingConv) {
-      await loadUserProfile(userId);
-    } else {
-      setSelectedConversationProfile(null);
-    }
-    
-    await loadConversations();
-    setShowSearchResults(false);
+    setOtherUser(userData);
+    setShowUserSelector(false);
+    setIsOpen(true);
     setSearchTerm('');
     setSearchResults([]);
   };
 
-  const searchUsers = async (searchQuery: string) => {
-    if (!searchQuery.trim() || !profile?.id) {
+  // Función de búsqueda de usuarios (solo para admins)
+  const searchUsers = async (query: string) => {
+    if (!query.trim() || !profile?.id) {
       setSearchResults([]);
       return;
     }
 
-    setSearchingUsers(true);
+    setSearching(true);
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('id, full_name, email, role, avatar_url')
         .neq('id', profile.id)
-        .or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
         .order('full_name')
         .limit(10);
 
-      if (error) throw error;
       setSearchResults(data || []);
     } catch (error) {
+      console.error('Error searching users:', error);
       setSearchResults([]);
     } finally {
-      setSearchingUsers(false);
+      setSearching(false);
     }
   };
 
+  // Debounce de búsqueda
   useEffect(() => {
-    if (searchTerm.trim() && isAdmin) {
+    if (searchTerm.trim() && isAdmin && showUserSelector) {
       const timeoutId = setTimeout(() => {
         searchUsers(searchTerm);
-        setShowSearchResults(true);
-      }, 300); // Debounce de 300ms
+      }, 300);
 
       return () => clearTimeout(timeoutId);
     } else {
       setSearchResults([]);
-      setShowSearchResults(false);
     }
-  }, [searchTerm, isAdmin]);
+  }, [searchTerm, isAdmin, showUserSelector]);
 
-  const conversationsToShow = isNormalUser ? allConversations : conversations;
-  // Filtrar conversaciones solo si no hay resultados de búsqueda de usuarios mostrándose
-  const filteredConversations = showSearchResults && isAdmin && searchResults.length > 0 
-    ? [] 
-    : conversationsToShow.filter(conv =>
-        conv.other_user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conv.other_user_email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-  const [selectedConversationProfile, setSelectedConversationProfile] = useState<any>(null);
-
-  // Obtener datos de la conversación seleccionada
-  const selectedConversationData = selectedConversation ? (
-    conversations.find(c => c.other_user_id === selectedConversation) || 
-    (selectedConversationProfile ? {
-      other_user_id: selectedConversationProfile.id,
-      other_user_name: selectedConversationProfile.full_name,
-      other_user_email: selectedConversationProfile.email,
-      other_user_role: selectedConversationProfile.role,
-      avatar_url: selectedConversationProfile.avatar_url
-    } : null)
-  ) : null;
-
+  // Cerrar desplegable al hacer clic fuera (solo para el desplegable de búsqueda)
   useEffect(() => {
-    if (isNormalUser && availableAdmins.length > 0) {
-      // Combinar conversaciones existentes con admin/support que no tienen conversación
-      const existingAdminIds = conversations.map(c => c.other_user_id);
-      const missingAdmins = availableAdmins.filter(a => !existingAdminIds.includes(a.id));
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const isSearchInput = target.closest('input[placeholder*="Buscar"]');
+      const isDropdown = target.closest('.search-dropdown');
       
-      // Crear conversaciones "vacías" para admin/support sin mensajes
-      const emptyConversations: Conversation[] = missingAdmins.map(admin => ({
-        other_user_id: admin.id,
-        other_user_name: admin.full_name,
-        other_user_email: admin.email,
-        other_user_role: admin.role,
-        last_message: '',
-        last_message_at: '',
-        unread_count: 0,
-        avatar_url: admin.avatar_url
-      }));
-      
-      // Crear un mapa de conversaciones existentes para preservar avatar_url
-      const conversationsMap = new Map(conversations.map(c => [c.other_user_id, c]));
-      
-      // Actualizar emptyConversations con avatar_url preservados si existen
-      const emptyConversationsWithAvatars = emptyConversations.map(emptyConv => {
-        const existingConv = conversationsMap.get(emptyConv.other_user_id);
-        return {
-          ...emptyConv,
-          avatar_url: existingConv?.avatar_url || emptyConv.avatar_url || null
-        };
-      });
-      
-      // Combinar conversaciones existentes con las nuevas, preservando avatar_url
-      const combined = [...conversations, ...emptyConversationsWithAvatars];
-      combined.sort((a, b) => {
-        // Primero las que tienen mensajes (por fecha), luego las vacías (por nombre)
-        if (a.last_message_at && !b.last_message_at) return -1;
-        if (!a.last_message_at && b.last_message_at) return 1;
-        if (a.last_message_at && b.last_message_at) {
-          return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
-        }
-        return a.other_user_name.localeCompare(b.other_user_name);
-      });
-      
-      setAllConversations(combined);
-    } else {
-      setAllConversations(conversations);
-    }
-  }, [isNormalUser, conversations, availableAdmins]);
-
-  // Cargar perfiles de usuarios sin avatar_url (solo una vez por usuario)
-  const loadedProfilesRef = useRef<Set<string>>(new Set());
-  
-  useEffect(() => {
-    const conversationsToCheck = isNormalUser ? allConversations : conversations;
-    conversationsToCheck.forEach(conv => {
-      if (!conv.avatar_url && conv.other_user_id && !loadedProfilesRef.current.has(conv.other_user_id)) {
-        // Marcar como cargado para evitar múltiples llamadas
-        loadedProfilesRef.current.add(conv.other_user_id);
-        // Cargar perfil en background para obtener avatar_url actualizado
-        loadUserProfile(conv.other_user_id);
+      if (!isSearchInput && !isDropdown && searchResults.length > 0) {
+        setSearchResults([]);
       }
-    });
-  }, [conversations, allConversations, isNormalUser]);
+    };
 
-  return (
-    <div className="fixed bottom-6 right-6 z-50" ref={dropdownRef}>
-      {showDropdown ? (
-        <div className="w-[500px] max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-2xl border border-gray-200 mb-2" style={{ maxHeight: '800px', display: 'flex', flexDirection: 'column' }}>
-          {!selectedConversation ? (
-            // Vista de lista de conversaciones
-            <>
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">Mensajes</h3>
+    if (searchResults.length > 0) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [searchResults]);
+
+  // Botón flotante
+  if (!isOpen && !showUserSelector) {
+    return (
+      <button
+        onClick={() => {
+          // Ambos usuarios y admins muestran selector ahora
+          setShowUserSelector(true);
+        }}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 flex items-center justify-center z-50"
+      >
+        <MessageSquare className="w-6 h-6" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-600 rounded-full">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </button>
+    );
+  }
+
+  // Vista de selección - Usuarios Normales
+  if (showUserSelector && isNormalUser) {
+    return (
+      <div className="fixed bottom-6 right-6 w-[550px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50" style={{ maxHeight: '80vh' }}>
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <h3 className="text-white font-semibold">Selecciona un administrador</h3>
+            <button
+              onClick={() => setShowUserSelector(false)}
+              className="p-1 hover:bg-blue-500 rounded transition text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {availableUsers.length === 0 ? (
+            <div className="p-10 text-center text-gray-500">
+              <MessageSquare className="w-16 h-16 mx-auto mb-3 text-gray-300" />
+              <p className="text-base font-medium">No hay administradores disponibles</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {availableUsers.map((user) => {
+                const userUnreadCount = unreadByUser.get(user.id) || 0;
+                return (
                   <button
-                    onClick={() => setShowDropdown(false)}
-                    className="p-1 hover:bg-gray-100 rounded transition"
+                    key={user.id}
+                    onClick={() => selectUserAndOpenChat(user)}
+                    className="w-full flex items-center gap-4 p-5 hover:bg-blue-50 transition-colors text-left group"
                   >
-                    <X className="w-4 h-4" />
+                    <div className="relative flex-shrink-0">
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.full_name}
+                          className="w-14 h-14 rounded-full object-cover ring-2 ring-blue-100 group-hover:ring-blue-300 transition-all"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-blue-100 group-hover:ring-blue-300 transition-all">
+                          <span className="text-white font-bold text-xl">
+                            {user.full_name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      {userUnreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-6 px-2 text-xs font-bold text-white bg-red-600 rounded-full shadow-lg">
+                          {userUnreadCount > 9 ? '9+' : userUnreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-base truncate">{user.full_name}</p>
+                      <p className="text-sm text-gray-500 truncate mt-0.5">{user.email}</p>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 mt-2">
+                        {user.role === 'admin' ? '👑 Administrador' : '🛠️ Soporte'}
+                      </span>
+                    </div>
+                    <div className="text-blue-600 flex-shrink-0">
+                      <MessageSquare className="w-6 h-6" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="p-3 border-t border-gray-100 bg-gray-50 text-center rounded-b-2xl">
+          <p className="text-xs text-gray-500">
+            Selecciona con quién deseas conversar
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Vista de selección - Administradores (Conversaciones + Buscador)
+  if (showUserSelector && isAdmin) {
+    const filteredConversations = searchTerm.trim() 
+      ? conversations.filter(conv =>
+          conv.other_user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          conv.other_user_email.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      : conversations;
+
+    return (
+      <div className="fixed bottom-6 right-6 w-[500px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ maxHeight: '80vh', height: '800px' }}>
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl">
+                <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold">Mensajes</h3>
+                  <button
+              onClick={() => {
+                setShowUserSelector(false);
+                setSearchTerm('');
+                setSearchResults([]);
+              }}
+              className="p-1 hover:bg-blue-500 rounded transition text-white"
+            >
+              <X className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder={isAdmin ? "Buscar usuarios o conversaciones..." : "Buscar conversaciones..."}
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      if (e.target.value.trim().length > 0 && isAdmin) {
-                        setShowSearchResults(true);
-                      } else {
-                        setShowSearchResults(false);
-                      }
-                    }}
-                    onFocus={() => {
-                      if (searchTerm.trim().length > 0 && isAdmin) {
-                        setShowSearchResults(true);
-                      }
-                    }}
-                    onBlur={() => {
-                      setTimeout(() => setShowSearchResults(false), 200);
-                    }}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  />
-                  {showSearchResults && isAdmin && (
-                    <>
-                      {searchingUsers && (
-                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-gray-500 text-sm">
-                          Buscando...
-                        </div>
-                      )}
-                      {!searchingUsers && searchResults.length > 0 && (
-                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
-                          {searchResults.map((user) => (
-                            <button
-                              key={user.id}
-                              onClick={() => startConversation(user.id)}
-                              className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition border-b border-gray-100 last:border-b-0"
-                            >
-                              {user.avatar_url ? (
-                                <img
-                                  src={user.avatar_url}
-                                  alt={user.full_name}
-                                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                    if (fallback) fallback.style.display = 'flex';
-                                  }}
-                                />
-                              ) : null}
-                              <div 
-                                className={`w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 ${user.avatar_url ? 'hidden' : ''}`}
-                              >
-                                <span className="text-blue-600 font-semibold">
-                                  {user.full_name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="flex-1 text-left min-w-0">
-                                <p className="font-medium text-gray-900 text-sm truncate">{user.full_name}</p>
-                                <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                                <p className="text-xs text-gray-400">
-                                  {user.role === 'admin' ? 'Administrador' : 
-                                   user.role === 'support' ? 'Soporte' : 'Usuario'}
-                                </p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {!searchingUsers && searchTerm.trim().length > 0 && searchResults.length === 0 && (
-                        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-center text-gray-500 text-sm">
-                          No se encontraron usuarios
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
 
-              <div className="flex-1 overflow-y-auto" style={{ minHeight: '400px', maxHeight: '500px' }}>
-                {filteredConversations.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm">No hay conversaciones</p>
+          {/* Buscador */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Buscar usuario para iniciar conversación..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => {
+                if (searchTerm.trim()) {
+                  searchUsers(searchTerm);
+                }
+              }}
+              className="w-full px-4 py-3 text-sm border-0 rounded-lg focus:ring-2 focus:ring-white text-gray-900 placeholder-gray-500"
+            />
+            {searching && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            
+            {/* Desplegable de resultados de búsqueda */}
+            {searchTerm.trim().length > 0 && searchResults.length > 0 && (
+              <div className="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-80 overflow-y-auto z-50">
+                <div className="p-2 bg-gray-50 border-b border-gray-100">
+                  <p className="text-xs font-semibold text-gray-600 px-2">
+                    Usuarios encontrados ({searchResults.length})
+                  </p>
+                </div>
+                {searchResults.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => selectUserAndOpenChat(user)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-blue-50 transition-colors text-left border-b border-gray-50 last:border-b-0"
+                  >
+                    {user.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt={user.full_name}
+                        className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-semibold text-lg">
+                          {user.full_name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm truncate">{user.full_name}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mt-1">
+                        {user.role === 'admin' ? '👑 Admin' : user.role === 'support' ? '🛠️ Soporte' : '👤 Usuario'}
+                      </span>
+                    </div>
+                    <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {/* Mensaje cuando no hay resultados */}
+            {searchTerm.trim().length > 0 && !searching && searchResults.length === 0 && (
+              <div className="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 text-center z-50">
+                <p className="text-sm text-gray-500">No se encontraron usuarios</p>
+                <p className="text-xs text-gray-400 mt-1">Intenta con otro nombre o email</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Lista de conversaciones */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredConversations.length > 0 ? (
+            // Conversaciones activas
+            <div className="divide-y divide-gray-100">
+              {filteredConversations.map((conv) => (
+                <button
+                  key={conv.other_user_id}
+                  onClick={() => selectUserAndOpenChat(conv)}
+                  className="w-full flex items-center gap-4 p-5 hover:bg-blue-50 transition-colors text-left group"
+                >
+                  <div className="relative flex-shrink-0">
+                    {conv.avatar_url ? (
+                      <img
+                        src={conv.avatar_url}
+                        alt={conv.other_user_name}
+                        className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100 group-hover:ring-blue-200 transition-all"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-gray-100 group-hover:ring-blue-200 transition-all">
+                        <span className="text-white font-bold text-xl">
+                          {conv.other_user_name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    {conv.unread_count > 0 && (
+                      <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-6 px-2 text-xs font-bold text-white bg-red-600 rounded-full shadow-lg">
+                        {conv.unread_count > 9 ? '9+' : conv.unread_count}
+                      </span>
+                    )}
                   </div>
-                ) : (
-                  <div>
-                    {filteredConversations.map((conv) => (
-                        <button
-                          key={conv.other_user_id}
-                          onClick={() => {
-                            setSelectedConversation(conv.other_user_id);
-                            setMessages([]); // Limpiar mensajes anteriores
-                            setSelectedFiles([]); // Limpiar archivos seleccionados
-                            setSelectedConversationProfile(null); // Limpiar perfil temporal
-                            // Forzar recarga del perfil para obtener avatar_url actualizado
-                            loadUserProfile(conv.other_user_id);
-                            if (conv.last_message) {
-                              markAsRead(conv.other_user_id);
-                            }
-                          }}
-                          className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition border-b border-gray-100"
-                        >
-                          {conv.avatar_url ? (
-                            <img
-                              src={conv.avatar_url}
-                              alt={conv.other_user_name}
-                              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                              onError={(e) => {
-                                // Si la imagen falla al cargar, ocultar y mostrar fallback
-                                e.currentTarget.style.display = 'none';
-                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                                if (fallback) {
-                                  fallback.style.display = 'flex';
-                                  fallback.classList.remove('hidden');
-                                }
-                                // Intentar recargar el perfil
-                                if (conv.other_user_id) {
-                                  loadUserProfile(conv.other_user_id);
-                                }
-                              }}
-                              onLoad={() => {
-                              }}
-                            />
-                          ) : null}
-                          <div 
-                            className={`w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 ${conv.avatar_url ? 'hidden' : ''}`}
-                            style={{ display: conv.avatar_url ? 'none' : 'flex' }}
-                          >
-                            <span className="text-blue-600 font-semibold text-lg">
-                              {conv.other_user_name?.charAt(0).toUpperCase() || '?'}
-                            </span>
-                          </div>
-                        <div className="flex-1 text-left min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="font-medium text-gray-900 text-sm truncate">{conv.other_user_name}</p>
-                            {conv.unread_count > 0 && (
-                              <span className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                                {conv.unread_count}
-                              </span>
-                            )}
-                          </div>
-                          {conv.last_message && (
-                            <p className="text-xs text-gray-500 truncate">
-                              {conv.last_message}
-                            </p>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="font-semibold text-gray-900 text-base truncate">
+                        {conv.other_user_name}
+                      </p>
+                      {conv.last_message_at && (
+                        <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                          {new Date(conv.last_message_at).toLocaleDateString('es-ES', { 
+                            day: '2-digit', 
+                            month: '2-digit' 
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    {conv.last_message && (
+                      <p className="text-sm text-gray-600 truncate font-normal">
+                        {conv.last_message}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            // Sin conversaciones
+            <div className="p-8 text-center text-gray-500">
+              <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">
+                {searchTerm.trim() ? 'No se encontraron resultados' : 'No hay conversaciones activas'}
+              </p>
+              <p className="text-xs mt-1 text-gray-400">
+                Usa el buscador para iniciar una conversación
+              </p>
                   </div>
                 )}
               </div>
-            </>
-          ) : (
-            // Vista de chat
-            <>
-              <div className="p-4 border-b border-gray-200 bg-gray-50">
+
+        {/* Footer */}
+        <div className="p-3 border-t border-gray-100 bg-gray-50 text-center rounded-b-2xl">
+          <p className="text-xs text-gray-500">
+            {conversations.length} conversacion{conversations.length !== 1 ? 'es' : ''} activa{conversations.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed bottom-6 right-6 w-[500px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ maxHeight: '80vh', height: '800px' }}>
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setSelectedConversation(null)}
-                      className="p-1 hover:bg-gray-200 rounded transition"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                    {selectedConversationData?.avatar_url ? (
-                      <img
-                        src={selectedConversationData.avatar_url}
-                        alt={selectedConversationData.other_user_name}
-                        className="w-8 h-8 rounded-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div 
-                      className={`w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center ${selectedConversationData?.avatar_url ? 'hidden' : ''}`}
-                    >
-                      <span className="text-blue-600 font-semibold text-sm">
-                        {selectedConversationData?.other_user_name?.charAt(0).toUpperCase() || '?'}
+          <div className="flex items-center gap-3 flex-1">
+            {otherUser?.avatar_url ? (
+              <img
+                src={otherUser.avatar_url}
+                alt={otherUser.full_name}
+                className="w-10 h-10 rounded-full object-cover border-2 border-white"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+                <span className="text-blue-600 font-semibold text-lg">
+                  {otherUser?.full_name?.charAt(0).toUpperCase() || '?'}
                       </span>
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">
-                        {selectedConversationData?.other_user_name || 'Cargando...'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {selectedConversationData?.other_user_role === 'admin' ? 'Administrador' : 
-                         selectedConversationData?.other_user_role === 'support' ? 'Soporte' : 
-                         selectedConversationData?.other_user_role ? 'Usuario' : ''}
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-white text-sm truncate">
+                {otherUser?.full_name || 'Cargando...'}
+              </p>
+              <p className="text-xs text-blue-100">
+                {otherUser?.role === 'admin' ? 'Administrador' :
+                 otherUser?.role === 'support' ? 'Soporte' : 'Usuario'}
                       </p>
                     </div>
                   </div>
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              cleanupSubscription();
+              signedUrlCacheRef.current.clear();
+              setMessages([]);
+              setNewMessage('');
+              setSelectedFiles([]);
+              // Volver al selector (listado)
+              setShowUserSelector(true);
+            }}
+            className="p-1 hover:bg-blue-500 rounded transition text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50" style={{ minHeight: '450px', maxHeight: '550px' }}>
-                {messages.length === 0 ? (
-                  <div className="text-center text-gray-500 mt-8">
+      {/* Messages Area */}
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50" 
+        style={{ 
+          minHeight: '400px',
+          scrollBehavior: 'auto', // Desactivar smooth scroll para scroll programático
+          willChange: 'scroll-position' // Optimización para scroll
+        }}
+      >
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Cargando mensajes...</p>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-gray-500">
                     <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                     <p className="text-sm">No hay mensajes aún</p>
+              <p className="text-xs mt-1">Envía un mensaje para comenzar</p>
+            </div>
                   </div>
                 ) : (
                   messages.map((msg) => {
@@ -1071,34 +1376,45 @@ export function MessagesBell() {
                               : 'bg-white text-gray-900 border border-gray-200'
                           }`}
                         >
-                          {msg.message && (
-                            <p className="whitespace-pre-wrap break-words mb-2">{msg.message}</p>
+                  {msg.message && msg.message !== '📎 Archivo adjunto' && (
+                    <p className="whitespace-pre-wrap break-words mb-1">{msg.message}</p>
                           )}
                           
-                          {/* Archivos adjuntos */}
                           {msg.direct_message_attachments && msg.direct_message_attachments.length > 0 && (
-                            <div className="space-y-2 mb-2">
-                              {msg.direct_message_attachments.map((attachment: any) => {
-                                // Usar file_url si está disponible, sino calcularlo
-                                const fileUrl = attachment.file_url || supabase.storage
-                                  .from('direct-message-attachments')
-                                  .getPublicUrl(attachment.file_path).data.publicUrl;
-                                
+                    <div className="space-y-2 mb-1">
+                      {msg.direct_message_attachments
+                        .filter((attachment, index, self) => 
+                          // Eliminar attachments duplicados por ID
+                          index === self.findIndex(a => a.id === attachment.id)
+                        )
+                        .map((attachment) => {
+                        const isImage = attachment.file_type.startsWith('image/') ||
+                          ['.png', '.jpg', '.jpeg', '.gif', '.webp'].some(ext =>
+                            attachment.file_name.toLowerCase().endsWith(ext)
+                          );
+
+                        if (isImage) {
                                 return (
-                                  <a
+                            <ImagePreview
                                     key={attachment.id}
-                                    href={fileUrl}
-                                    download={attachment.file_name}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`flex items-center gap-2 p-2 rounded ${
-                                      isMine
-                                        ? 'bg-blue-500 hover:bg-blue-400'
-                                        : 'bg-gray-100 hover:bg-gray-200'
+                              attachment={attachment}
+                              isMine={isMine}
+                              onDownload={() => handleDownloadFile(attachment)}
+                              urlCache={signedUrlCacheRef}
+                            />
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={attachment.id}
+                            onClick={() => handleDownloadFile(attachment)}
+                            className={`w-full flex items-center gap-2 p-2 rounded ${
+                              isMine ? 'bg-blue-500 hover:bg-blue-400' : 'bg-gray-100 hover:bg-gray-200'
                                     } transition`}
                                   >
                                     {getFileIcon(attachment.file_type)}
-                                    <div className="flex-1 min-w-0">
+                            <div className="flex-1 text-left min-w-0">
                                       <p className={`text-xs truncate ${isMine ? 'text-white' : 'text-gray-900'}`}>
                                         {attachment.file_name}
                                       </p>
@@ -1107,17 +1423,13 @@ export function MessagesBell() {
                                       </p>
                                     </div>
                                     <Download className={`w-4 h-4 ${isMine ? 'text-white' : 'text-gray-600'}`} />
-                                  </a>
+                          </button>
                                 );
                               })}
                             </div>
                           )}
                           
-                          <p
-                            className={`text-xs mt-1 ${
-                              isMine ? 'text-blue-100' : 'text-gray-500'
-                            }`}
-                          >
+                  <p className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>
                             {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                               hour: '2-digit',
                               minute: '2-digit'
@@ -1131,8 +1443,8 @@ export function MessagesBell() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="p-4 border-t border-gray-200 bg-white">
-                {/* Archivos Seleccionados */}
+      {/* Input Area */}
+              <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
                 {selectedFiles.length > 0 && (
                   <div className="mb-3 space-y-2 max-h-32 overflow-y-auto">
                     {selectedFiles.map((file, index) => (
@@ -1147,7 +1459,7 @@ export function MessagesBell() {
                         </div>
                         <button
                           onClick={() => removeFile(index)}
-                          className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  className="p-1 hover:bg-gray-200 rounded"
                         >
                           <X className="w-4 h-4 text-gray-600" />
                         </button>
@@ -1166,8 +1478,7 @@ export function MessagesBell() {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Adjuntar archivo"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
                     disabled={sending || uploading}
                   >
                     <Paperclip className="w-5 h-5" />
@@ -1191,7 +1502,7 @@ export function MessagesBell() {
                     disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploading}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
                   >
-                    {(sending || uploading) ? (
+            {sending || uploading ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <Send className="w-4 h-4" />
@@ -1199,23 +1510,6 @@ export function MessagesBell() {
                   </button>
                 </div>
               </div>
-            </>
-          )}
-        </div>
-      ) : (
-        <button
-          onClick={() => setShowDropdown(true)}
-          className="relative w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 flex items-center justify-center"
-        >
-          <MessageSquare className="w-6 h-6" />
-          {totalUnread > 0 && (
-            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-600 rounded-full">
-              {totalUnread > 9 ? '9+' : totalUnread}
-            </span>
-          )}
-        </button>
-      )}
     </div>
   );
 }
-
