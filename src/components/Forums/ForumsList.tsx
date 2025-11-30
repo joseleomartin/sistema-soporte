@@ -33,7 +33,7 @@ export function ForumsList() {
   const [showPendingTasksModal, setShowPendingTasksModal] = useState<{ clientName: string; tasks: any[] } | null>(null);
   
   // Filtros
-  const [sortBy, setSortBy] = useState<'alphabetical' | 'activity' | 'none'>('none');
+  const [sortBy, setSortBy] = useState<'alphabetical' | 'activity' | 'none'>('alphabetical');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filterByTasks, setFilterByTasks] = useState<'all' | 'with_tasks' | 'without_tasks'>('all');
 
@@ -84,16 +84,14 @@ export function ForumsList() {
         const result = await supabase
           .from('subforums')
           .select('*')
-          .in('id', subforumIds)
-          .order('created_at', { ascending: false });
+          .in('id', subforumIds);
 
         data = result.data;
         error = result.error;
       } else {
         const result = await supabase
           .from('subforums')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .select('*');
 
         data = result.data;
         error = result.error;
