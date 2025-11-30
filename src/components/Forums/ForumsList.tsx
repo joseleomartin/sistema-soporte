@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar } from 'lucide-react';
+import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { CreateForumModal } from './CreateForumModal';
 import { SubforumChat } from './SubforumChat';
 import { ManagePermissionsModal } from './ManagePermissionsModal';
@@ -31,6 +31,11 @@ export function ForumsList() {
   const [showFilesFor, setShowFilesFor] = useState<Subforum | null>(null);
   const [pendingTasksCount, setPendingTasksCount] = useState<Map<string, number>>(new Map());
   const [showPendingTasksModal, setShowPendingTasksModal] = useState<{ clientName: string; tasks: any[] } | null>(null);
+  
+  // Filtros
+  const [sortBy, setSortBy] = useState<'alphabetical' | 'activity' | 'none'>('none');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterByTasks, setFilterByTasks] = useState<'all' | 'with_tasks' | 'without_tasks'>('all');
 
   const canCreateForum = profile?.role === 'admin' || profile?.role === 'support';
 
@@ -50,7 +55,7 @@ export function ForumsList() {
 
   useEffect(() => {
     filterSubforums();
-  }, [subforums, searchTerm]);
+  }, [subforums, searchTerm, sortBy, sortOrder, filterByTasks, pendingTasksCount]);
 
   const loadSubforums = async () => {
     if (!profile?.id) return;
@@ -180,17 +185,42 @@ export function ForumsList() {
   };
 
   const filterSubforums = () => {
-    if (!searchTerm) {
-      setFilteredSubforums(subforums);
-      return;
+    let filtered = [...subforums];
+
+    // Filtro por búsqueda de texto
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (forum) =>
+          forum.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          forum.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          forum.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
-    const filtered = subforums.filter(
-      (forum) =>
-        forum.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        forum.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        forum.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filtro por tareas pendientes
+    if (filterByTasks === 'with_tasks') {
+      filtered = filtered.filter(
+        (forum) => (pendingTasksCount.get(forum.client_name) || 0) > 0
+      );
+    } else if (filterByTasks === 'without_tasks') {
+      filtered = filtered.filter(
+        (forum) => (pendingTasksCount.get(forum.client_name) || 0) === 0
+      );
+    }
+
+    // Ordenamiento
+    if (sortBy === 'alphabetical') {
+      filtered.sort((a, b) => {
+        const comparison = a.client_name.localeCompare(b.client_name, 'es', { sensitivity: 'base' });
+        return sortOrder === 'asc' ? comparison : -comparison;
+      });
+    } else if (sortBy === 'activity') {
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+    }
 
     setFilteredSubforums(filtered);
   };
@@ -275,7 +305,7 @@ export function ForumsList() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
@@ -285,6 +315,75 @@ export function ForumsList() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+        </div>
+
+        {/* Panel de Filtros */}
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200">
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <Filter className="w-4 h-4" />
+            <span className="font-medium">Filtros:</span>
+          </div>
+
+          {/* Filtro por Orden Alfabético */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Orden:</label>
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value as 'alphabetical' | 'activity' | 'none');
+                if (e.target.value === 'none') {
+                  setSortOrder('asc');
+                }
+              }}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="none">Sin orden</option>
+              <option value="alphabetical">Alfabético</option>
+              <option value="activity">Actividad</option>
+            </select>
+            {sortBy !== 'none' && (
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+              >
+                {sortOrder === 'asc' ? (
+                  <ArrowUp className="w-4 h-4 text-gray-600" />
+                ) : (
+                  <ArrowDown className="w-4 h-4 text-gray-600" />
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Filtro por Tareas Pendientes */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Tareas:</label>
+            <select
+              value={filterByTasks}
+              onChange={(e) => setFilterByTasks(e.target.value as 'all' | 'with_tasks' | 'without_tasks')}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Todos</option>
+              <option value="with_tasks">Con tareas pendientes</option>
+              <option value="without_tasks">Sin tareas pendientes</option>
+            </select>
+          </div>
+
+          {/* Botón para limpiar filtros */}
+          {(sortBy !== 'none' || filterByTasks !== 'all' || searchTerm) && (
+            <button
+              onClick={() => {
+                setSortBy('none');
+                setSortOrder('asc');
+                setFilterByTasks('all');
+                setSearchTerm('');
+              }}
+              className="ml-auto px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Limpiar filtros
+            </button>
+          )}
         </div>
       </div>
 

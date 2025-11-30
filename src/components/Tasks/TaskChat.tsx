@@ -291,6 +291,12 @@ export function TaskChat({ taskId }: TaskChatProps) {
   const getAvatarUrl = (avatarPath: string | null) => {
     if (!avatarPath) return null;
     
+    // Si ya es una URL completa, usarla directamente
+    if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+      return avatarPath;
+    }
+    
+    // Si es un path relativo, obtener la URL pública
     const { data } = supabase.storage
       .from('avatars')
       .getPublicUrl(avatarPath);

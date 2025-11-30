@@ -78,6 +78,22 @@ export function TasksList() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
 
+  const getAvatarUrl = (avatarPath: string | null | undefined) => {
+    if (!avatarPath) return null;
+    
+    // Si ya es una URL completa, usarla directamente
+    if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+      return avatarPath;
+    }
+    
+    // Si es un path relativo, obtener la URL pública
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(avatarPath);
+    
+    return data.publicUrl;
+  };
+
   useEffect(() => {
     fetchTasks();
   }, [profile]);
@@ -467,9 +483,9 @@ export function TasksList() {
                                 }`}
                                 title={isCurrentUser ? 'Tú' : user.full_name}
                               >
-                                {user.avatar_url ? (
+                                {getAvatarUrl(user.avatar_url) ? (
                                   <img 
-                                    src={user.avatar_url} 
+                                    src={getAvatarUrl(user.avatar_url)!} 
                                     alt={user.full_name} 
                                     className={`w-5 h-5 rounded-full object-cover ${isCurrentUser ? 'ring-2 ring-white' : ''}`}
                                   />

@@ -78,6 +78,22 @@ const formatDuration = (startDate: string, endDate?: string | null): string => {
 
 export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
   const { profile } = useAuth();
+
+  const getAvatarUrl = (avatarPath: string | null | undefined) => {
+    if (!avatarPath) return null;
+    
+    // Si ya es una URL completa, usarla directamente
+    if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+      return avatarPath;
+    }
+    
+    // Si es un path relativo, obtener la URL pública
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(avatarPath);
+    
+    return data.publicUrl;
+  };
   const [task, setTask] = useState<Task>(initialTask);
   const [updating, setUpdating] = useState(false);
   const [isAssigned, setIsAssigned] = useState(false);
@@ -500,9 +516,9 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                                   : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                               }`}
                             >
-                              {user.avatar_url ? (
+                              {getAvatarUrl(user.avatar_url) ? (
                                 <img 
-                                  src={user.avatar_url} 
+                                  src={getAvatarUrl(user.avatar_url)!} 
                                   alt={user.full_name} 
                                   className={`w-6 h-6 rounded-full object-cover ${isCurrentUser ? 'ring-2 ring-white' : ''}`}
                                 />

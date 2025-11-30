@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, AlertCircle, Users, User } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, AlertCircle, Users, User, Paperclip, FileText, Image, File } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -42,11 +42,15 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   
   // Data
   const [users, setUsers] = useState<Profile[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [clients, setClients] = useState<{client_name: string}[]>([]);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -105,6 +109,97 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
   const filteredClients = clients.filter(c => 
     c.client_name.toLowerCase().includes(clientNameInput.toLowerCase())
   );
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
+    // Reset input para permitir seleccionar el mismo archivo nuevamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) {
+      return <Image className="w-5 h-5 text-blue-600" />;
+    } else if (fileType === 'application/pdf') {
+      return <FileText className="w-5 h-5 text-red-600" />;
+    } else {
+      return <File className="w-5 h-5 text-gray-600" />;
+    }
+  };
+
+  const uploadFiles = async (taskId: string) => {
+    if (selectedFiles.length === 0 || !profile?.id) return;
+
+    setUploading(true);
+    try {
+      // Crear un mensaje automático para los archivos iniciales
+      const { data: messageData, error: messageError } = await supabase
+        .from('task_messages')
+        .insert([
+          {
+            task_id: taskId,
+            user_id: profile.id,
+            message: selectedFiles.length === 1 
+              ? `📎 ${selectedFiles[0].name}` 
+              : `📎 ${selectedFiles.length} archivos adjuntos`
+          }
+        ])
+        .select()
+        .single();
+
+      if (messageError) throw messageError;
+
+      // Subir archivos y asociarlos al mensaje
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${taskId}/${fileName}`;
+
+        // Subir archivo a Storage
+        const { error: uploadError } = await supabase.storage
+          .from('task-attachments')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // Guardar metadata en la base de datos asociada al mensaje
+        const { error: dbError } = await supabase
+          .from('task_attachments')
+          .insert([
+            {
+              task_id: taskId,
+              message_id: messageData.id, // Asociar al mensaje automático
+              file_name: file.name,
+              file_path: filePath,
+              file_size: file.size,
+              file_type: file.type,
+              uploaded_by: profile.id
+            }
+          ]);
+
+        if (dbError) throw dbError;
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      throw error;
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const validateForm = (): string | null => {
     if (!title.trim()) return 'El título es requerido';
@@ -200,6 +295,13 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
       if (assignmentError) throw assignmentError;
 
+      // Subir archivos si hay alguno seleccionado
+      if (selectedFiles.length > 0) {
+        await uploadFiles(taskData.id);
+      }
+
+      // Limpiar formulario
+      setSelectedFiles([]);
       onSuccess();
     } catch (error: any) {
       console.error('Error creating task:', error);
@@ -261,6 +363,52 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
               placeholder="Descripción detallada de la tarea"
               required
             />
+          </div>
+
+          {/* Archivos Adjuntos (Opcional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Archivos Adjuntos <span className="text-gray-400 text-xs">(Opcional)</span>
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              id="file-input"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 text-gray-600"
+            >
+              <Paperclip className="w-5 h-5" />
+              <span>Seleccionar archivos</span>
+            </button>
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    {getFileIcon(file.type)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                      <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="p-1 hover:bg-red-100 rounded text-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Cliente (Opcional) */}
@@ -571,13 +719,13 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {loading && (
+              {(loading || uploading) && (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               )}
-              {loading ? 'Creando...' : 'Crear Tarea'}
+              {loading ? 'Creando...' : uploading ? 'Subiendo archivos...' : 'Crear Tarea'}
             </button>
           </div>
         </form>
