@@ -1131,8 +1131,8 @@ export function MessagesBell() {
   // Vista de selección - Usuarios Normales
   if (showUserSelector && isNormalUser) {
     return (
-      <div className="fixed bottom-6 right-6 w-[550px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50" style={{ maxHeight: '80vh' }}>
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl">
+      <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[550px] sm:max-w-[calc(100vw-1rem)] max-h-[calc(100vh)] sm:max-h-[calc(100vh-2rem)] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(400px, 600px, calc(100vh))', maxWidth: '100vw' }}>
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <h3 className="text-white font-semibold">Selecciona un administrador</h3>
             <button
@@ -1144,7 +1144,7 @@ export function MessagesBell() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {availableUsers.length === 0 ? (
             <div className="p-10 text-center text-gray-500">
               <MessageSquare className="w-16 h-16 mx-auto mb-3 text-gray-300" />
@@ -1197,7 +1197,7 @@ export function MessagesBell() {
           )}
         </div>
 
-        <div className="p-3 border-t border-gray-100 bg-gray-50 text-center rounded-b-2xl">
+        <div className="p-3 border-t border-gray-100 bg-gray-50 text-center rounded-b-2xl flex-shrink-0">
           <p className="text-xs text-gray-500">
             Selecciona con quién deseas conversar
           </p>
@@ -1216,7 +1216,7 @@ export function MessagesBell() {
       : conversations;
 
     return (
-      <div className="fixed bottom-6 right-6 w-[500px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ maxHeight: '80vh', height: '800px' }}>
+      <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[500px] sm:max-w-[calc(100vw-1rem)] max-h-[calc(100vh)] sm:max-h-[calc(100vh-2rem)] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(500px, 800px, calc(100vh))', maxWidth: '100vw' }}>
         {/* Header */}
         <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl">
                 <div className="flex items-center justify-between mb-3">
@@ -1382,29 +1382,29 @@ export function MessagesBell() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-[500px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ maxHeight: '80vh', height: '800px' }}>
+    <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[500px] sm:max-w-[calc(100vw-1rem)] max-h-[100vh] sm:max-h-[calc(100vh-2rem)] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(400px, 800px, 100vh)', maxWidth: '100vw' }}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl flex-shrink-0">
+      <div className="p-2 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl flex-shrink-0">
                 <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             {otherUser?.avatar_url ? (
               <img
                 src={otherUser.avatar_url}
                 alt={otherUser.full_name}
-                className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-white flex-shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
-                <span className="text-blue-600 font-semibold text-lg">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-600 font-semibold text-base sm:text-lg">
                   {otherUser?.full_name?.charAt(0).toUpperCase() || '?'}
                       </span>
                     </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-white text-sm truncate">
+              <p className="font-semibold text-white text-xs sm:text-sm truncate">
                 {otherUser?.full_name || 'Cargando...'}
               </p>
-              <p className="text-xs text-blue-100">
+              <p className="text-xs sm:text-xs text-blue-100 truncate">
                 {otherUser?.role === 'admin' ? 'Administrador' :
                  otherUser?.role === 'support' ? 'Soporte' : 'Usuario'}
                       </p>
@@ -1421,9 +1421,9 @@ export function MessagesBell() {
               // Volver al selector (listado)
               setShowUserSelector(true);
             }}
-            className="p-1 hover:bg-blue-500 rounded transition text-white"
+            className="p-1 hover:bg-blue-500 rounded transition text-white flex-shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
                 </div>
               </div>
@@ -1431,25 +1431,25 @@ export function MessagesBell() {
       {/* Messages Area */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50" 
+        className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50 min-h-0" 
         style={{ 
-          minHeight: '400px',
+          minHeight: '200px',
           scrollBehavior: 'auto', // Desactivar smooth scroll para scroll programático
           willChange: 'scroll-position' // Optimización para scroll
         }}
       >
         {loading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full min-h-[200px]">
             <div className="text-center">
-              <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-sm text-gray-500">Cargando mensajes...</p>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-xs sm:text-sm text-gray-500">Cargando mensajes...</p>
             </div>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full min-h-[200px]">
             <div className="text-center text-gray-500">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm">No hay mensajes aún</p>
+                    <MessageSquare className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
+                    <p className="text-xs sm:text-sm">No hay mensajes aún</p>
               <p className="text-xs mt-1">Envía un mensaje para comenzar</p>
             </div>
                   </div>
@@ -1462,7 +1462,7 @@ export function MessagesBell() {
                         className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
+                          className={`max-w-[85%] sm:max-w-xs px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm ${
                             isMine
                               ? 'bg-blue-600 text-white'
                               : 'bg-white text-gray-900 border border-gray-200'
@@ -1536,31 +1536,31 @@ export function MessagesBell() {
               </div>
 
       {/* Input Area */}
-              <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl flex-shrink-0">
+              <div className="p-2 sm:p-4 border-t border-gray-200 bg-white rounded-b-2xl flex-shrink-0">
                 {selectedFiles.length > 0 && (
-                  <div className="mb-3 space-y-2 max-h-32 overflow-y-auto">
+                  <div className="mb-2 sm:mb-3 space-y-2 max-h-24 sm:max-h-32 overflow-y-auto">
                     {selectedFiles.map((file, index) => (
                       <div
                         key={index}
-                        className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200"
+                        className="flex items-center gap-2 p-1.5 sm:p-2 bg-gray-50 rounded-lg border border-gray-200"
                       >
                         {getFileIcon(file.type)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900 truncate">{file.name}</p>
+                          <p className="text-xs sm:text-sm text-gray-900 truncate">{file.name}</p>
                           <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
                         </div>
                         <button
                           onClick={() => removeFile(index)}
-                  className="p-1 hover:bg-gray-200 rounded"
+                  className="p-1 hover:bg-gray-200 rounded flex-shrink-0"
                         >
-                          <X className="w-4 h-4 text-gray-600" />
+                          <X className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 sm:gap-2 items-end">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -1570,10 +1570,10 @@ export function MessagesBell() {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+            className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
                     disabled={sending || uploading}
                   >
-                    <Paperclip className="w-5 h-5" />
+                    <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   <textarea
                     value={newMessage}
@@ -1585,19 +1585,19 @@ export function MessagesBell() {
                       }
                     }}
                     placeholder="Escribe un mensaje..."
-                    rows={2}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={1}
+                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[36px] sm:min-h-[40px] max-h-32 overflow-y-auto"
                     disabled={sending || uploading}
                   />
                   <button
                     onClick={sendMessage}
                     disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+                    className="p-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 sm:gap-2 flex-shrink-0 min-w-[36px] sm:min-w-[auto]"
                   >
             {sending || uploading ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <Send className="w-3 h-3 sm:w-4 sm:h-4" />
                     )}
                   </button>
                 </div>
