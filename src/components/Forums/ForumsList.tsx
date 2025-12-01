@@ -33,6 +33,7 @@ export function ForumsList() {
   const [pendingTasksCount, setPendingTasksCount] = useState<Map<string, number>>(new Map());
   const [showPendingTasksModal, setShowPendingTasksModal] = useState<{ clientName: string; tasks: any[] } | null>(null);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
+  const [bulkAssignModalKey, setBulkAssignModalKey] = useState(0);
   
   // Filtros
   const [sortBy, setSortBy] = useState<'alphabetical' | 'activity' | 'none'>('alphabetical');
@@ -260,7 +261,10 @@ export function ForumsList() {
         {canCreateForum && (
           <div className="flex gap-3">
             <button
-              onClick={() => setShowBulkAssignModal(true)}
+              onClick={() => {
+                setBulkAssignModalKey(prev => prev + 1);
+                setShowBulkAssignModal(true);
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
             >
               <Users className="w-5 h-5" />
@@ -601,10 +605,15 @@ export function ForumsList() {
       {/* Modal de Asignación Masiva */}
       {showBulkAssignModal && (
         <BulkAssignUsersModal
+          key={bulkAssignModalKey}
           subforums={subforums}
-          onClose={() => setShowBulkAssignModal(false)}
+          onClose={() => {
+            setShowBulkAssignModal(false);
+            setBulkAssignModalKey(prev => prev + 1);
+          }}
           onSuccess={() => {
             setShowBulkAssignModal(false);
+            setBulkAssignModalKey(prev => prev + 1);
             loadSubforums();
           }}
         />

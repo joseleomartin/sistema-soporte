@@ -40,7 +40,7 @@ export function BulkAssignUsersModal({
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [subforums]);
 
   const loadData = async () => {
     try {
@@ -57,31 +57,54 @@ export function BulkAssignUsersModal({
       setUsers(usersData || []);
 
       // Cargar permisos existentes para todos los clientes
+      // Usar paginación para cargar todos los permisos (no solo los primeros 1000)
       const clientIds = subforums.map(s => s.id);
       if (clientIds.length > 0) {
-        const { data: permsData, error: permsError } = await supabase
-          .from('subforum_permissions')
-          .select('subforum_id, user_id')
-          .in('subforum_id', clientIds)
-          .eq('can_view', true);
-
-        if (permsError) throw permsError;
-
         const permsMap = new Map<string, Set<string>>();
-        (permsData || []).forEach((perm) => {
-          if (!permsMap.has(perm.subforum_id)) {
-            permsMap.set(perm.subforum_id, new Set());
+        let from = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        // Cargar todos los permisos usando paginación
+        while (hasMore) {
+          const { data: permsData, error: permsError } = await supabase
+            .from('subforum_permissions')
+            .select('subforum_id, user_id')
+            .in('subforum_id', clientIds)
+            .eq('can_view', true)
+            .range(from, from + pageSize - 1);
+
+          if (permsError) throw permsError;
+
+          if (permsData && permsData.length > 0) {
+            permsData.forEach((perm) => {
+              if (!permsMap.has(perm.subforum_id)) {
+                permsMap.set(perm.subforum_id, new Set());
+              }
+              permsMap.get(perm.subforum_id)!.add(perm.user_id);
+            });
+
+            // Si obtuvimos menos registros que el tamaño de página, no hay más
+            hasMore = permsData.length === pageSize;
+            from += pageSize;
+          } else {
+            hasMore = false;
           }
-          permsMap.get(perm.subforum_id)!.add(perm.user_id);
-        });
+        }
+
         setExistingPermissions(permsMap);
         
         // Crear una copia profunda para clientUserAssignments
+        // Esto refleja el estado actual de los permisos en la base de datos
         const assignmentsMap = new Map<string, Set<string>>();
         permsMap.forEach((userSet, clientId) => {
           assignmentsMap.set(clientId, new Set(userSet));
         });
         setClientUserAssignments(assignmentsMap);
+        
+        // Limpiar selecciones de usuarios y clientes para reflejar el estado actual
+        setSelectedUsers(new Set());
+        setSelectedClients(new Set());
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -229,11 +252,20 @@ export function BulkAssignUsersModal({
             can_moderate: false,
           }));
 
+          // Usar upsert para evitar errores de duplicados
+          // Si el permiso ya existe, se actualiza; si no, se crea
           const insertPromise = supabase
             .from('subforum_permissions')
-            .insert(newPerms)
+            .upsert(newPerms, {
+              onConflict: 'subforum_id,user_id'
+            })
             .then((result) => {
               if (result.error) {
+                // Si el error es de duplicado, lo ignoramos (puede pasar en operaciones concurrentes)
+                if (result.error.code === '23505' || result.error.message?.includes('duplicate')) {
+                  console.log(`⚠️ Algunos permisos ya existían para cliente ${client.id}, se ignoran`);
+                  return result; // No lanzar error, solo continuar
+                }
                 console.error(`Error insertando permisos para cliente ${client.id}:`, result.error);
                 throw result.error;
               }
@@ -253,6 +285,10 @@ export function BulkAssignUsersModal({
       console.log(`Guardando ${updates.length} operaciones...`);
       await Promise.all(updates);
       console.log(`✅ Guardado exitoso: ${totalChanges} cambios aplicados`);
+      
+      // Recargar datos para reflejar los cambios
+      await loadData();
+      
       onSuccess();
       onClose();
     } catch (error) {
@@ -429,10 +465,9 @@ export function BulkAssignUsersModal({
               ) : (
                 <div className="space-y-2">
                   {filteredClients.map((client) => {
-                    const assignedUsers = users.filter((user) => {
-                      const assignments = clientUserAssignments.get(client.id) || new Set();
-                      return assignments.has(user.id);
-                    });
+                    // Contar directamente el número de usuarios asignados desde el Set
+                    const assignments = clientUserAssignments.get(client.id) || new Set();
+                    const assignedCount = assignments.size;
 
                     return (
                       <div
@@ -490,9 +525,9 @@ export function BulkAssignUsersModal({
                             );
                           })}
                         </div>
-                        {assignedUsers.length > 0 && (
+                        {assignedCount > 0 && (
                           <p className="text-xs text-gray-500 mt-2">
-                            Asignado a {assignedUsers.length} usuario{assignedUsers.length !== 1 ? 's' : ''}
+                            Asignado a {assignedCount} usuario{assignedCount !== 1 ? 's' : ''}
                           </p>
                         )}
                       </div>

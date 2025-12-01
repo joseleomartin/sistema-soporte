@@ -73,9 +73,44 @@ export function TimeEntry() {
     if (!profile?.id) return;
 
     try {
-      // Usar función RPC para obtener todos los clientes para carga de horas
-      // Esto permite ver todos los clientes sin afectar las políticas RLS de subforums
-      const { data, error } = await supabase.rpc('get_all_clients_for_time_tracking');
+      let data;
+      let error;
+
+      if (profile.role === 'user') {
+        // Para usuarios normales, obtener solo los clientes asignados
+        const { data: permData, error: permError } = await supabase
+          .from('subforum_permissions')
+          .select('subforum_id')
+          .eq('user_id', profile.id)
+          .eq('can_view', true);
+
+        if (permError) throw permError;
+
+        const subforumIds = permData?.map((p) => p.subforum_id) || [];
+
+        if (subforumIds.length === 0) {
+          setClients([]);
+          return;
+        }
+
+        const result = await supabase
+          .from('subforums')
+          .select('id, name')
+          .in('id', subforumIds)
+          .order('name');
+
+        data = result.data;
+        error = result.error;
+      } else {
+        // Para admin/support, obtener todos los clientes
+        const result = await supabase
+          .from('subforums')
+          .select('id, name')
+          .order('name');
+
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
       setClients(data || []);
