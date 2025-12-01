@@ -1384,7 +1384,7 @@ export function MessagesBell() {
   return (
     <div className="fixed bottom-6 right-6 w-[500px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ maxHeight: '80vh', height: '800px' }}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl">
+      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl flex-shrink-0">
                 <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1">
             {otherUser?.avatar_url ? (
@@ -1536,7 +1536,7 @@ export function MessagesBell() {
               </div>
 
       {/* Input Area */}
-              <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
+              <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl flex-shrink-0">
                 {selectedFiles.length > 0 && (
                   <div className="mb-3 space-y-2 max-h-32 overflow-y-auto">
                     {selectedFiles.map((file, index) => (
