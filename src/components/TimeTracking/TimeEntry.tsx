@@ -52,7 +52,12 @@ export function TimeEntry() {
   const [filteredEntries, setFilteredEntries] = useState<TimeEntry[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const today = new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+  // Estados temporales para los inputs de fecha (evitan refresh mientras se navega)
+  const [tempStartDate, setTempStartDate] = useState(today);
+  const [tempEndDate, setTempEndDate] = useState(today);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
@@ -63,7 +68,16 @@ export function TimeEntry() {
       loadClients();
       loadTimeEntries();
     }
-  }, [profile?.id, selectedDate]);
+  }, [profile?.id, startDate, endDate]);
+
+  // Sincronizar estados temporales cuando cambien las fechas reales
+  useEffect(() => {
+    setTempStartDate(startDate);
+  }, [startDate]);
+
+  useEffect(() => {
+    setTempEndDate(endDate);
+  }, [endDate]);
 
   useEffect(() => {
     filterEntries();
@@ -123,6 +137,16 @@ export function TimeEntry() {
     if (!profile?.id) return;
 
     try {
+      setLoading(true);
+      
+      // Validar que la fecha de inicio no sea mayor que la fecha de fin
+      if (startDate > endDate) {
+        setMessage({ type: 'error', text: 'La fecha de inicio no puede ser mayor que la fecha de fin' });
+        setTimeEntries([]);
+        setLoading(false);
+        return;
+      }
+
       let query = supabase
         .from('time_entries')
         .select(`
@@ -131,7 +155,9 @@ export function TimeEntry() {
           department:departments!time_entries_department_id_fkey(id, name),
           user:profiles!time_entries_user_id_fkey(id, full_name, email)
         `)
-        .eq('entry_date', selectedDate)
+        .gte('entry_date', startDate)
+        .lte('entry_date', endDate)
+        .order('entry_date', { ascending: false })
         .order('created_at', { ascending: false });
 
       // Si no es admin/support, solo ver sus propias horas
@@ -143,6 +169,7 @@ export function TimeEntry() {
 
       if (error) throw error;
       setTimeEntries(data || []);
+      setMessage(null);
     } catch (error: any) {
       console.error('Error loading time entries:', error);
       setMessage({ type: 'error', text: 'Error al cargar las horas' });
@@ -254,12 +281,77 @@ export function TimeEntry() {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-gray-400" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">Desde</label>
+                <input
+                  type="date"
+                  value={tempStartDate}
+                  onChange={(e) => {
+                    // Solo actualizar el estado temporal mientras se navega
+                    setTempStartDate(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    // Solo actualizar el estado real cuando el usuario termine de seleccionar
+                    const newDate = e.target.value;
+                    if (newDate !== startDate && newDate) {
+                      setStartDate(newDate);
+                      setTempStartDate(newDate);
+                    } else if (!newDate) {
+                      // Si se borra, mantener el valor anterior
+                      setTempStartDate(startDate);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // Si presiona Enter, aplicar el cambio
+                    if (e.key === 'Enter') {
+                      const newDate = tempStartDate;
+                      if (newDate !== startDate && newDate) {
+                        setStartDate(newDate);
+                      }
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  max={endDate}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <span className="text-gray-400 mt-6">-</span>
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-1">Hasta</label>
+                <input
+                  type="date"
+                  value={tempEndDate}
+                  onChange={(e) => {
+                    // Solo actualizar el estado temporal mientras se navega
+                    setTempEndDate(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    // Solo actualizar el estado real cuando el usuario termine de seleccionar
+                    const newDate = e.target.value;
+                    if (newDate !== endDate && newDate) {
+                      setEndDate(newDate);
+                      setTempEndDate(newDate);
+                    } else if (!newDate) {
+                      // Si se borra, mantener el valor anterior
+                      setTempEndDate(endDate);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // Si presiona Enter, aplicar el cambio
+                    if (e.key === 'Enter') {
+                      const newDate = tempEndDate;
+                      if (newDate !== endDate && newDate) {
+                        setEndDate(newDate);
+                      }
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  min={startDate}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
           </div>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -285,7 +377,12 @@ export function TimeEntry() {
         {filteredEntries.length === 0 ? (
           <div className="p-12 text-center">
             <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-            <p className="text-gray-500">No hay horas cargadas para esta fecha</p>
+            <p className="text-gray-500">
+              {startDate === endDate 
+                ? `No hay horas cargadas para esta fecha`
+                : `No hay horas cargadas en el rango seleccionado`
+              }
+            </p>
             <p className="text-sm text-gray-400 mt-1">Haz clic en "Cargar Horas" para agregar una entrada</p>
           </div>
         ) : (
@@ -350,7 +447,7 @@ export function TimeEntry() {
         <TimeEntryModal
           entry={editingEntry}
           clients={clients}
-          selectedDate={selectedDate}
+          selectedDate={today}
           onClose={() => {
             setShowCreateModal(false);
             setEditingEntry(null);

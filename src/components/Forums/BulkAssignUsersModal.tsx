@@ -57,38 +57,56 @@ export function BulkAssignUsersModal({
       setUsers(usersData || []);
 
       // Cargar permisos existentes para todos los clientes
-      // Usar paginación para cargar todos los permisos (no solo los primeros 1000)
+      // Dividir en lotes para evitar límites de Supabase y asegurar carga completa
       const clientIds = subforums.map(s => s.id);
       if (clientIds.length > 0) {
         const permsMap = new Map<string, Set<string>>();
-        let from = 0;
-        const pageSize = 1000;
-        let hasMore = true;
+        
+        // Dividir clientIds en lotes de 100 para evitar límites de Supabase
+        const batchSize = 100;
+        const batches: string[][] = [];
+        for (let i = 0; i < clientIds.length; i += batchSize) {
+          batches.push(clientIds.slice(i, i + batchSize));
+        }
 
-        // Cargar todos los permisos usando paginación
-        while (hasMore) {
-          const { data: permsData, error: permsError } = await supabase
-            .from('subforum_permissions')
-            .select('subforum_id, user_id')
-            .in('subforum_id', clientIds)
-            .eq('can_view', true)
-            .range(from, from + pageSize - 1);
+        // Cargar permisos por lotes con un pequeño delay entre cada lote
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+          const batch = batches[batchIndex];
+          
+          // Pequeño delay entre lotes para no sobrecargar
+          if (batchIndex > 0) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
 
-          if (permsError) throw permsError;
+          let from = 0;
+          const pageSize = 1000;
+          let hasMore = true;
 
-          if (permsData && permsData.length > 0) {
-            permsData.forEach((perm) => {
-              if (!permsMap.has(perm.subforum_id)) {
-                permsMap.set(perm.subforum_id, new Set());
-              }
-              permsMap.get(perm.subforum_id)!.add(perm.user_id);
-            });
+          // Cargar todos los permisos de este lote usando paginación
+          while (hasMore) {
+            const { data: permsData, error: permsError } = await supabase
+              .from('subforum_permissions')
+              .select('subforum_id, user_id')
+              .in('subforum_id', batch)
+              .eq('can_view', true)
+              .range(from, from + pageSize - 1);
 
-            // Si obtuvimos menos registros que el tamaño de página, no hay más
-            hasMore = permsData.length === pageSize;
-            from += pageSize;
-          } else {
-            hasMore = false;
+            if (permsError) throw permsError;
+
+            if (permsData && permsData.length > 0) {
+              permsData.forEach((perm) => {
+                if (!permsMap.has(perm.subforum_id)) {
+                  permsMap.set(perm.subforum_id, new Set());
+                }
+                permsMap.get(perm.subforum_id)!.add(perm.user_id);
+              });
+
+              // Si obtuvimos menos registros que el tamaño de página, no hay más
+              hasMore = permsData.length === pageSize;
+              from += pageSize;
+            } else {
+              hasMore = false;
+            }
           }
         }
 
@@ -105,6 +123,9 @@ export function BulkAssignUsersModal({
         // Limpiar selecciones de usuarios y clientes para reflejar el estado actual
         setSelectedUsers(new Set());
         setSelectedClients(new Set());
+        
+        // Pequeño delay adicional para asegurar que todo esté sincronizado
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     } catch (error) {
       console.error('Error loading data:', error);
