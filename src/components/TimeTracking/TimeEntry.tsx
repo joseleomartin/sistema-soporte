@@ -278,79 +278,73 @@ export function TimeEntry() {
 
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-gray-400" />
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="flex items-center gap-3 flex-1 sm:flex-initial">
+            <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
             <div className="flex items-center gap-2">
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-500 mb-1">Desde</label>
-                <input
-                  type="date"
-                  value={tempStartDate}
-                  onChange={(e) => {
-                    // Solo actualizar el estado temporal mientras se navega
-                    setTempStartDate(e.target.value);
-                  }}
-                  onBlur={(e) => {
-                    // Solo actualizar el estado real cuando el usuario termine de seleccionar
-                    const newDate = e.target.value;
+              <input
+                type="date"
+                value={tempStartDate}
+                onChange={(e) => {
+                  // Solo actualizar el estado temporal mientras se navega
+                  setTempStartDate(e.target.value);
+                }}
+                onBlur={(e) => {
+                  // Solo actualizar el estado real cuando el usuario termine de seleccionar
+                  const newDate = e.target.value;
+                  if (newDate !== startDate && newDate) {
+                    setStartDate(newDate);
+                    setTempStartDate(newDate);
+                  } else if (!newDate) {
+                    // Si se borra, mantener el valor anterior
+                    setTempStartDate(startDate);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Si presiona Enter, aplicar el cambio
+                  if (e.key === 'Enter') {
+                    const newDate = tempStartDate;
                     if (newDate !== startDate && newDate) {
                       setStartDate(newDate);
-                      setTempStartDate(newDate);
-                    } else if (!newDate) {
-                      // Si se borra, mantener el valor anterior
-                      setTempStartDate(startDate);
                     }
-                  }}
-                  onKeyDown={(e) => {
-                    // Si presiona Enter, aplicar el cambio
-                    if (e.key === 'Enter') {
-                      const newDate = tempStartDate;
-                      if (newDate !== startDate && newDate) {
-                        setStartDate(newDate);
-                      }
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  max={endDate}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <span className="text-gray-400 mt-6">-</span>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-500 mb-1">Hasta</label>
-                <input
-                  type="date"
-                  value={tempEndDate}
-                  onChange={(e) => {
-                    // Solo actualizar el estado temporal mientras se navega
-                    setTempEndDate(e.target.value);
-                  }}
-                  onBlur={(e) => {
-                    // Solo actualizar el estado real cuando el usuario termine de seleccionar
-                    const newDate = e.target.value;
+                    e.currentTarget.blur();
+                  }
+                }}
+                max={endDate}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
+              <span className="text-gray-400">-</span>
+              <input
+                type="date"
+                value={tempEndDate}
+                onChange={(e) => {
+                  // Solo actualizar el estado temporal mientras se navega
+                  setTempEndDate(e.target.value);
+                }}
+                onBlur={(e) => {
+                  // Solo actualizar el estado real cuando el usuario termine de seleccionar
+                  const newDate = e.target.value;
+                  if (newDate !== endDate && newDate) {
+                    setEndDate(newDate);
+                    setTempEndDate(newDate);
+                  } else if (!newDate) {
+                    // Si se borra, mantener el valor anterior
+                    setTempEndDate(endDate);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  // Si presiona Enter, aplicar el cambio
+                  if (e.key === 'Enter') {
+                    const newDate = tempEndDate;
                     if (newDate !== endDate && newDate) {
                       setEndDate(newDate);
-                      setTempEndDate(newDate);
-                    } else if (!newDate) {
-                      // Si se borra, mantener el valor anterior
-                      setTempEndDate(endDate);
                     }
-                  }}
-                  onKeyDown={(e) => {
-                    // Si presiona Enter, aplicar el cambio
-                    if (e.key === 'Enter') {
-                      const newDate = tempEndDate;
-                      if (newDate !== endDate && newDate) {
-                        setEndDate(newDate);
-                      }
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  min={startDate}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+                    e.currentTarget.blur();
+                  }
+                }}
+                min={startDate}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
             </div>
           </div>
           <div className="relative flex-1">
