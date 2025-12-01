@@ -125,21 +125,23 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       let tasksCount = 0;
       
       if (profile.role === 'admin') {
-        // Admin ve todas las tareas (sin filtros)
-        const { count: allTasksCount, error: tasksError } = await supabase
+        // Admin cuenta solo tareas pendientes o en progreso (no completadas)
+        const { count: pendingTasksCount, error: tasksError } = await supabase
           .from('tasks')
-          .select('*', { count: 'exact', head: true });
+          .select('*', { count: 'exact', head: true })
+          .in('status', ['pending', 'in_progress']);
         
         if (tasksError) {
           // Si hay error, intentar contar de otra manera
-          const { data: allTasks, error: tasksDataError } = await supabase
+          const { data: pendingTasks, error: tasksDataError } = await supabase
             .from('tasks')
-            .select('id');
-          if (!tasksDataError && allTasks) {
-            tasksCount = allTasks.length;
+            .select('id')
+            .in('status', ['pending', 'in_progress']);
+          if (!tasksDataError && pendingTasks) {
+            tasksCount = pendingTasks.length;
           }
         } else {
-          tasksCount = allTasksCount || 0;
+          tasksCount = pendingTasksCount || 0;
         }
       } else {
         // Usuario regular: contar tareas asignadas directamente o por departamento
@@ -186,7 +188,18 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           ...(deptTasks?.map(t => t.task_id) || [])
         ]);
 
-        tasksCount = allTaskIds.size;
+        // Contar solo tareas pendientes o en progreso (no completadas)
+        if (allTaskIds.size > 0) {
+          const { count: pendingTasksCount } = await supabase
+            .from('tasks')
+            .select('*', { count: 'exact', head: true })
+            .in('id', Array.from(allTaskIds))
+            .in('status', ['pending', 'in_progress']);
+          
+          tasksCount = pendingTasksCount || 0;
+        } else {
+          tasksCount = 0;
+        }
       }
 
       // Obtener actividad reciente

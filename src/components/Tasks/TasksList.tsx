@@ -288,10 +288,17 @@ export function TasksList() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = date.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Comparar solo las fechas (sin hora) para determinar si es hoy, mañana, etc.
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffDays = Math.round((dateOnly.getTime() - nowOnly.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 0) {
+    // Verificar si está vencida (comparando fecha y hora completa)
+    const diffTime = date.getTime() - now.getTime();
+    const isOverdue = diffTime < 0;
+
+    if (isOverdue) {
       return { text: 'Vencida', color: '#EF4444' };
     } else if (diffDays === 0) {
       return { text: 'Hoy', color: '#F59E0B' };
@@ -442,13 +449,15 @@ export function TasksList() {
                       )}
                     </div>
 
-                    {/* Fecha límite */}
-                    <div className="flex items-center gap-2 mb-3 text-sm">
-                      <Calendar className="w-4 h-4" style={{ color: dueDate.color }} />
-                      <span style={{ color: dueDate.color }} className="font-medium">
-                        {dueDate.text}
-                      </span>
-                    </div>
+                    {/* Fecha límite - Solo mostrar si la tarea no está completada */}
+                    {task.status !== 'completed' && (
+                      <div className="flex items-center gap-2 mb-3 text-sm">
+                        <Calendar className="w-4 h-4" style={{ color: dueDate.color }} />
+                        <span style={{ color: dueDate.color }} className="font-medium">
+                          {dueDate.text}
+                        </span>
+                      </div>
+                    )}
 
                     {/* Estado */}
                     <div className="flex items-center justify-between">

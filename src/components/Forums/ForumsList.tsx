@@ -7,6 +7,7 @@ import { SubforumChat } from './SubforumChat';
 import { ManagePermissionsModal } from './ManagePermissionsModal';
 import { ClientFilesModal } from './ClientFilesModal';
 import { ManageDepartmentPermissionsModal } from './ManageDepartmentPermissionsModal';
+import { BulkAssignUsersModal } from './BulkAssignUsersModal';
 
 interface Subforum {
   id: string;
@@ -31,6 +32,7 @@ export function ForumsList() {
   const [showFilesFor, setShowFilesFor] = useState<Subforum | null>(null);
   const [pendingTasksCount, setPendingTasksCount] = useState<Map<string, number>>(new Map());
   const [showPendingTasksModal, setShowPendingTasksModal] = useState<{ clientName: string; tasks: any[] } | null>(null);
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
   
   // Filtros
   const [sortBy, setSortBy] = useState<'alphabetical' | 'activity' | 'none'>('alphabetical');
@@ -256,13 +258,22 @@ export function ForumsList() {
           </p>
         </div>
         {canCreateForum && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            <Plus className="w-5 h-5" />
-            Nuevo Cliente
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowBulkAssignModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+            >
+              <Users className="w-5 h-5" />
+              Asignación Masiva
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            >
+              <Plus className="w-5 h-5" />
+              Nuevo Cliente
+            </button>
+          </div>
         )}
       </div>
 
@@ -585,6 +596,18 @@ export function ForumsList() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Asignación Masiva */}
+      {showBulkAssignModal && (
+        <BulkAssignUsersModal
+          subforums={subforums}
+          onClose={() => setShowBulkAssignModal(false)}
+          onSuccess={() => {
+            setShowBulkAssignModal(false);
+            loadSubforums();
+          }}
+        />
       )}
     </div>
   );

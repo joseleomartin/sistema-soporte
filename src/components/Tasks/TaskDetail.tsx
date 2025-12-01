@@ -407,19 +407,21 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                     </div>
                   )}
 
-                  {/* Fecha Límite */}
-                  <div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>Fecha Límite</span>
+                  {/* Fecha Límite - Solo mostrar si la tarea no está completada */}
+                  {task.status !== 'completed' && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>Fecha Límite</span>
+                      </div>
+                      <p className="text-base font-medium text-gray-900">
+                        {new Date(task.due_date).toLocaleString('es-ES', {
+                          dateStyle: 'full',
+                          timeStyle: 'short'
+                        })}
+                      </p>
                     </div>
-                    <p className="text-base font-medium text-gray-900">
-                      {new Date(task.due_date).toLocaleString('es-ES', {
-                        dateStyle: 'full',
-                        timeStyle: 'short'
-                      })}
-                    </p>
-                  </div>
+                  )}
 
                   {/* Prioridad */}
                   <div>

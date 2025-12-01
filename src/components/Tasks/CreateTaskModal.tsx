@@ -246,6 +246,17 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
         end_date: recurrenceEndDate || null
       } : null;
 
+      // Convertir dueDate de datetime-local a ISO string con zona horaria
+      // datetime-local devuelve "YYYY-MM-DDTHH:mm" sin zona horaria
+      // Necesitamos crear un Date en la zona horaria local y convertirlo a ISO
+      let dueDateISO = dueDate;
+      if (dueDate) {
+        // Crear un objeto Date a partir del valor datetime-local (se interpreta como hora local)
+        const localDate = new Date(dueDate);
+        // Convertir a ISO string (esto incluirá la zona horaria correcta)
+        dueDateISO = localDate.toISOString();
+      }
+
       // Crear la tarea
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
@@ -254,7 +265,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             title: title.trim(),
             description: description.trim(),
             client_name: clientName.trim() || null, // Permitir null
-            due_date: dueDate,
+            due_date: dueDateISO,
             priority,
             status: 'pending',
             created_by: profile.id,
