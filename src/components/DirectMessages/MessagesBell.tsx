@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, memo, useLayoutEffect } from 'react';
+import { useEffect, useState, useRef, memo, useLayoutEffect, useCallback } from 'react';
 import { MessageSquare, X, Send, Paperclip, Download, Image, FileText, File } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -360,52 +360,97 @@ export function MessagesBell() {
     };
   }, [profile?.id, otherUser?.id, isOpen]);
 
+  // Escuchar evento para abrir chat desde notificación
+  useEffect(() => {
+    const handleOpenDirectMessage = async (event: CustomEvent) => {
+      const { senderId } = event.detail;
+      if (!senderId || !profile?.id) return;
+
+      // Obtener información del usuario remitente
+      const { data: senderProfile } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role, avatar_url')
+        .eq('id', senderId)
+        .single();
+
+      if (senderProfile) {
+        setOtherUser({
+          id: senderProfile.id,
+          full_name: senderProfile.full_name,
+          email: senderProfile.email,
+          role: senderProfile.role,
+          avatar_url: senderProfile.avatar_url
+        });
+        setShowUserSelector(false);
+        setIsOpen(true);
+      }
+    };
+
+    window.addEventListener('openDirectMessage', handleOpenDirectMessage as EventListener);
+
+    return () => {
+      window.removeEventListener('openDirectMessage', handleOpenDirectMessage as EventListener);
+    };
+  }, [profile?.id]);
+
+  // Función para cargar contador de no leídos
+  const loadUnreadCount = useCallback(async () => {
+    if (!profile?.id) return;
+
+    if (isNormalUser) {
+      // Usuario normal: contar mensajes no leídos de todos los admins/soporte
+      const { count } = await supabase
+        .from('direct_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', profile.id)
+        .eq('is_read', false);
+
+      setUnreadCount(count || 0);
+
+      // Cargar contadores individuales por usuario
+      if (showUserSelector && availableUsers.length > 0) {
+        const unreadMap = new Map<string, number>();
+        
+        for (const user of availableUsers) {
+          const { count: userCount } = await supabase
+            .from('direct_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('receiver_id', profile.id)
+            .eq('sender_id', user.id)
+            .eq('is_read', false);
+          
+          if (userCount && userCount > 0) {
+            unreadMap.set(user.id, userCount);
+          }
+        }
+        
+        setUnreadByUser(unreadMap);
+      }
+    } else if (otherUser?.id) {
+      // Admin: contar solo del usuario seleccionado
+      const { count } = await supabase
+        .from('direct_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', profile.id)
+        .eq('sender_id', otherUser.id)
+        .eq('is_read', false);
+
+      setUnreadCount(count || 0);
+    } else {
+      // Admin sin usuario seleccionado: contar todos los mensajes no leídos
+      const { count } = await supabase
+        .from('direct_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', profile.id)
+        .eq('is_read', false);
+
+      setUnreadCount(count || 0);
+    }
+  }, [profile?.id, isNormalUser, otherUser?.id, showUserSelector, availableUsers]);
+
   // Cargar contador de no leídos
   useEffect(() => {
     if (!profile?.id) return;
-
-    const loadUnreadCount = async () => {
-      if (isNormalUser) {
-        // Usuario normal: contar mensajes no leídos de todos los admins/soporte
-        const { count } = await supabase
-          .from('direct_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', profile.id)
-          .eq('is_read', false);
-
-        setUnreadCount(count || 0);
-
-        // Cargar contadores individuales por usuario
-        if (showUserSelector && availableUsers.length > 0) {
-          const unreadMap = new Map<string, number>();
-          
-          for (const user of availableUsers) {
-            const { count: userCount } = await supabase
-              .from('direct_messages')
-              .select('*', { count: 'exact', head: true })
-              .eq('receiver_id', profile.id)
-              .eq('sender_id', user.id)
-              .eq('is_read', false);
-            
-            if (userCount && userCount > 0) {
-              unreadMap.set(user.id, userCount);
-            }
-          }
-          
-          setUnreadByUser(unreadMap);
-        }
-      } else if (otherUser?.id) {
-        // Admin: contar solo del usuario seleccionado
-        const { count } = await supabase
-          .from('direct_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', profile.id)
-          .eq('sender_id', otherUser.id)
-          .eq('is_read', false);
-
-        setUnreadCount(count || 0);
-      }
-    };
 
     loadUnreadCount();
 
@@ -415,6 +460,50 @@ export function MessagesBell() {
       return () => clearInterval(interval);
     }
   }, [profile?.id, otherUser?.id, isOpen, showUserSelector, isNormalUser, availableUsers]);
+
+  // Suscripción en tiempo real para actualizar contador cuando llega un mensaje nuevo
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    // Suscribirse a nuevos mensajes donde el usuario es receptor
+    const channel = supabase
+      .channel(`unread_count_${profile.id}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `receiver_id=eq.${profile.id}`
+        },
+        (payload: any) => {
+          // Si el mensaje no está leído, actualizar contador
+          if (!payload.new.is_read) {
+            loadUnreadCount();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `receiver_id=eq.${profile.id}`
+        },
+        (payload: any) => {
+          // Si el mensaje cambió a leído, actualizar contador
+          if (payload.new.is_read !== payload.old.is_read) {
+            loadUnreadCount();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id, loadUnreadCount]);
 
   // Scroll automático - useLayoutEffect para carga inicial (sin flash)
   useLayoutEffect(() => {
@@ -734,9 +823,12 @@ export function MessagesBell() {
           return [...filtered, messageData];
         });
 
-        // Si es mensaje recibido, marcar como leído
+        // Si es mensaje recibido, marcar como leído y actualizar contador
         if ((data as any).receiver_id === profile.id && isOpen) {
           markMessagesAsRead();
+        } else if ((data as any).receiver_id === profile.id && !isOpen) {
+          // Si el chat está cerrado, actualizar contador de no leídos
+          loadUnreadCount();
         }
       }
     } catch (error) {

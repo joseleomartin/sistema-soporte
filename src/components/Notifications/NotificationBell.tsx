@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
-  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention';
+  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention' | 'direct_message';
   title: string;
   message: string;
   read: boolean;
@@ -14,6 +14,7 @@ interface Notification {
   event_id?: string;
   task_id?: string;
   subforum_id?: string;
+  direct_message_id?: string;
   metadata?: any;
 }
 
@@ -53,6 +54,10 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         },
         (payload) => {
           const newNotification = payload.new as Notification;
+          // Ignorar notificaciones de mensajes directos
+          if (newNotification.type === 'direct_message') {
+            return;
+          }
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
 
@@ -86,6 +91,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         .from('notifications')
         .select('*')
         .eq('user_id', profile.id)
+        .neq('type', 'direct_message') // Excluir notificaciones de mensajes directos
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -95,11 +101,13 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
       }
 
       if (data) {
-        const newUnreadCount = data.filter(n => !n.read).length;
+        // Filtrar también en el frontend por si acaso
+        const filteredData = data.filter(n => n.type !== 'direct_message');
+        const newUnreadCount = filteredData.filter(n => !n.read).length;
         
         // Solo actualizar si hay cambios
-        if (JSON.stringify(data) !== JSON.stringify(notifications)) {
-          setNotifications(data);
+        if (JSON.stringify(filteredData) !== JSON.stringify(notifications)) {
+          setNotifications(filteredData);
           setUnreadCount(newUnreadCount);
         }
       }
@@ -177,6 +185,12 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         // Fallback: usar window.location si no hay callback
         window.location.hash = 'forums';
       }
+    } else if (notification.type === 'direct_message' && notification.metadata?.sender_id) {
+      // Abrir chat de mensajes directos con el remitente
+      // Disparar evento personalizado que MessagesBell escuchará
+      window.dispatchEvent(new CustomEvent('openDirectMessage', {
+        detail: { senderId: notification.metadata.sender_id }
+      }));
     }
   };
 
@@ -198,6 +212,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         return <CheckSquare className="w-5 h-5 text-indigo-600" />;
       case 'forum_mention':
         return <MessageSquare className="w-5 h-5 text-purple-600" />;
+      case 'direct_message':
+        return <MessageSquare className="w-5 h-5 text-cyan-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
