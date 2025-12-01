@@ -73,35 +73,12 @@ export function TimeEntry() {
     if (!profile?.id) return;
 
     try {
-      let clientIds: string[] = [];
+      // Usar función RPC para obtener todos los clientes para carga de horas
+      // Esto permite ver todos los clientes sin afectar las políticas RLS de subforums
+      const { data, error } = await supabase.rpc('get_all_clients_for_time_tracking');
 
-      if (profile.role === 'user') {
-        // Usuarios normales: solo clientes con permiso
-        const { data: permData } = await supabase
-          .from('subforum_permissions')
-          .select('subforum_id')
-          .eq('user_id', profile.id)
-          .eq('can_view', true);
-
-        clientIds = permData?.map(p => p.subforum_id) || [];
-      } else {
-        // Admin/support: todos los clientes
-        const { data: allClients } = await supabase
-          .from('subforums')
-          .select('id');
-        
-        clientIds = allClients?.map(c => c.id) || [];
-      }
-
-      if (clientIds.length > 0) {
-        const { data: clientsData } = await supabase
-          .from('subforums')
-          .select('id, name')
-          .in('id', clientIds)
-          .order('name');
-
-        setClients(clientsData || []);
-      }
+      if (error) throw error;
+      setClients(data || []);
     } catch (error) {
       console.error('Error loading clients:', error);
     }
@@ -172,6 +149,23 @@ export function TimeEntry() {
       setMessage({ type: 'error', text: 'Error al eliminar la entrada' });
       setTimeout(() => setMessage(null), 5000);
     }
+  };
+
+  // Función helper para formatear horas decimales a horas y minutos
+  const formatHoursMinutes = (decimalHours: number) => {
+    const hours = Math.floor(decimalHours);
+    const minutes = Math.round((decimalHours - hours) * 60);
+    
+    if (hours === 0 && minutes === 0) {
+      return '0 min';
+    }
+    if (hours === 0) {
+      return `${minutes} min`;
+    }
+    if (minutes === 0) {
+      return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+    }
+    return `${hours} ${hours === 1 ? 'hora' : 'horas'} ${minutes} min`;
   };
 
   const totalHours = filteredEntries.reduce((sum, entry) => sum + parseFloat(entry.hours_worked.toString()), 0);
@@ -245,7 +239,7 @@ export function TimeEntry() {
           <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg">
             <Clock className="w-5 h-5 text-blue-600" />
             <span className="font-semibold text-blue-900">
-              Total: {totalHours.toFixed(2)} horas
+              Total: {formatHoursMinutes(totalHours)}
             </span>
           </div>
         </div>
@@ -269,7 +263,7 @@ export function TimeEntry() {
                       <FolderOpen className="w-5 h-5 text-blue-600" />
                       <h3 className="font-semibold text-gray-900">{entry.client?.name || 'Cliente desconocido'}</h3>
                       <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                        {parseFloat(entry.hours_worked.toString()).toFixed(2)} horas
+                        {formatHoursMinutes(parseFloat(entry.hours_worked.toString()))}
                       </span>
                     </div>
                     {entry.user && (
@@ -354,7 +348,20 @@ function TimeEntryModal({
   const { profile } = useAuth();
   const [clientId, setClientId] = useState(entry?.client_id || '');
   const [date, setDate] = useState(entry?.entry_date || selectedDate);
-  const [hours, setHours] = useState(entry?.hours_worked?.toString() || '');
+  
+  // Convertir horas decimales a horas y minutos para mostrar
+  const convertDecimalToHoursMinutes = (decimalHours: number) => {
+    const hours = Math.floor(decimalHours);
+    const minutes = Math.round((decimalHours - hours) * 60);
+    return { hours, minutes };
+  };
+  
+  const initialTime = entry?.hours_worked 
+    ? convertDecimalToHoursMinutes(parseFloat(entry.hours_worked.toString()))
+    : { hours: 0, minutes: 0 };
+  
+  const [hoursInput, setHoursInput] = useState(initialTime.hours.toString());
+  const [minutesInput, setMinutesInput] = useState(initialTime.minutes.toString());
   const [description, setDescription] = useState(entry?.description || '');
   const [departmentId, setDepartmentId] = useState(entry?.department_id || '');
   const [departments, setDepartments] = useState<any[]>([]);
@@ -364,6 +371,22 @@ function TimeEntryModal({
   useEffect(() => {
     loadDepartments();
   }, []);
+
+  // Actualizar campos cuando cambie la entrada
+  useEffect(() => {
+    if (entry?.hours_worked) {
+      const time = convertDecimalToHoursMinutes(parseFloat(entry.hours_worked.toString()));
+      setHoursInput(time.hours.toString());
+      setMinutesInput(time.minutes.toString());
+    } else {
+      setHoursInput('0');
+      setMinutesInput('0');
+    }
+    setClientId(entry?.client_id || '');
+    setDate(entry?.entry_date || selectedDate);
+    setDescription(entry?.description || '');
+    setDepartmentId(entry?.department_id || '');
+  }, [entry, selectedDate]);
 
   const loadDepartments = async () => {
     if (!profile?.id) return;
@@ -411,8 +434,25 @@ function TimeEntryModal({
       return;
     }
 
-    if (!hours || parseFloat(hours) <= 0 || parseFloat(hours) > 24) {
-      setError('Las horas deben ser un número entre 0 y 24');
+    // Validar y convertir horas y minutos a decimal
+    const hours = parseInt(hoursInput) || 0;
+    const minutes = parseInt(minutesInput) || 0;
+
+    if (hours === 0 && minutes === 0) {
+      setError('Debes ingresar al menos 1 minuto');
+      return;
+    }
+
+    if (minutes < 0 || minutes >= 60) {
+      setError('Los minutos deben estar entre 0 y 59');
+      return;
+    }
+
+    // Convertir a horas decimales
+    const totalDecimalHours = hours + (minutes / 60);
+
+    if (totalDecimalHours > 24) {
+      setError('El tiempo total no puede exceder 24 horas');
       return;
     }
 
@@ -428,7 +468,7 @@ function TimeEntryModal({
         user_id: profile.id,
         client_id: clientId,
         entry_date: date,
-        hours_worked: parseFloat(hours),
+        hours_worked: totalDecimalHours,
         description: description || null,
         department_id: departmentId || null
       };
@@ -504,18 +544,45 @@ function TimeEntryModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Horas trabajadas *
             </label>
-            <input
-              type="number"
-              step="0.25"
-              min="0.25"
-              max="24"
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
-              placeholder="Ej: 4.5"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">Mínimo 0.25 horas, máximo 24 horas</p>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <input
+                  type="number"
+                  min="0"
+                  max="24"
+                  value={hoursInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || (parseInt(val) >= 0 && parseInt(val) <= 24)) {
+                      setHoursInput(val);
+                    }
+                  }}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">Horas (0-24)</p>
+              </div>
+              <div className="flex-1">
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={minutesInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || (parseInt(val) >= 0 && parseInt(val) <= 59)) {
+                      setMinutesInput(val);
+                    }
+                  }}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">Minutos (0-59)</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Ejemplo: 1 hora y 10 minutos, o solo 10 minutos (0 horas y 10 minutos)
+            </p>
           </div>
 
           {departments.length > 0 && (

@@ -195,6 +195,23 @@ export function TimeReports() {
     }
   };
 
+  // Función helper para formatear horas decimales a horas y minutos
+  const formatHoursMinutes = (decimalHours: number) => {
+    const hours = Math.floor(decimalHours);
+    const minutes = Math.round((decimalHours - hours) * 60);
+    
+    if (hours === 0 && minutes === 0) {
+      return '0 min';
+    }
+    if (hours === 0) {
+      return `${minutes} min`;
+    }
+    if (minutes === 0) {
+      return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+    }
+    return `${hours} ${hours === 1 ? 'hora' : 'horas'} ${minutes} min`;
+  };
+
   if (profile?.role !== 'admin' && profile?.role !== 'support') {
     return (
       <div className="flex items-center justify-center h-64">
@@ -252,7 +269,7 @@ export function TimeReports() {
           <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg ml-auto">
             <Clock className="w-5 h-5 text-blue-600" />
             <span className="font-semibold text-blue-900">
-              Total: {getTotalHours().toFixed(2)} horas
+              Total: {formatHoursMinutes(getTotalHours())}
             </span>
           </div>
         </div>
@@ -290,7 +307,7 @@ export function TimeReports() {
                         </div>
                         <div className="text-center text-gray-600">{report.entries_count}</div>
                         <div className="text-right font-semibold text-blue-600">
-                          {report.total_hours.toFixed(2)} horas
+                          {formatHoursMinutes(report.total_hours)}
                         </div>
                       </div>
                     </div>
@@ -328,7 +345,7 @@ export function TimeReports() {
                         </div>
                         <div className="text-center text-gray-600">{report.entries_count}</div>
                         <div className="text-right font-semibold text-blue-600">
-                          {report.total_hours.toFixed(2)} horas
+                          {formatHoursMinutes(report.total_hours)}
                         </div>
                       </div>
                     </div>
@@ -363,7 +380,7 @@ export function TimeReports() {
                         </div>
                         <div className="text-center text-gray-600">{report.entries_count}</div>
                         <div className="text-right font-semibold text-blue-600">
-                          {report.total_hours.toFixed(2)} horas
+                          {formatHoursMinutes(report.total_hours)}
                         </div>
                       </div>
                     </div>

@@ -66,6 +66,23 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const [userVacations, setUserVacations] = useState<any[]>([]);
   const [showVacationModal, setShowVacationModal] = useState(false);
 
+  // Función helper para formatear horas decimales a horas y minutos
+  const formatHoursMinutes = (decimalHours: number) => {
+    const hours = Math.floor(decimalHours);
+    const minutes = Math.round((decimalHours - hours) * 60);
+    
+    if (hours === 0 && minutes === 0) {
+      return '0 min';
+    }
+    if (hours === 0) {
+      return `${minutes} min`;
+    }
+    if (minutes === 0) {
+      return `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+    }
+    return `${hours} ${hours === 1 ? 'hora' : 'horas'} ${minutes} min`;
+  };
+
   useEffect(() => {
     if (profile?.id) {
       loadDashboardData();
@@ -492,7 +509,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     { 
       icon: Clock, 
       label: 'Horas Cargadas', 
-      value: `${stats.totalHours.toFixed(2)}h`, 
+      value: formatHoursMinutes(stats.totalHours), 
       color: 'bg-orange-50 text-orange-600',
       description: 'Horas del mes actual',
       isText: false
