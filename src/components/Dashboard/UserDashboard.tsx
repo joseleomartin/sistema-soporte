@@ -385,24 +385,44 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       const vacationsAsEvents = (vacations || []).map((vacation: any) => {
         // Crear un evento por cada día de vacaciones
         const vacationEvents = [];
-        const start = new Date(vacation.start_date);
-        const end = new Date(vacation.end_date);
+        // Parsear fechas manualmente para evitar problemas de zona horaria
+        const startParts = vacation.start_date.split('-');
+        const endParts = vacation.end_date.split('-');
+        const start = new Date(
+          parseInt(startParts[0]),
+          parseInt(startParts[1]) - 1, // Mes es 0-indexed
+          parseInt(startParts[2])
+        );
+        const end = new Date(
+          parseInt(endParts[0]),
+          parseInt(endParts[1]) - 1, // Mes es 0-indexed
+          parseInt(endParts[2])
+        );
         
         // Solo crear eventos para días dentro del mes actual
-        const currentDay = new Date(start);
-        while (currentDay <= end) {
-          const dayDate = new Date(currentDay);
+        // Iterar sobre los días usando fechas locales para evitar problemas de zona horaria
+        const currentDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+        const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        
+        while (currentDay <= endDay) {
+          const dayYear = currentDay.getFullYear();
+          const dayMonth = currentDay.getMonth();
+          const dayDate = currentDay.getDate();
+          
           if (
-            dayDate.getMonth() === currentDate.getMonth() &&
-            dayDate.getFullYear() === currentDate.getFullYear()
+            dayMonth === currentDate.getMonth() &&
+            dayYear === currentDate.getFullYear()
           ) {
+            // Crear fecha en formato YYYY-MM-DD para el ID
+            const dateStr = `${dayYear}-${String(dayMonth + 1).padStart(2, '0')}-${String(dayDate).padStart(2, '0')}`;
+            
             vacationEvents.push({
-              id: `vacation-${vacation.id}-${dayDate.toISOString().split('T')[0]}`,
+              id: `vacation-${vacation.id}-${dateStr}`,
               title: profile.role === 'admin' || profile.role === 'support'
                 ? `Vacaciones / Licencias: ${vacation.user_profile?.full_name || 'Usuario'}`
                 : 'Vacaciones / Licencias',
-              start_date: dayDate.toISOString(),
-              end_date: dayDate.toISOString(),
+              start_date: `${dateStr}T00:00:00`,
+              end_date: `${dateStr}T23:59:59`,
               color: '#F59E0B', // Color naranja/ámbar para vacaciones
               isPersonal: vacation.user_id === profile.id,
               isTask: false,
@@ -412,6 +432,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
               vacationUser: vacation.user_profile?.full_name
             });
           }
+          // Avanzar al siguiente día usando fecha local
           currentDay.setDate(currentDay.getDate() + 1);
         }
         
@@ -904,8 +925,19 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           ) : (
             <div className="space-y-3">
               {userVacations.map((vacation) => {
-                const startDate = new Date(vacation.start_date);
-                const endDate = new Date(vacation.end_date);
+                // Parsear fechas manualmente para evitar problemas de zona horaria
+                const startParts = vacation.start_date.split('-');
+                const endParts = vacation.end_date.split('-');
+                const startDate = new Date(
+                  parseInt(startParts[0]),
+                  parseInt(startParts[1]) - 1, // Mes es 0-indexed
+                  parseInt(startParts[2])
+                );
+                const endDate = new Date(
+                  parseInt(endParts[0]),
+                  parseInt(endParts[1]) - 1, // Mes es 0-indexed
+                  parseInt(endParts[2])
+                );
                 const getStatusBadge = () => {
                   switch (vacation.status) {
                     case 'approved':
