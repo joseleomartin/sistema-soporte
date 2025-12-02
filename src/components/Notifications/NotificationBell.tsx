@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
-  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention' | 'direct_message';
+  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention' | 'task_mention' | 'direct_message';
   title: string;
   message: string;
   read: boolean;
@@ -177,6 +177,14 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         // Fallback: usar window.location si no hay callback
         window.location.hash = 'tasks';
       }
+    } else if (notification.type === 'task_mention' && notification.task_id) {
+      // Navegar a tareas (se abrirá la tarea específica)
+      if (onNavigateToTasks) {
+        onNavigateToTasks();
+      } else {
+        // Fallback: usar window.location si no hay callback
+        window.location.hash = 'tasks';
+      }
     } else if (notification.type === 'forum_mention' && notification.subforum_id) {
       // Navegar al foro/cliente
       if (onNavigateToForum) {
@@ -210,6 +218,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         return <AlertCircle className="w-5 h-5 text-orange-600" />;
       case 'task_assigned':
         return <CheckSquare className="w-5 h-5 text-indigo-600" />;
+      case 'task_mention':
+        return <MessageSquare className="w-5 h-5 text-purple-600" />;
       case 'forum_mention':
         return <MessageSquare className="w-5 h-5 text-purple-600" />;
       case 'direct_message':
@@ -288,7 +298,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                           {notification.title}
                         </p>
                         <p className={`text-sm mt-0.5 ${!notification.read ? 'text-gray-700' : 'text-gray-600'}`}>
-                          {notification.type === 'forum_mention' 
+                          {(notification.type === 'forum_mention' || notification.type === 'task_mention')
                             ? cleanMentionMessage(notification.message)
                             : notification.message}
                         </p>

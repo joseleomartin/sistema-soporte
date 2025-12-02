@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Paperclip, Download, X, FileText, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { TaskMentionAutocomplete } from './TaskMentionAutocomplete';
 
 interface Message {
   id: string;
@@ -39,6 +40,14 @@ export function TaskChat({ taskId }: TaskChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<any>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Estados para menciones
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [mentionPosition, setMentionPosition] = useState(0);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [mentionedUsers, setMentionedUsers] = useState<Map<string, { id: string; full_name: string }>>(new Map());
 
   useEffect(() => {
     fetchMessages();
@@ -220,6 +229,10 @@ export function TaskChat({ taskId }: TaskChatProps) {
     try {
       setSending(true);
 
+      // Convertir menciones visibles (@Nombre) al formato técnico (@[Nombre](user_id))
+      const rawMessage = newMessage.trim() || '(archivo adjunto)';
+      const messageText = formatMentionsForStorage(rawMessage);
+
       // Crear mensaje
       const { data: messageData, error: messageError } = await supabase
         .from('task_messages')
@@ -227,13 +240,27 @@ export function TaskChat({ taskId }: TaskChatProps) {
           {
             task_id: taskId,
             user_id: profile.id,
-            message: newMessage.trim() || '(archivo adjunto)'
+            message: messageText
           }
         ])
         .select()
         .single();
 
       if (messageError) throw messageError;
+
+      // Extraer menciones y crear notificaciones
+      const mentionedUserIds = extractMentions(messageText);
+      if (mentionedUserIds.length > 0 && messageData) {
+        const messagePreview = messageText.substring(0, 100);
+        await supabase.rpc('create_task_mention_notifications', {
+          p_task_id: taskId,
+          p_mentioned_user_ids: mentionedUserIds,
+          p_mentioner_id: profile.id,
+          p_message_preview: messagePreview.length < messageText.length 
+            ? messagePreview + '...' 
+            : messagePreview,
+        });
+      }
 
       // Subir archivos si hay
       if (selectedFiles.length > 0) {
@@ -245,6 +272,8 @@ export function TaskChat({ taskId }: TaskChatProps) {
 
       setNewMessage('');
       setSelectedFiles([]);
+      setMentionedUsers(new Map());
+      setShowMentions(false);
       
       // Refrescar mensajes para mostrar archivos
       if (selectedFiles.length > 0) {
@@ -286,6 +315,172 @@ export function TaskChat({ taskId }: TaskChatProps) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  // Funciones para manejar menciones
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    
+    setNewMessage(value);
+    
+    // Buscar @ antes del cursor
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      // Verificar que no haya espacio entre @ y el cursor
+      const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+      // No mostrar autocompletado si ya hay una mención completa (terminada con espacio o salto de línea)
+      if (!textAfterAt.includes(' ') && !textAfterAt.includes('\n')) {
+        const searchTerm = textAfterAt;
+        setMentionSearch(searchTerm);
+        setMentionPosition(cursorPos);
+        setShowMentions(true);
+        setSelectedMentionIndex(0);
+        return;
+      }
+    }
+    
+    setShowMentions(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showMentions) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Escape') {
+        e.preventDefault();
+        if (e.key === 'ArrowDown') {
+          handleMentionNavigate('down', 9);
+        } else if (e.key === 'ArrowUp') {
+          handleMentionNavigate('up', 9);
+        } else if (e.key === 'Enter') {
+          // La selección se manejará en el componente de autocompletado
+          // No hacer nada aquí, el componente TaskMentionAutocomplete manejará el Enter
+          return;
+        } else if (e.key === 'Escape') {
+          setShowMentions(false);
+        }
+        return; // Prevenir comportamiento por defecto para estas teclas
+      }
+    }
+    
+    // Si no hay menciones abiertas, permitir Enter normal
+    if (e.key === 'Enter' && !e.shiftKey && !showMentions) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleMentionSelect = (user: { id: string; full_name: string }) => {
+    const textBeforeCursor = newMessage.substring(0, mentionPosition);
+    const textAfterCursor = newMessage.substring(mentionPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    const beforeAt = newMessage.substring(0, lastAtIndex);
+    const afterAt = newMessage.substring(mentionPosition);
+    // Mostrar solo @Nombre en el textarea (sin el formato técnico)
+    const newText = `${beforeAt}@${user.full_name} ${afterAt}`;
+    
+    // Guardar el usuario mencionado en el Map para poder convertirlo al formato técnico al enviar
+    setMentionedUsers(prev => {
+      const newMap = new Map(prev);
+      newMap.set(`@${user.full_name}`, { id: user.id, full_name: user.full_name });
+      return newMap;
+    });
+    
+    setNewMessage(newText);
+    setShowMentions(false);
+    setMentionSearch('');
+    
+    // Restaurar el foco al textarea
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      const newCursorPos = lastAtIndex + user.full_name.length + 2; // +2 por @ y espacio
+      textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleMentionNavigate = (direction: 'up' | 'down', maxIndex: number) => {
+    if (direction === 'down') {
+      setSelectedMentionIndex((prev) => (prev < maxIndex ? prev + 1 : prev));
+    } else {
+      setSelectedMentionIndex((prev) => (prev > 0 ? prev - 1 : 0));
+    }
+  };
+
+  // Función para convertir menciones visibles (@Nombre) al formato técnico (@[Nombre](user_id))
+  const formatMentionsForStorage = (text: string): string => {
+    let formatted = text;
+    mentionedUsers.forEach((user, mentionText) => {
+      // Reemplazar @Nombre con @[Nombre](user_id)
+      const regex = new RegExp(mentionText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      formatted = formatted.replace(regex, `@[${user.full_name}](${user.id})`);
+    });
+    return formatted;
+  };
+
+  // Función para extraer menciones del texto (formato @[Nombre](user_id))
+  const extractMentions = (text: string): string[] => {
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+    const userIds: string[] = [];
+    let match;
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      userIds.push(match[2]); // El segundo grupo captura el user_id
+    }
+
+    return [...new Set(userIds)]; // Eliminar duplicados
+  };
+
+  // Renderizar menciones en los mensajes
+  const renderMessageWithMentions = (message: string, isOwn: boolean) => {
+    // Buscar menciones en el formato @[Nombre](user_id)
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: Array<{ text: string; isMention: boolean; mentionName?: string }> = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = mentionRegex.exec(message)) !== null) {
+      // Agregar texto antes de la mención
+      if (match.index > lastIndex) {
+        parts.push({ text: message.substring(lastIndex, match.index), isMention: false });
+      }
+      
+      // Agregar la mención (mostrar solo el nombre, no el formato completo)
+      parts.push({ text: `@${match[1]}`, isMention: true, mentionName: match[1] });
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Agregar texto restante
+    if (lastIndex < message.length) {
+      parts.push({ text: message.substring(lastIndex), isMention: false });
+    }
+
+    // Si no hay menciones, devolver el texto normal
+    if (parts.length === 0) {
+      return <span>{message}</span>;
+    }
+
+    return (
+      <>
+        {parts.map((part, index) => 
+          part.isMention ? (
+            <span 
+              key={index} 
+              className={`font-semibold px-1 rounded ${
+                isOwn 
+                  ? 'text-indigo-200 bg-indigo-800' 
+                  : 'text-indigo-700 bg-indigo-100'
+              }`}
+            >
+              {part.text}
+            </span>
+          ) : (
+            <span key={index}>{part.text}</span>
+          )
+        )}
+      </>
+    );
   };
 
   const getAvatarUrl = (avatarPath: string | null) => {
@@ -370,7 +565,9 @@ export function TaskChat({ taskId }: TaskChatProps) {
                           : 'bg-gray-100 text-gray-900'
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+                      <p className={`text-sm whitespace-pre-wrap break-words ${isOwn ? 'text-white' : ''}`}>
+                        {renderMessageWithMentions(message.message, isOwn)}
+                      </p>
                     </div>
                   )}
 
@@ -449,15 +646,30 @@ export function TaskChat({ taskId }: TaskChatProps) {
           >
             <Paperclip className="w-5 h-5" />
           </button>
-          <textarea
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-            placeholder="Escribe un mensaje..."
-            rows={2}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none max-h-32 overflow-y-auto"
-            disabled={sending || uploading}
-          />
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={newMessage}
+              onChange={(e) => handleMessageChange(e)}
+              onKeyDown={(e) => handleKeyDown(e)}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && !showMentions && handleSend()}
+              placeholder="Escribe un mensaje... (usa @ para mencionar usuarios)"
+              rows={2}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none max-h-32 overflow-y-auto"
+              disabled={sending || uploading}
+            />
+            {showMentions && (
+              <TaskMentionAutocomplete
+                taskId={taskId}
+                searchTerm={mentionSearch}
+                cursorPosition={mentionPosition}
+                selectedIndex={selectedMentionIndex}
+                onSelect={handleMentionSelect}
+                onClose={() => setShowMentions(false)}
+                onNavigate={handleMentionNavigate}
+              />
+            )}
+          </div>
           <button
             onClick={handleSend}
             disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploading}
