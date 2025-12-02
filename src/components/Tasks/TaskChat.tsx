@@ -117,25 +117,49 @@ export function TaskChat({ taskId }: TaskChatProps) {
           console.log('📨 New message received via Realtime:', payload);
           
           try {
-            // Fetch el mensaje completo con relaciones
-            const { data, error } = await supabase
-              .from('task_messages')
-              .select(`
-                *,
-                profiles!task_messages_user_id_fkey (
-                  full_name,
-                  avatar_url
-                ),
-                task_attachments (
-                  id,
-                  file_name,
-                  file_path,
-                  file_size,
-                  file_type
-                )
-              `)
-              .eq('id', payload.new.id)
-              .single();
+            // Esperar un poco para que los archivos se suban (si hay)
+            // Si el mensaje está vacío o es muy corto, probablemente tiene archivos
+            const messageText = payload.new.message as string;
+            const hasAttachment = !messageText || messageText.trim() === '' || messageText.length < 10;
+            const delay = hasAttachment ? 1000 : 300; // 1 segundo si hay archivo, 300ms si no
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+            // Fetch el mensaje completo con relaciones (con retry si hay archivos)
+            let data, error;
+            let retries = hasAttachment ? 3 : 1;
+            
+            for (let i = 0; i < retries; i++) {
+              const result = await supabase
+                .from('task_messages')
+                .select(`
+                  *,
+                  profiles!task_messages_user_id_fkey (
+                    full_name,
+                    avatar_url
+                  ),
+                  task_attachments (
+                    id,
+                    file_name,
+                    file_path,
+                    file_size,
+                    file_type
+                  )
+                `)
+                .eq('id', payload.new.id)
+                .single();
+              
+              data = result.data;
+              error = result.error;
+              
+              // Si hay archivos y no se encontraron, esperar un poco más y reintentar
+              if (hasAttachment && !error && (!data?.task_attachments || data.task_attachments.length === 0) && i < retries - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                continue;
+              }
+              
+              break;
+            }
 
             if (error) {
               console.error('❌ Error fetching new message:', error);
@@ -158,10 +182,58 @@ export function TaskChat({ taskId }: TaskChatProps) {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'task_attachments',
+          filter: `task_id=eq.${taskId}`
+        },
+        async (payload) => {
+          console.log('📎 New attachment received via Realtime:', payload);
+          
+          try {
+            // Actualizar el mensaje correspondiente para incluir el nuevo archivo
+            const attachment = payload.new;
+            if (attachment.message_id) {
+              setMessages((prev) => {
+                return prev.map((msg) => {
+                  if (msg.id === attachment.message_id) {
+                    // Verificar si el archivo ya existe
+                    const attachmentExists = msg.task_attachments?.some(
+                      (att) => att.id === attachment.id
+                    );
+                    
+                    if (!attachmentExists) {
+                      return {
+                        ...msg,
+                        task_attachments: [
+                          ...(msg.task_attachments || []),
+                          {
+                            id: attachment.id,
+                            file_name: attachment.file_name,
+                            file_path: attachment.file_path,
+                            file_size: attachment.file_size,
+                            file_type: attachment.file_type,
+                          },
+                        ],
+                      };
+                    }
+                  }
+                  return msg;
+                });
+              });
+            }
+          } catch (error) {
+            console.error('❌ Error updating message with attachment:', error);
+          }
+        }
+      )
       .subscribe((status) => {
         console.log('📡 Subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to task_messages');
+          console.log('✅ Successfully subscribed to task_messages and task_attachments');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Channel subscription error');
         } else if (status === 'TIMED_OUT') {
@@ -230,7 +302,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
       setSending(true);
 
       // Convertir menciones visibles (@Nombre) al formato técnico (@[Nombre](user_id))
-      const rawMessage = newMessage.trim() || '(archivo adjunto)';
+      const rawMessage = newMessage.trim() || '';
       const messageText = formatMentionsForStorage(rawMessage);
 
       // Crear mensaje
@@ -557,7 +629,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
                     </span>
                   </div>
                   
-                  {message.message && (
+                  {message.message && message.message.trim() !== '' && message.message !== '(archivo adjunto)' && (
                     <div
                       className={`px-4 py-2 rounded-lg ${
                         isOwn
