@@ -21,9 +21,9 @@ export function ExtractionNotifications() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]">
+    <div className="fixed bottom-6 right-28 z-40 w-96 max-w-[calc(100vw-2rem)]">
       {/* Header */}
-      <div className="bg-white rounded-t-xl shadow-lg border border-gray-200">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600" />
@@ -160,6 +160,9 @@ export function ExtractionNotifications() {
     </div>
   );
 }
+
+
+
 
 
 
