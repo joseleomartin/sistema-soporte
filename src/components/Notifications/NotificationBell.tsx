@@ -31,6 +31,15 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Actualizar título de la pestaña con el contador de notificaciones
+  useEffect(() => {
+    if (unreadCount > 0) {
+      document.title = `EmaGroup (${unreadCount})`;
+    } else {
+      document.title = 'EmaGroup';
+    }
+  }, [unreadCount]);
+
   useEffect(() => {
     if (!profile?.id) return;
 
@@ -237,8 +246,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-600 rounded-full">
-            {unreadCount > 9 ? '9+' : unreadCount}
+          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-600 rounded-full shadow-lg animate-pulse">
+            {unreadCount > 99 ? '99+' : unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
