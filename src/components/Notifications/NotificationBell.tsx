@@ -187,13 +187,20 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         window.location.hash = 'tasks';
       }
     } else if (notification.type === 'task_mention' && notification.task_id) {
-      // Navegar a tareas (se abrirá la tarea específica)
+      // Navegar a tareas y abrir la tarea específica
       if (onNavigateToTasks) {
         onNavigateToTasks();
       } else {
         // Fallback: usar window.location si no hay callback
         window.location.hash = 'tasks';
       }
+      // Disparar evento personalizado para abrir la tarea específica
+      // Esto se ejecutará después de que se navegue a la sección de tareas
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('openTask', {
+          detail: { taskId: notification.task_id }
+        }));
+      }, 100);
     } else if (notification.type === 'forum_mention' && notification.subforum_id) {
       // Navegar al foro/cliente
       if (onNavigateToForum) {

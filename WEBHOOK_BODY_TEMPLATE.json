@@ -1,0 +1,6 @@
+{
+  "to": "{{(SELECT email FROM profiles WHERE id = (record.user_id)::uuid LIMIT 1)}}",
+  "subject": "{{record.title}}",
+  "message": "{{record.message}}"
+}
+

@@ -98,9 +98,87 @@ export function TasksList() {
     fetchTasks();
   }, [profile]);
 
+  // Verificar si hay un parámetro task en la URL después de cargar las tareas
+  useEffect(() => {
+    if (loading || tasks.length === 0) return;
+    
+    const hash = window.location.hash;
+    const taskMatch = hash.match(/[?&]task=([^&]+)/);
+    if (taskMatch) {
+      const taskId = taskMatch[1];
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setSelectedTask(task);
+        // Limpiar el parámetro de la URL
+        window.history.replaceState(null, '', window.location.pathname + '#tasks');
+      }
+    }
+  }, [loading, tasks]);
+
   useEffect(() => {
     filterTasks();
   }, [tasks, searchQuery, statusFilter, priorityFilter]);
+
+  // Escuchar evento para abrir tarea desde notificación
+  useEffect(() => {
+    const handleOpenTask = async (event: CustomEvent) => {
+      const { taskId } = event.detail;
+      if (!taskId) return;
+
+      // Función auxiliar para abrir la tarea
+      const openTaskById = async (taskIdToOpen: string) => {
+        // Si las tareas ya están cargadas, buscar la tarea
+        if (tasks.length > 0) {
+          const task = tasks.find(t => t.id === taskIdToOpen);
+          if (task) {
+            setSelectedTask(task);
+            return;
+          }
+        }
+
+        // Si no está en la lista, cargarla directamente desde la base de datos
+        try {
+          const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('id', taskIdToOpen)
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            setSelectedTask(data as Task);
+          }
+        } catch (error) {
+          console.error('Error al cargar la tarea:', error);
+        }
+      };
+
+      // Si las tareas aún no están cargadas, esperar un poco y reintentar
+      if (loading) {
+        // Esperar a que termine de cargar
+        const checkInterval = setInterval(() => {
+          if (!loading && tasks.length > 0) {
+            clearInterval(checkInterval);
+            openTaskById(taskId);
+          }
+        }, 100);
+
+        // Timeout después de 3 segundos
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          openTaskById(taskId);
+        }, 3000);
+      } else {
+        openTaskById(taskId);
+      }
+    };
+
+    window.addEventListener('openTask', handleOpenTask as EventListener);
+
+    return () => {
+      window.removeEventListener('openTask', handleOpenTask as EventListener);
+    };
+  }, [tasks, loading]);
 
   const fetchTasks = async () => {
     if (!profile) return;
