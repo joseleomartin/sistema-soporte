@@ -70,12 +70,14 @@ SELECT
   id,
   url,
   method,
-  status_code,
   created,
+  status,
+  response_status_code,
   CASE 
-    WHEN status_code IS NULL THEN '⏳ Pendiente'
-    WHEN status_code >= 200 AND status_code < 300 THEN '✅ Éxito'
-    ELSE '❌ Error'
+    WHEN status = 'pending' THEN '⏳ Pendiente'
+    WHEN status = 'success' AND response_status_code >= 200 AND response_status_code < 300 THEN '✅ Éxito'
+    WHEN status = 'error' THEN '❌ Error'
+    ELSE status
   END as estado
 FROM net.http_request_queue
 ORDER BY created DESC
