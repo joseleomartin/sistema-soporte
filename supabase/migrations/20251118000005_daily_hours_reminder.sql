@@ -129,8 +129,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- '0 20 * * *' = minuto 0, hora 20 UTC (17:00 hora Argentina, UTC-3), todos los días del mes, todos los meses, todos los días de la semana
 DO $$
 BEGIN
-  -- Eliminar el cron job si ya existe
-  PERFORM cron.unschedule('daily-hours-reminder');
+  -- Eliminar el cron job si ya existe (ignorar error si no existe)
+  BEGIN
+    PERFORM cron.unschedule('daily-hours-reminder');
+  EXCEPTION WHEN OTHERS THEN
+    -- El job no existe, continuar normalmente
+    RAISE NOTICE 'ℹ️  El cron job no existe, se creará uno nuevo';
+  END;
   
   -- Crear el cron job
   PERFORM cron.schedule(
