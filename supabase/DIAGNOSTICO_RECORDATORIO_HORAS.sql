@@ -103,8 +103,8 @@ SELECT
 
 -- 10. Calcular próxima ejecución esperada
 SELECT 
-  'Próxima ejecución esperada: ' || 
+  'Próxima ejecución esperada (UTC): ' || 
   (CURRENT_DATE + INTERVAL '1 day' + INTERVAL '20 hours')::text as proxima_ejecucion_utc,
   'Hora Argentina equivalente: ' || 
-  ((CURRENT_DATE + INTERVAL '1 day' + INTERVAL '20 hours') AT TIME ZONE 'America/Argentina/Buenos_Aires')::text as proxima_ejecucion_argentina;
+  ((CURRENT_DATE + INTERVAL '1 day' + INTERVAL '20 hours') AT TIME ZONE 'UTC' AT TIME ZONE 'America/Argentina/Buenos_Aires')::text as proxima_ejecucion_argentina;
 
