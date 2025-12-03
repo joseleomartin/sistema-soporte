@@ -63,7 +63,7 @@ BEGIN
     ) VALUES (
       assigned_user_id,
       'task_assigned',
-      'Nueva tarea asignada',
+      'EmaGroup Notificaciones: Nueva tarea asignada',
       'Se te ha asignado la tarea "' || COALESCE(task_title, 'Sin título') || '"' ||
       CASE 
         WHEN task_creator_name IS NOT NULL THEN ' por ' || task_creator_name
@@ -91,7 +91,7 @@ BEGIN
     SELECT 
       ud.user_id,
       'task_assigned',
-      'Nueva tarea asignada a tu departamento',
+      'EmaGroup Notificaciones: Nueva tarea asignada a tu departamento',
       'Se ha asignado la tarea "' || COALESCE(task_title, 'Sin título') || '"' ||
       ' a tu departamento' ||
       CASE 
@@ -164,6 +164,11 @@ WHERE tgname = 'trigger_notify_task_assigned';
 -- ============================================
 
 -- ✅ Sistema de notificaciones para tareas configurado correctamente
+
+
+
+
+
 
 
 

@@ -1,35 +1,7 @@
 -- ============================================
--- NOTIFICACIONES PARA @MENTIONS EN CHAT DE TAREAS
+-- ACTUALIZAR ASUNTO DE EMAIL PARA MENCIONES EN TAREAS
 -- ============================================
--- Permite etiquetar usuarios con @ en el chat de tareas y notificarles
--- ============================================
-
--- 1. Agregar tipo 'task_mention' al CHECK constraint de notifications
--- ============================================
-
--- Primero, eliminar el constraint existente
-ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
-
--- Recrear el constraint con el nuevo tipo
-ALTER TABLE notifications ADD CONSTRAINT notifications_type_check 
-  CHECK (type IN ('calendar_event', 'ticket_comment', 'ticket_status', 'task_assigned', 'forum_mention', 'task_mention'));
-
--- 2. Agregar columna task_id si no existe (para referenciar la tarea)
--- ============================================
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'notifications' 
-    AND column_name = 'task_id'
-  ) THEN
-    ALTER TABLE notifications ADD COLUMN task_id UUID REFERENCES tasks(id) ON DELETE CASCADE;
-    CREATE INDEX IF NOT EXISTS idx_notifications_task_id ON notifications(task_id);
-  END IF;
-END $$;
-
--- 3. Función RPC para crear notificaciones de menciones en tareas
+-- Cambia el asunto del email para incluir "EmaGroup Notificaciones"
 -- ============================================
 
 CREATE OR REPLACE FUNCTION create_task_mention_notifications(
@@ -85,20 +57,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
--- FIN DEL SCRIPT
+-- ✅ Función actualizada
 -- ============================================
--- ✅ Tipo 'task_mention' agregado a notifications
--- ✅ Columna task_id agregada
--- ✅ Función create_task_mention_notifications creada
--- ✅ Índice en task_id creado
--- 
--- Uso desde el frontend:
--- SELECT create_task_mention_notifications(
---   'task-id'::uuid,
---   ARRAY['user-id-1'::uuid, 'user-id-2'::uuid],
---   'mentioner-id'::uuid,
---   'Preview del mensaje...'
--- );
+-- El asunto del email ahora mostrará:
+-- "EmaGroup Notificaciones: Fuiste mencionado en el chat de [título de la tarea]"
 -- ============================================
-
 

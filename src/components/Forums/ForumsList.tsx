@@ -19,13 +19,18 @@ interface Subforum {
   message_count?: number;
 }
 
-export function ForumsList() {
+interface ForumsListProps {
+  initialSubforumId?: string | null;
+  onSubforumChange?: (subforumId: string | null) => void;
+}
+
+export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListProps = {}) {
   const { profile } = useAuth();
   const [subforums, setSubforums] = useState<Subforum[]>([]);
   const [filteredSubforums, setFilteredSubforums] = useState<Subforum[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedSubforum, setSelectedSubforum] = useState<string | null>(null);
+  const [selectedSubforum, setSelectedSubforum] = useState<string | null>(initialSubforumId || null);
   const [searchTerm, setSearchTerm] = useState('');
   const [managePermissionsFor, setManagePermissionsFor] = useState<Subforum | null>(null);
   const [manageDeptPermissionsFor, setManageDeptPermissionsFor] = useState<{ forumId: string, forumName: string } | null>(null);
@@ -46,6 +51,13 @@ export function ForumsList() {
     loadSubforums();
     loadPendingTasks();
   }, [profile?.id]);
+
+  // Actualizar selectedSubforum cuando cambia initialSubforumId
+  useEffect(() => {
+    if (initialSubforumId) {
+      setSelectedSubforum(initialSubforumId);
+    }
+  }, [initialSubforumId]);
 
   useEffect(() => {
     // Recargar tareas pendientes cada 30 segundos
@@ -232,6 +244,9 @@ export function ForumsList() {
         subforumId={selectedSubforum}
         onBack={() => {
           setSelectedSubforum(null);
+          if (onSubforumChange) {
+            onSubforumChange(null);
+          }
           loadSubforums();
         }}
       />
@@ -417,7 +432,8 @@ export function ForumsList() {
           {filteredSubforums.map((forum) => (
             <div
               key={forum.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition relative group"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition relative group cursor-pointer"
+              onClick={() => setSelectedSubforum(forum.id)}
             >
               {canCreateForum && (
                 <div className="absolute top-4 right-4 flex gap-1">
@@ -468,10 +484,7 @@ export function ForumsList() {
                 </button>
               </div>
 
-              <button
-                onClick={() => setSelectedSubforum(forum.id)}
-                className="w-full text-left"
-              >
+              <div className="w-full text-left">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{forum.name}</h3>
 
                 {forum.description && (
@@ -501,7 +514,7 @@ export function ForumsList() {
                     <span>{pendingTasksCount.get(forum.client_name)} tarea{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''} pendiente{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''}</span>
                   </button>
                 )}
-              </button>
+              </div>
             </div>
           ))}
         </div>

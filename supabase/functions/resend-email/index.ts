@@ -2,7 +2,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'notificaciones@app.somosemagroup.com'
+const FROM_EMAIL_ADDRESS = Deno.env.get('FROM_EMAIL') || 'notificaciones@app.somosemagroup.com'
+const FROM_NAME = 'EmaGroup Notificaciones'
+const FROM_EMAIL = `${FROM_NAME} <${FROM_EMAIL_ADDRESS}>`
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://app.somosemagroup.com'
 
 Deno.serve(async (req) => {
@@ -47,27 +49,18 @@ Deno.serve(async (req) => {
     }
     
     // Obtener datos de la notificación
-    subject = record.title || 'Notificación'
+    // Agregar "EmaGroup Notificaciones:" solo para el email, no para la notificación en la app
+    const notificationTitle = record.title || 'Notificación'
+    subject = notificationTitle.startsWith('EmaGroup Notificaciones:') 
+      ? notificationTitle 
+      : `EmaGroup Notificaciones: ${notificationTitle}`
     message = record.message || ''
     
     // Limpiar menciones del formato técnico @[Nombre](user_id) a @Nombre
     message = message.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')
     
-    // Construir URL de redirección según el tipo de notificación
-    let redirectUrl = `${FRONTEND_URL}/#notifications`
-    if (record.type === 'task_mention' && record.task_id) {
-      redirectUrl = `${FRONTEND_URL}/#tasks?task=${record.task_id}`
-    } else if (record.type === 'direct_message') {
-      redirectUrl = `${FRONTEND_URL}/#messages`
-    } else if (record.type === 'ticket_comment' || record.type === 'ticket_status') {
-      redirectUrl = `${FRONTEND_URL}/#tickets`
-    } else if (record.type === 'calendar_event') {
-      redirectUrl = `${FRONTEND_URL}/#calendar`
-    } else if (record.type === 'task_assigned') {
-      redirectUrl = `${FRONTEND_URL}/#tasks`
-    } else if (record.type === 'forum_mention') {
-      redirectUrl = `${FRONTEND_URL}/#forum`
-    }
+    // Construir URL de redirección - solo la URL base sin hash
+    let redirectUrl = FRONTEND_URL
     
     // Construir HTML
     if (message) {
@@ -93,7 +86,11 @@ Deno.serve(async (req) => {
   } else {
     // Si viene formato directo (desde trigger o test manual)
     to = payload.to
-    subject = payload.subject
+    // Agregar "EmaGroup Notificaciones:" solo para el email si no lo tiene
+    const notificationSubject = payload.subject || 'Notificación'
+    subject = notificationSubject.startsWith('EmaGroup Notificaciones:') 
+      ? notificationSubject 
+      : `EmaGroup Notificaciones: ${notificationSubject}`
     html = payload.html
     message = payload.message
     
@@ -102,8 +99,8 @@ Deno.serve(async (req) => {
       message = message.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')
     }
     
-    // Construir URL de redirección (formato directo, usar notificaciones por defecto)
-    const redirectUrl = payload.redirect_url || `${FRONTEND_URL}/#notifications`
+    // Construir URL de redirección - solo la URL base sin hash
+    const redirectUrl = payload.redirect_url || FRONTEND_URL
     
     // Si no hay HTML pero hay message, construir HTML
     if (!html && message) {

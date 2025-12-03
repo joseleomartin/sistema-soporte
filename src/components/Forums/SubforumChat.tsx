@@ -204,20 +204,100 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
     let match;
 
     while ((match = mentionRegex.exec(text)) !== null) {
-      userIds.push(match[2]); // El segundo grupo captura el user_id
+      const userId = match[2]; // El segundo grupo captura el user_id
+      userIds.push(userId);
+      console.log(`🔍 Encontrada mención: @${match[1]} -> ${userId}`);
     }
 
-    return [...new Set(userIds)]; // Eliminar duplicados
+    const uniqueIds = [...new Set(userIds)]; // Eliminar duplicados
+    console.log(`📋 User IDs únicos extraídos:`, uniqueIds);
+    return uniqueIds;
   };
 
   // Función para reemplazar @nombre con formato de mención
-  const formatMentions = (text: string): string => {
+  const formatMentions = async (text: string): Promise<string> => {
     // Reemplazar @Nombre Usuario con @[Nombre Usuario](user_id)
     let formatted = text;
-    mentionedUsers.forEach((user, userId) => {
-      const regex = new RegExp(`@${user.full_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi');
-      formatted = formatted.replace(regex, `@[${user.full_name}](${userId})`);
-    });
+    
+    // Si el texto ya tiene menciones formateadas, no hacer nada
+    if (/@\[([^\]]+)\]\([^)]+\)/.test(formatted)) {
+      console.log('📝 El mensaje ya tiene menciones formateadas');
+      return formatted;
+    }
+    
+    // Obtener usuarios accesibles al subforo para buscar menciones por nombre
+    try {
+      const { data: accessibleUsers, error: usersError } = await supabase.rpc('get_subforum_accessible_users', {
+        p_subforum_id: subforumId,
+      });
+      
+      if (usersError) {
+        console.error('❌ Error al obtener usuarios accesibles:', usersError);
+        // Si falla, intentar con el Map existente
+        if (mentionedUsers.size > 0) {
+          mentionedUsers.forEach((user, userId) => {
+            const escapedName = user.full_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`@${escapedName}(?=\\s|$|\\n|\\r)`, 'gi');
+            formatted = formatted.replace(regex, `@[${user.full_name}](${userId})`);
+          });
+        }
+        return formatted;
+      }
+      
+      // Buscar menciones en el texto y reemplazarlas
+      const mentionPattern = /@(\w+(?:\s+\w+)*)/g;
+      let match;
+      const processedMentions = new Set<string>();
+      
+      while ((match = mentionPattern.exec(text)) !== null) {
+        const mentionText = match[1].trim(); // Nombre después del @
+        
+        // Evitar procesar la misma mención dos veces
+        if (processedMentions.has(mentionText.toLowerCase())) continue;
+        processedMentions.add(mentionText.toLowerCase());
+        
+        // Buscar usuario por nombre (coincidencia exacta o parcial)
+        const matchedUser = accessibleUsers?.find((user: any) => 
+          user.full_name.toLowerCase() === mentionText.toLowerCase() ||
+          user.full_name.toLowerCase().startsWith(mentionText.toLowerCase() + ' ') ||
+          user.full_name.toLowerCase().endsWith(' ' + mentionText.toLowerCase())
+        );
+        
+        if (matchedUser) {
+          // Reemplazar @Nombre con @[Nombre](user_id)
+          const escapedName = mentionText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`@${escapedName}(?=\\s|$|\\n|\\r)`, 'gi');
+          formatted = formatted.replace(regex, `@[${matchedUser.full_name}](${matchedUser.id})`);
+          console.log(`✅ Reemplazado: @${mentionText} -> @[${matchedUser.full_name}](${matchedUser.id})`);
+          
+          // También agregar al Map para consistencia
+          setMentionedUsers((prev) => {
+            const updated = new Map(prev);
+            updated.set(matchedUser.id, { id: matchedUser.id, full_name: matchedUser.full_name });
+            return updated;
+          });
+        } else {
+          console.warn(`⚠️ No se encontró usuario para: @${mentionText}`);
+        }
+      }
+      
+      // También procesar usuarios del Map (por si acaso)
+      if (mentionedUsers.size > 0) {
+        mentionedUsers.forEach((user, userId) => {
+          const escapedName = user.full_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`@${escapedName}(?=\\s|$|\\n|\\r)`, 'gi');
+          const beforeReplace = formatted;
+          formatted = formatted.replace(regex, `@[${user.full_name}](${userId})`);
+          if (beforeReplace !== formatted) {
+            console.log(`✅ Reemplazado desde Map: @${user.full_name} -> @[${user.full_name}](${userId})`);
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en formatMentions:', error);
+    }
+    
     return formatted;
   };
 
@@ -262,7 +342,10 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
       const attachments = await uploadFiles();
 
       // Formatear menciones en el mensaje
-      const formattedMessage = formatMentions(newMessage.trim());
+      console.log('📝 Mensaje original:', newMessage.trim());
+      console.log('👥 Usuarios mencionados en Map:', Array.from(mentionedUsers.values()));
+      const formattedMessage = await formatMentions(newMessage.trim());
+      console.log('📝 Mensaje formateado:', formattedMessage);
 
       // Insertar mensaje
       const { data: messageData, error } = await supabase
@@ -280,9 +363,12 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
 
       // Extraer menciones y crear notificaciones
       const mentionedUserIds = extractMentions(formattedMessage);
+      console.log('🔍 User IDs extraídos de menciones:', mentionedUserIds);
+      
       if (mentionedUserIds.length > 0 && messageData) {
         const messagePreview = formattedMessage.substring(0, 100);
-        await supabase.rpc('create_forum_mention_notifications', {
+        console.log('📧 Creando notificaciones para:', mentionedUserIds);
+        const { error: notificationError } = await supabase.rpc('create_forum_mention_notifications', {
           p_subforum_id: subforumId,
           p_mentioned_user_ids: mentionedUserIds,
           p_mentioner_id: profile.id,
@@ -290,6 +376,14 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
             ? messagePreview + '...' 
             : messagePreview,
         });
+        
+        if (notificationError) {
+          console.error('❌ Error al crear notificaciones de menciones:', notificationError);
+        } else {
+          console.log('✅ Notificaciones de menciones creadas para usuarios:', mentionedUserIds);
+        }
+      } else {
+        console.warn('⚠️ No se encontraron menciones o no hay messageData. Menciones extraídas:', mentionedUserIds.length, 'MessageData:', !!messageData);
       }
 
       setNewMessage('');

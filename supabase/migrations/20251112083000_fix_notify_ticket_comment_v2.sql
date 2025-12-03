@@ -28,7 +28,7 @@ BEGIN
     VALUES (
       ticket_creator,
       'ticket_comment',
-      'Nuevo comentario en tu ticket',
+      'EmaGroup Notificaciones: Nuevo comentario en tu ticket',
       commenter_name || ' ha respondido en "' || ticket_title || '"',
       NEW.ticket_id,
       jsonb_build_object(
@@ -47,7 +47,7 @@ BEGIN
     VALUES (
       ticket_assigned_to,
       'ticket_comment',
-      'Nuevo comentario en ticket asignado',
+      'EmaGroup Notificaciones: Nuevo comentario en ticket asignado',
       commenter_name || ' ha respondido en "' || ticket_title || '"',
       NEW.ticket_id,
       jsonb_build_object(
@@ -61,6 +61,11 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+
+
+
 
 
 

@@ -148,7 +148,7 @@ BEGIN
     VALUES (
       NEW.created_by,
       'ticket_status',
-      'Estado de ticket actualizado',
+      'EmaGroup Notificaciones: Estado del ticket actualizado',
       'Tu ticket "' || ticket_title || '" ahora está ' || status_text,
       NEW.id,
       jsonb_build_object('old_status', OLD.status, 'new_status', NEW.status)
@@ -224,6 +224,11 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Comentario: Para ejecutar la limpieza automáticamente, puedes usar pg_cron o llamarla manualmente
 -- SELECT cleanup_old_notifications();
+
+
+
+
+
 
 
 

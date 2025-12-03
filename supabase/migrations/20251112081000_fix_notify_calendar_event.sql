@@ -29,7 +29,7 @@ BEGIN
   VALUES (
     NEW.assigned_to,
     'calendar_event',
-    'Nuevo evento asignado',
+    'EmaGroup Notificaciones: Nuevo evento asignado',
     COALESCE(creator_name, 'Un administrador') || ' te ha asignado el evento "' || NEW.title || '"',
     NEW.id,
     jsonb_build_object(
@@ -46,6 +46,11 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+
+
+
 
 
 
