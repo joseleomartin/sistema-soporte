@@ -124,9 +124,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Programar el cron job para ejecutar la función todos los días a las 17:00
+-- Programar el cron job para ejecutar la función todos los días a las 17:00 hora Argentina (UTC-3)
 -- Formato cron: 'minuto hora día_mes mes día_semana'
--- '0 17 * * *' = minuto 0, hora 17 (5 PM), todos los días del mes, todos los meses, todos los días de la semana
+-- '0 20 * * *' = minuto 0, hora 20 UTC (17:00 hora Argentina, UTC-3), todos los días del mes, todos los meses, todos los días de la semana
 DO $$
 BEGIN
   -- Eliminar el cron job si ya existe
@@ -135,11 +135,11 @@ BEGIN
   -- Crear el cron job
   PERFORM cron.schedule(
     'daily-hours-reminder',           -- Nombre del job
-    '0 17 * * *',                     -- Todos los días a las 17:00
+    '0 20 * * *',                     -- Todos los días a las 20:00 UTC (17:00 hora Argentina)
     $$SELECT send_hours_reminder_emails();$$  -- Función a ejecutar
   );
   
-  RAISE NOTICE '✅ Cron job configurado: Recordatorio diario de carga de horas a las 17:00';
+  RAISE NOTICE '✅ Cron job configurado: Recordatorio diario de carga de horas a las 17:00 hora Argentina (20:00 UTC)';
 END $$;
 
 -- Comentario: Para probar manualmente, ejecuta:

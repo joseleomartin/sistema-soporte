@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista Previa - Recordatorio de Carga de Horas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .email-container {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            color: white;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            background: #ffffff;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+        }
+        .content h2 {
+            color: #111827;
+            margin-top: 0;
+            font-size: 20px;
+        }
+        .content p {
+            color: #374151;
+            font-size: 16px;
+            line-height: 1.6;
+            margin: 20px 0;
+        }
+        .button-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .button:hover {
+            opacity: 0.9;
+        }
+        .footer-text {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 20px 0 0 0;
+        }
+        .disclaimer {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .disclaimer p {
+            color: #9ca3af;
+            font-size: 12px;
+            margin: 0;
+        }
+        .info-box {
+            background: #f3f4f6;
+            border-left: 4px solid #2563eb;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box p {
+            margin: 0;
+            color: #374151;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>EmaGroup</h1>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <h2>EmaGroup Notificaciones: Recordatorio de Carga de Horas</h2>
+            
+            <p>
+                Este es un recordatorio diario para que cargues las horas trabajadas del día de hoy. 
+                No olvides registrar tu tiempo en la plataforma EmaGroup.
+            </p>
+            
+            <div class="info-box">
+                <p><strong>📅 Recordatorio diario</strong><br>
+                Recibirás este email todos los días a las 17:00 (hora Argentina) para recordarte cargar tus horas.</p>
+            </div>
+            
+            <div class="button-container">
+                <a href="https://app.somosemagroup.com#time-tracking" class="button">
+                    Ir a Cargar Horas
+                </a>
+                <p class="footer-text">
+                    Haz clic en el botón para ir directamente a la sección de carga de horas.
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="disclaimer">
+            <p>Este es un email automático, por favor no respondas.</p>
+        </div>
+    </div>
+    
+    <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <h3 style="color: #111827; margin-top: 0;">ℹ️ Información Técnica</h3>
+        <ul style="color: #374151; line-height: 1.8;">
+            <li><strong>Asunto del email:</strong> "EmaGroup Notificaciones: Recordatorio de Carga de Horas"</li>
+            <li><strong>Remitente:</strong> EmaGroup Notificaciones &lt;notificaciones@app.somosemagroup.com&gt;</li>
+            <li><strong>Destinatarios:</strong> Todos los usuarios con email válido en el sistema</li>
+            <li><strong>Frecuencia:</strong> Diaria a las 17:00 hora Argentina (20:00 UTC)</li>
+            <li><strong>Link de redirección:</strong> https://app.somosemagroup.com#time-tracking</li>
+        </ul>
+    </div>
+</body>
+</html>
+
