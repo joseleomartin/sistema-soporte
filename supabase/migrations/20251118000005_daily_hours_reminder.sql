@@ -136,7 +136,7 @@ BEGIN
   PERFORM cron.schedule(
     'daily-hours-reminder',           -- Nombre del job
     '0 20 * * *',                     -- Todos los días a las 20:00 UTC (17:00 hora Argentina)
-    $$SELECT send_hours_reminder_emails();$$  -- Función a ejecutar
+    'SELECT send_hours_reminder_emails();'  -- Función a ejecutar
   );
   
   RAISE NOTICE '✅ Cron job configurado: Recordatorio diario de carga de horas a las 17:00 hora Argentina (20:00 UTC)';
