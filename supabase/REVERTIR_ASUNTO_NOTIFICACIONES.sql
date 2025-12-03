@@ -73,11 +73,15 @@ RETURNS TRIGGER AS $$
 DECLARE
   ticket_title text;
   status_text text;
+  updater_id uuid;
 BEGIN
   -- Solo notificar si el estado cambió
   IF OLD.status IS DISTINCT FROM NEW.status THEN
     -- Obtener el título del ticket
     SELECT title INTO ticket_title FROM tickets WHERE id = NEW.id;
+    
+    -- Obtener el ID del usuario que hizo la actualización
+    updater_id := auth.uid();
     
     -- Traducir el estado
     status_text := CASE NEW.status
@@ -99,7 +103,7 @@ BEGIN
       jsonb_build_object(
         'old_status', OLD.status,
         'new_status', NEW.status,
-        'updated_by', NEW.updated_by
+        'updated_by', updater_id
       )
     );
   END IF;
