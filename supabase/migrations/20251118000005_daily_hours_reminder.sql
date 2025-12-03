@@ -76,7 +76,7 @@ BEGIN
                 'No olvides registrar tu tiempo en la plataforma EmaGroup.' ||
                 '</p>' ||
                 '<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">' ||
-                '<a href="' || frontend_url || '#time-tracking" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 0;">Ir a Cargar Horas</a>' ||
+                '<a href="' || frontend_url || '" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 0;">Ir a Cargar Horas</a>' ||
                 '<p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">Haz clic en el botón para ir directamente a la sección de carga de horas.</p>' ||
                 '</div>' ||
                 '</div>' ||

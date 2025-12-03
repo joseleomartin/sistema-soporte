@@ -157,5 +157,5 @@ El email que recibirán los usuarios se ve así:
 └─────────────────────────────────────────┘
 ```
 
-El botón "Ir a Cargar Horas" redirige a: `https://app.somosemagroup.com#time-tracking`
+El botón "Ir a Cargar Horas" redirige a: `https://app.somosemagroup.com`
 
