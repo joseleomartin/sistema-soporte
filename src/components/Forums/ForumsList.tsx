@@ -52,12 +52,79 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
     loadPendingTasks();
   }, [profile?.id]);
 
+  // Verificar si hay un parámetro subforum en la URL después de cargar los subforos
+  useEffect(() => {
+    if (loading || subforums.length === 0) return;
+    
+    const hash = window.location.hash;
+    const subforumMatch = hash.match(/[?&]subforum=([^&]+)/);
+    if (subforumMatch) {
+      const subforumId = subforumMatch[1];
+      const subforum = subforums.find(s => s.id === subforumId);
+      if (subforum) {
+        setSelectedSubforum(subforumId);
+        // Limpiar el parámetro de la URL
+        window.history.replaceState(null, '', window.location.pathname + '#forums');
+      }
+    }
+  }, [loading, subforums]);
+
   // Actualizar selectedSubforum cuando cambia initialSubforumId
   useEffect(() => {
     if (initialSubforumId) {
       setSelectedSubforum(initialSubforumId);
     }
   }, [initialSubforumId]);
+
+  // Escuchar evento para abrir subforo desde notificación
+  useEffect(() => {
+    const handleOpenForum = async (event: CustomEvent) => {
+      const { subforumId } = event.detail;
+      if (!subforumId) return;
+
+      // Función auxiliar para abrir el subforo
+      const openSubforumById = async (subforumIdToOpen: string) => {
+        // Si los subforos ya están cargados, buscar el subforo
+        if (subforums.length > 0) {
+          const subforum = subforums.find(s => s.id === subforumIdToOpen);
+          if (subforum) {
+            setSelectedSubforum(subforumIdToOpen);
+            if (onSubforumChange) {
+              onSubforumChange(subforumIdToOpen);
+            }
+            return;
+          }
+        }
+
+        // Si no está en la lista, cargarlo directamente desde la base de datos
+        try {
+          const { data, error } = await supabase
+            .from('subforums')
+            .select('*')
+            .eq('id', subforumIdToOpen)
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            setSelectedSubforum(subforumIdToOpen);
+            if (onSubforumChange) {
+              onSubforumChange(subforumIdToOpen);
+            }
+          }
+        } catch (error) {
+          console.error('Error al cargar el subforo:', error);
+        }
+      };
+
+      await openSubforumById(subforumId);
+    };
+
+    window.addEventListener('openForum', handleOpenForum as EventListener);
+
+    return () => {
+      window.removeEventListener('openForum', handleOpenForum as EventListener);
+    };
+  }, [subforums, onSubforumChange]);
 
   useEffect(() => {
     // Recargar tareas pendientes cada 30 segundos

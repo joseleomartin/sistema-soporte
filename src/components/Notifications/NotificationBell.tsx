@@ -209,6 +209,13 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         // Fallback: usar window.location si no hay callback
         window.location.hash = 'forums';
       }
+      // Disparar evento personalizado para abrir el subforo específico
+      // Esto se ejecutará después de que se navegue a la sección de foros
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('openForum', {
+          detail: { subforumId: notification.subforum_id }
+        }));
+      }, 100);
     } else if (notification.type === 'direct_message' && notification.metadata?.sender_id) {
       // Abrir chat de mensajes directos con el remitente
       // Disparar evento personalizado que MessagesBell escuchará
