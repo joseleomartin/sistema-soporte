@@ -15,6 +15,7 @@ import { ProfileSettings } from './components/Profile/ProfileSettings';
 import { TasksList } from './components/Tasks/TasksList';
 import { VacationsManagement } from './components/Vacations/VacationsManagement';
 import { TimeTracking } from './components/TimeTracking/TimeTracking';
+import { LibraryAndCourses } from './components/Library/LibraryAndCourses';
 import { MessagesBell } from './components/DirectMessages/MessagesBell';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
@@ -23,6 +24,7 @@ function MainApp() {
   const { user, profile, loading } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [selectedSubforumId, setSelectedSubforumId] = useState<string | null>(null);
   const [viewKey, setViewKey] = useState(0); // Key para forzar recarga
 
   // Verificar si estamos en el callback de OAuth
@@ -79,6 +81,12 @@ function MainApp() {
     setViewKey(prev => prev + 1);
   };
 
+  const handleNavigateToForum = (subforumId: string) => {
+    setSelectedSubforumId(subforumId);
+    setCurrentView('forums');
+    setViewKey(prev => prev + 1);
+  };
+
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
@@ -87,7 +95,7 @@ function MainApp() {
       case 'tickets':
         return <TicketsList key={`tickets-${viewKey}`} selectedTicketId={selectedTicketId} onClearSelection={() => setSelectedTicketId(null)} />;
       case 'forums':
-        return <ForumsList key={`forums-${viewKey}`} />;
+        return <ForumsList key={`forums-${viewKey}`} initialSubforumId={selectedSubforumId} onSubforumChange={setSelectedSubforumId} />;
       case 'meetings':
         return <MeetingRoomsList key={`meetings-${viewKey}`} />;
       case 'tools':
@@ -102,6 +110,8 @@ function MainApp() {
         return <VacationsManagement key={`vacations-${viewKey}`} />;
       case 'time-tracking':
         return <TimeTracking key={`time-tracking-${viewKey}`} />;
+      case 'library':
+        return <LibraryAndCourses key={`library-${viewKey}`} />;
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
       default:
@@ -115,6 +125,7 @@ function MainApp() {
         currentView={currentView}
         onViewChange={handleViewChange}
         onNavigateToTicket={handleNavigateToTicket}
+        onNavigateToForum={handleNavigateToForum}
       />
       <main className="flex-1 overflow-auto ml-64">
         <div className="max-w-7xl mx-auto p-8">
