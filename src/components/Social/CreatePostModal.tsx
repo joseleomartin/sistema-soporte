@@ -8,11 +8,16 @@ interface CreatePostModalProps {
   onSuccess: () => void;
 }
 
+interface FileWithPreview {
+  file: File;
+  preview: string;
+  id: string;
+}
+
 export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
   const { profile } = useAuth();
   const [content, setContent] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,24 +45,41 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
     return null;
   };
 
-  const handleFileSelect = (file: File) => {
-    const validationError = validateFile(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
-    setError(null);
-    setSelectedFile(file);
-    
-    // Crear preview
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    const newFiles: FileWithPreview[] = [];
+    let hasError = false;
+
+    Array.from(files).forEach((file) => {
+      const validationError = validateFile(file);
+      if (validationError && !hasError) {
+        setError(validationError);
+        hasError = true;
+        return;
+      }
+
+      if (!hasError) {
+        const preview = URL.createObjectURL(file);
+        newFiles.push({
+          file,
+          preview,
+          id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        });
+      }
+    });
+
+    if (!hasError && newFiles.length > 0) {
+      setError(null);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileSelect(e.target.files[0]);
+    handleFileSelect(e.target.files);
+    // Resetear el input para permitir seleccionar el mismo archivo de nuevo
+    if (e.target) {
+      e.target.value = '';
     }
   };
 
@@ -74,21 +96,17 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelect(e.dataTransfer.files[0]);
-    }
+    handleFileSelect(e.dataTransfer.files);
   };
 
-  const removeFile = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+  const removeFile = (id: string) => {
+    setSelectedFiles((prev) => {
+      const fileToRemove = prev.find((f) => f.id === id);
+      if (fileToRemove) {
+        URL.revokeObjectURL(fileToRemove.preview);
+      }
+      return prev.filter((f) => f.id !== id);
+    });
   };
 
   const getMediaType = (file: File): 'image' | 'video' | 'gif' => {
@@ -98,32 +116,40 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
     return 'image'; // default
   };
 
-  const uploadFile = async (): Promise<string> => {
-    if (!selectedFile || !profile) throw new Error('No hay archivo seleccionado');
+  const uploadFiles = async (): Promise<Array<{ url: string; type: 'image' | 'video' | 'gif' }>> => {
+    if (selectedFiles.length === 0 || !profile) throw new Error('No hay archivos seleccionados');
 
-    const fileExt = selectedFile.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `${profile.id}/${fileName}`;
+    const uploadPromises = selectedFiles.map(async (fileWithPreview, index) => {
+      const file = fileWithPreview.file;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${index}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${profile.id}/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('social-media')
-      .upload(filePath, selectedFile);
+      const { error: uploadError } = await supabase.storage
+        .from('social-media')
+        .upload(filePath, file);
 
-    if (uploadError) throw uploadError;
+      if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage
-      .from('social-media')
-      .getPublicUrl(filePath);
+      const { data } = supabase.storage
+        .from('social-media')
+        .getPublicUrl(filePath);
 
-    return data.publicUrl;
+      return {
+        url: data.publicUrl,
+        type: getMediaType(file),
+      };
+    });
+
+    return Promise.all(uploadPromises);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!selectedFile) {
-      setError('Debes subir una imagen, video o GIF');
+    if (selectedFiles.length === 0) {
+      setError('Debes subir al menos una imagen, video o GIF');
       return;
     }
 
@@ -140,27 +166,43 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
     try {
       setUploading(true);
 
-      const mediaUrl = await uploadFile();
-      const mediaType = getMediaType(selectedFile);
+      // Subir todos los archivos
+      const uploadedMedia = await uploadFiles();
 
-      const { error: insertError } = await supabase
+      // Crear el post (sin media_type y media_url para usar la nueva estructura)
+      const { data: postData, error: insertError } = await supabase
         .from('social_posts')
         .insert({
           user_id: profile.id,
           content: content.trim() || null,
-          media_type: mediaType,
-          media_url: mediaUrl,
-        });
+          media_type: null, // Ya no es requerido
+          media_url: null, // Ya no es requerido
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
 
-      // Limpiar
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      // Crear registros en social_post_media
+      if (postData && uploadedMedia.length > 0) {
+        const mediaRecords = uploadedMedia.map((media, index) => ({
+          post_id: postData.id,
+          media_type: media.type,
+          media_url: media.url,
+          display_order: index,
+        }));
+
+        const { error: mediaError } = await supabase
+          .from('social_post_media')
+          .insert(mediaRecords);
+
+        if (mediaError) throw mediaError;
       }
+
+      // Limpiar
+      selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview));
       setContent('');
-      setSelectedFile(null);
-      setPreviewUrl(null);
+      setSelectedFiles([]);
       
       onSuccess();
     } catch (error: any) {
@@ -210,71 +252,100 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
             </div>
 
             {/* File upload area */}
-            {!selectedFile ? (
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  isDragging
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">
-                  Arrastra y suelta una imagen, video o GIF aquí
-                </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  o haz clic para seleccionar
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Seleccionar archivo
-                </button>
-                <p className="text-xs text-gray-500 mt-4">
-                  Máximo 10MB para imágenes/GIFs, 50MB para videos
-                </p>
-              </div>
-            ) : (
-              <div className="mb-4">
-                <div className="relative rounded-lg overflow-hidden border border-gray-200">
-                  {selectedFile.type.startsWith('image/') ? (
-                    <img
-                      src={previewUrl || ''}
-                      alt="Preview"
-                      className="w-full max-h-96 object-contain"
-                    />
-                  ) : (
-                    <video
-                      src={previewUrl || ''}
-                      controls
-                      className="w-full max-h-96"
-                    />
-                  )}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-lg p-4 transition-colors mb-4 ${
+                isDragging
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
+            >
+              {selectedFiles.length === 0 ? (
+                <div className="text-center py-4">
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">
+                    Arrastra y suelta imágenes, videos o GIFs aquí
+                  </p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    o haz clic para seleccionar
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+                    onChange={handleFileInputChange}
+                    multiple
+                    className="hidden"
+                  />
                   <button
                     type="button"
-                    onClick={removeFile}
-                    className="absolute top-2 right-2 p-2 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <X className="w-5 h-5" />
+                    Seleccionar archivos
                   </button>
+                  <p className="text-xs text-gray-500 mt-4">
+                    Máximo 10MB para imágenes/GIFs, 50MB para videos. Puedes seleccionar múltiples archivos.
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                </p>
-              </div>
-            )}
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      {selectedFiles.length} archivo{selectedFiles.length !== 1 ? 's' : ''} seleccionado{selectedFiles.length !== 1 ? 's' : ''}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      + Agregar más
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+                    onChange={handleFileInputChange}
+                    multiple
+                    className="hidden"
+                  />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {selectedFiles.map((fileWithPreview) => (
+                      <div key={fileWithPreview.id} className="relative group">
+                        <div className="relative rounded-lg overflow-hidden border border-gray-200 aspect-square">
+                          {fileWithPreview.file.type.startsWith('image/') ? (
+                            <img
+                              src={fileWithPreview.preview}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <video
+                              src={fileWithPreview.preview}
+                              className="w-full h-full object-cover"
+                              muted
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(fileWithPreview.id)}
+                            className="absolute top-1 right-1 p-1.5 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1 truncate">
+                          {fileWithPreview.file.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 mt-6">
@@ -288,7 +359,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
               </button>
               <button
                 type="submit"
-                disabled={uploading || !selectedFile}
+                disabled={uploading || selectedFiles.length === 0}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {uploading ? (

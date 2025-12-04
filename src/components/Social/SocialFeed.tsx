@@ -5,12 +5,20 @@ import { SocialPost } from './SocialPost';
 import { CreatePostModal } from './CreatePostModal';
 import { BirthdayCard } from './BirthdayCard';
 
+interface PostMedia {
+  id: string;
+  post_id: string;
+  media_type: 'image' | 'video' | 'gif';
+  media_url: string;
+  display_order: number;
+}
+
 interface Post {
   id: string;
   user_id: string;
   content: string | null;
-  media_type: 'image' | 'video' | 'gif';
-  media_url: string;
+  media_type?: 'image' | 'video' | 'gif' | null; // Opcional para compatibilidad
+  media_url?: string | null; // Opcional para compatibilidad
   created_at: string;
   updated_at: string;
   user_profile?: {
@@ -20,6 +28,7 @@ interface Post {
   likes_count?: number;
   comments_count?: number;
   user_liked?: boolean;
+  media?: PostMedia[]; // Múltiples archivos de media
 }
 
 interface BirthdayUser {
@@ -122,6 +131,13 @@ export function SocialFeed() {
 
       if (error) throw error;
 
+      // Obtener media del post
+      const { data: mediaData } = await supabase
+        .from('social_post_media')
+        .select('*')
+        .eq('post_id', postId)
+        .order('display_order', { ascending: true });
+
       // Obtener conteo de likes y comentarios
       const [likesResult, commentsResult, userLikeResult] = await Promise.all([
         supabase
@@ -148,6 +164,7 @@ export function SocialFeed() {
 
       return {
         ...data,
+        media: mediaData || [],
         likes_count: likesResult.count || 0,
         comments_count: commentsResult.count || 0,
         user_liked: userLikeResult,
@@ -185,6 +202,25 @@ export function SocialFeed() {
         return;
       }
 
+      // Obtener todos los IDs de posts para obtener su media
+      const postIds = data.map((p) => p.id);
+      const { data: allMedia } = await supabase
+        .from('social_post_media')
+        .select('*')
+        .in('post_id', postIds)
+        .order('display_order', { ascending: true });
+
+      // Agrupar media por post_id
+      const mediaByPostId: { [key: string]: PostMedia[] } = {};
+      if (allMedia) {
+        allMedia.forEach((media) => {
+          if (!mediaByPostId[media.post_id]) {
+            mediaByPostId[media.post_id] = [];
+          }
+          mediaByPostId[media.post_id].push(media as PostMedia);
+        });
+      }
+
       // Obtener conteos de likes y comentarios para cada post
       const postsWithCounts = await Promise.all(
         data.map(async (post) => {
@@ -213,6 +249,7 @@ export function SocialFeed() {
 
           return {
             ...post,
+            media: mediaByPostId[post.id] || [],
             likes_count: likesResult.count || 0,
             comments_count: commentsResult.count || 0,
             user_liked: userLikeResult,

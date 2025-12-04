@@ -1,15 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, User, MoreVertical, Edit2, Trash2, X, Maximize2 } from 'lucide-react';
+import { Heart, MessageCircle, User, MoreVertical, Edit2, Trash2, X, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { PostComments } from './PostComments';
+
+interface PostMedia {
+  id: string;
+  post_id: string;
+  media_type: 'image' | 'video' | 'gif';
+  media_url: string;
+  display_order: number;
+}
 
 interface Post {
   id: string;
   user_id: string;
   content: string | null;
-  media_type: 'image' | 'video' | 'gif';
-  media_url: string;
+  media_type?: 'image' | 'video' | 'gif' | null; // Opcional para compatibilidad
+  media_url?: string | null; // Opcional para compatibilidad
   created_at: string;
   updated_at: string;
   user_profile?: {
@@ -19,6 +27,7 @@ interface Post {
   likes_count?: number;
   comments_count?: number;
   user_liked?: boolean;
+  media?: PostMedia[]; // Múltiples archivos de media
 }
 
 interface SocialPostProps {
@@ -34,8 +43,13 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
   const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
   const [showMenu, setShowMenu] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [postMedia, setPostMedia] = useState<PostMedia[]>([]);
 
   useEffect(() => {
+    // Cargar media del post
+    fetchPostMedia();
+    
     // Verificar si el usuario dio like
     if (profile) {
       checkUserLike();
@@ -83,6 +97,44 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       supabase.removeChannel(commentsChannel);
     };
   }, [post.id, profile]);
+
+  const fetchPostMedia = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('social_post_media')
+        .select('*')
+        .eq('post_id', post.id)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      
+      // Si hay media en la nueva tabla, usarla
+      if (data && data.length > 0) {
+        setPostMedia(data as PostMedia[]);
+      } else if (post.media_url && post.media_type) {
+        // Compatibilidad con posts antiguos
+        setPostMedia([{
+          id: post.id,
+          post_id: post.id,
+          media_type: post.media_type,
+          media_url: post.media_url,
+          display_order: 0,
+        }]);
+      }
+    } catch (error) {
+      console.error('Error fetching post media:', error);
+      // Fallback a media antiguo
+      if (post.media_url && post.media_type) {
+        setPostMedia([{
+          id: post.id,
+          post_id: post.id,
+          media_type: post.media_type,
+          media_url: post.media_url,
+          display_order: 0,
+        }]);
+      }
+    }
+  };
 
   const checkUserLike = async () => {
     if (!profile) return;
@@ -265,32 +317,90 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       </div>
 
       {/* Media - Se adapta al tamaño natural */}
-      <div className="w-full flex-shrink-0 relative group">
-        {post.media_type === 'image' || post.media_type === 'gif' ? (
-          <div className="relative">
-            <img
-              src={post.media_url}
-              alt={post.content || 'Post image'}
-              className="w-full h-auto object-cover cursor-pointer"
-              loading="lazy"
-              onClick={() => setShowImageModal(true)}
-            />
-            {/* Overlay con icono de expandir al hover */}
-            <div 
-              className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
-              onClick={() => setShowImageModal(true)}
-            >
-              <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+      {postMedia.length > 0 && (
+        <div className="w-full flex-shrink-0">
+          {postMedia.length === 1 ? (
+            // Una sola imagen/video
+            <div className="relative group">
+              {postMedia[0].media_type === 'image' || postMedia[0].media_type === 'gif' ? (
+                <div className="relative">
+                  <img
+                    src={postMedia[0].media_url}
+                    alt={post.content || 'Post image'}
+                    className="w-full h-auto object-cover cursor-pointer"
+                    loading="lazy"
+                    onClick={() => {
+                      setSelectedImageIndex(0);
+                      setShowImageModal(true);
+                    }}
+                  />
+                  <div 
+                    className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
+                    onClick={() => {
+                      setSelectedImageIndex(0);
+                      setShowImageModal(true);
+                    }}
+                  >
+                    <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  </div>
+                </div>
+              ) : (
+                <video
+                  src={postMedia[0].media_url}
+                  controls
+                  className="w-full h-auto"
+                />
+              )}
             </div>
-          </div>
-        ) : (
-          <video
-            src={post.media_url}
-            controls
-            className="w-full h-auto"
-          />
-        )}
-      </div>
+          ) : (
+            // Múltiples imágenes - Grid
+            <div className={`grid gap-1 ${
+              postMedia.length === 2 ? 'grid-cols-2' :
+              postMedia.length === 3 ? 'grid-cols-2' :
+              postMedia.length === 4 ? 'grid-cols-2' :
+              'grid-cols-2'
+            }`}>
+              {postMedia.slice(0, 4).map((media, index) => (
+                <div
+                  key={media.id}
+                  className={`relative group cursor-pointer ${
+                    postMedia.length === 3 && index === 0 ? 'row-span-2' : ''
+                  }`}
+                  onClick={() => {
+                    setSelectedImageIndex(index);
+                    setShowImageModal(true);
+                  }}
+                >
+                  {media.media_type === 'image' || media.media_type === 'gif' ? (
+                    <>
+                      <img
+                        src={media.media_url}
+                        alt={`${post.content || 'Post image'} ${index + 1}`}
+                        className="w-full h-full object-cover aspect-square"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200" />
+                      {postMedia.length > 4 && index === 3 && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                          <span className="text-white text-2xl font-bold">
+                            +{postMedia.length - 4}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <video
+                      src={media.media_url}
+                      controls
+                      className="w-full h-full object-cover aspect-square"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       {post.content && (
@@ -344,7 +454,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       </div>
 
       {/* Modal para imagen expandida */}
-      {showImageModal && (post.media_type === 'image' || post.media_type === 'gif') && (
+      {showImageModal && postMedia.length > 0 && postMedia[selectedImageIndex] && (postMedia[selectedImageIndex].media_type === 'image' || postMedia[selectedImageIndex].media_type === 'gif') && (
         <div 
           className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4"
           onClick={() => setShowImageModal(false)}
@@ -356,12 +466,45 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
             >
               <X className="w-6 h-6" />
             </button>
+            
+            {/* Navegación entre imágenes */}
+            {postMedia.length > 1 && (
+              <>
+                {selectedImageIndex > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedImageIndex(selectedImageIndex - 1);
+                    }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors z-10"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                )}
+                {selectedImageIndex < postMedia.length - 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedImageIndex(selectedImageIndex + 1);
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors z-10"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                )}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black bg-opacity-50 rounded-full px-3 py-1 text-white text-sm z-10">
+                  {selectedImageIndex + 1} / {postMedia.length}
+                </div>
+              </>
+            )}
+            
             <img
-              src={post.media_url}
+              src={postMedia[selectedImageIndex].media_url}
               alt={post.content || 'Post image'}
               className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
             />
+            
             {/* Información del post en el modal */}
             <div 
               className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-50 rounded-lg p-4 text-white"
