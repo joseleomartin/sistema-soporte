@@ -174,24 +174,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Limpiar explícitamente el almacenamiento de Supabase
       // Supabase almacena la sesión en localStorage con claves específicas
       // El formato típico es: sb-{project-ref}-auth-token
+      // IMPORTANTE: NO limpiar tokens de Google Drive para mantener la autenticación
       try {
-        // Buscar todas las claves de Supabase
+        // Claves de Google Drive que NO debemos eliminar
+        const googleDriveKeysToKeep = [
+          'google_drive_token',
+          'google_drive_token_expiry',
+          'google_drive_access_token',
+          'google_drive_token_expiry',
+          'google_drive_refresh_token',
+          'google_oauth_token',
+          'google_oauth_token_expiry'
+        ];
+        
+        // Buscar todas las claves de Supabase (excluyendo las de Google Drive)
         const allKeys = Object.keys(localStorage);
         const supabaseKeys = allKeys.filter(key => 
-          key.startsWith('sb-') || 
-          key.includes('supabase') ||
-          (key.includes('auth') && (key.includes('token') || key.includes('session')))
+          (key.startsWith('sb-') || 
+           key.includes('supabase') ||
+           (key.includes('auth') && (key.includes('token') || key.includes('session')))) &&
+          !googleDriveKeysToKeep.includes(key)
         );
         
         supabaseKeys.forEach(key => {
           localStorage.removeItem(key);
         });
         
-        // También limpiar sessionStorage por si acaso
+        // También limpiar sessionStorage por si acaso (excluyendo Google Drive)
         const sessionKeys = Object.keys(sessionStorage).filter(key => 
-          key.startsWith('sb-') || 
-          key.includes('supabase') ||
-          (key.includes('auth') && (key.includes('token') || key.includes('session')))
+          (key.startsWith('sb-') || 
+           key.includes('supabase') ||
+           (key.includes('auth') && (key.includes('token') || key.includes('session')))) &&
+          !googleDriveKeysToKeep.includes(key)
         );
         sessionKeys.forEach(key => {
           sessionStorage.removeItem(key);
@@ -200,19 +214,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn('Error limpiando almacenamiento:', e);
       }
       
-      // Limpiar tokens de Google si existen
-      try {
-        localStorage.removeItem('google_drive_refresh_token');
-        localStorage.removeItem('google_oauth_token');
-        localStorage.removeItem('google_oauth_token_expiry');
-        const googleKeys = Object.keys(localStorage).filter(key => 
-          key.toLowerCase().includes('google') || 
-          key.toLowerCase().includes('gapi')
-        );
-        googleKeys.forEach(key => localStorage.removeItem(key));
-      } catch (e) {
-        console.warn('Error limpiando tokens de Google:', e);
-      }
+      // NO limpiar tokens de Google Drive - mantener la autenticación guardada
+      // Los tokens de Google Drive se mantienen para que el usuario no tenga que volver a autenticar
       
       // Esperar un momento para asegurar que todo se limpie
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -228,21 +231,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       
       // Limpiar todo el almacenamiento relacionado con autenticación
+      // IMPORTANTE: NO limpiar tokens de Google Drive
       try {
-        // Limpiar solo las claves relacionadas con auth, no todo localStorage
+        // Claves de Google Drive que NO debemos eliminar
+        const googleDriveKeysToKeep = [
+          'google_drive_token',
+          'google_drive_token_expiry',
+          'google_drive_access_token',
+          'google_drive_token_expiry',
+          'google_drive_refresh_token',
+          'google_oauth_token',
+          'google_oauth_token_expiry'
+        ];
+        
+        // Limpiar solo las claves relacionadas con auth, excluyendo Google Drive
         const authKeys = Object.keys(localStorage).filter(key => 
-          key.startsWith('sb-') || 
-          key.includes('supabase') ||
-          key.includes('auth') ||
-          key.includes('google') ||
-          key.includes('gapi')
+          (key.startsWith('sb-') || 
+           key.includes('supabase') ||
+           key.includes('auth')) &&
+          !googleDriveKeysToKeep.includes(key) &&
+          !key.toLowerCase().includes('google_drive') &&
+          !key.toLowerCase().includes('gapi')
         );
         authKeys.forEach(key => localStorage.removeItem(key));
         
         const sessionAuthKeys = Object.keys(sessionStorage).filter(key => 
-          key.startsWith('sb-') || 
-          key.includes('supabase') ||
-          key.includes('auth')
+          (key.startsWith('sb-') || 
+           key.includes('supabase') ||
+           key.includes('auth')) &&
+          !googleDriveKeysToKeep.includes(key)
         );
         sessionAuthKeys.forEach(key => sessionStorage.removeItem(key));
       } catch (e) {
