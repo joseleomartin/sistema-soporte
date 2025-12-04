@@ -15,6 +15,8 @@ import {
   Wrench,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   CheckSquare,
   Plus,
   CheckCircle,
@@ -22,6 +24,7 @@ import {
 } from 'lucide-react';
 import { CreateEventModal } from '../Calendar/CreateEventModal';
 import { EventDetailsModal } from '../Calendar/EventDetailsModal';
+import { VacationCalendar } from '../Vacations/VacationsManagement';
 
 interface UserStats {
   clientsAccess: number;
@@ -65,6 +68,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userVacations, setUserVacations] = useState<any[]>([]);
   const [showVacationModal, setShowVacationModal] = useState(false);
+  const [allVacations, setAllVacations] = useState<any[]>([]);
+  const [vacationCalendarDate, setVacationCalendarDate] = useState(new Date());
+  const [showVacationCalendarModal, setShowVacationCalendarModal] = useState(false);
 
   // Función helper para formatear horas decimales a horas y minutos
   const formatHoursMinutes = (decimalHours: number) => {
@@ -87,6 +93,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     if (profile?.id) {
       loadDashboardData();
       loadEvents();
+      loadAllVacations(); // Cargar todas las vacaciones para el calendario
       if (profile.role !== 'admin' && profile.role !== 'support') {
         loadUserVacations();
       }
@@ -102,6 +109,49 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       loadEvents();
     }
   }, [currentDate, profile?.id]);
+
+  useEffect(() => {
+    // Recargar vacaciones cuando cambia el mes del calendario
+    if (profile?.id) {
+      loadAllVacations();
+    }
+  }, [vacationCalendarDate, profile?.id]);
+
+  const loadAllVacations = async () => {
+    try {
+      // Cargar todas las vacaciones aprobadas y pendientes con información del usuario
+      // IMPORTANTE: Esta consulta debe funcionar para TODOS los usuarios, no solo admin/support
+      const { data, error } = await supabase
+        .from('vacations')
+        .select(`
+          *,
+          user_profile:profiles!vacations_user_id_fkey(full_name, email)
+        `)
+        .in('status', ['approved', 'pending'])
+        .order('start_date', { ascending: true });
+
+      if (error) {
+        console.error('Error cargando vacaciones:', error);
+        console.error('Detalles del error:', JSON.stringify(error, null, 2));
+        setAllVacations([]);
+        return;
+      }
+
+      console.log('Vacaciones cargadas:', data?.length || 0);
+      console.log('Datos de vacaciones:', data);
+
+      // Formatear los datos para el calendario
+      const formattedVacations = (data || []).map((vacation: any) => ({
+        ...vacation,
+        user_profile: vacation.user_profile || { full_name: 'Usuario', email: '' }
+      }));
+
+      setAllVacations(formattedVacations);
+    } catch (error) {
+      console.error('Error cargando todas las vacaciones:', error);
+      setAllVacations([]);
+    }
+  };
 
   const loadUserVacations = async () => {
     if (!profile?.id) return;
@@ -899,93 +949,107 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         </div>
       </div>
 
-      {/* Sección de Vacaciones - Solo para usuarios normales */}
+      {/* Sección de Vacaciones / Licencias - Solo para usuarios normales */}
       {profile?.role !== 'admin' && profile?.role !== 'support' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <CalendarIcon className="w-5 h-5 text-orange-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Mis Vacaciones / Licencias</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Vacaciones / Licencias</h3>
             </div>
-            <button
-              onClick={() => setShowVacationModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Solicitar Vacaciones / Licencias
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowVacationModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Solicitar Vacaciones / Licencias
+              </button>
+              <button
+                onClick={() => setShowVacationCalendarModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                Ver Calendario
+              </button>
+            </div>
           </div>
 
-          {userVacations.length === 0 ? (
-            <div className="text-center py-8">
-              <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-              <p className="text-gray-500 mb-2">No tienes vacaciones / licencias registradas</p>
-              <p className="text-sm text-gray-400">Solicita tus vacaciones / licencias haciendo clic en el botón de arriba</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {userVacations.map((vacation) => {
-                // Parsear fechas manualmente para evitar problemas de zona horaria
-                const startParts = vacation.start_date.split('-');
-                const endParts = vacation.end_date.split('-');
-                const startDate = new Date(
-                  parseInt(startParts[0]),
-                  parseInt(startParts[1]) - 1, // Mes es 0-indexed
-                  parseInt(startParts[2])
-                );
-                const endDate = new Date(
-                  parseInt(endParts[0]),
-                  parseInt(endParts[1]) - 1, // Mes es 0-indexed
-                  parseInt(endParts[2])
-                );
-                const getStatusBadge = () => {
-                  switch (vacation.status) {
-                    case 'approved':
-                      return (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                          <CheckCircle className="w-3 h-3" />
-                          Aprobada
-                        </span>
-                      );
-                    case 'rejected':
-                      return (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                          <XCircle className="w-3 h-3" />
-                          Rechazada
-                        </span>
-                      );
-                    default:
-                      return (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                          <Clock className="w-3 h-3" />
-                          Pendiente
-                        </span>
-                      );
-                  }
-                };
+          {/* Mis Vacaciones - Dentro de la misma tarjeta */}
+          <div className="border-t border-gray-200 pt-4 mt-4">
+            <h4 className="text-md font-semibold text-gray-900 mb-4">Mis Vacaciones / Licencias</h4>
 
-                return (
-                  <div key={vacation.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        {getStatusBadge()}
-                        <span className="text-sm font-medium text-gray-900">
-                          {startDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - {endDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                        <span className="text-sm text-gray-500">({vacation.days_count} día{vacation.days_count !== 1 ? 's' : ''})</span>
+            {userVacations.length === 0 ? (
+              <div className="text-center py-8">
+                <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <p className="text-gray-500 mb-2">No tienes vacaciones / licencias registradas</p>
+                <p className="text-sm text-gray-400">Solicita tus vacaciones / licencias haciendo clic en el botón de arriba</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {userVacations.map((vacation) => {
+                  // Parsear fechas manualmente para evitar problemas de zona horaria
+                  const startParts = vacation.start_date.split('-');
+                  const endParts = vacation.end_date.split('-');
+                  const startDate = new Date(
+                    parseInt(startParts[0]),
+                    parseInt(startParts[1]) - 1, // Mes es 0-indexed
+                    parseInt(startParts[2])
+                  );
+                  const endDate = new Date(
+                    parseInt(endParts[0]),
+                    parseInt(endParts[1]) - 1, // Mes es 0-indexed
+                    parseInt(endParts[2])
+                  );
+                  const getStatusBadge = () => {
+                    switch (vacation.status) {
+                      case 'approved':
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                            <CheckCircle className="w-3 h-3" />
+                            Aprobada
+                          </span>
+                        );
+                      case 'rejected':
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                            <XCircle className="w-3 h-3" />
+                            Rechazada
+                          </span>
+                        );
+                      default:
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                            <Clock className="w-3 h-3" />
+                            Pendiente
+                          </span>
+                        );
+                    }
+                  };
+
+                  return (
+                    <div key={vacation.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          {getStatusBadge()}
+                          <span className="text-sm font-medium text-gray-900">
+                            {startDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - {endDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                          <span className="text-sm text-gray-500">({vacation.days_count} día{vacation.days_count !== 1 ? 's' : ''})</span>
+                        </div>
+                        {vacation.reason && (
+                          <p className="text-sm text-gray-600">{vacation.reason}</p>
+                        )}
+                        {vacation.status === 'rejected' && vacation.rejection_reason && (
+                          <p className="text-xs text-red-600 mt-1">Razón: {vacation.rejection_reason}</p>
+                        )}
                       </div>
-                      {vacation.reason && (
-                        <p className="text-sm text-gray-600">{vacation.reason}</p>
-                      )}
-                      {vacation.status === 'rejected' && vacation.rejection_reason && (
-                        <p className="text-xs text-red-600 mt-1">Razón: {vacation.rejection_reason}</p>
-                      )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1053,9 +1117,38 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           onSuccess={() => {
             setShowVacationModal(false);
             loadUserVacations();
+            loadAllVacations(); // Recargar todas las vacaciones para el calendario
             loadEvents(); // Recargar eventos para mostrar las vacaciones en el calendario
           }}
         />
+      )}
+
+      {/* Modal para el calendario de vacaciones */}
+      {showVacationCalendarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-orange-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Calendario de Vacaciones / Licencias</h2>
+              </div>
+              <button
+                onClick={() => setShowVacationCalendarModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Cerrar"
+              >
+                <XCircle className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              <VacationCalendar
+                vacations={allVacations}
+                currentDate={vacationCalendarDate}
+                onDateChange={setVacationCalendarDate}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

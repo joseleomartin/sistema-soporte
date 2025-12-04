@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Verificar si hay una sesión activa
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -32,8 +33,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       (async () => {
+        // Si el evento es SIGNED_OUT, asegurarse de limpiar todo
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);
@@ -149,7 +158,100 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      // Limpiar el estado local primero para evitar que se restaure
+      setProfile(null);
+      setUser(null);
+      setLoading(true);
+      
+      // Cerrar sesión en Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Error al cerrar sesión:', error);
+      }
+      
+      // Limpiar explícitamente el almacenamiento de Supabase
+      // Supabase almacena la sesión en localStorage con claves específicas
+      // El formato típico es: sb-{project-ref}-auth-token
+      try {
+        // Buscar todas las claves de Supabase
+        const allKeys = Object.keys(localStorage);
+        const supabaseKeys = allKeys.filter(key => 
+          key.startsWith('sb-') || 
+          key.includes('supabase') ||
+          (key.includes('auth') && (key.includes('token') || key.includes('session')))
+        );
+        
+        supabaseKeys.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        // También limpiar sessionStorage por si acaso
+        const sessionKeys = Object.keys(sessionStorage).filter(key => 
+          key.startsWith('sb-') || 
+          key.includes('supabase') ||
+          (key.includes('auth') && (key.includes('token') || key.includes('session')))
+        );
+        sessionKeys.forEach(key => {
+          sessionStorage.removeItem(key);
+        });
+      } catch (e) {
+        console.warn('Error limpiando almacenamiento:', e);
+      }
+      
+      // Limpiar tokens de Google si existen
+      try {
+        localStorage.removeItem('google_drive_refresh_token');
+        localStorage.removeItem('google_oauth_token');
+        localStorage.removeItem('google_oauth_token_expiry');
+        const googleKeys = Object.keys(localStorage).filter(key => 
+          key.toLowerCase().includes('google') || 
+          key.toLowerCase().includes('gapi')
+        );
+        googleKeys.forEach(key => localStorage.removeItem(key));
+      } catch (e) {
+        console.warn('Error limpiando tokens de Google:', e);
+      }
+      
+      // Esperar un momento para asegurar que todo se limpie
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Forzar recarga completa de la página para limpiar todo el estado
+      // Usar window.location.reload() para asegurar que se recargue completamente
+      window.location.replace(window.location.origin);
+    } catch (error) {
+      console.error('Error inesperado al cerrar sesión:', error);
+      // Forzar limpieza completa
+      setProfile(null);
+      setUser(null);
+      setLoading(true);
+      
+      // Limpiar todo el almacenamiento relacionado con autenticación
+      try {
+        // Limpiar solo las claves relacionadas con auth, no todo localStorage
+        const authKeys = Object.keys(localStorage).filter(key => 
+          key.startsWith('sb-') || 
+          key.includes('supabase') ||
+          key.includes('auth') ||
+          key.includes('google') ||
+          key.includes('gapi')
+        );
+        authKeys.forEach(key => localStorage.removeItem(key));
+        
+        const sessionAuthKeys = Object.keys(sessionStorage).filter(key => 
+          key.startsWith('sb-') || 
+          key.includes('supabase') ||
+          key.includes('auth')
+        );
+        sessionAuthKeys.forEach(key => sessionStorage.removeItem(key));
+      } catch (e) {
+        console.warn('Error limpiando almacenamiento:', e);
+      }
+      
+      // Redirigir
+      window.location.replace(window.location.origin);
+    }
   };
 
   const resetPassword = async (email: string) => {

@@ -860,7 +860,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
 }
 
 // Componente de calendario para visualizar vacaciones
-function VacationCalendar({
+export function VacationCalendar({
   vacations,
   currentDate,
   onDateChange

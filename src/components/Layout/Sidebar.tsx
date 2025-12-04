@@ -40,6 +40,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   const { activeJobsCount } = useExtraction();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     if (profile?.avatar_url) {
@@ -53,6 +54,21 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
 
   const handleNavigateToCalendar = () => {
     onViewChange('dashboard'); // El calendario está en el dashboard
+  };
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isSigningOut) return; // Evitar múltiples clics
+    
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      setIsSigningOut(false);
+    }
   };
 
   return (
@@ -139,11 +155,14 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
 
       <div className="p-4 border-t border-gray-200 flex-shrink-0 mt-auto">
         <button
-          onClick={signOut}
-          className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition"
+          onClick={handleSignOut}
+          disabled={isSigningOut}
+          className={`w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition ${
+            isSigningOut ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
           <LogOut className="w-5 h-5" />
-          <span>Cerrar Sesión</span>
+          <span>{isSigningOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}</span>
         </button>
       </div>
     </aside>
