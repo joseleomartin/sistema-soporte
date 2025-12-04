@@ -9,6 +9,12 @@ import importlib.util
 from pathlib import Path
 import sys
 import requests
+import threading
+import uuid
+import pandas as pd
+from datetime import datetime
+import glob
+import re
 
 # Logging para diagnóstico
 import logging
@@ -179,6 +185,843 @@ BANCO_EXTRACTORS = {
 
 logger.info(f"Extractores configurados: {len(BANCO_EXTRACTORS)}")
 logger.info("Aplicación Flask inicializada correctamente")
+
+# ==================== SISTEMA DE VENCIMIENTOS ====================
+# Usar ruta absoluta para evitar problemas con el directorio de trabajo
+VENCIMIENTOS_DIR = Path(__file__).parent.resolve() / 'vencimientos'
+VENCIMIENTOS_DIR.mkdir(parents=True, exist_ok=True)
+logger.info(f"Directorio de vencimientos: {VENCIMIENTOS_DIR}")
+logger.info(f"Directorio de vencimientos existe: {VENCIMIENTOS_DIR.exists()}")
+
+# Sistema de jobs asíncronos para vencimientos
+vencimientos_jobs = {}
+vencimientos_jobs_lock = threading.Lock()
+
+def get_vencimientos_job(job_id):
+    """Obtiene el estado de un job de vencimientos"""
+    with vencimientos_jobs_lock:
+        return vencimientos_jobs.get(job_id)
+
+def update_vencimientos_job(job_id, status, progress=0, message='', error=None):
+    """Actualiza el estado de un job de vencimientos"""
+    with vencimientos_jobs_lock:
+        if job_id in vencimientos_jobs:
+            vencimientos_jobs[job_id].update({
+                'status': status,
+                'progress': progress,
+                'message': message,
+                'error': error,
+                'updated_at': datetime.now().isoformat()
+            })
+
+def ejecutar_scraper_vencimientos(job_id):
+    """Ejecuta el scraper de vencimientos en segundo plano"""
+    try:
+        update_vencimientos_job(job_id, 'processing', 10, 'Iniciando scraper...')
+        
+        # Usar rutas absolutas para evitar problemas con el directorio de trabajo
+        scraper_path = VENCIMIENTOS_DIR.resolve() / 'scraper_vencimientos.py'
+        
+        logger.info(f"Ejecutando scraper desde: {scraper_path}")
+        logger.info(f"Directorio de trabajo actual: {os.getcwd()}")
+        
+        if not scraper_path.exists():
+            raise FileNotFoundError(f"Scraper no encontrado: {scraper_path}")
+        
+        # Guardar el directorio de trabajo original
+        original_cwd = os.getcwd()
+        logger.info(f"Directorio original guardado: {original_cwd}")
+        
+        try:
+            # Cambiar al directorio de vencimientos para que el scraper guarde los archivos ahí
+            vencimientos_dir_abs = str(VENCIMIENTOS_DIR.resolve())
+            os.chdir(vencimientos_dir_abs)
+            logger.info(f"Cambiado al directorio: {vencimientos_dir_abs}")
+            
+            # Agregar el directorio al path de Python
+            vencimientos_dir_str = str(VENCIMIENTOS_DIR.resolve())
+            if vencimientos_dir_str not in sys.path:
+                sys.path.insert(0, vencimientos_dir_str)
+            
+            # Importar y ejecutar el scraper usando ruta absoluta
+            spec = importlib.util.spec_from_file_location(
+                'scraper_vencimientos', 
+                str(scraper_path.resolve())
+            )
+            if spec is None or spec.loader is None:
+                raise ImportError(f"No se pudo cargar el módulo scraper desde {scraper_path}")
+            
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            
+            update_vencimientos_job(job_id, 'processing', 30, 'Ejecutando scraper...')
+            
+            # Ejecutar la función main del scraper
+            if hasattr(module, 'main'):
+                module.main()
+            else:
+                raise AttributeError("El scraper no tiene una función 'main()'")
+            
+            update_vencimientos_job(job_id, 'processing', 90, 'Finalizando...')
+            
+            # Buscar el archivo consolidado más reciente usando ruta absoluta
+            archivos_consolidados = list(VENCIMIENTOS_DIR.resolve().glob('vencimientos_consolidado_*.xlsx'))
+            if archivos_consolidados:
+                archivo_mas_reciente = max(archivos_consolidados, key=lambda p: p.stat().st_mtime)
+                update_vencimientos_job(
+                    job_id, 
+                    'completed', 
+                    100, 
+                    f'Scraper completado. Archivo: {archivo_mas_reciente.name}',
+                    None
+                )
+            else:
+                update_vencimientos_job(job_id, 'completed', 100, 'Scraper completado', None)
+                
+        finally:
+            # Restaurar el directorio de trabajo original
+            try:
+                os.chdir(original_cwd)
+                logger.info(f"Directorio restaurado a: {original_cwd}")
+            except Exception as e:
+                logger.warning(f"Error al restaurar directorio de trabajo: {e}")
+            
+    except Exception as e:
+        logger.error(f"Error ejecutando scraper de vencimientos: {str(e)}", exc_info=True)
+        update_vencimientos_job(job_id, 'error', 0, f'Error: {str(e)}', str(e))
+
+def encontrar_archivo_consolidado_mas_reciente():
+    """Encuentra el archivo consolidado más reciente"""
+    # Usar ruta absoluta para evitar problemas con el directorio de trabajo
+    archivos = list(VENCIMIENTOS_DIR.resolve().glob('vencimientos_consolidado_*.xlsx'))
+    if not archivos:
+        return None
+    return max(archivos, key=lambda p: p.stat().st_mtime)
+
+def extraer_ultimo_digito_cuil(cuil):
+    """Extrae el último dígito de un CUIL (formato XX-XXXXXXXX-X o XXXXXXXXXXX)"""
+    # Remover guiones y espacios
+    cuil_limpio = str(cuil).replace('-', '').replace(' ', '').strip()
+    if not cuil_limpio:
+        return None
+    # Retornar el último carácter
+    return cuil_limpio[-1] if len(cuil_limpio) > 0 else None
+
+def encontrar_columna_fecha_por_digito(columnas, fila, ultimo_digito):
+    """Encuentra la columna que contiene la fecha correspondiente al último dígito del CUIL"""
+    if ultimo_digito is None:
+        return None
+    
+    # Buscar columnas de fechas por terminación
+    columnas_fechas = [col for col in columnas if 'vencimiento según terminación' in str(col).lower() or 'terminación' in str(col).lower()]
+    
+    # Mapeo de dígitos a rangos comunes
+    # 0-1-2-3 -> primera columna
+    # 4-5-6 -> segunda columna  
+    # 7-8-9 -> tercera columna
+    digito_int = int(ultimo_digito) if ultimo_digito.isdigit() else None
+    
+    if digito_int is not None:
+        if digito_int in [0, 1, 2, 3]:
+            # Buscar primera columna de fechas (sin .1 o .2)
+            for col in columnas_fechas:
+                if '.1' not in str(col) and '.2' not in str(col):
+                    # Verificar que esta columna contenga el rango correcto
+                    valor = fila.get(col, '')
+                    if pd.notna(valor):
+                        valor_str = str(valor).strip()
+                        # Verificar si contiene el dígito en el rango
+                        if any(d in valor_str for d in ['0', '1', '2', '3']) or '0-1-2-3' in valor_str or '0, 1, 2' in valor_str:
+                            return col
+            # Si no se encuentra específica, usar la primera
+            if columnas_fechas:
+                primera = [c for c in columnas_fechas if '.1' not in str(c) and '.2' not in str(c)]
+                if primera:
+                    return primera[0]
+        
+        elif digito_int in [4, 5, 6]:
+            # Buscar segunda columna de fechas (.1)
+            for col in columnas_fechas:
+                if '.1' in str(col):
+                    valor = fila.get(col, '')
+                    if pd.notna(valor):
+                        valor_str = str(valor).strip()
+                        if any(d in valor_str for d in ['4', '5', '6']) or '4-5-6' in valor_str or '4, 5, 6' in valor_str:
+                            return col
+            # Si no se encuentra específica, usar la que tiene .1
+            segunda = [c for c in columnas_fechas if '.1' in str(c)]
+            if segunda:
+                return segunda[0]
+        
+        elif digito_int in [7, 8, 9]:
+            # Buscar tercera columna de fechas (.2)
+            for col in columnas_fechas:
+                if '.2' in str(col):
+                    valor = fila.get(col, '')
+                    if pd.notna(valor):
+                        valor_str = str(valor).strip()
+                        if any(d in valor_str for d in ['7', '8', '9']) or '7-8-9' in valor_str or '7, 8, 9' in valor_str:
+                            return col
+            # Si no se encuentra específica, usar la que tiene .2
+            tercera = [c for c in columnas_fechas if '.2' in str(c)]
+            if tercera:
+                return tercera[0]
+    
+    # Fallback: buscar en todas las columnas de fechas
+    for col in columnas_fechas:
+        valor = fila.get(col, '')
+        if pd.notna(valor):
+            valor_str = str(valor).strip()
+            if ultimo_digito in valor_str:
+                return col
+    
+    return None
+
+def buscar_por_ultimo_digito(df, ultimo_digito):
+    """Busca filas en un DataFrame donde alguna columna contenga el último dígito"""
+    if ultimo_digito is None:
+        return pd.DataFrame()
+    
+    filas_coincidentes = []
+    filas_procesadas = set()  # Para evitar duplicados
+    
+    # Buscar en columnas de fechas por terminación primero (más específico)
+    columnas_fechas_terminacion = [col for col in df.columns if 'vencimiento según terminación' in str(col).lower() or 'terminación' in str(col).lower()]
+    
+    # También buscar en columnas que puedan contener rangos de dígitos
+    columnas_digitos = []
+    for col in df.columns:
+        col_str = str(col).lower()
+        if any(term in col_str for term in ['dígito', 'digito', 'verificador', 'dv', 'd.v.', 'terminación', 'terminacion']):
+            columnas_digitos.append(col)
+    
+    # Buscar en todas las columnas
+    todas_columnas = list(df.columns)
+    
+    for idx, row in df.iterrows():
+        if idx in filas_procesadas:
+            continue
+            
+        coincidencia_encontrada = False
+        
+        # Primero buscar en columnas de fechas por terminación
+        for col in columnas_fechas_terminacion:
+            valor = row[col]
+            if pd.notna(valor):
+                valor_str = str(valor).strip()
+                # Buscar si contiene el dígito o el rango que incluye el dígito
+                if ultimo_digito in valor_str:
+                    # Verificar rangos comunes
+                    digito_int = int(ultimo_digito) if ultimo_digito.isdigit() else None
+                    if digito_int is not None:
+                        # Verificar si el dígito está en el rango de esta columna
+                        if digito_int in [0, 1, 2, 3] and ('.1' not in str(col) and '.2' not in str(col)):
+                            filas_coincidentes.append(idx)
+                            filas_procesadas.add(idx)
+                            coincidencia_encontrada = True
+                            break
+                        elif digito_int in [4, 5, 6] and '.1' in str(col):
+                            filas_coincidentes.append(idx)
+                            filas_procesadas.add(idx)
+                            coincidencia_encontrada = True
+                            break
+                        elif digito_int in [7, 8, 9] and '.2' in str(col):
+                            filas_coincidentes.append(idx)
+                            filas_procesadas.add(idx)
+                            coincidencia_encontrada = True
+                            break
+                        # Si contiene el dígito directamente
+                        elif ultimo_digito in valor_str:
+                            filas_coincidentes.append(idx)
+                            filas_procesadas.add(idx)
+                            coincidencia_encontrada = True
+                            break
+        
+        # Si no se encontró en columnas de fechas, buscar en otras columnas
+        if not coincidencia_encontrada:
+            for col in todas_columnas:
+                if col in columnas_fechas_terminacion:
+                    continue  # Ya las procesamos
+                    
+                valor = row[col]
+                if pd.notna(valor):
+                    valor_str = str(valor).strip()
+                    # Buscar si el último dígito del valor coincide
+                    if valor_str and len(valor_str) > 0:
+                        # Extraer solo dígitos del final
+                        digitos_finales = ''.join(filter(str.isdigit, valor_str[-3:]))
+                        if digitos_finales and digitos_finales[-1] == ultimo_digito:
+                            filas_coincidentes.append(idx)
+                            filas_procesadas.add(idx)
+                            break
+    
+    if filas_coincidentes:
+        return df.loc[filas_coincidentes]
+    return pd.DataFrame()
+
+@app.route('/vencimientos/listar', methods=['GET'])
+def vencimientos_listar():
+    """Lista los vencimientos disponibles desde el archivo consolidado más reciente (compartido para todos los usuarios)"""
+    try:
+        logger.info(f"Buscando archivo consolidado en: {VENCIMIENTOS_DIR.resolve()}")
+        archivo = encontrar_archivo_consolidado_mas_reciente()
+        
+        if not archivo:
+            logger.warning(f"No se encontró archivo consolidado en {VENCIMIENTOS_DIR.resolve()}")
+            return jsonify({
+                'success': False,
+                'message': 'No se encontró ningún archivo consolidado de vencimientos. Ejecuta "Refrescar Vencimientos" para generar los datos.',
+                'data': {}
+            }), 404
+        
+        logger.info(f"Archivo consolidado encontrado: {archivo}")
+        
+        # Leer el archivo Excel
+        excel_file = pd.ExcelFile(archivo)
+        fecha_modificacion = datetime.fromtimestamp(archivo.stat().st_mtime)
+        resultado = {
+            'archivo': archivo.name,
+            'fecha_actualizacion': fecha_modificacion.isoformat(),
+            'fecha_actualizacion_formateada': fecha_modificacion.strftime('%d/%m/%Y %H:%M:%S'),
+            'compartido': True,  # Indica que los datos son compartidos entre todos los usuarios
+            'hojas': {}
+        }
+        
+        # Leer cada hoja
+        for sheet_name in excel_file.sheet_names:
+            df = pd.read_excel(excel_file, sheet_name=sheet_name)
+            # Convertir a formato JSON (solo primeras 100 filas para no sobrecargar)
+            df_limited = df.head(100)
+            # Reemplazar NaN con None para que se serialice correctamente como null en JSON
+            df_limited = df_limited.where(pd.notna(df_limited), None)
+            # Convertir a diccionario
+            datos_dict = df_limited.to_dict('records')
+            # Limpiar cualquier NaN restante (por si acaso)
+            datos_limpios = []
+            for fila in datos_dict:
+                fila_limpia = {k: (None if (isinstance(v, float) and pd.isna(v)) else v) for k, v in fila.items()}
+                datos_limpios.append(fila_limpia)
+            
+            resultado['hojas'][sheet_name] = {
+                'total_filas': len(df),
+                'columnas': list(df.columns),
+                'datos': datos_limpios
+            }
+        
+        return jsonify({
+            'success': True,
+            'data': resultado
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error listando vencimientos: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': f'Error al listar vencimientos: {str(e)}'
+        }), 500
+
+@app.route('/vencimientos/refrescar', methods=['POST'])
+def vencimientos_refrescar():
+    """Ejecuta el scraper de vencimientos de forma asíncrona. Los datos generados serán compartidos para todos los usuarios."""
+    try:
+        # Verificar que el directorio de vencimientos existe
+        if not VENCIMIENTOS_DIR.exists():
+            logger.error(f"Directorio de vencimientos no existe: {VENCIMIENTOS_DIR}")
+            return jsonify({
+                'success': False,
+                'message': f'Directorio de vencimientos no encontrado: {VENCIMIENTOS_DIR}'
+            }), 500
+        
+        # Verificar que el scraper existe
+        scraper_path = VENCIMIENTOS_DIR / 'scraper_vencimientos.py'
+        if not scraper_path.exists():
+            logger.error(f"Scraper no encontrado: {scraper_path}")
+            return jsonify({
+                'success': False,
+                'message': f'Scraper no encontrado: {scraper_path}'
+            }), 404
+        
+        # Verificar si ya hay un job en proceso
+        with vencimientos_jobs_lock:
+            jobs_activos = [j for j in vencimientos_jobs.values() if j.get('status') in ['pending', 'processing']]
+            if jobs_activos:
+                job_activo = jobs_activos[0]
+                logger.info(f"Ya hay un job activo: {job_activo['id']}")
+                return jsonify({
+                    'success': False,
+                    'message': 'Ya hay una actualización en proceso. Espera a que finalice antes de iniciar otra.',
+                    'job_id': job_activo['id']
+                }), 409  # Conflict
+        
+        # Crear un nuevo job
+        job_id = str(uuid.uuid4())
+        
+        with vencimientos_jobs_lock:
+            vencimientos_jobs[job_id] = {
+                'id': job_id,
+                'status': 'pending',
+                'progress': 0,
+                'message': 'Job creado, esperando inicio...',
+                'error': None,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat(),
+                'compartido': True  # Indica que los datos serán compartidos
+            }
+        
+        logger.info(f"Iniciando scraper de vencimientos con job_id: {job_id}")
+        logger.info(f"Los datos se guardarán en: {VENCIMIENTOS_DIR.resolve()} (compartido para todos los usuarios)")
+        
+        # Iniciar el scraper en un thread separado
+        thread = threading.Thread(target=ejecutar_scraper_vencimientos, args=(job_id,))
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'Scraper iniciado en segundo plano. Los datos generados serán compartidos para todos los usuarios.',
+            'compartido': True
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error iniciando scraper de vencimientos: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': f'Error al iniciar scraper: {str(e)}'
+        }), 500
+
+@app.route('/vencimientos/status/<job_id>', methods=['GET'])
+def vencimientos_status(job_id):
+    """Consulta el estado de un job de refresco de vencimientos"""
+    try:
+        logger.info(f"Consultando estado de job: {job_id}")
+        logger.info(f"Jobs disponibles: {list(vencimientos_jobs.keys())}")
+        
+        job = get_vencimientos_job(job_id)
+        
+        if not job:
+            logger.warning(f"Job {job_id} no encontrado. Jobs disponibles: {list(vencimientos_jobs.keys())}")
+            return jsonify({
+                'success': False,
+                'message': f'Job no encontrado: {job_id}',
+                'available_jobs': list(vencimientos_jobs.keys())
+            }), 404
+        
+        logger.info(f"Job encontrado: {job_id}, estado: {job.get('status')}")
+        return jsonify({
+            'success': True,
+            'job': job
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error consultando estado de job: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': f'Error al consultar estado: {str(e)}'
+        }), 500
+
+@app.route('/vencimientos/filtrar-por-cuils', methods=['POST'])
+def vencimientos_filtrar_por_cuils():
+    """Filtra vencimientos por CUILs desde un archivo Excel"""
+    try:
+        # Validar que se recibió el archivo
+        if 'archivo' not in request.files:
+            return jsonify({
+                'success': False,
+                'message': 'No se recibió ningún archivo Excel'
+            }), 400
+        
+        archivo_cuils = request.files['archivo']
+        
+        if archivo_cuils.filename == '':
+            return jsonify({
+                'success': False,
+                'message': 'El archivo está vacío'
+            }), 400
+        
+        # Validar extensión
+        ext = Path(archivo_cuils.filename).suffix.lower()
+        if ext not in ['.xlsx', '.xls']:
+            return jsonify({
+                'success': False,
+                'message': 'El archivo debe ser Excel (.xlsx o .xls)'
+            }), 400
+        
+        # Guardar archivo temporalmente
+        temp_file = TEMP_DIR / f'cuils_{int(datetime.now().timestamp())}{ext}'
+        archivo_cuils.save(str(temp_file))
+        
+        try:
+            # Leer archivo de CUILs
+            logger.info(f"Leyendo archivo de CUILs: {temp_file}")
+            df_cuils = pd.read_excel(temp_file)
+            
+            logger.info(f"Columnas encontradas en el archivo: {list(df_cuils.columns)}")
+            logger.info(f"Total de filas: {len(df_cuils)}")
+            
+            # Buscar columna con CUILs (puede llamarse 'CUIL', 'cuil', 'CUIT', 'cuit', o la primera columna)
+            columna_cuil = None
+            posibles_nombres = ['CUIL', 'cuil', 'CUIT', 'cuit', 'CUIL/CUIT', 'CUIT/CUIL', 'CUIT/CUIL', 'CUIL_CUIT', 'CUIT_CUIL']
+            
+            # Buscar por nombre exacto o parcial
+            for col in df_cuils.columns:
+                col_str = str(col).upper().strip()
+                # Buscar coincidencia exacta o parcial
+                for nombre_posible in posibles_nombres:
+                    if nombre_posible.upper() in col_str or col_str in nombre_posible.upper():
+                        columna_cuil = col
+                        logger.info(f"Columna CUIL encontrada por nombre: {col}")
+                        break
+                if columna_cuil:
+                    break
+            
+            # Si no se encuentra, usar la primera columna que tenga datos
+            if columna_cuil is None:
+                logger.info("No se encontró columna con nombre CUIL/CUIT, usando la primera columna con datos")
+                for col in df_cuils.columns:
+                    valores_no_vacios = df_cuils[col].dropna()
+                    if len(valores_no_vacios) > 0:
+                        columna_cuil = col
+                        logger.info(f"Usando primera columna con datos: {col}")
+                        break
+            
+            if columna_cuil is None:
+                return jsonify({
+                    'success': False,
+                    'message': 'No se encontró ninguna columna con datos en el archivo',
+                    'columnas_disponibles': list(df_cuils.columns)
+                }), 400
+            
+            logger.info(f"Columna seleccionada para CUILs: {columna_cuil}")
+            
+            # Extraer CUILs - limpiar y convertir a string
+            cuils_raw = df_cuils[columna_cuil].dropna()
+            logger.info(f"Valores encontrados en la columna (primeros 5): {cuils_raw.head().tolist()}")
+            
+            # Convertir a string y limpiar
+            cuils = []
+            for valor in cuils_raw:
+                if pd.notna(valor):
+                    valor_str = str(valor).strip()
+                    # Remover espacios y caracteres especiales, pero mantener números y guiones
+                    if valor_str and len(valor_str) > 0:
+                        cuils.append(valor_str)
+            
+            # Eliminar duplicados
+            cuils = list(set(cuils))
+            
+            logger.info(f"Total de CUILs únicos encontrados: {len(cuils)}")
+            if len(cuils) > 0:
+                logger.info(f"Ejemplos de CUILs: {cuils[:5]}")
+            
+            if len(cuils) == 0:
+                return jsonify({
+                    'success': False,
+                    'message': f'No se encontraron CUILs válidos en la columna "{columna_cuil}". Verifica que el archivo contenga CUILs en formato válido.',
+                    'columna_usada': columna_cuil,
+                    'columnas_disponibles': list(df_cuils.columns),
+                    'total_filas': len(df_cuils)
+                }), 400
+            
+            # Obtener archivo consolidado más reciente
+            archivo_consolidado = encontrar_archivo_consolidado_mas_reciente()
+            
+            if not archivo_consolidado:
+                return jsonify({
+                    'success': False,
+                    'message': 'No se encontró ningún archivo consolidado de vencimientos. Ejecuta primero "Refrescar Vencimientos".'
+                }), 404
+            
+            # Leer archivo consolidado
+            excel_file = pd.ExcelFile(archivo_consolidado)
+            
+            # Procesar cada CUIL
+            resultados = []
+            
+            for cuil in cuils:
+                ultimo_digito = extraer_ultimo_digito_cuil(cuil)
+                
+                if ultimo_digito is None:
+                    resultados.append({
+                        'CUIL': cuil,
+                        'estado': 'Sin vencimientos',
+                        'motivo': 'CUIL inválido',
+                        'datos': []
+                    })
+                    continue
+                
+                # Buscar en todas las hojas
+                vencimientos_encontrados = []
+                
+                for sheet_name in excel_file.sheet_names:
+                    df = pd.read_excel(excel_file, sheet_name=sheet_name)
+                    
+                    # Identificar la columna de fecha correspondiente al dígito ANTES de procesar filas
+                    # Buscar columnas de fechas por terminación
+                    columnas_fechas = [col for col in df.columns if 'vencimiento según terminación' in str(col).lower() or 'terminación' in str(col).lower()]
+                    
+                    # Determinar qué columna usar según el dígito
+                    columna_fecha_digito = None
+                    digito_int = int(ultimo_digito) if ultimo_digito.isdigit() else None
+                    
+                    if digito_int is not None and columnas_fechas:
+                        if digito_int in [0, 1, 2, 3]:
+                            # Primera columna (sin .1 o .2)
+                            primera = [c for c in columnas_fechas if '.1' not in str(c) and '.2' not in str(c)]
+                            if primera:
+                                columna_fecha_digito = primera[0]
+                        elif digito_int in [4, 5, 6]:
+                            # Segunda columna (.1)
+                            segunda = [c for c in columnas_fechas if '.1' in str(c)]
+                            if segunda:
+                                columna_fecha_digito = segunda[0]
+                        elif digito_int in [7, 8, 9]:
+                            # Tercera columna (.2)
+                            tercera = [c for c in columnas_fechas if '.2' in str(c)]
+                            if tercera:
+                                columna_fecha_digito = tercera[0]
+                    
+                    logger.info(f"Hoja {sheet_name}: columna_fecha_digito={columna_fecha_digito} para dígito {ultimo_digito}")
+                    
+                    if columna_fecha_digito:
+                        # Procesar TODAS las filas y extraer la fecha de la columna correspondiente
+                        for idx, fila in df.iterrows():
+                            # Obtener la fecha de la columna correspondiente al dígito
+                            fecha_vencimiento = fila.get(columna_fecha_digito)
+                            
+                            # Solo procesar si hay una fecha válida
+                            if pd.notna(fecha_vencimiento) and str(fecha_vencimiento).strip():
+                                fecha_limpia = None if (isinstance(fecha_vencimiento, float) and pd.isna(fecha_vencimiento)) else fecha_vencimiento
+                                
+                                if fecha_limpia and str(fecha_limpia).strip():
+                                    # Convertir fila a diccionario y limpiar NaN
+                                    fila_dict = fila.to_dict()
+                                    fila_limpia = {}
+                                    
+                                    # Agregar columnas de información general
+                                    columnas_info = ['Mes de devengamiento', 'Periodo devengado', 'MES DE DEVENGAMIENTO', 
+                                                    'PERIODO DEVENGADO', 'Mes', 'Período', 'Periodo', 'Devengamiento']
+                                    
+                                    for k, v in fila_dict.items():
+                                        # Limpiar NaN
+                                        valor_limpio = None if (isinstance(v, float) and pd.isna(v)) else v
+                                        
+                                        col_str = str(k).lower()
+                                        
+                                        # Incluir columnas de información general
+                                        if any(info_col.lower() in col_str for info_col in columnas_info):
+                                            fila_limpia[k] = valor_limpio
+                                        # Incluir la fecha de vencimiento
+                                        elif k == columna_fecha_digito:
+                                            fila_limpia['Fecha_Vencimiento'] = fecha_limpia
+                                        # Excluir otras columnas de fechas por terminación
+                                        elif 'vencimiento según terminación' in col_str or 'terminación' in col_str:
+                                            continue
+                                        else:
+                                            # Incluir otras columnas que no sean de fechas por terminación
+                                            if valor_limpio is not None:
+                                                fila_limpia[k] = valor_limpio
+                                    
+                                    # Agregar el vencimiento encontrado
+                                    vencimientos_encontrados.append({
+                                        'tipo_vencimiento': sheet_name,
+                                        **fila_limpia
+                                    })
+                    
+                    logger.info(f"Total vencimientos encontrados en {sheet_name}: {len([v for v in vencimientos_encontrados if v.get('tipo_vencimiento') == sheet_name])}")
+                
+                if vencimientos_encontrados:
+                    resultados.append({
+                        'CUIL': cuil,
+                        'ultimo_digito': ultimo_digito,
+                        'estado': 'Con vencimientos',
+                        'total': len(vencimientos_encontrados),
+                        'datos': vencimientos_encontrados
+                    })
+                else:
+                    resultados.append({
+                        'CUIL': cuil,
+                        'ultimo_digito': ultimo_digito,
+                        'estado': 'Sin vencimientos',
+                        'datos': []
+                    })
+            
+            # Crear DataFrame con resultados organizados: CUIL -> Tipo -> Fechas
+            filas_resultado = []
+            for resultado in resultados:
+                cuil = resultado['CUIL']
+                ultimo_digito = resultado.get('ultimo_digito', '')
+                estado = resultado['estado']
+                
+                if resultado['datos']:
+                    # Fila de encabezado del CUIL
+                    filas_resultado.append({
+                        'CUIL': cuil,
+                        'Ultimo_Digito': ultimo_digito,
+                        'Estado': estado,
+                        'Tipo_Vencimiento': f"TOTAL: {len(resultado['datos'])} vencimiento(s)",
+                        'Es_Encabezado_CUIL': True
+                    })
+                    
+                    # Agrupar vencimientos por tipo
+                    vencimientos_por_tipo = {}
+                    for vencimiento in resultado['datos']:
+                        tipo = vencimiento.get('tipo_vencimiento', 'Sin tipo')
+                        if tipo not in vencimientos_por_tipo:
+                            vencimientos_por_tipo[tipo] = []
+                        vencimientos_por_tipo[tipo].append(vencimiento)
+                    
+                    # Crear filas organizadas: Tipo -> Fechas
+                    for tipo_vencimiento, vencimientos in vencimientos_por_tipo.items():
+                        # Fila de encabezado del tipo de vencimiento
+                        filas_resultado.append({
+                            'CUIL': '',
+                            'Ultimo_Digito': '',
+                            'Estado': '',
+                            'Tipo_Vencimiento': f"  → {tipo_vencimiento} ({len(vencimientos)} vencimiento(s))",
+                            'Es_Encabezado_CUIL': False,
+                            'Es_Encabezado_Tipo': True
+                        })
+                        
+                        # Filas con los datos de cada vencimiento (fechas)
+                        for vencimiento in vencimientos:
+                            # Extraer todas las columnas excepto tipo_vencimiento
+                            fila_vencimiento = {
+                                'CUIL': '',
+                                'Ultimo_Digito': '',
+                                'Estado': '',
+                                'Tipo_Vencimiento': '',  # Vacío porque ya está en el encabezado
+                                'Es_Encabezado_CUIL': False,
+                                'Es_Encabezado_Tipo': False
+                            }
+                            
+                            # Agregar todas las columnas del vencimiento
+                            for k, v in vencimiento.items():
+                                if k != 'tipo_vencimiento':
+                                    fila_vencimiento[k] = v
+                            
+                            filas_resultado.append(fila_vencimiento)
+                    
+                    # Fila separadora después de cada CUIL
+                    filas_resultado.append({
+                        'CUIL': '',
+                        'Ultimo_Digito': '',
+                        'Estado': '',
+                        'Tipo_Vencimiento': '',
+                        'Es_Encabezado_CUIL': False,
+                        'Es_Encabezado_Tipo': False
+                    })
+                else:
+                    # Si no hay vencimientos, crear una fila indicando esto
+                    fila = {
+                        'CUIL': cuil,
+                        'Ultimo_Digito': ultimo_digito,
+                        'Estado': estado,
+                        'Motivo': resultado.get('motivo', 'No se encontraron coincidencias'),
+                        'Tipo_Vencimiento': '',
+                        'Es_Encabezado_CUIL': False,
+                        'Es_Encabezado_Tipo': False
+                    }
+                    filas_resultado.append(fila)
+                    # Fila separadora
+                    filas_resultado.append({
+                        'CUIL': '',
+                        'Ultimo_Digito': '',
+                        'Estado': '',
+                        'Tipo_Vencimiento': '',
+                        'Es_Encabezado_CUIL': False,
+                        'Es_Encabezado_Tipo': False
+                    })
+            
+            df_resultado = pd.DataFrame(filas_resultado)
+            
+            # Guardar resultado en Excel con formato
+            resultado_filename = f'vencimientos_filtrados_{int(datetime.now().timestamp())}.xlsx'
+            resultado_path = TEMP_DIR / resultado_filename
+            
+            with pd.ExcelWriter(resultado_path, engine='openpyxl') as writer:
+                df_resultado.to_excel(writer, sheet_name='Vencimientos_Filtrados', index=False)
+            
+            # Aplicar formato al Excel (colores para encabezados)
+            try:
+                from openpyxl import load_workbook
+                from openpyxl.styles import Font, PatternFill, Alignment
+                
+                wb = load_workbook(resultado_path)
+                ws = wb['Vencimientos_Filtrados']
+                
+                # Estilos
+                header_cuil_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+                header_tipo_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
+                header_font = Font(bold=True, color="FFFFFF", size=11)
+                tipo_font = Font(bold=True, color="000000", size=10)
+                
+                # Aplicar formato a las filas
+                for idx, row in enumerate(ws.iter_rows(min_row=2, max_row=ws.max_row), start=2):
+                    # Verificar si es encabezado de CUIL
+                    es_encabezado_cuil = False
+                    es_encabezado_tipo = False
+                    
+                    # Buscar columna Es_Encabezado_CUIL y Es_Encabezado_Tipo
+                    for col_idx, cell in enumerate(row, start=1):
+                        header = ws.cell(row=1, column=col_idx).value
+                        if header == 'Es_Encabezado_CUIL' and cell.value == True:
+                            es_encabezado_cuil = True
+                        if header == 'Es_Encabezado_Tipo' and cell.value == True:
+                            es_encabezado_tipo = True
+                    
+                    if es_encabezado_cuil:
+                        # Formato para encabezado de CUIL
+                        for cell in row:
+                            if cell.value:  # Solo aplicar si tiene valor
+                                cell.fill = header_cuil_fill
+                                cell.font = header_font
+                                cell.alignment = Alignment(horizontal='left', vertical='center')
+                    elif es_encabezado_tipo:
+                        # Formato para encabezado de tipo
+                        for cell in row:
+                            if cell.value:  # Solo aplicar si tiene valor
+                                cell.fill = header_tipo_fill
+                                cell.font = tipo_font
+                                cell.alignment = Alignment(horizontal='left', vertical='center')
+                
+                # Ocultar columnas de control
+                for col_idx, header in enumerate(ws[1], start=1):
+                    if header.value in ['Es_Encabezado_CUIL', 'Es_Encabezado_Tipo']:
+                        ws.column_dimensions[header.column_letter].hidden = True
+                
+                wb.save(resultado_path)
+            except Exception as e:
+                logger.warning(f"No se pudo aplicar formato al Excel: {e}")
+            
+            base_url = request.host_url.rstrip('/')
+            
+            return jsonify({
+                'success': True,
+                'message': f'Filtrado completado. {len(cuils)} CUILs procesados.',
+                'filename': resultado_filename,
+                'total_cuils': len(cuils),
+                'cuils_con_vencimientos': sum(1 for r in resultados if r['estado'] == 'Con vencimientos'),
+                'cuils_sin_vencimientos': sum(1 for r in resultados if r['estado'] == 'Sin vencimientos'),
+                'downloadUrl': f'{base_url}/download/{resultado_filename}'
+            }), 200
+            
+        finally:
+            # Limpiar archivo temporal
+            if temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except Exception as e:
+                    logger.warning(f"Error al eliminar archivo temporal: {e}")
+        
+    except Exception as e:
+        logger.error(f"Error filtrando vencimientos por CUILs: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': f'Error al filtrar vencimientos: {str(e)}'
+        }), 500
+
+# ==================== FIN SISTEMA DE VENCIMIENTOS ====================
 
 def load_extractor_module(script_name):
     """Carga dinámicamente un módulo extractor"""

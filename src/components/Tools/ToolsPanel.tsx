@@ -3,6 +3,7 @@ import { Table2, FileText, Scale, Calendar, ArrowLeft } from 'lucide-react';
 import { TableExtractor } from './TableExtractor';
 import { PDFtoOCR } from './PDFtoOCR';
 import { Consilador } from './Consilador';
+import { Vencimientos } from './Vencimientos';
 
 const tools = [
   {
@@ -39,7 +40,7 @@ const tools = [
     icon: Calendar,
     color: 'bg-orange-100 text-orange-600',
     hoverColor: 'hover:bg-orange-50',
-    comingSoon: true,
+    comingSoon: false,
   },
 ];
 
@@ -100,6 +101,21 @@ export function ToolsPanel() {
           Volver a Herramientas
         </button>
         <Consilador />
+      </div>
+    );
+  }
+
+  if (activeTool === 'vencimiento') {
+    return (
+      <div className="h-full overflow-auto">
+        <button
+          onClick={handleBack}
+          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Volver a Herramientas
+        </button>
+        <Vencimientos />
       </div>
     );
   }
