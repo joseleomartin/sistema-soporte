@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Table2, FileText, ArrowLeft } from 'lucide-react';
+import { Table2, FileText, Scale, Calendar, ArrowLeft } from 'lucide-react';
 import { TableExtractor } from './TableExtractor';
 import { PDFtoOCR } from './PDFtoOCR';
+import { Consilador } from './Consilador';
 
 const tools = [
   {
@@ -11,6 +12,7 @@ const tools = [
     icon: Table2,
     color: 'bg-blue-100 text-blue-600',
     hoverColor: 'hover:bg-blue-50',
+    comingSoon: false,
   },
   {
     id: 'pdf-ocr',
@@ -19,6 +21,25 @@ const tools = [
     icon: FileText,
     color: 'bg-green-100 text-green-600',
     hoverColor: 'hover:bg-green-50',
+    comingSoon: false,
+  },
+  {
+    id: 'consilador',
+    name: 'Consiliador',
+    description: 'Concilia y compara datos financieros',
+    icon: Scale,
+    color: 'bg-purple-100 text-purple-600',
+    hoverColor: 'hover:bg-purple-50',
+    comingSoon: false,
+  },
+  {
+    id: 'vencimiento',
+    name: 'Vencimiento',
+    description: 'Gestiona y controla vencimientos de clientes',
+    icon: Calendar,
+    color: 'bg-orange-100 text-orange-600',
+    hoverColor: 'hover:bg-orange-50',
+    comingSoon: true,
   },
 ];
 
@@ -26,6 +47,10 @@ export function ToolsPanel() {
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
   const handleToolClick = (toolId: string) => {
+    const tool = tools.find(t => t.id === toolId);
+    if (tool?.comingSoon) {
+      return; // No hacer nada si está en "próximamente"
+    }
     setActiveTool(toolId);
   };
 
@@ -64,6 +89,21 @@ export function ToolsPanel() {
     );
   }
 
+  if (activeTool === 'consilador') {
+    return (
+      <div className="h-full overflow-auto">
+        <button
+          onClick={handleBack}
+          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Volver a Herramientas
+        </button>
+        <Consilador />
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-auto">
       <div className="mb-8">
@@ -74,13 +114,29 @@ export function ToolsPanel() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool) => {
           const Icon = tool.icon;
+          const isExperimental = tool.id === 'consilador';
+          const isComingSoon = tool.comingSoon;
           return (
             <button
               key={tool.id}
               onClick={() => handleToolClick(tool.id)}
-              className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left transition ${tool.hoverColor} hover:shadow-md group`}
+              className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left transition relative ${
+                isComingSoon 
+                  ? 'opacity-75 cursor-not-allowed' 
+                  : `${tool.hoverColor} hover:shadow-md group`
+              }`}
             >
-              <div className={`w-14 h-14 ${tool.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition`}>
+              {isExperimental && (
+                <span className="absolute top-3 right-3 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full border border-yellow-300">
+                  Experimental
+                </span>
+              )}
+              {isComingSoon && (
+                <span className="absolute top-3 right-3 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full border border-blue-300">
+                  Próximamente
+                </span>
+              )}
+              <div className={`w-14 h-14 ${tool.color} rounded-xl flex items-center justify-center mb-4 ${!isComingSoon ? 'group-hover:scale-110 transition' : ''}`}>
                 <Icon className="w-7 h-7" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{tool.name}</h3>

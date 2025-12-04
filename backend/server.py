@@ -623,6 +623,141 @@ def get_google_client_id():
         logger.error(f"Error en get_google_client_id: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+@app.route('/consilador/comparar', methods=['POST'])
+def consilador_comparar():
+    """Endpoint para comparar dos archivos Excel usando el consilador"""
+    try:
+        # Validar que se recibieron los dos archivos Excel
+        if 'archivo1' not in request.files or 'archivo2' not in request.files:
+            return jsonify({
+                'success': False, 
+                'message': 'Se requieren dos archivos Excel (archivo1 y archivo2)'
+            }), 400
+        
+        archivo1 = request.files['archivo1']
+        archivo2 = request.files['archivo2']
+        
+        # Validar que los archivos tienen nombres
+        if archivo1.filename == '' or archivo2.filename == '':
+            return jsonify({
+                'success': False, 
+                'message': 'Ambos archivos deben tener un nombre válido'
+            }), 400
+        
+        # Validar extensiones
+        allowed_extensions = {'.xlsx', '.xls'}
+        ext1 = Path(archivo1.filename).suffix.lower()
+        ext2 = Path(archivo2.filename).suffix.lower()
+        
+        if ext1 not in allowed_extensions or ext2 not in allowed_extensions:
+            return jsonify({
+                'success': False, 
+                'message': 'Ambos archivos deben ser Excel (.xlsx o .xls)'
+            }), 400
+        
+        # Crear directorio temporal para la comparación
+        import time
+        comparacion_dir = TEMP_DIR / f'consilador_{int(time.time())}'
+        comparacion_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Guardar los archivos temporalmente
+        archivo1_path = comparacion_dir / f'archivo1{ext1}'
+        archivo2_path = comparacion_dir / f'archivo2{ext2}'
+        
+        archivo1.save(str(archivo1_path))
+        archivo2.save(str(archivo2_path))
+        
+        logger.info(f"Archivos guardados en: {comparacion_dir}")
+        
+        try:
+            # Importar el módulo de comparación
+            consilador_dir = Path(__file__).parent / 'Consilador'
+            comparar_automatico_path = consilador_dir / 'comparar_automatico.py'
+            
+            if not comparar_automatico_path.exists():
+                return jsonify({
+                    'success': False,
+                    'message': 'Módulo de comparación no encontrado'
+                }), 500
+            
+            # Agregar el directorio al path
+            sys.path.insert(0, str(consilador_dir))
+            
+            # Cambiar al directorio temporal para que el script encuentre los archivos
+            original_cwd = os.getcwd()
+            os.chdir(str(comparacion_dir))
+            
+            try:
+                # Importar y ejecutar la función de comparación
+                spec = importlib.util.spec_from_file_location(
+                    'comparar_automatico', 
+                    str(comparar_automatico_path)
+                )
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                # Ejecutar la comparación
+                logger.info("Ejecutando comparación de archivos...")
+                resultado = module.comparar_archivos_actuales()
+                
+                if not resultado:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Error al comparar los archivos'
+                    }), 500
+                
+                # Buscar el archivo de resultado
+                resultado_path = comparacion_dir / 'resultado_comparacion.xlsx'
+                
+                if not resultado_path.exists():
+                    return jsonify({
+                        'success': False,
+                        'message': 'No se generó el archivo de resultado'
+                    }), 500
+                
+                # Generar nombre único para el archivo de resultado
+                resultado_filename = f'resultado_comparacion_{int(time.time())}.xlsx'
+                resultado_final = TEMP_DIR / resultado_filename
+                
+                # Mover el resultado al directorio temporal principal
+                import shutil
+                shutil.move(str(resultado_path), str(resultado_final))
+                
+                base_url = request.host_url.rstrip('/')
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Comparación completada exitosamente',
+                    'filename': resultado_filename,
+                    'downloadUrl': f'{base_url}/download/{resultado_filename}'
+                })
+                
+            finally:
+                # Restaurar directorio original
+                os.chdir(original_cwd)
+                # Limpiar archivos temporales del directorio de comparación
+                try:
+                    import shutil
+                    if comparacion_dir.exists():
+                        shutil.rmtree(comparacion_dir, ignore_errors=True)
+                        logger.info(f"Directorio temporal limpiado: {comparacion_dir}")
+                except Exception as e:
+                    logger.warning(f"Error al limpiar archivos temporales: {e}")
+                
+        except Exception as e:
+            logger.error(f"Error durante la comparación: {str(e)}", exc_info=True)
+            return jsonify({
+                'success': False,
+                'message': f'Error al procesar los archivos: {str(e)}'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error general en consilador_comparar: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': f'Error del servidor: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     # NOTA: Este bloque SOLO se ejecuta cuando se corre directamente con python server.py
     # Railway/Gunicorn NO ejecuta este bloque, importa la app directamente
