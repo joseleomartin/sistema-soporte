@@ -22,6 +22,7 @@ interface Course {
     full_name: string;
     avatar_url?: string | null;
   };
+  parts_count?: number;
 }
 
 export function LibraryAndCourses() {
@@ -51,7 +52,35 @@ export function LibraryAndCourses() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCourses(data || []);
+
+      // Obtener el conteo de partes para cada curso
+      if (data && data.length > 0) {
+        const courseIds = data.map(course => course.id);
+        const { data: partsData, error: partsError } = await supabase
+          .from('course_parts')
+          .select('course_id')
+          .in('course_id', courseIds);
+
+        if (partsError) throw partsError;
+
+        // Contar partes por curso
+        const partsCountMap: { [key: string]: number } = {};
+        if (partsData) {
+          partsData.forEach(part => {
+            partsCountMap[part.course_id] = (partsCountMap[part.course_id] || 0) + 1;
+          });
+        }
+
+        // Agregar el conteo a cada curso
+        const coursesWithParts = data.map(course => ({
+          ...course,
+          parts_count: partsCountMap[course.id] || 0,
+        }));
+
+        setCourses(coursesWithParts);
+      } else {
+        setCourses([]);
+      }
     } catch (error) {
       console.error('Error fetching courses:', error);
     } finally {
@@ -167,7 +196,10 @@ export function LibraryAndCourses() {
       {selectedCourse && (
         <CourseDetailModal
           course={selectedCourse}
-          onClose={() => setSelectedCourse(null)}
+          onClose={() => {
+            setSelectedCourse(null);
+            fetchCourses(); // Refrescar para actualizar conteo de partes
+          }}
         />
       )}
     </div>

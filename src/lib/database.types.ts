@@ -229,8 +229,8 @@ export interface Database {
           id: string
           user_id: string
           content: string | null
-          media_type: 'image' | 'video' | 'gif'
-          media_url: string
+          media_type: 'image' | 'video' | 'gif' | null
+          media_url: string | null
           created_at: string
           updated_at: string
         }
@@ -238,8 +238,8 @@ export interface Database {
           id?: string
           user_id: string
           content?: string | null
-          media_type: 'image' | 'video' | 'gif'
-          media_url: string
+          media_type?: 'image' | 'video' | 'gif' | null
+          media_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -247,8 +247,8 @@ export interface Database {
           id?: string
           user_id?: string
           content?: string | null
-          media_type?: 'image' | 'video' | 'gif'
-          media_url?: string
+          media_type?: 'image' | 'video' | 'gif' | null
+          media_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -323,6 +323,137 @@ export interface Database {
           content?: string
           created_at?: string
           updated_at?: string
+        }
+      }
+      social_post_media: {
+        Row: {
+          id: string
+          post_id: string
+          media_type: 'image' | 'video' | 'gif'
+          media_url: string
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          media_type: 'image' | 'video' | 'gif'
+          media_url: string
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          media_type?: 'image' | 'video' | 'gif'
+          media_url?: string
+          display_order?: number
+          created_at?: string
+        }
+      }
+      library_courses: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          youtube_url: string | null
+          file_path: string | null
+          file_name: string | null
+          file_type: string | null
+          file_size: number | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          youtube_url?: string | null
+          file_path?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_size?: number | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          youtube_url?: string | null
+          file_path?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_size?: number | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      course_parts: {
+        Row: {
+          id: string
+          course_id: string
+          part_number: number
+          title: string
+          description: string | null
+          youtube_url: string | null
+          file_path: string | null
+          file_name: string | null
+          file_type: string | null
+          file_size: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          part_number: number
+          title: string
+          description?: string | null
+          youtube_url?: string | null
+          file_path?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_size?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          part_number?: number
+          title?: string
+          description?: string | null
+          youtube_url?: string | null
+          file_path?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_size?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      client_favorites: {
+        Row: {
+          id: string
+          user_id: string
+          subforum_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subforum_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subforum_id?: string
+          created_at?: string
         }
       }
     }

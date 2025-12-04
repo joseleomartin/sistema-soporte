@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star } from 'lucide-react';
 import { CreateForumModal } from './CreateForumModal';
 import { SubforumChat } from './SubforumChat';
 import { ManagePermissionsModal } from './ManagePermissionsModal';
@@ -17,6 +17,7 @@ interface Subforum {
   forum_id: string;
   created_at: string;
   message_count?: number;
+  is_favorite?: boolean;
 }
 
 interface ForumsListProps {
@@ -44,13 +45,91 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   const [sortBy, setSortBy] = useState<'alphabetical' | 'activity' | 'none'>('alphabetical');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filterByTasks, setFilterByTasks] = useState<'all' | 'with_tasks' | 'without_tasks'>('all');
+  const [filterByFavorites, setFilterByFavorites] = useState<boolean>(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const canCreateForum = profile?.role === 'admin' || profile?.role === 'support';
 
   useEffect(() => {
     loadSubforums();
     loadPendingTasks();
+    loadFavorites();
   }, [profile?.id]);
+
+  const loadFavorites = async () => {
+    if (!profile?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('client_favorites')
+        .select('subforum_id')
+        .eq('user_id', profile.id);
+
+      if (error) throw error;
+
+      const favoriteSet = new Set<string>();
+      data?.forEach((fav) => {
+        favoriteSet.add(fav.subforum_id);
+      });
+      setFavoriteIds(favoriteSet);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
+
+  const toggleFavorite = async (subforumId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!profile?.id) return;
+
+    try {
+      const isFavorite = favoriteIds.has(subforumId);
+
+      if (isFavorite) {
+        // Eliminar favorito
+        const { error } = await supabase
+          .from('client_favorites')
+          .delete()
+          .eq('user_id', profile.id)
+          .eq('subforum_id', subforumId);
+
+        if (error) throw error;
+
+        setFavoriteIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(subforumId);
+          return newSet;
+        });
+      } else {
+        // Agregar favorito
+        const { error } = await supabase
+          .from('client_favorites')
+          .insert({
+            user_id: profile.id,
+            subforum_id: subforumId,
+          });
+
+        if (error) throw error;
+
+        setFavoriteIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(subforumId);
+          return newSet;
+        });
+      }
+
+      // Actualizar el estado de los subforos
+      setSubforums((prev) =>
+        prev.map((forum) =>
+          forum.id === subforumId
+            ? { ...forum, is_favorite: !isFavorite }
+            : forum
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert('Error al actualizar el favorito');
+    }
+  };
 
   // Verificar si hay un parámetro subforum en la URL después de cargar los subforos
   useEffect(() => {
@@ -137,7 +216,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
 
   useEffect(() => {
     filterSubforums();
-  }, [subforums, searchTerm, sortBy, sortOrder, filterByTasks, pendingTasksCount]);
+  }, [subforums, searchTerm, sortBy, sortOrder, filterByTasks, filterByFavorites, favoriteIds, pendingTasksCount]);
 
   const loadSubforums = async () => {
     if (!profile?.id) return;
@@ -182,6 +261,20 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       if (error) throw error;
 
       if (data) {
+        // Cargar favoritos si no están cargados
+        let currentFavoriteIds = favoriteIds;
+        if (currentFavoriteIds.size === 0 && profile?.id) {
+          const { data: favData } = await supabase
+            .from('client_favorites')
+            .select('subforum_id')
+            .eq('user_id', profile.id);
+
+          if (favData) {
+            currentFavoriteIds = new Set(favData.map((fav) => fav.subforum_id));
+            setFavoriteIds(currentFavoriteIds);
+          }
+        }
+
         const forumsWithCounts = await Promise.all(
           data.map(async (forum) => {
             // Contar archivos adjuntos en los mensajes
@@ -201,6 +294,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
             return {
               ...forum,
               message_count: fileCount, // Ahora es cantidad de archivos
+              is_favorite: currentFavoriteIds.has(forum.id),
             };
           })
         );
@@ -267,6 +361,11 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   const filterSubforums = () => {
     let filtered = [...subforums];
 
+    // Filtro por favoritos
+    if (filterByFavorites) {
+      filtered = filtered.filter((forum) => favoriteIds.has(forum.id));
+    }
+
     // Filtro por búsqueda de texto
     if (searchTerm) {
       filtered = filtered.filter(
@@ -288,19 +387,27 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       );
     }
 
-    // Ordenamiento
-    if (sortBy === 'alphabetical') {
-      filtered.sort((a, b) => {
+    // Ordenamiento: Favoritos primero, luego el orden seleccionado
+    filtered.sort((a, b) => {
+      const aIsFavorite = favoriteIds.has(a.id);
+      const bIsFavorite = favoriteIds.has(b.id);
+
+      // Si uno es favorito y el otro no, el favorito va primero
+      if (aIsFavorite && !bIsFavorite) return -1;
+      if (!aIsFavorite && bIsFavorite) return 1;
+
+      // Si ambos son favoritos o ninguno, aplicar el orden seleccionado
+      if (sortBy === 'alphabetical') {
         const comparison = a.client_name.localeCompare(b.client_name, 'es', { sensitivity: 'base' });
         return sortOrder === 'asc' ? comparison : -comparison;
-      });
-    } else if (sortBy === 'activity') {
-      filtered.sort((a, b) => {
+      } else if (sortBy === 'activity') {
         const dateA = new Date(a.created_at).getTime();
         const dateB = new Date(b.created_at).getTime();
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-      });
-    }
+      }
+
+      return 0;
+    });
 
     setFilteredSubforums(filtered);
   };
@@ -465,13 +572,29 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
             </select>
           </div>
 
+          {/* Filtro por Favoritos */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFilterByFavorites(!filterByFavorites)}
+              className={`flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
+                filterByFavorites
+                  ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
+                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Star className={`w-4 h-4 ${filterByFavorites ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+              <span>Favoritos</span>
+            </button>
+          </div>
+
           {/* Botón para limpiar filtros */}
-          {(sortBy !== 'none' || filterByTasks !== 'all' || searchTerm) && (
+          {(sortBy !== 'none' || filterByTasks !== 'all' || filterByFavorites || searchTerm) && (
             <button
               onClick={() => {
                 setSortBy('none');
                 setSortOrder('asc');
                 setFilterByTasks('all');
+                setFilterByFavorites(false);
                 setSearchTerm('');
               }}
               className="ml-auto px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -502,30 +625,44 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
               className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition relative group cursor-pointer"
               onClick={() => setSelectedSubforum(forum.id)}
             >
-              {canCreateForum && (
-                <div className="absolute top-4 right-4 flex gap-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setManageDeptPermissionsFor({ forumId: forum.forum_id, forumName: forum.name });
-                    }}
-                    className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
-                    title="Permisos por departamento"
-                  >
-                    <Building2 className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setManagePermissionsFor(forum);
-                    }}
-                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                    title="Permisos por usuario"
-                  >
-                    <Users className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
+              <div className="absolute top-4 right-4 flex gap-1">
+                {/* Botón de Favorito */}
+                <button
+                  onClick={(e) => toggleFavorite(forum.id, e)}
+                  className={`p-2 rounded-lg transition ${
+                    favoriteIds.has(forum.id)
+                      ? 'text-yellow-500 bg-yellow-50 hover:bg-yellow-100'
+                      : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
+                  }`}
+                  title={favoriteIds.has(forum.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                >
+                  <Star className={`w-5 h-5 ${favoriteIds.has(forum.id) ? 'fill-current' : ''}`} />
+                </button>
+                {canCreateForum && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setManageDeptPermissionsFor({ forumId: forum.forum_id, forumName: forum.name });
+                      }}
+                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                      title="Permisos por departamento"
+                    >
+                      <Building2 className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setManagePermissionsFor(forum);
+                      }}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      title="Permisos por usuario"
+                    >
+                      <Users className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+              </div>
 
               <div className="flex items-start justify-between mb-4">
                 <button

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Edit, Trash2, Play, User, FileText, Image, File, Download, Eye, X, Loader2 } from 'lucide-react';
+import { Edit, Trash2, Play, User, FileText, Image, File, Download, Eye, X, Loader2, List } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Course {
@@ -18,6 +18,7 @@ interface Course {
     full_name: string;
     avatar_url?: string | null;
   };
+  parts_count?: number;
 }
 
 interface CourseCardProps {
@@ -143,9 +144,17 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-              {course.title}
-            </h3>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                {course.title}
+              </h3>
+              {course.parts_count !== undefined && course.parts_count > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                  <List className="w-3 h-3" />
+                  {course.parts_count} {course.parts_count === 1 ? 'parte' : 'partes'}
+                </span>
+              )}
+            </div>
             {course.created_by_profile && (
               <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                 <User className="w-3.5 h-3.5" />

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, Play, User, FileText, Image, File, Download, Eye, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
+import { CoursePartsManager } from './CoursePartsManager';
 
 interface Course {
   id: string;
@@ -26,9 +28,11 @@ interface CourseDetailModalProps {
 }
 
 export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
+  const { profile } = useAuth();
   const [showVideo, setShowVideo] = useState(false);
   const [showFilePreview, setShowFilePreview] = useState(false);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const isAdmin = profile?.role === 'admin';
 
   // Obtener URL del archivo
   const getFileUrl = async () => {
@@ -312,6 +316,9 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
                 )}
               </div>
             )}
+
+            {/* Gestor de Partes del Curso */}
+            <CoursePartsManager courseId={course.id} isAdmin={isAdmin || false} />
           </div>
         </div>
       </div>
