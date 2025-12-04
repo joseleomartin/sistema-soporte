@@ -1,4 +1,4 @@
-import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen } from 'lucide-react';
+import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { NotificationBell } from '../Notifications/NotificationBell';
@@ -19,6 +19,7 @@ const menuItems: MenuItem[] = [
   { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
   { icon: Clock, label: 'Carga de Horas', view: 'time-tracking', roles: ['admin', 'support', 'user'] },
   { icon: BookOpen, label: 'Biblioteca y Cursos', view: 'library', roles: ['admin', 'support', 'user'] },
+  { icon: Heart, label: 'Social', view: 'social', roles: ['admin', 'support', 'user'] },
   { icon: Building2, label: 'Areas', view: 'departments', roles: ['admin', 'support'] },
   { icon: Calendar, label: 'Vacaciones / Licencias', view: 'vacations', roles: ['admin', 'support'] },
   { icon: Users, label: 'Usuarios', view: 'users', roles: ['admin'] },

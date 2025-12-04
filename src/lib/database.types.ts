@@ -221,6 +221,81 @@ export interface Database {
           created_at?: string
         }
       }
+      social_posts: {
+        Row: {
+          id: string
+          user_id: string
+          content: string | null
+          media_type: 'image' | 'video' | 'gif'
+          media_url: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          content?: string | null
+          media_type: 'image' | 'video' | 'gif'
+          media_url: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          content?: string | null
+          media_type?: 'image' | 'video' | 'gif'
+          media_url?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      social_likes: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          created_at?: string
+        }
+      }
+      social_comments: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          content: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
