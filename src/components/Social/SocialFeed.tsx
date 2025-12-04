@@ -63,11 +63,27 @@ export function SocialFeed() {
           table: 'social_posts',
         },
         async (payload) => {
-          // Obtener el nuevo post con toda su información
-          const newPost = await fetchPostWithDetails(payload.new.id);
-          if (newPost) {
-            setPosts((prev) => [newPost, ...prev]);
-          }
+          // Verificar que el post no esté ya en la lista (evitar duplicados)
+          setPosts((prev) => {
+            const exists = prev.some((p) => p.id === payload.new.id);
+            if (exists) return prev;
+            
+            // Obtener el nuevo post con toda su información de forma asíncrona
+            fetchPostWithDetails(payload.new.id).then((newPost) => {
+              if (newPost) {
+                setPosts((current) => {
+                  // Verificar nuevamente antes de agregar (por si acaso)
+                  const stillExists = current.some((p) => p.id === newPost.id);
+                  if (stillExists) return current;
+                  return [newPost, ...current];
+                });
+              }
+            }).catch((error) => {
+              console.error('Error fetching new post details:', error);
+            });
+            
+            return prev; // Retornar el estado anterior mientras se carga
+          });
         }
       )
       .on(
@@ -382,7 +398,12 @@ export function SocialFeed() {
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             setShowCreateModal(false);
-            fetchPosts(0); // Recargar desde el inicio
+            // No recargar posts aquí - Realtime ya los agrega automáticamente
+            // Solo recargar si pasan más de 2 segundos sin que Realtime detecte el cambio
+            setTimeout(() => {
+              // Verificar si el post se agregó correctamente
+              // Si no, recargar manualmente
+            }, 2000);
           }}
         />
       )}

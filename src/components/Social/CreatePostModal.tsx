@@ -22,6 +22,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const validateFile = (file: File): string | null => {
     // Validar tipo
@@ -146,6 +147,12 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevenir doble envío
+    if (isSubmittingRef.current || uploading) {
+      return;
+    }
+
     setError(null);
 
     if (selectedFiles.length === 0) {
@@ -164,6 +171,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
     }
 
     try {
+      isSubmittingRef.current = true;
       setUploading(true);
 
       // Subir todos los archivos
@@ -210,6 +218,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
       setError(error.message || 'Error al crear el post');
     } finally {
       setUploading(false);
+      isSubmittingRef.current = false;
     }
   };
 
