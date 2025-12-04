@@ -20,6 +20,7 @@ interface Task {
   task_manager_id?: string | null;
   assigned_users?: Array<{ id: string; full_name: string; avatar_url?: string }>;
   assigned_departments?: Array<{ id: string; name: string }>;
+  created_by_profile?: { id: string; full_name: string; avatar_url?: string | null };
 }
 
 interface TaskDetailProps {
@@ -379,6 +380,17 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                         <span>Cliente</span>
                       </div>
                       <p className="text-base font-medium text-gray-900">{task.client_name}</p>
+                    </div>
+                  )}
+
+                  {/* Creador de la Tarea */}
+                  {task.created_by_profile && (
+                    <div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                        <User className="w-4 h-4" />
+                        <span>Creada por</span>
+                      </div>
+                      <p className="text-base font-medium text-gray-900">{task.created_by_profile.full_name}</p>
                     </div>
                   )}
 

@@ -131,23 +131,23 @@ export function TaskChat({ taskId }: TaskChatProps) {
             
             for (let i = 0; i < retries; i++) {
               const result = await supabase
-                .from('task_messages')
-                .select(`
-                  *,
-                  profiles!task_messages_user_id_fkey (
-                    full_name,
-                    avatar_url
-                  ),
-                  task_attachments (
-                    id,
-                    file_name,
-                    file_path,
-                    file_size,
-                    file_type
-                  )
-                `)
-                .eq('id', payload.new.id)
-                .single();
+              .from('task_messages')
+              .select(`
+                *,
+                profiles!task_messages_user_id_fkey (
+                  full_name,
+                  avatar_url
+                ),
+                task_attachments (
+                  id,
+                  file_name,
+                  file_path,
+                  file_size,
+                  file_type
+                )
+              `)
+              .eq('id', payload.new.id)
+              .single();
               
               data = result.data;
               error = result.error;
@@ -622,10 +622,36 @@ export function TaskChat({ taskId }: TaskChatProps) {
                       {message.profiles.full_name}
                     </span>
                     <span className="text-xs text-gray-500">
-                      {new Date(message.created_at).toLocaleTimeString('es-ES', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {(() => {
+                        const messageDate = new Date(message.created_at);
+                        const today = new Date();
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        
+                        // Verificar si es hoy
+                        const isToday = messageDate.toDateString() === today.toDateString();
+                        // Verificar si es ayer
+                        const isYesterday = messageDate.toDateString() === yesterday.toDateString();
+                        
+                        if (isToday) {
+                          return messageDate.toLocaleTimeString('es-ES', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
+                        } else if (isYesterday) {
+                          return `Ayer ${messageDate.toLocaleTimeString('es-ES', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}`;
+                        } else {
+                          return messageDate.toLocaleString('es-ES', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
+                        }
+                      })()}
                     </span>
                   </div>
                   
@@ -719,17 +745,17 @@ export function TaskChat({ taskId }: TaskChatProps) {
             <Paperclip className="w-5 h-5" />
           </button>
           <div className="flex-1 relative">
-            <textarea
+          <textarea
               ref={textareaRef}
-              value={newMessage}
+            value={newMessage}
               onChange={(e) => handleMessageChange(e)}
               onKeyDown={(e) => handleKeyDown(e)}
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && !showMentions && handleSend()}
               placeholder="Escribe un mensaje... (usa @ para mencionar usuarios)"
-              rows={2}
+            rows={2}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none max-h-32 overflow-y-auto"
-              disabled={sending || uploading}
-            />
+            disabled={sending || uploading}
+          />
             {showMentions && (
               <TaskMentionAutocomplete
                 taskId={taskId}

@@ -19,6 +19,7 @@ interface Task {
   completed_at?: string | null;
   assigned_users?: Array<{ id: string; full_name: string; avatar_url?: string }>;
   assigned_departments?: Array<{ id: string; name: string }>;
+  created_by_profile?: { id: string; full_name: string; avatar_url?: string | null };
 }
 
 // Función para formatear duración
@@ -140,7 +141,14 @@ export function TasksList() {
         try {
           const { data, error } = await supabase
             .from('tasks')
-            .select('*')
+            .select(`
+              *,
+              created_by_profile:profiles!tasks_created_by_fkey (
+                id,
+                full_name,
+                avatar_url
+              )
+            `)
             .eq('id', taskIdToOpen)
             .single();
 
@@ -193,7 +201,14 @@ export function TasksList() {
       if (profile.role === 'admin') {
         const { data, error } = await supabase
           .from('tasks')
-          .select('*')
+          .select(`
+            *,
+            created_by_profile:profiles!tasks_created_by_fkey (
+              id,
+              full_name,
+              avatar_url
+            )
+          `)
           .order('due_date', { ascending: true });
 
         if (error) throw error;
@@ -238,7 +253,14 @@ export function TasksList() {
           if (taskIds.length > 0) {
             const { data, error } = await supabase
               .from('tasks')
-              .select('*')
+              .select(`
+                *,
+                created_by_profile:profiles!tasks_created_by_fkey (
+                  id,
+                  full_name,
+                  avatar_url
+                )
+              `)
               .in('id', taskIds)
               .order('due_date', { ascending: true });
 
@@ -255,7 +277,14 @@ export function TasksList() {
           if (taskIds.length > 0) {
             const { data, error } = await supabase
               .from('tasks')
-              .select('*')
+              .select(`
+                *,
+                created_by_profile:profiles!tasks_created_by_fkey (
+                  id,
+                  full_name,
+                  avatar_url
+                )
+              `)
               .in('id', taskIds)
               .order('due_date', { ascending: true });
 
@@ -515,6 +544,14 @@ export function TasksList() {
                       <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
                         <User className="w-4 h-4" />
                         <span>{task.client_name}</span>
+                      </div>
+                    )}
+
+                    {/* Creador de la Tarea */}
+                    {task.created_by_profile && (
+                      <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
+                        <User className="w-3.5 h-3.5" />
+                        <span>Creada por: {task.created_by_profile.full_name}</span>
                       </div>
                     )}
 
