@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface Comment {
   id: string;
-  post_id: string;
+  birthday_user_id: string;
   user_id: string;
   content: string;
   created_at: string;
@@ -16,11 +16,11 @@ interface Comment {
   };
 }
 
-interface PostCommentsProps {
-  postId: string;
+interface BirthdayCommentsProps {
+  birthdayUserId: string;
 }
 
-export function PostComments({ postId }: PostCommentsProps) {
+export function BirthdayComments({ birthdayUserId }: BirthdayCommentsProps) {
   const { profile } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -35,14 +35,14 @@ export function PostComments({ postId }: PostCommentsProps) {
     
     // Suscripción a cambios en tiempo real
     const channel = supabase
-      .channel(`post_comments_${postId}`)
+      .channel(`birthday_comments_${birthdayUserId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'social_comments',
-          filter: `post_id=eq.${postId}`,
+          table: 'birthday_comments',
+          filter: `birthday_user_id=eq.${birthdayUserId}`,
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
@@ -70,20 +70,20 @@ export function PostComments({ postId }: PostCommentsProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [postId]);
+  }, [birthdayUserId]);
 
   const fetchCommentWithProfile = async (commentId: string): Promise<Comment | null> => {
-      const { data, error } = await supabase
-        .from('social_comments')
-        .select(`
-          *,
-          user_profile:profiles!social_comments_user_id_fkey (
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq('id', commentId)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('birthday_comments')
+      .select(`
+        *,
+        user_profile:profiles!birthday_comments_user_id_fkey (
+          full_name,
+          avatar_url
+        )
+      `)
+      .eq('id', commentId)
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching comment:', error);
@@ -97,15 +97,15 @@ export function PostComments({ postId }: PostCommentsProps) {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('social_comments')
+        .from('birthday_comments')
         .select(`
           *,
-          user_profile:profiles!social_comments_user_id_fkey (
+          user_profile:profiles!birthday_comments_user_id_fkey (
             full_name,
             avatar_url
           )
         `)
-        .eq('post_id', postId)
+        .eq('birthday_user_id', birthdayUserId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -134,9 +134,9 @@ export function PostComments({ postId }: PostCommentsProps) {
     try {
       setSubmitting(true);
       const { error } = await supabase
-        .from('social_comments')
+        .from('birthday_comments')
         .insert({
-          post_id: postId,
+          birthday_user_id: birthdayUserId,
           user_id: profile.id,
           content: newComment.trim(),
         });
@@ -165,7 +165,7 @@ export function PostComments({ postId }: PostCommentsProps) {
 
     try {
       const { error } = await supabase
-        .from('social_comments')
+        .from('birthday_comments')
         .update({ content: editContent.trim() })
         .eq('id', commentId);
 
@@ -185,7 +185,7 @@ export function PostComments({ postId }: PostCommentsProps) {
 
     try {
       const { error } = await supabase
-        .from('social_comments')
+        .from('birthday_comments')
         .delete()
         .eq('id', commentId);
 
@@ -215,18 +215,18 @@ export function PostComments({ postId }: PostCommentsProps) {
 
   if (loading) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-4 text-center text-white text-opacity-80">
         Cargando comentarios...
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="mt-4 pt-4 border-t border-white border-opacity-30">
       {/* Lista de comentarios */}
       <div className="space-y-3 mb-3 max-h-48 overflow-y-auto">
         {comments.length === 0 ? (
-          <p className="text-xs text-gray-500 text-center py-2">
+          <p className="text-xs text-white text-opacity-70 text-center py-2">
             No hay comentarios aún
           </p>
         ) : (
@@ -238,20 +238,20 @@ export function PostComments({ postId }: PostCommentsProps) {
                   <img
                     src={comment.user_profile.avatar_url}
                     alt={comment.user_profile.full_name}
-                    className="w-6 h-6 rounded-full object-cover"
+                    className="w-6 h-6 rounded-full object-cover border border-white border-opacity-50"
                   />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                    <User className="w-3 h-3 text-gray-500" />
+                  <div className="w-6 h-6 rounded-full bg-white bg-opacity-30 flex items-center justify-center border border-white border-opacity-50">
+                    <User className="w-3 h-3 text-white" />
                   </div>
                 )}
               </div>
 
               {/* Contenido */}
               <div className="flex-1 min-w-0">
-                <div className="bg-gray-50 rounded-lg p-2">
+                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-gray-900">
+                    <span className="text-xs font-semibold text-white">
                       {comment.user_profile?.full_name || 'Usuario'}
                     </span>
                     {profile && (profile.id === comment.user_id || profile.role === 'admin') && (
@@ -259,7 +259,7 @@ export function PostComments({ postId }: PostCommentsProps) {
                         {profile.id === comment.user_id && (
                           <button
                             onClick={() => handleEdit(comment)}
-                            className="p-0.5 text-gray-400 hover:text-blue-600 transition-colors"
+                            className="p-0.5 text-white text-opacity-70 hover:text-opacity-100 transition-colors"
                             title="Editar"
                           >
                             <Edit2 className="w-3 h-3" />
@@ -267,7 +267,7 @@ export function PostComments({ postId }: PostCommentsProps) {
                         )}
                         <button
                           onClick={() => handleDelete(comment.id)}
-                          className="p-0.5 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-0.5 text-white text-opacity-70 hover:text-opacity-100 transition-colors"
                           title="Eliminar"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -280,14 +280,15 @@ export function PostComments({ postId }: PostCommentsProps) {
                       <textarea
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full p-1.5 border border-gray-300 rounded text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full p-1.5 border border-white border-opacity-30 rounded text-xs resize-none focus:ring-2 focus:ring-white focus:border-transparent bg-white bg-opacity-10 text-white placeholder-white placeholder-opacity-50"
                         rows={2}
                         maxLength={1000}
+                        placeholder="Editar comentario..."
                       />
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleSaveEdit(comment.id)}
-                          className="text-xs px-2 py-0.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          className="text-xs px-2 py-0.5 bg-white bg-opacity-30 text-white rounded hover:bg-opacity-40 transition-colors"
                         >
                           Guardar
                         </button>
@@ -296,19 +297,19 @@ export function PostComments({ postId }: PostCommentsProps) {
                             setEditingId(null);
                             setEditContent('');
                           }}
-                          className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                          className="text-xs px-2 py-0.5 bg-white bg-opacity-20 text-white rounded hover:bg-opacity-30 transition-colors"
                         >
                           Cancelar
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-700 whitespace-pre-wrap line-clamp-3">
+                    <p className="text-xs text-white text-opacity-90 whitespace-pre-wrap line-clamp-3">
                       {comment.content}
                     </p>
                   )}
                 </div>
-                <span className="text-xs text-gray-500 mt-0.5 block">
+                <span className="text-xs text-white text-opacity-70 mt-0.5 block">
                   {formatTimeAgo(comment.created_at)}
                 </span>
               </div>
@@ -326,11 +327,11 @@ export function PostComments({ postId }: PostCommentsProps) {
               <img
                 src={profile.avatar_url}
                 alt={profile.full_name}
-                className="w-6 h-6 rounded-full object-cover"
+                className="w-6 h-6 rounded-full object-cover border border-white border-opacity-50"
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                <User className="w-3 h-3 text-gray-500" />
+              <div className="w-6 h-6 rounded-full bg-white bg-opacity-30 flex items-center justify-center border border-white border-opacity-50">
+                <User className="w-3 h-3 text-white" />
               </div>
             )}
           </div>
@@ -339,14 +340,14 @@ export function PostComments({ postId }: PostCommentsProps) {
               type="text"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Escribe un comentario..."
-              className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs"
+              placeholder="Escribe un comentario de felicitación..."
+              className="flex-1 px-2 py-1.5 border border-white border-opacity-30 rounded-lg focus:ring-2 focus:ring-white focus:border-transparent text-xs bg-white bg-opacity-10 text-white placeholder-white placeholder-opacity-50"
               maxLength={1000}
             />
             <button
               type="submit"
               disabled={!newComment.trim() || submitting}
-              className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 bg-white bg-opacity-20 text-white rounded-lg hover:bg-opacity-30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-3.5 h-3.5" />
             </button>

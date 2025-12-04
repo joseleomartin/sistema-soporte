@@ -3,6 +3,7 @@ import { Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SocialPost } from './SocialPost';
 import { CreatePostModal } from './CreatePostModal';
+import { BirthdayCard } from './BirthdayCard';
 
 interface Post {
   id: string;
@@ -21,17 +22,26 @@ interface Post {
   user_liked?: boolean;
 }
 
+interface BirthdayUser {
+  id: string;
+  full_name: string;
+  avatar_url?: string | null;
+  birthday: string;
+}
+
 export function SocialFeed() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [birthdayUsers, setBirthdayUsers] = useState<BirthdayUser[]>([]);
   const loadingRef = useRef(false);
   const postsPerPage = 10;
 
   useEffect(() => {
     fetchPosts();
+    fetchBirthdayUsers();
 
     // Suscripción a nuevos posts en tiempo real
     const channel = supabase
@@ -69,6 +79,33 @@ export function SocialFeed() {
     };
   }, []);
 
+  const fetchBirthdayUsers = async () => {
+    try {
+      const today = new Date();
+      const month = today.getMonth() + 1; // JavaScript months are 0-indexed
+      const day = today.getDate();
+
+      // Obtener todos los usuarios con cumpleaños
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, birthday')
+        .not('birthday', 'is', null);
+
+      if (error) throw error;
+
+      // Filtrar usuarios que cumplen años hoy
+      const todayBirthdays = (data || []).filter((user) => {
+        if (!user.birthday) return false;
+        const birthday = new Date(user.birthday);
+        return birthday.getMonth() + 1 === month && birthday.getDate() === day;
+      });
+
+      setBirthdayUsers(todayBirthdays as BirthdayUser[]);
+    } catch (error) {
+      console.error('Error fetching birthday users:', error);
+    }
+  };
+
   const fetchPostWithDetails = async (postId: string): Promise<Post | null> => {
     try {
       const { data, error } = await supabase
@@ -81,7 +118,7 @@ export function SocialFeed() {
           )
         `)
         .eq('id', postId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -102,7 +139,7 @@ export function SocialFeed() {
               .select('id')
               .eq('post_id', postId)
               .eq('user_id', userResult.data.user.id)
-              .single();
+              .maybeSingle();
             return !!likeData;
           }
           return false;
@@ -167,7 +204,7 @@ export function SocialFeed() {
                   .select('id')
                   .eq('post_id', post.id)
                   .eq('user_id', userResult.data.user.id)
-                  .single();
+                  .maybeSingle();
                 return !!likeData;
               }
               return false;
@@ -255,6 +292,13 @@ export function SocialFeed() {
         </div>
       ) : (
         <>
+          {/* Tarjetas de cumpleaños */}
+          {birthdayUsers.length > 0 && (
+            <div className="mb-6">
+              <BirthdayCard users={birthdayUsers} />
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-min">
             {posts.map((post) => (
               <SocialPost

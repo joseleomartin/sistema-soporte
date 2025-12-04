@@ -92,10 +92,9 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
         .select('id')
         .eq('post_id', post.id)
         .eq('user_id', profile.id)
-        .single();
+        .maybeSingle(); // Usar maybeSingle() en lugar de single() para manejar 0 o 1 resultado
 
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 es "no rows returned", que es esperado si no hay like
+      if (error) {
         console.error('Error checking like:', error);
         return;
       }

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Camera, User, Upload, CheckCircle, AlertCircle, Building2 } from 'lucide-react';
+import { Camera, User, Upload, CheckCircle, AlertCircle, Building2, Calendar } from 'lucide-react';
 
 export function ProfileSettings() {
   const { profile, user } = useAuth();
@@ -9,14 +9,31 @@ export function ProfileSettings() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [departments, setDepartments] = useState<any[]>([]);
+  const [birthday, setBirthday] = useState<string>('');
+  const [savingBirthday, setSavingBirthday] = useState(false);
+  const [birthdayInitialized, setBirthdayInitialized] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (profile?.avatar_url) {
       setAvatarUrl(profile.avatar_url);
     }
+    // Solo inicializar el birthday una vez cuando se carga el perfil
+    if (!birthdayInitialized && profile) {
+      if (profile.birthday) {
+        // Formatear la fecha para el input (YYYY-MM-DD)
+        const date = new Date(profile.birthday);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        setBirthday(`${year}-${month}-${day}`);
+      } else {
+        setBirthday('');
+      }
+      setBirthdayInitialized(true);
+    }
     loadDepartments();
-  }, [profile]);
+  }, [profile?.id, profile?.birthday, birthdayInitialized]);
 
   const loadDepartments = async () => {
     if (!profile?.id) return;
@@ -107,6 +124,39 @@ export function ProfileSettings() {
       setMessage({ type: 'error', text: error.message || 'Error al subir la imagen' });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleBirthdayInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBirthday(e.target.value);
+  };
+
+  const handleBirthdaySave = async () => {
+    if (!user?.id) return;
+
+    try {
+      setSavingBirthday(true);
+      
+      // Si birthday está vacío, establecer null para eliminar la fecha
+      const birthdayValue = birthday.trim() || null;
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ birthday: birthdayValue })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      setMessage({ type: 'success', text: 'Fecha de cumpleaños actualizada correctamente' });
+      setTimeout(() => setMessage(null), 3000);
+      
+      // Marcar como inicializado para evitar que se resetee
+      setBirthdayInitialized(true);
+    } catch (error: any) {
+      console.error('Error updating birthday:', error);
+      setMessage({ type: 'error', text: error.message || 'Error al actualizar la fecha de cumpleaños' });
+    } finally {
+      setSavingBirthday(false);
     }
   };
 
@@ -236,6 +286,33 @@ export function ProfileSettings() {
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Fecha de Cumpleaños
+                </div>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={birthday}
+                  onChange={handleBirthdayInputChange}
+                  onBlur={handleBirthdaySave}
+                  disabled={savingBirthday}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                {savingBirthday && (
+                  <div className="flex items-center px-4">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Tu cumpleaños aparecerá en la sección Social cuando sea tu día especial
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -257,6 +334,11 @@ export function ProfileSettings() {
     </div>
   );
 }
+
+
+
+
+
 
 
 

@@ -16,6 +16,7 @@ export interface Database {
           full_name: string
           role: 'admin' | 'support' | 'user'
           avatar_url: string | null
+          birthday: string | null
           created_at: string
           updated_at: string
         }
@@ -25,6 +26,7 @@ export interface Database {
           full_name: string
           role?: 'admin' | 'support' | 'user'
           avatar_url?: string | null
+          birthday?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -34,6 +36,7 @@ export interface Database {
           full_name?: string
           role?: 'admin' | 'support' | 'user'
           avatar_url?: string | null
+          birthday?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -290,6 +293,32 @@ export interface Database {
         Update: {
           id?: string
           post_id?: string
+          user_id?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      birthday_comments: {
+        Row: {
+          id: string
+          birthday_user_id: string
+          user_id: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          birthday_user_id: string
+          user_id: string
+          content: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          birthday_user_id?: string
           user_id?: string
           content?: string
           created_at?: string
