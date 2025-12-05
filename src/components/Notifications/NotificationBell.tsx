@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare } from 'lucide-react';
+import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare, Cake } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -23,9 +23,10 @@ interface NotificationBellProps {
   onNavigateToCalendar?: () => void;
   onNavigateToTasks?: () => void;
   onNavigateToForum?: (subforumId: string) => void;
+  onNavigateToSocial?: () => void;
 }
 
-export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum }: NotificationBellProps) {
+export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial }: NotificationBellProps) {
   const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -222,6 +223,14 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
       window.dispatchEvent(new CustomEvent('openDirectMessage', {
         detail: { senderId: notification.metadata.sender_id }
       }));
+    } else if (notification.type === 'birthday') {
+      // Navegar a Social
+      if (onNavigateToSocial) {
+        onNavigateToSocial();
+      } else {
+        // Fallback: usar window.location si no hay callback
+        window.location.hash = 'social';
+      }
     }
   };
 
@@ -247,6 +256,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         return <MessageSquare className="w-5 h-5 text-purple-600" />;
       case 'direct_message':
         return <MessageSquare className="w-5 h-5 text-cyan-600" />;
+      case 'birthday':
+        return <Cake className="w-5 h-5 text-pink-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
@@ -270,12 +281,12 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         <>
           {/* Overlay para cerrar al hacer clic fuera */}
           <div 
-            className="fixed inset-0 z-40" 
+            className="fixed inset-0 z-[9998]" 
             onClick={() => setShowDropdown(false)}
           />
           
           {/* Dropdown de notificaciones */}
-          <div className="absolute top-full mt-2 right-0 sm:left-1/2 sm:-translate-x-1/2 transform w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-50 origin-top-right sm:origin-top">
+          <div className="absolute top-full mt-2 right-0 sm:left-1/2 sm:-translate-x-1/2 transform w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] origin-top-right sm:origin-top">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900">Notificaciones</h3>
               <div className="flex items-center gap-2">

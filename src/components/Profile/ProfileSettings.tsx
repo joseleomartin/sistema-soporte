@@ -21,12 +21,26 @@ export function ProfileSettings() {
     // Solo inicializar el birthday una vez cuando se carga el perfil
     if (!birthdayInitialized && profile) {
       if (profile.birthday) {
-        // Formatear la fecha para el input (YYYY-MM-DD)
-        const date = new Date(profile.birthday);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        setBirthday(`${year}-${month}-${day}`);
+        // Parsear la fecha directamente del string para evitar problemas de zona horaria
+        // La fecha viene en formato ISO (YYYY-MM-DD) o como string de fecha
+        let dateStr = profile.birthday;
+        
+        // Si es un objeto Date o string ISO completo, extraer solo la parte de fecha
+        if (dateStr.includes('T')) {
+          dateStr = dateStr.split('T')[0];
+        }
+        
+        // Verificar que tenga el formato correcto YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          setBirthday(dateStr);
+        } else {
+          // Fallback: intentar parsear con Date pero usando solo fecha local
+          const date = new Date(dateStr + 'T12:00:00'); // Usar mediodía para evitar cambios de día
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          setBirthday(`${year}-${month}-${day}`);
+        }
       } else {
         setBirthday('');
       }
@@ -138,7 +152,12 @@ export function ProfileSettings() {
       setSavingBirthday(true);
       
       // Si birthday está vacío, establecer null para eliminar la fecha
-      const birthdayValue = birthday.trim() || null;
+      let birthdayValue: string | null = birthday.trim() || null;
+      
+      // Validar formato de fecha antes de guardar (YYYY-MM-DD)
+      if (birthdayValue && !/^\d{4}-\d{2}-\d{2}$/.test(birthdayValue)) {
+        throw new Error('Formato de fecha inválido. Use el formato dd/mm/aaaa');
+      }
       
       const { error } = await supabase
         .from('profiles')
@@ -301,6 +320,7 @@ export function ProfileSettings() {
                   onChange={handleBirthdayInputChange}
                   onBlur={handleBirthdaySave}
                   disabled={savingBirthday}
+                  max={new Date().toISOString().split('T')[0]}
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {savingBirthday && (

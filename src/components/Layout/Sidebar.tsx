@@ -94,6 +94,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
             onNavigateToForum={onNavigateToForum || ((subforumId) => {
               onViewChange('forums');
             })}
+            onNavigateToSocial={() => onViewChange('social')}
           />
         </div>
         {profile && (

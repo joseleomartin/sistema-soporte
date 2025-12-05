@@ -106,9 +106,15 @@ export function SocialFeed() {
 
   const fetchBirthdayUsers = async () => {
     try {
+      // Obtener fecha actual en formato YYYY-MM-DD para evitar problemas de zona horaria
       const today = new Date();
-      const month = today.getMonth() + 1; // JavaScript months are 0-indexed
-      const day = today.getDate();
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
+      const todayDay = today.getDate();
+      
+      // Formatear fecha actual como string YYYY-MM-DD
+      const todayStr = `${todayYear}-${String(todayMonth).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
+      const todayMonthDay = `${String(todayMonth).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`;
 
       // Obtener todos los usuarios con cumpleaños
       const { data, error } = await supabase
@@ -119,10 +125,28 @@ export function SocialFeed() {
       if (error) throw error;
 
       // Filtrar usuarios que cumplen años hoy
+      // Parsear la fecha directamente del string para evitar problemas de zona horaria
       const todayBirthdays = (data || []).filter((user) => {
         if (!user.birthday) return false;
-        const birthday = new Date(user.birthday);
-        return birthday.getMonth() + 1 === month && birthday.getDate() === day;
+        
+        // Parsear la fecha directamente del string sin usar new Date()
+        let birthdayStr = user.birthday;
+        
+        // Si es un string ISO completo, extraer solo la parte de fecha
+        if (birthdayStr.includes('T')) {
+          birthdayStr = birthdayStr.split('T')[0];
+        }
+        
+        // Verificar formato YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(birthdayStr)) {
+          // Extraer mes y día directamente del string
+          const [, month, day] = birthdayStr.split('-');
+          return month === String(todayMonth).padStart(2, '0') && day === String(todayDay).padStart(2, '0');
+        }
+        
+        // Fallback: usar Date pero con precaución
+        const birthday = new Date(birthdayStr + 'T12:00:00'); // Usar mediodía para evitar cambios de día
+        return birthday.getMonth() + 1 === todayMonth && birthday.getDate() === todayDay;
       });
 
       setBirthdayUsers(todayBirthdays as BirthdayUser[]);

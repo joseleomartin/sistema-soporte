@@ -24,7 +24,22 @@ export function BirthdayCard({ users }: BirthdayCardProps) {
   };
 
   const formatBirthday = (birthday: string): string => {
-    const date = new Date(birthday);
+    // Parsear la fecha directamente del string para evitar problemas de zona horaria
+    let birthdayStr = birthday;
+    if (birthdayStr.includes('T')) {
+      birthdayStr = birthdayStr.split('T')[0];
+    }
+    
+    if (/^\d{4}-\d{2}-\d{2}$/.test(birthdayStr)) {
+      const [, month, day] = birthdayStr.split('-');
+      const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                          'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const monthIndex = parseInt(month, 10) - 1;
+      return `${parseInt(day, 10)} de ${monthNames[monthIndex]}`;
+    }
+    
+    // Fallback
+    const date = new Date(birthdayStr + 'T12:00:00');
     return date.toLocaleDateString('es-ES', {
       month: 'long',
       day: 'numeric',
@@ -32,8 +47,30 @@ export function BirthdayCard({ users }: BirthdayCardProps) {
   };
 
   const getAge = (birthday: string): number => {
+    // Parsear la fecha directamente del string para evitar problemas de zona horaria
+    let birthdayStr = birthday;
+    if (birthdayStr.includes('T')) {
+      birthdayStr = birthdayStr.split('T')[0];
+    }
+    
     const today = new Date();
-    const birthDate = new Date(birthday);
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth() + 1;
+    const todayDay = today.getDate();
+    
+    if (/^\d{4}-\d{2}-\d{2}$/.test(birthdayStr)) {
+      const [year, month, day] = birthdayStr.split('-').map(Number);
+      let age = todayYear - year;
+      
+      // Ajustar edad si aún no ha cumplido años este año
+      if (todayMonth < month || (todayMonth === month && todayDay < day)) {
+        age--;
+      }
+      return age;
+    }
+    
+    // Fallback
+    const birthDate = new Date(birthdayStr + 'T12:00:00');
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
