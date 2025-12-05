@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare, Cake } from 'lucide-react';
+import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare, Cake, Ticket } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
-  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention' | 'task_mention' | 'direct_message';
+  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention' | 'task_mention' | 'direct_message' | 'birthday' | 'ticket_created';
   title: string;
   message: string;
   read: boolean;
@@ -231,6 +231,14 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         // Fallback: usar window.location si no hay callback
         window.location.hash = 'social';
       }
+    } else if (notification.type === 'ticket_created' && notification.ticket_id) {
+      // Navegar al ticket específico
+      if (onNavigateToTicket) {
+        onNavigateToTicket(notification.ticket_id);
+      } else {
+        // Fallback: usar window.location si no hay callback
+        window.location.hash = `tickets?ticket=${notification.ticket_id}`;
+      }
     }
   };
 
@@ -258,6 +266,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         return <MessageSquare className="w-5 h-5 text-cyan-600" />;
       case 'birthday':
         return <Cake className="w-5 h-5 text-pink-600" />;
+      case 'ticket_created':
+        return <Ticket className="w-5 h-5 text-orange-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }

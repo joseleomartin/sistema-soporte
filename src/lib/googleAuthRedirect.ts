@@ -309,19 +309,40 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   
   if (backendUrl) {
     try {
+      // Agregar headers de ngrok si es necesario
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (backendUrl.includes('ngrok')) {
+        headers['ngrok-skip-browser-warning'] = 'true';
+        headers['User-Agent'] = 'Mozilla/5.0';
+      }
+      
       const tokenResponse = await fetch(`${backendUrl}/api/google/oauth/refresh`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           refresh_token: refreshToken,
         }),
       });
       
       if (!tokenResponse.ok) {
-        const error = await tokenResponse.json();
-        throw new Error(`Error al refrescar token: ${error.error_description || error.error || error.message || 'Error desconocido'}`);
+        let error;
+        try {
+          error = await tokenResponse.json();
+        } catch {
+          error = { error: 'Error desconocido', message: `HTTP ${tokenResponse.status}` };
+        }
+        
+        const errorMessage = error.error_description || error.error || error.message || 'Error desconocido';
+        
+        // Si es 401, probablemente las credenciales no están configuradas
+        if (tokenResponse.status === 401) {
+          throw new Error(`Error de autenticación: ${errorMessage}. Verifica que GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET estén configurados en el backend.`);
+        }
+        
+        throw new Error(`Error al refrescar token: ${errorMessage}`);
       }
       
       const tokenData = await tokenResponse.json();

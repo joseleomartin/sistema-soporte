@@ -1888,9 +1888,17 @@ def refresh_google_token():
         })
         
         if token_response.status_code != 200:
-            error_data = token_response.json()
+            try:
+                error_data = token_response.json()
+            except:
+                error_data = {'error': 'Error desconocido al refrescar token', 'status_code': token_response.status_code}
             logger.error(f"Error al refrescar token: {error_data}")
-            return jsonify(error_data), token_response.status_code
+            # Retornar un mensaje más descriptivo
+            return jsonify({
+                'error': error_data.get('error', 'Error al refrescar token'),
+                'error_description': error_data.get('error_description', 'Verifica que las credenciales de Google estén configuradas correctamente'),
+                'message': error_data.get('error_description') or error_data.get('error') or 'Error al refrescar token'
+            }), token_response.status_code
         
         token_data = token_response.json()
         logger.info("Token refrescado exitosamente")
