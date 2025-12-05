@@ -622,7 +622,7 @@ def vencimientos_status(job_id):
 
 @app.route('/vencimientos/filtrar-por-cuils', methods=['POST'])
 def vencimientos_filtrar_por_cuils():
-    """Filtra vencimientos por CUILs desde un archivo Excel"""
+    """Filtra vencimientos por CUITs desde un archivo Excel"""
     try:
         # Validar que se recibió el archivo
         if 'archivo' not in request.files:
@@ -670,7 +670,7 @@ def vencimientos_filtrar_por_cuils():
                 for nombre_posible in posibles_nombres:
                     if nombre_posible.upper() in col_str or col_str in nombre_posible.upper():
                         columna_cuil = col
-                        logger.info(f"Columna CUIL encontrada por nombre: {col}")
+                        logger.info(f"Columna CUIT encontrada por nombre: {col}")
                         break
                 if columna_cuil:
                     break
@@ -692,9 +692,9 @@ def vencimientos_filtrar_por_cuils():
                     'columnas_disponibles': list(df_cuils.columns)
                 }), 400
             
-            logger.info(f"Columna seleccionada para CUILs: {columna_cuil}")
+            logger.info(f"Columna seleccionada para CUITs: {columna_cuil}")
             
-            # Extraer CUILs - limpiar y convertir a string
+            # Extraer CUITs - limpiar y convertir a string
             cuils_raw = df_cuils[columna_cuil].dropna()
             logger.info(f"Valores encontrados en la columna (primeros 5): {cuils_raw.head().tolist()}")
             
@@ -710,14 +710,14 @@ def vencimientos_filtrar_por_cuils():
             # Eliminar duplicados
             cuils = list(set(cuils))
             
-            logger.info(f"Total de CUILs únicos encontrados: {len(cuils)}")
+            logger.info(f"Total de CUITs únicos encontrados: {len(cuils)}")
             if len(cuils) > 0:
-                logger.info(f"Ejemplos de CUILs: {cuils[:5]}")
+                logger.info(f"Ejemplos de CUITs: {cuils[:5]}")
             
             if len(cuils) == 0:
                 return jsonify({
                     'success': False,
-                    'message': f'No se encontraron CUILs válidos en la columna "{columna_cuil}". Verifica que el archivo contenga CUILs en formato válido.',
+                    'message': f'No se encontraron CUITs válidos en la columna "{columna_cuil}". Verifica que el archivo contenga CUITs en formato válido.',
                     'columna_usada': columna_cuil,
                     'columnas_disponibles': list(df_cuils.columns),
                     'total_filas': len(df_cuils)
@@ -745,7 +745,7 @@ def vencimientos_filtrar_por_cuils():
                     resultados.append({
                         'CUIL': cuil,
                         'estado': 'Sin vencimientos',
-                        'motivo': 'CUIL inválido',
+                        'motivo': 'CUIT inválido',
                         'datos': []
                     })
                     continue
@@ -998,11 +998,11 @@ def vencimientos_filtrar_por_cuils():
             
             return jsonify({
                 'success': True,
-                'message': f'Filtrado completado. {len(cuils)} CUILs procesados.',
+                'message': f'Filtrado completado. {len(cuils)} CUITs procesados.',
                 'filename': resultado_filename,
-                'total_cuils': len(cuils),
-                'cuils_con_vencimientos': sum(1 for r in resultados if r['estado'] == 'Con vencimientos'),
-                'cuils_sin_vencimientos': sum(1 for r in resultados if r['estado'] == 'Sin vencimientos'),
+                'total_cuits': len(cuils),
+                'cuits_con_vencimientos': sum(1 for r in resultados if r['estado'] == 'Con vencimientos'),
+                'cuits_sin_vencimientos': sum(1 for r in resultados if r['estado'] == 'Sin vencimientos'),
                 'downloadUrl': f'{base_url}/download/{resultado_filename}'
             }), 200
             
@@ -1032,17 +1032,18 @@ def vencimientos_enviar_email():
                 'message': 'No se recibieron datos'
             }), 400
         
-        cuil = data.get('cuil')
+        # Aceptar tanto 'cuil' como 'cuit' para compatibilidad
+        cuil = data.get('cuil') or data.get('cuit')
         email = data.get('email')
         nombre_cliente = data.get('nombre_cliente', 'Cliente')
         
         if not cuil or not email:
             return jsonify({
                 'success': False,
-                'message': 'CUIL y email son requeridos'
+                'message': 'CUIT y email son requeridos'
             }), 400
         
-        # Obtener vencimientos para este CUIL
+        # Obtener vencimientos para este CUIT
         archivo = encontrar_archivo_consolidado_mas_reciente()
         if not archivo:
             return jsonify({
@@ -1050,12 +1051,12 @@ def vencimientos_enviar_email():
                 'message': 'No hay archivo de vencimientos disponible'
             }), 404
         
-        # Extraer último dígito del CUIL
+        # Extraer último dígito del CUIT
         ultimo_digito = extraer_ultimo_digito_cuil(cuil)
         if ultimo_digito is None:
             return jsonify({
                 'success': False,
-                'message': 'CUIL inválido'
+                'message': 'CUIT inválido'
             }), 400
         
         # Obtener mes y año actual
@@ -1383,7 +1384,7 @@ def vencimientos_enviar_email():
                 </div>
                 <div class="content">
                     <p>Estimado/a <strong>{nombre_cliente}</strong>,</p>
-                    <p>Le informamos los siguientes vencimientos que se efectúan en <strong>{mes_actual_nombre_completo} {anio_actual}</strong> correspondientes a su CUIL <strong>{cuil}</strong>:</p>
+                    <p>Le informamos los siguientes vencimientos que se efectúan en <strong>{mes_actual_nombre_completo} {anio_actual}</strong> correspondientes a su CUIT <strong>{cuil}</strong>:</p>
                     
                     <div style="margin: 20px 0;">
         """

@@ -34,7 +34,7 @@ interface JobStatus {
 interface Cliente {
   id: string;
   nombre: string;
-  cuil: string;
+  cuit: string;
   email: string;
   created_at: string;
   updated_at: string;
@@ -48,15 +48,15 @@ export function Vencimientos() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshJobId, setRefreshJobId] = useState<string | null>(null);
   const [localJobId, setLocalJobId] = useState<string | null>(null);
-  const [archivoCuils, setArchivoCuils] = useState<File | null>(null);
+  const [archivoCuits, setArchivoCuits] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [filtrando, setFiltrando] = useState(false);
   const [resultadoFiltrado, setResultadoFiltrado] = useState<{
     filename: string;
     downloadUrl: string;
-    total_cuils: number;
-    cuils_con_vencimientos: number;
-    cuils_sin_vencimientos: number;
+    total_cuits: number;
+    cuits_con_vencimientos: number;
+    cuits_sin_vencimientos: number;
   } | null>(null);
   const [localMessage, setLocalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [tabActiva, setTabActiva] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export function Vencimientos() {
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
-  const [formCliente, setFormCliente] = useState({ nombre: '', cuil: '', email: '' });
+  const [formCliente, setFormCliente] = useState({ nombre: '', cuit: '', email: '' });
   const [enviandoEmail, setEnviandoEmail] = useState(false);
 
   // Definir cargarVencimientos antes de usarlo en los useEffect
@@ -249,7 +249,7 @@ export function Vencimientos() {
       const file = e.dataTransfer.files[0];
       const ext = file.name.toLowerCase().split('.').pop();
       if (ext === 'xlsx' || ext === 'xls') {
-        setArchivoCuils(file);
+        setArchivoCuits(file);
         setLocalMessage(null);
         setResultadoFiltrado(null);
       } else {
@@ -263,7 +263,7 @@ export function Vencimientos() {
       const file = e.target.files[0];
       const ext = file.name.toLowerCase().split('.').pop();
       if (ext === 'xlsx' || ext === 'xls') {
-        setArchivoCuils(file);
+        setArchivoCuits(file);
         setLocalMessage(null);
         setResultadoFiltrado(null);
       } else {
@@ -273,8 +273,8 @@ export function Vencimientos() {
   };
 
   const handleFiltrar = async () => {
-    if (!archivoCuils) {
-      setLocalMessage({ type: 'error', text: 'Por favor selecciona un archivo Excel con CUILs' });
+    if (!archivoCuits) {
+      setLocalMessage({ type: 'error', text: 'Por favor selecciona un archivo Excel con CUITs' });
       return;
     }
 
@@ -285,7 +285,7 @@ export function Vencimientos() {
     const jobId = addJob({
       banco: 'vencimientos',
       bancoName: 'Filtrado de Vencimientos',
-      filename: `Filtrado: ${archivoCuils.name}`,
+      filename: `Filtrado: ${archivoCuits.name}`,
       status: 'processing',
       progress: 0,
       message: 'Iniciando filtrado...',
@@ -293,7 +293,7 @@ export function Vencimientos() {
 
     try {
       const formData = new FormData();
-      formData.append('archivo', archivoCuils);
+      formData.append('archivo', archivoCuits);
 
       const headers: HeadersInit = {};
       if (API_BASE_URL.includes('ngrok')) {
@@ -309,7 +309,7 @@ export function Vencimientos() {
         body: formData,
       });
 
-      updateJob(jobId, { progress: 60, message: 'Procesando CUILs...' });
+      updateJob(jobId, { progress: 60, message: 'Procesando CUITs...' });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Error al filtrar vencimientos' }));
@@ -342,14 +342,14 @@ export function Vencimientos() {
         setResultadoFiltrado({
           filename: data.filename,
           downloadUrl: data.downloadUrl,
-          total_cuils: data.total_cuils,
-          cuils_con_vencimientos: data.cuils_con_vencimientos,
-          cuils_sin_vencimientos: data.cuils_sin_vencimientos,
+          total_cuits: data.total_cuits,
+          cuits_con_vencimientos: data.cuits_con_vencimientos,
+          cuits_sin_vencimientos: data.cuits_sin_vencimientos,
         });
 
         setLocalMessage({
           type: 'success',
-          text: `Filtrado completado. ${data.cuils_con_vencimientos} CUILs con vencimientos, ${data.cuils_sin_vencimientos} sin vencimientos.`,
+          text: `Filtrado completado. ${data.cuits_con_vencimientos} CUITs con vencimientos, ${data.cuits_sin_vencimientos} sin vencimientos.`,
         });
       } else {
         throw new Error(data.message || 'Error al filtrar vencimientos');
@@ -402,7 +402,11 @@ export function Vencimientos() {
         .order('nombre', { ascending: true });
 
       if (error) throw error;
-      setClientes(data || []);
+      // Mapear 'cuil' de la base de datos a 'cuit' en la interfaz
+      setClientes((data || []).map((cliente: any) => ({
+        ...cliente,
+        cuit: cliente.cuil || cliente.cuit || ''
+      })));
     } catch (error: any) {
       console.error('Error cargando clientes:', error);
       setLocalMessage({ type: 'error', text: 'Error al cargar clientes' });
@@ -414,7 +418,7 @@ export function Vencimientos() {
   const handleGuardarCliente = async () => {
     if (!profile?.id) return;
     
-    if (!formCliente.nombre.trim() || !formCliente.cuil.trim() || !formCliente.email.trim()) {
+    if (!formCliente.nombre.trim() || !formCliente.cuit.trim() || !formCliente.email.trim()) {
       setLocalMessage({ type: 'error', text: 'Todos los campos son requeridos' });
       return;
     }
@@ -433,7 +437,7 @@ export function Vencimientos() {
           .from('vencimientos_clientes')
           .update({
             nombre: formCliente.nombre.trim(),
-            cuil: formCliente.cuil.trim(),
+            cuil: formCliente.cuit.trim(),
             email: formCliente.email.trim(),
           })
           .eq('id', clienteEditando.id)
@@ -447,14 +451,14 @@ export function Vencimientos() {
           .from('vencimientos_clientes')
           .insert({
             nombre: formCliente.nombre.trim(),
-            cuil: formCliente.cuil.trim(),
+            cuil: formCliente.cuit.trim(),
             email: formCliente.email.trim(),
             user_id: profile.id,
           });
 
         if (error) {
           if (error.code === '23505') {
-            throw new Error('Ya existe un cliente con ese CUIL');
+            throw new Error('Ya existe un cliente con ese CUIT');
           }
           throw error;
         }
@@ -463,7 +467,7 @@ export function Vencimientos() {
 
       setShowClienteModal(false);
       setClienteEditando(null);
-      setFormCliente({ nombre: '', cuil: '', email: '' });
+      setFormCliente({ nombre: '', cuit: '', email: '' });
       await cargarClientes();
     } catch (error: any) {
       console.error('Error guardando cliente:', error);
@@ -496,7 +500,7 @@ export function Vencimientos() {
     setClienteEditando(cliente);
     setFormCliente({
       nombre: cliente.nombre,
-      cuil: cliente.cuil,
+      cuit: cliente.cuit,
       email: cliente.email,
     });
     setShowClienteModal(true);
@@ -526,7 +530,7 @@ export function Vencimientos() {
         },
         body: JSON.stringify({
           cliente_id: cliente.id,
-          cuil: cliente.cuil,
+          cuit: cliente.cuit,
           email: cliente.email,
           nombre_cliente: cliente.nombre,
         }),
@@ -772,21 +776,21 @@ export function Vencimientos() {
         </div>
       )}
 
-      {/* Carga de Excel con CUILs */}
+      {/* Carga de Excel con CUITs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Filtrar Vencimientos por CUILs
+          Filtrar Vencimientos por CUITs
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Carga un archivo Excel con una columna de CUILs. El sistema buscará vencimientos
-          comparando el último dígito del CUIL con los datos disponibles.
+          Carga un archivo Excel con una columna de CUITs. El sistema buscará vencimientos
+          comparando el último dígito del CUIT con los datos disponibles.
         </p>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <p className="text-xs text-blue-800 font-medium mb-1">📋 Formato del archivo:</p>
           <ul className="text-xs text-blue-700 space-y-1 ml-4 list-disc">
-            <li>El archivo debe tener una columna con CUILs (puede llamarse "CUIL", "CUIT", "CUIL/CUIT", etc.)</li>
+            <li>El archivo debe tener una columna con CUITs (puede llamarse "CUIL", "CUIT", "CUIL/CUIT", etc.)</li>
             <li>Si no hay columna con ese nombre, se usará la primera columna con datos</li>
-            <li>Los CUILs pueden estar en formato: XX-XXXXXXXX-X o XXXXXXXXXXX</li>
+            <li>Los CUITs pueden estar en formato: XX-XXXXXXXX-X o XXXXXXXXXXX</li>
             <li>No importa si hay filas vacías, se ignorarán automáticamente</li>
           </ul>
         </div>
@@ -804,15 +808,15 @@ export function Vencimientos() {
         >
           <input
             type="file"
-            id="file-upload-cuils"
+            id="file-upload-cuits"
             accept=".xlsx,.xls"
             onChange={handleFileChange}
             className="hidden"
           />
-          <label htmlFor="file-upload-cuils" className="cursor-pointer">
+          <label htmlFor="file-upload-cuits" className="cursor-pointer">
             <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-lg font-medium text-gray-700 mb-2">
-              {archivoCuils ? archivoCuils.name : 'Arrastra y suelta el archivo Excel con CUILs aquí'}
+              {archivoCuits ? archivoCuits.name : 'Arrastra y suelta el archivo Excel con CUITs aquí'}
             </p>
             <p className="text-sm text-gray-500">
               o haz clic para seleccionar un archivo
@@ -822,9 +826,9 @@ export function Vencimientos() {
 
         <button
           onClick={handleFiltrar}
-          disabled={!archivoCuils || filtrando}
+          disabled={!archivoCuits || filtrando}
           className={`w-full py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
-            !archivoCuils || filtrando
+            !archivoCuits || filtrando
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-orange-600 text-white hover:bg-orange-700'
           }`}
@@ -853,19 +857,19 @@ export function Vencimientos() {
                 Filtrado Completado
               </h3>
               <p className="text-sm text-green-800 mb-3">
-                Total CUILs procesados: {resultadoFiltrado.total_cuils}
+                Total CUITs procesados: {resultadoFiltrado.total_cuits}
               </p>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-white rounded-lg p-3">
                   <p className="text-xs font-medium text-green-900 mb-1">Con Vencimientos</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {resultadoFiltrado.cuils_con_vencimientos}
+                    {resultadoFiltrado.cuits_con_vencimientos}
                   </p>
                 </div>
                 <div className="bg-white rounded-lg p-3">
                   <p className="text-xs font-medium text-green-900 mb-1">Sin Vencimientos</p>
                   <p className="text-2xl font-bold text-gray-600">
-                    {resultadoFiltrado.cuils_sin_vencimientos}
+                    {resultadoFiltrado.cuits_sin_vencimientos}
                   </p>
                 </div>
               </div>
@@ -893,7 +897,7 @@ export function Vencimientos() {
           <button
             onClick={() => {
               setClienteEditando(null);
-              setFormCliente({ nombre: '', cuil: '', email: '' });
+              setFormCliente({ nombre: '', cuit: '', email: '' });
               setShowClienteModal(true);
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
@@ -925,7 +929,7 @@ export function Vencimientos() {
                   <div className="flex items-center gap-3">
                     <div>
                       <p className="font-medium text-gray-900">{cliente.nombre}</p>
-                      <p className="text-sm text-gray-600">CUIL: {cliente.cuil}</p>
+                      <p className="text-sm text-gray-600">CUIT: {cliente.cuit}</p>
                       <p className="text-sm text-gray-600">Email: {cliente.email}</p>
                     </div>
                   </div>
@@ -973,7 +977,7 @@ export function Vencimientos() {
                 onClick={() => {
                   setShowClienteModal(false);
                   setClienteEditando(null);
-                  setFormCliente({ nombre: '', cuil: '', email: '' });
+                  setFormCliente({ nombre: '', cuit: '', email: '' });
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -997,12 +1001,12 @@ export function Vencimientos() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  CUIL *
+                  CUIT *
                 </label>
                 <input
                   type="text"
-                  value={formCliente.cuil}
-                  onChange={(e) => setFormCliente({ ...formCliente, cuil: e.target.value })}
+                  value={formCliente.cuit}
+                  onChange={(e) => setFormCliente({ ...formCliente, cuit: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Ej: 20-12345678-9"
                 />
@@ -1032,7 +1036,7 @@ export function Vencimientos() {
                   onClick={() => {
                     setShowClienteModal(false);
                     setClienteEditando(null);
-                    setFormCliente({ nombre: '', cuil: '', email: '' });
+                    setFormCliente({ nombre: '', cuit: '', email: '' });
                   }}
                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
                 >
@@ -1060,17 +1064,17 @@ export function Vencimientos() {
             <ul className="text-xs text-orange-700 space-y-1 mt-2">
               <li>• Actualización automática de vencimientos</li>
               <li>• Visualización por tipo de vencimiento</li>
-              <li>• Filtrado por CUILs</li>
+              <li>• Filtrado por CUITs</li>
               <li>• Exportación a Excel</li>
             </ul>
           </div>
           <div className="bg-white rounded-lg p-3">
-            <p className="text-xs font-medium text-orange-900 mb-1">✅ Filtrado por CUIL</p>
+            <p className="text-xs font-medium text-orange-900 mb-1">✅ Filtrado por CUIT</p>
             <ul className="text-xs text-orange-700 space-y-1 mt-2">
-              <li>• Compara el último dígito del CUIL</li>
+              <li>• Compara el último dígito del CUIT</li>
               <li>• Busca en todas las tablas disponibles</li>
               <li>• Genera reporte con resultados</li>
-              <li>• Indica CUILs sin vencimientos</li>
+              <li>• Indica CUITs sin vencimientos</li>
             </ul>
           </div>
         </div>
@@ -1078,3 +1082,15 @@ export function Vencimientos() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
