@@ -278,3 +278,4 @@ VALUES (
    - Si funciona, el problema está en la integración
    - Si no funciona, el problema está en Resend o DNS
 
+

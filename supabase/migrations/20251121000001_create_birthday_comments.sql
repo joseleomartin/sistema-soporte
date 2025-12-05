@@ -66,3 +66,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE birthday_comments;
 -- Comentario en la tabla
 COMMENT ON TABLE birthday_comments IS 'Comentarios de felicitación en los cumpleaños de usuarios';
 
+

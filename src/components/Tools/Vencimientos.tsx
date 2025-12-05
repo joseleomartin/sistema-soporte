@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar, RefreshCw, Upload, Download, AlertCircle, CheckCircle2, Loader2, FileSpreadsheet } from 'lucide-react';
+import { Calendar, RefreshCw, Upload, Download, AlertCircle, CheckCircle2, Loader2, FileSpreadsheet, UserPlus, Users, Mail, X, Edit2, Trash2 } from 'lucide-react';
 import { useExtraction } from '../../contexts/ExtractionContext';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Usar VITE_BACKEND_URL si está disponible, sino VITE_EXTRACTOR_API_URL, sino localhost:5000 (backend por defecto)
 const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL as string | undefined) 
@@ -29,8 +31,18 @@ interface JobStatus {
   error?: string;
 }
 
+interface Cliente {
+  id: string;
+  nombre: string;
+  cuil: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export function Vencimientos() {
   const { addJob, updateJob } = useExtraction();
+  const { profile } = useAuth();
   const [vencimientos, setVencimientos] = useState<VencimientoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,6 +60,14 @@ export function Vencimientos() {
   } | null>(null);
   const [localMessage, setLocalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [tabActiva, setTabActiva] = useState<string | null>(null);
+  
+  // Estados para gestión de clientes
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
+  const [showClienteModal, setShowClienteModal] = useState(false);
+  const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
+  const [formCliente, setFormCliente] = useState({ nombre: '', cuil: '', email: '' });
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
 
   // Definir cargarVencimientos antes de usarlo en los useEffect
   const cargarVencimientos = useCallback(async () => {
@@ -88,6 +108,7 @@ export function Vencimientos() {
   // Cargar vencimientos al montar el componente
   useEffect(() => {
     cargarVencimientos();
+    cargarClientes();
   }, [cargarVencimientos]);
 
   // Polling para el estado del job de refresco
@@ -365,6 +386,168 @@ export function Vencimientos() {
       });
     } catch {
       return fechaISO;
+    }
+  };
+
+  // Funciones para gestión de clientes
+  const cargarClientes = async () => {
+    if (!profile?.id) return;
+    
+    try {
+      setLoadingClientes(true);
+      const { data, error } = await supabase
+        .from('vencimientos_clientes')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      setClientes(data || []);
+    } catch (error: any) {
+      console.error('Error cargando clientes:', error);
+      setLocalMessage({ type: 'error', text: 'Error al cargar clientes' });
+    } finally {
+      setLoadingClientes(false);
+    }
+  };
+
+  const handleGuardarCliente = async () => {
+    if (!profile?.id) return;
+    
+    if (!formCliente.nombre.trim() || !formCliente.cuil.trim() || !formCliente.email.trim()) {
+      setLocalMessage({ type: 'error', text: 'Todos los campos son requeridos' });
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formCliente.email)) {
+      setLocalMessage({ type: 'error', text: 'El email no es válido' });
+      return;
+    }
+
+    try {
+      if (clienteEditando) {
+        // Actualizar cliente existente
+        const { error } = await supabase
+          .from('vencimientos_clientes')
+          .update({
+            nombre: formCliente.nombre.trim(),
+            cuil: formCliente.cuil.trim(),
+            email: formCliente.email.trim(),
+          })
+          .eq('id', clienteEditando.id)
+          .eq('user_id', profile.id);
+
+        if (error) throw error;
+        setLocalMessage({ type: 'success', text: 'Cliente actualizado correctamente' });
+      } else {
+        // Crear nuevo cliente
+        const { error } = await supabase
+          .from('vencimientos_clientes')
+          .insert({
+            nombre: formCliente.nombre.trim(),
+            cuil: formCliente.cuil.trim(),
+            email: formCliente.email.trim(),
+            user_id: profile.id,
+          });
+
+        if (error) {
+          if (error.code === '23505') {
+            throw new Error('Ya existe un cliente con ese CUIL');
+          }
+          throw error;
+        }
+        setLocalMessage({ type: 'success', text: 'Cliente creado correctamente' });
+      }
+
+      setShowClienteModal(false);
+      setClienteEditando(null);
+      setFormCliente({ nombre: '', cuil: '', email: '' });
+      await cargarClientes();
+    } catch (error: any) {
+      console.error('Error guardando cliente:', error);
+      setLocalMessage({ type: 'error', text: error.message || 'Error al guardar cliente' });
+    }
+  };
+
+  const handleEliminarCliente = async (id: string) => {
+    if (!profile?.id) return;
+    
+    if (!confirm('¿Estás seguro de que deseas eliminar este cliente?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('vencimientos_clientes')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', profile.id);
+
+      if (error) throw error;
+      setLocalMessage({ type: 'success', text: 'Cliente eliminado correctamente' });
+      await cargarClientes();
+    } catch (error: any) {
+      console.error('Error eliminando cliente:', error);
+      setLocalMessage({ type: 'error', text: 'Error al eliminar cliente' });
+    }
+  };
+
+  const handleEditarCliente = (cliente: Cliente) => {
+    setClienteEditando(cliente);
+    setFormCliente({
+      nombre: cliente.nombre,
+      cuil: cliente.cuil,
+      email: cliente.email,
+    });
+    setShowClienteModal(true);
+  };
+
+  const handleEnviarEmail = async (cliente: Cliente) => {
+    if (!vencimientos) {
+      setLocalMessage({ type: 'error', text: 'No hay vencimientos disponibles para enviar' });
+      return;
+    }
+
+    setEnviandoEmail(true);
+    setLocalMessage(null);
+
+    try {
+      const headers: HeadersInit = {};
+      if (API_BASE_URL.includes('ngrok')) {
+        headers['ngrok-skip-browser-warning'] = 'true';
+        headers['User-Agent'] = 'Mozilla/5.0';
+      }
+
+      const response = await fetch(`${API_BASE_URL}/vencimientos/enviar-email`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cliente_id: cliente.id,
+          cuil: cliente.cuil,
+          email: cliente.email,
+          nombre_cliente: cliente.nombre,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Error al enviar email' }));
+        throw new Error(errorData.message || 'Error al enviar email');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setLocalMessage({ type: 'success', text: `Email enviado correctamente a ${cliente.email}` });
+      } else {
+        throw new Error(data.message || 'Error al enviar email');
+      }
+    } catch (error: any) {
+      console.error('Error enviando email:', error);
+      setLocalMessage({ type: 'error', text: error.message || 'Error al enviar email' });
+    } finally {
+      setEnviandoEmail(false);
     }
   };
 
@@ -698,6 +881,169 @@ export function Vencimientos() {
         </div>
       )}
 
+      {/* Gestión de Clientes */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Clientes</h3>
+            <p className="text-sm text-gray-600">
+              Gestiona tus clientes para enviarles vencimientos por email
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setClienteEditando(null);
+              setFormCliente({ nombre: '', cuil: '', email: '' });
+              setShowClienteModal(true);
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Agregar Cliente
+          </button>
+        </div>
+
+        {loadingClientes ? (
+          <div className="text-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+            <p className="text-sm text-gray-500 mt-2">Cargando clientes...</p>
+          </div>
+        ) : clientes.length === 0 ? (
+          <div className="text-center py-8">
+            <Users className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+            <p className="text-gray-500 mb-2">No tienes clientes registrados</p>
+            <p className="text-sm text-gray-400">Agrega un cliente para comenzar</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {clientes.map((cliente) => (
+              <div
+                key={cliente.id}
+                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="font-medium text-gray-900">{cliente.nombre}</p>
+                      <p className="text-sm text-gray-600">CUIL: {cliente.cuil}</p>
+                      <p className="text-sm text-gray-600">Email: {cliente.email}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleEnviarEmail(cliente)}
+                    disabled={enviandoEmail || !vencimientos}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Enviar vencimientos por email"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Enviar Vencimientos
+                  </button>
+                  <button
+                    onClick={() => handleEditarCliente(cliente)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    title="Editar cliente"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleEliminarCliente(cliente.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                    title="Eliminar cliente"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal para crear/editar cliente */}
+      {showClienteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {clienteEditando ? 'Editar Cliente' : 'Nuevo Cliente'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowClienteModal(false);
+                  setClienteEditando(null);
+                  setFormCliente({ nombre: '', cuil: '', email: '' });
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del Cliente *
+                </label>
+                <input
+                  type="text"
+                  value={formCliente.nombre}
+                  onChange={(e) => setFormCliente({ ...formCliente, nombre: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: Juan Pérez"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CUIL *
+                </label>
+                <input
+                  type="text"
+                  value={formCliente.cuil}
+                  onChange={(e) => setFormCliente({ ...formCliente, cuil: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: 20-12345678-9"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={formCliente.email}
+                  onChange={(e) => setFormCliente({ ...formCliente, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: cliente@ejemplo.com"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleGuardarCliente}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  {clienteEditando ? 'Actualizar' : 'Crear'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowClienteModal(false);
+                    setClienteEditando(null);
+                    setFormCliente({ nombre: '', cuil: '', email: '' });
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Información sobre Vencimientos */}
       <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-orange-900 mb-3 flex items-center gap-2">
@@ -732,4 +1078,3 @@ export function Vencimientos() {
     </div>
   );
 }
-

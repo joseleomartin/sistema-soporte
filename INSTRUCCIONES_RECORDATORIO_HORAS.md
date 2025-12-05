@@ -190,3 +190,4 @@ ORDER BY full_name;
 
 - 📧 **Límites de Resend:** Verifica los límites de tu plan de Resend para asegurarte de que puedes enviar emails a todos tus usuarios.
 
+

@@ -56,3 +56,9 @@ CREATE POLICY "Users can delete their own attachments"
 -- Bucket name: direct-message-attachments
 -- Public: false (archivos privados)
 
+
+
+
+
+
+

@@ -150,3 +150,4 @@ Puedes personalizar el template del email editando:
 
 El template HTML está en la función `serve()` dentro del campo `html`.
 
+

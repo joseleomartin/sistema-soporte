@@ -107,3 +107,4 @@ SELECT 'Anon key configurado:' as info,
     ELSE 'No'
   END as anon_key_status;
 
+

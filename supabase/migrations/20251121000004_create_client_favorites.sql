@@ -39,3 +39,4 @@ COMMENT ON TABLE client_favorites IS 'Tabla para almacenar los clientes favorito
 COMMENT ON COLUMN client_favorites.user_id IS 'ID del usuario que marcó el cliente como favorito';
 COMMENT ON COLUMN client_favorites.subforum_id IS 'ID del subforo (cliente) marcado como favorito';
 
+

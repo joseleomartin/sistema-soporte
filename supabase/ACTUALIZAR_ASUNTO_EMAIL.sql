@@ -63,3 +63,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- "EmaGroup Notificaciones: Fuiste mencionado en el chat de [título de la tarea]"
 -- ============================================
 
+

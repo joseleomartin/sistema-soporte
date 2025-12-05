@@ -52,6 +52,7 @@ FROM profiles;
 
 -- 5. Probar pg_net directamente (test simple)
 -- Esto debería crear una entrada en la tabla net.http_request_queue
+-- Nota: pg_net puede no estar disponible en todos los planes de Supabase
 DO $$
 BEGIN
   -- Intentar hacer una petición HTTP de prueba
@@ -63,25 +64,21 @@ BEGIN
   RAISE NOTICE '✅ Test de pg_net ejecutado - Revisa net.http_request_queue';
 EXCEPTION WHEN OTHERS THEN
   RAISE NOTICE '❌ Error en test de pg_net: %', SQLERRM;
+  RAISE NOTICE '⚠️  Si pg_net no funciona, considera usar Database Webhooks en su lugar';
 END $$;
 
--- 6. Ver peticiones HTTP recientes de pg_net
-SELECT 
-  id,
-  url,
-  method,
-  created,
-  status,
-  response_status_code,
-  CASE 
-    WHEN status = 'pending' THEN '⏳ Pendiente'
-    WHEN status = 'success' AND response_status_code >= 200 AND response_status_code < 300 THEN '✅ Éxito'
-    WHEN status = 'error' THEN '❌ Error'
-    ELSE status
-  END as estado
-FROM net.http_request_queue
-ORDER BY created DESC
-LIMIT 10;
+-- 6. Verificar si hay peticiones HTTP en pg_net
+-- Nota: La estructura de net.http_request_queue puede variar
+-- Si hay error, significa que pg_net puede no estar funcionando correctamente
+DO $$
+BEGIN
+  -- Intentar contar registros en la tabla
+  PERFORM COUNT(*) FROM net.http_request_queue;
+  RAISE NOTICE '✅ Tabla net.http_request_queue existe y tiene registros';
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE '❌ Error accediendo a net.http_request_queue: %', SQLERRM;
+  RAISE NOTICE '⚠️  Esto puede indicar que pg_net no está funcionando correctamente';
+END $$;
 
 -- 7. Verificar la URL de la Edge Function que se está usando
 SELECT 

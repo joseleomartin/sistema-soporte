@@ -17,3 +17,4 @@ DROP CONSTRAINT IF EXISTS unique_user_client_date;
 --    para el mismo cliente en la misma fecha
 -- ============================================
 
+

@@ -62,6 +62,13 @@ Deno.serve(async (req) => {
     // Construir URL de redirección - solo la URL base sin hash
     let redirectUrl = FRONTEND_URL
     
+    // Verificar si es un recordatorio de horas para personalizar el botón
+    const isHoursReminder = record.metadata?.is_hours_reminder === true || record.metadata?.is_hours_reminder === 'true'
+    const buttonText = isHoursReminder ? 'Ir a Cargar Horas' : 'Ir a la plataforma'
+    const buttonHelpText = isHoursReminder 
+      ? 'Haz clic en el botón para ir directamente a la sección de carga de horas.'
+      : 'Puedes ver todas tus notificaciones en la plataforma EmaGroup.'
+    
     // Construir HTML
     if (message) {
       html = `
@@ -73,8 +80,8 @@ Deno.serve(async (req) => {
             <h2 style="color: #111827; margin-top: 0; font-size: 20px;">${subject}</h2>
             <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">${message}</p>
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
-              <a href="${redirectUrl}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 0;">Ir a la plataforma</a>
-              <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">Puedes ver todas tus notificaciones en la plataforma EmaGroup.</p>
+              <a href="${redirectUrl}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 0;">${buttonText}</a>
+              <p style="color: #6b7280; font-size: 14px; margin: 20px 0 0 0;">${buttonHelpText}</p>
             </div>
           </div>
           <div style="text-align: center; margin-top: 20px;">
@@ -86,11 +93,16 @@ Deno.serve(async (req) => {
   } else {
     // Si viene formato directo (desde trigger o test manual)
     to = payload.to
-    // Agregar "EmaGroup Notificaciones:" solo para el email si no lo tiene
+    // Para vencimientos, no agregar el prefijo "EmaGroup Notificaciones:"
     const notificationSubject = payload.subject || 'Notificación'
-    subject = notificationSubject.startsWith('EmaGroup Notificaciones:') 
-      ? notificationSubject 
-      : `EmaGroup Notificaciones: ${notificationSubject}`
+    // Solo agregar el prefijo si NO es un email de vencimientos
+    if (notificationSubject.startsWith('Vencimientos -')) {
+      subject = notificationSubject
+    } else {
+      subject = notificationSubject.startsWith('EmaGroup Notificaciones:') 
+        ? notificationSubject 
+        : `EmaGroup Notificaciones: ${notificationSubject}`
+    }
     html = payload.html
     message = payload.message
     
@@ -149,40 +161,68 @@ Deno.serve(async (req) => {
     )
   }
 
-  // Enviar email usando Resend
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${RESEND_API_KEY}`,
-    },
-    body: JSON.stringify({
-      from: FROM_EMAIL,  // Usar FROM_EMAIL de las variables de entorno
-      to,
-      subject,
-      html,
-    }),
-  })
+  // Enviar email usando Resend con retry logic para manejar rate limiting
+  const maxRetries = 3
+  let retryCount = 0
+  let lastError = null
+  
+  while (retryCount < maxRetries) {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to,
+        subject,
+        html,
+      }),
+    })
 
-  const data = await res.json()
+    const data = await res.json()
 
-  // Si hay error, loguearlo
-  if (!res.ok) {
+    // Si es éxito, retornar
+    if (res.ok) {
+      console.log('✅ Email enviado exitosamente a:', to)
+      return new Response(
+        JSON.stringify(data),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Si es error 429 (rate limit), esperar y reintentar
+    if (res.status === 429 && retryCount < maxRetries - 1) {
+      const retryAfter = res.headers.get('retry-after') || '1'
+      const waitTime = parseInt(retryAfter) * 1000 || 1000 // Esperar al menos 1 segundo
+      
+      console.log(`⏳ Rate limit alcanzado. Esperando ${waitTime}ms antes de reintentar... (intento ${retryCount + 1}/${maxRetries})`)
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+      retryCount++
+      lastError = data
+      continue
+    }
+
+    // Si es otro error o se agotaron los reintentos, retornar error
     console.error('❌ Error enviando email con Resend:', data)
     return new Response(
       JSON.stringify({ 
         error: 'Failed to send email',
-        details: data
+        details: data,
+        retries: retryCount
       }),
       { status: res.status, headers: { 'Content-Type': 'application/json' } }
     )
   }
 
-  // Éxito
-  console.log('✅ Email enviado exitosamente a:', to)
+  // Si llegamos aquí, se agotaron los reintentos
+  console.error('❌ Error enviando email después de', maxRetries, 'intentos:', lastError)
   return new Response(
-    JSON.stringify(data),
-    { headers: { 'Content-Type': 'application/json' } }
+    JSON.stringify({ 
+      error: 'Failed to send email after retries',
+      details: lastError
+    }),
+    { status: 429, headers: { 'Content-Type': 'application/json' } }
   )
 })
-

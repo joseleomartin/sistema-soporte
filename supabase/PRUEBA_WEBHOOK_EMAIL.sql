@@ -110,3 +110,4 @@ LIMIT 3;
 -- 3. Verifica que RESEND_API_KEY esté configurado
 -- ============================================
 
+

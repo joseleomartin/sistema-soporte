@@ -88,3 +88,4 @@ SELECT
     ELSE '❌ pg_net NO está habilitado - Ejecuta: CREATE EXTENSION IF NOT EXISTS pg_net;'
   END as estado;
 
+

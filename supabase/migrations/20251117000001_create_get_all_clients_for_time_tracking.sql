@@ -37,3 +37,5 @@ $$;
 -- Permitir a todos los usuarios autenticados ejecutar esta función
 GRANT EXECUTE ON FUNCTION get_all_clients_for_time_tracking() TO authenticated;
 
+
+

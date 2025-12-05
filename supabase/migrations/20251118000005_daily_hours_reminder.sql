@@ -62,7 +62,7 @@ BEGIN
   edge_function_url := supabase_url || '/functions/v1/resend-email';
 
   -- Asunto del email
-  email_subject := 'EmaGroup Notificaciones: Recordatorio de Carga de Horas';
+  email_subject := 'Recordatorio de Carga de Horas';
 
   -- HTML del email
   email_html := '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">' ||

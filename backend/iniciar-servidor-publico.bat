@@ -49,3 +49,9 @@ taskkill /FI "WINDOWTITLE eq Servidor Flask" /F >nul 2>&1
 
 
 
+
+
+
+
+
+

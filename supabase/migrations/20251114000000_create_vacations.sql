@@ -106,3 +106,9 @@ CREATE TRIGGER calculate_vacation_days_trigger
   FOR EACH ROW
   EXECUTE FUNCTION calculate_vacation_days();
 
+
+
+
+
+
+

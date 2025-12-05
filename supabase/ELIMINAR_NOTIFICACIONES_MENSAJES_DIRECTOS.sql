@@ -14,3 +14,8 @@ DROP TRIGGER IF EXISTS trigger_notify_direct_message ON direct_messages;
 -- SELECT COUNT(*) FROM notifications WHERE type = 'direct_message';
 -- Debe devolver 0
 
+
+
+
+
+

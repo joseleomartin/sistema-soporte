@@ -86,3 +86,4 @@ COMMENT ON COLUMN course_parts.part_number IS 'Número de la parte (1, 2, 3, etc
 COMMENT ON COLUMN course_parts.title IS 'Título de la parte';
 COMMENT ON COLUMN course_parts.description IS 'Descripción de la parte';
 
+

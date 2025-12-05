@@ -1021,6 +1021,462 @@ def vencimientos_filtrar_por_cuils():
             'message': f'Error al filtrar vencimientos: {str(e)}'
         }), 500
 
+@app.route('/vencimientos/enviar-email', methods=['POST'])
+def vencimientos_enviar_email():
+    """Envía un email con los vencimientos de un cliente"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No se recibieron datos'
+            }), 400
+        
+        cuil = data.get('cuil')
+        email = data.get('email')
+        nombre_cliente = data.get('nombre_cliente', 'Cliente')
+        
+        if not cuil or not email:
+            return jsonify({
+                'success': False,
+                'message': 'CUIL y email son requeridos'
+            }), 400
+        
+        # Obtener vencimientos para este CUIL
+        archivo = encontrar_archivo_consolidado_mas_reciente()
+        if not archivo:
+            return jsonify({
+                'success': False,
+                'message': 'No hay archivo de vencimientos disponible'
+            }), 404
+        
+        # Extraer último dígito del CUIL
+        ultimo_digito = extraer_ultimo_digito_cuil(cuil)
+        if ultimo_digito is None:
+            return jsonify({
+                'success': False,
+                'message': 'CUIL inválido'
+            }), 400
+        
+        # Obtener mes y año actual
+        from datetime import datetime
+        import locale
+        
+        # Configurar locale a español para parsear meses en español
+        try:
+            locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+        except:
+            try:
+                locale.setlocale(locale.LC_TIME, 'es_ES')
+            except:
+                try:
+                    locale.setlocale(locale.LC_TIME, 'Spanish_Spain.1252')
+                except:
+                    pass  # Si no funciona, continuar sin locale
+        
+        fecha_actual = datetime.now()
+        mes_actual = fecha_actual.month
+        anio_actual = fecha_actual.year
+        
+        # Nombres de meses en español para comparación
+        meses_espanol = {
+            'enero': 1, 'ene': 1,
+            'febrero': 2, 'feb': 2,
+            'marzo': 3, 'mar': 3,
+            'abril': 4, 'abr': 4,
+            'mayo': 5, 'may': 5,
+            'junio': 6, 'jun': 6,
+            'julio': 7, 'jul': 7,
+            'agosto': 8, 'ago': 8,
+            'septiembre': 9, 'sep': 9, 'sept': 9,
+            'octubre': 10, 'oct': 10,
+            'noviembre': 11, 'nov': 11,
+            'diciembre': 12, 'dic': 12
+        }
+        
+        # Obtener nombre del mes actual en español
+        meses_nombres_completos = {
+            1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+            5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+            9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+        }
+        mes_actual_nombre_completo = meses_nombres_completos.get(mes_actual, 'Desconocido')
+        mes_actual_nombre = mes_actual_nombre_completo.lower()
+        
+        logger.info(f"Filtrando vencimientos que se efectúan en {mes_actual_nombre_completo} {anio_actual}")
+        
+        # Leer archivo Excel y extraer TODAS las fechas de vencimiento
+        excel_file = pd.ExcelFile(archivo)
+        vencimientos_para_cliente = []
+        
+        for sheet_name in excel_file.sheet_names:
+            df = pd.read_excel(excel_file, sheet_name=sheet_name)
+            df = df.where(pd.notna(df), None)
+            
+            logger.debug(f"Procesando hoja: {sheet_name}")
+            
+            # Buscar la columna de período (para incluirla en el resultado)
+            columnas_periodo = []
+            for col in df.columns:
+                col_lower = str(col).lower()
+                if any(term in col_lower for term in ['mes de devengamiento', 'periodo devengado', 'mes', 'periodo']):
+                    if not any(excl in col_lower for excl in ['terminación', 'cuit', 'vencimiento']):
+                        columnas_periodo.append(col)
+                        break
+            
+            col_periodo = columnas_periodo[0] if columnas_periodo else None
+            
+            # NO filtrar por período, procesar TODAS las filas
+            # La idea es extraer TODAS las fechas y luego filtrar por mes de vencimiento
+            
+            # Identificar la columna de fecha correspondiente al dígito del CUIL
+            # Primero buscar formato "vencimiento según terminación"
+            columnas_fechas = [col for col in df.columns if 'vencimiento según terminación' in str(col).lower()]
+            
+            # Si no encontró, buscar simplemente "vencimiento" o "fecha"
+            if not columnas_fechas:
+                columnas_fechas = [col for col in df.columns if 'vencimiento' in str(col).lower() or 'fecha' in str(col).lower()]
+            
+            if not columnas_fechas:
+                logger.debug(f"Hoja {sheet_name} no tiene columnas de fecha, saltando")
+                continue
+            
+            columna_fecha_digito = None
+            digito_int = int(ultimo_digito) if ultimo_digito.isdigit() else None
+            
+            if digito_int is not None:
+                # Verificar si alguna columna menciona "terminación" o "CUIT" (indica división por dígitos)
+                tiene_division_digitos = any('terminación' in str(c).lower() or 'cuit' in str(c).lower() for c in columnas_fechas)
+                
+                # Si NO tiene división por dígitos (ej: servicio doméstico), usar la primera columna
+                if not tiene_division_digitos and len(columnas_fechas) >= 1:
+                    columna_fecha_digito = columnas_fechas[0]
+                    logger.debug(f"Tabla sin división por dígitos, usando primera columna: {columna_fecha_digito}")
+                # Si solo hay 2-3 columnas sin sufijos, asumir orden estándar
+                elif len(columnas_fechas) <= 3 and not any('.1' in str(c) or '.2' in str(c) for c in columnas_fechas):
+                    # Formato simplificado: primera columna, segunda (.1 implícita), etc.
+                    if digito_int in [0, 1, 2, 3] and len(columnas_fechas) >= 1:
+                        columna_fecha_digito = columnas_fechas[0]
+                    elif digito_int in [4, 5, 6] and len(columnas_fechas) >= 2:
+                        columna_fecha_digito = columnas_fechas[1]
+                    elif digito_int in [7, 8, 9] and len(columnas_fechas) >= 3:
+                        columna_fecha_digito = columnas_fechas[2]
+                    elif digito_int in [7, 8, 9] and len(columnas_fechas) == 2:
+                        # Solo 2 columnas, usar la segunda
+                        columna_fecha_digito = columnas_fechas[1]
+                else:
+                    # Formato estándar con sufijos .1, .2, .3, .4, etc.
+                    if digito_int in [0, 1, 2, 3]:
+                        primera = [c for c in columnas_fechas if '.1' not in str(c) and '.2' not in str(c) and '.3' not in str(c) and '.4' not in str(c)]
+                        if primera:
+                            columna_fecha_digito = primera[0]
+                    elif digito_int in [4, 5, 6]:
+                        # Buscar columna que contenga .1 o .2 (para tablas con 5 columnas)
+                        segunda = [c for c in columnas_fechas if '.1' in str(c)]
+                        if not segunda:
+                            segunda = [c for c in columnas_fechas if '.2' in str(c)]
+                        if segunda:
+                            columna_fecha_digito = segunda[0]
+                    elif digito_int in [7, 8, 9]:
+                        # Buscar columna que contenga .2, .3 o .4 (pueden variar según la tabla)
+                        # Para terminación 7 específicamente (6 y 7), buscar .3
+                        tercera = []
+                        # Si es una tabla de AGIP con 5 columnas, 6 y 7 están en .3
+                        if len(columnas_fechas) == 5:
+                            tercera = [c for c in columnas_fechas if '.3' in str(c)]
+                        # Si no, buscar .2 (formato estándar de 3 columnas)
+                        if not tercera:
+                            tercera = [c for c in columnas_fechas if '.2' in str(c)]
+                        # Como último recurso, buscar .4
+                        if not tercera:
+                            tercera = [c for c in columnas_fechas if '.4' in str(c)]
+                        if tercera:
+                            columna_fecha_digito = tercera[0]
+            
+            if not columna_fecha_digito:
+                logger.debug(f"No se pudo determinar columna de fecha para dígito {ultimo_digito} en {sheet_name}")
+                continue
+            
+            logger.debug(f"Columna de fecha seleccionada: {columna_fecha_digito}")
+            
+            # Recorrer TODAS las filas y extraer fechas válidas que vencen en el mes/año actual
+            fechas_sheet = []
+            
+            for idx, fila in df.iterrows():
+                fecha_vencimiento = fila.get(columna_fecha_digito)
+                
+                if pd.notna(fecha_vencimiento) and str(fecha_vencimiento).strip():
+                    fecha_str = str(fecha_vencimiento).strip()
+                    
+                    # Verificar que sea una fecha real (no "7, 8 y 9" o "0-1-2-3")
+                    # Una fecha real contiene "-" o "/" y no contiene "y" ni ","
+                    if ('-' in fecha_str or '/' in fecha_str) and 'y' not in fecha_str.lower() and ',' not in fecha_str:
+                        # Parsear la fecha para verificar que sea del mes y año actual
+                        try:
+                            separador = '-' if '-' in fecha_str else '/'
+                            partes = fecha_str.split(separador)
+                            
+                            if len(partes) >= 2:
+                                dia = partes[0].strip()
+                                mes_parte = partes[1].strip().lower()
+                                anio_parte = partes[2].strip() if len(partes) > 2 else str(anio_actual)
+                                
+                                # Convertir mes
+                                if mes_parte in meses_espanol:
+                                    mes_num = meses_espanol[mes_parte]
+                                elif mes_parte.isdigit():
+                                    mes_num = int(mes_parte)
+                                else:
+                                    continue
+                                
+                                # Completar año si es de 2 dígitos
+                                if len(anio_parte) == 2:
+                                    anio_parte = '20' + anio_parte
+                                
+                                anio_num = int(anio_parte) if anio_parte.isdigit() else anio_actual
+                                
+                                # Solo incluir si es del mes y año actual
+                                if mes_num == mes_actual and anio_num == anio_actual:
+                                    # Verificar el período para evitar duplicados de años futuros
+                                    periodo_ok = True
+                                    if col_periodo:
+                                        valor_periodo = fila.get(col_periodo)
+                                        if pd.notna(valor_periodo):
+                                            periodo_texto = str(valor_periodo).lower()
+                                            # Rechazar si menciona un año futuro
+                                            if '2026' in periodo_texto or '2027' in periodo_texto:
+                                                logger.debug(f"Rechazada fecha {fecha_str} de {sheet_name} por período de año futuro: {periodo_texto}")
+                                                periodo_ok = False
+                                    
+                                    if periodo_ok:
+                                        vencimiento_data = {
+                                            'Tipo_Vencimiento': sheet_name,
+                                            'Fecha_Vencimiento': fecha_str
+                                        }
+                                        
+                                        # Agregar columna de período si existe
+                                        if col_periodo:
+                                            valor_periodo = fila.get(col_periodo)
+                                            if pd.notna(valor_periodo) and str(valor_periodo).strip():
+                                                vencimiento_data[col_periodo] = str(valor_periodo)
+                                        
+                                        # Añadir otras columnas relevantes de información
+                                        columnas_info_general = ['Concepto', 'Descripción', 'Importe', 'Monto', 'Anticipo', 'Periodo']
+                                        for col_name in df.columns:
+                                            col_lower = str(col_name).lower()
+                                            if any(info_col.lower() in col_lower for info_col in columnas_info_general):
+                                                valor = fila.get(col_name)
+                                                if pd.notna(valor) and valor is not None and str(valor).strip():
+                                                    vencimiento_data[col_name] = str(valor)
+                                        
+                                        fechas_sheet.append(vencimiento_data)
+                                        logger.debug(f"Fecha válida {fecha_str} en {sheet_name} fila {idx} para {mes_actual}/{anio_actual}")
+                                else:
+                                    logger.debug(f"Rechazada fecha {fecha_str} de {sheet_name}: mes={mes_num}, año={anio_num} (esperado: {mes_actual}/{anio_actual})")
+                        except Exception as e:
+                            logger.debug(f"Error parseando fecha '{fecha_str}' en {sheet_name}: {e}")
+            
+            # Solo agregar UNA fecha por tabla (la primera válida encontrada)
+            # Esto evita duplicados
+            if fechas_sheet:
+                # Agrupar por fecha para eliminar duplicados exactos
+                fechas_unicas = {}
+                for venc in fechas_sheet:
+                    fecha = venc['Fecha_Vencimiento']
+                    if fecha not in fechas_unicas:
+                        fechas_unicas[fecha] = venc
+                
+                # Solo agregar la primera fecha única encontrada
+                if fechas_unicas:
+                    primera_fecha = list(fechas_unicas.values())[0]
+                    vencimientos_para_cliente.append(primera_fecha)
+                    logger.info(f"✓ Vencimiento agregado para {sheet_name}: {primera_fecha['Fecha_Vencimiento']}")
+            else:
+                logger.debug(f"No se encontraron fechas de {mes_actual}/{anio_actual} en {sheet_name}")
+        
+        if not vencimientos_para_cliente:
+            return jsonify({
+                'success': False,
+                'message': 'No se encontraron vencimientos para este CUIL'
+            }), 404
+        
+        # Filtrar vencimientos por fecha de vencimiento (mes actual)
+        vencimientos_filtrados = []
+        for venc in vencimientos_para_cliente:
+            fecha_str = venc.get('Fecha_Vencimiento', '')
+            if not fecha_str:
+                continue
+            
+            try:
+                # Parsear la fecha en diferentes formatos
+                fecha_vencimiento = None
+                
+                # Formato: dd-mmm-yyyy o dd-mmm o dd/mm/yyyy o dd/mm
+                if '-' in fecha_str or '/' in fecha_str:
+                    separador = '-' if '-' in fecha_str else '/'
+                    partes = fecha_str.split(separador)
+                    
+                    if len(partes) >= 2:
+                        dia = partes[0].strip()
+                        mes_parte = partes[1].strip().lower()
+                        anio_parte = partes[2].strip() if len(partes) > 2 else str(anio_actual)
+                        
+                        # Si el mes es un nombre (ej: "ene", "dic")
+                        if mes_parte in meses_espanol:
+                            mes_num = meses_espanol[mes_parte]
+                        # Si el mes es un número (ej: "12", "01")
+                        elif mes_parte.isdigit():
+                            mes_num = int(mes_parte)
+                        else:
+                            continue
+                        
+                        # Si el año es de 2 dígitos, completar
+                        if len(anio_parte) == 2:
+                            anio_parte = '20' + anio_parte
+                        
+                        anio_num = int(anio_parte) if anio_parte.isdigit() else anio_actual
+                        
+                        # Verificar si coincide con el mes y año actual
+                        if mes_num == mes_actual and anio_num == anio_actual:
+                            vencimientos_filtrados.append(venc)
+                            logger.debug(f"Vencimiento incluido: {fecha_str} ({mes_num}/{anio_num})")
+                        else:
+                            logger.debug(f"Vencimiento excluido: {fecha_str} (mes {mes_num}, año {anio_num}) - No coincide con {mes_actual}/{anio_actual}")
+            except Exception as e:
+                logger.error(f"Error parseando fecha '{fecha_str}': {e}")
+                # Si hay error parseando, incluir el vencimiento por seguridad
+                vencimientos_filtrados.append(venc)
+        
+        if not vencimientos_filtrados:
+            logger.info(f"No se encontraron vencimientos para {mes_actual_nombre_completo} {anio_actual} después de filtrar por fecha")
+            return jsonify({
+                'success': False,
+                'message': f'No se encontraron vencimientos que se efectúen en {mes_actual_nombre_completo} {anio_actual} para este CUIL'
+            }), 404
+        
+        logger.info(f"Vencimientos filtrados: {len(vencimientos_filtrados)} de {len(vencimientos_para_cliente)} totales")
+        vencimientos_para_cliente = vencimientos_filtrados
+        
+        # Construir HTML del email
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+                .content {{ background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px; }}
+                .vencimiento-item {{ background: #f9fafb; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #f97316; }}
+                .vencimiento-tipo {{ font-weight: bold; color: #f97316; margin-bottom: 8px; }}
+                .vencimiento-fecha {{ color: #059669; font-weight: 600; }}
+                .footer {{ text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }}
+                .footer p {{ color: #6b7280; font-size: 14px; margin: 5px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Vencimientos - {nombre_cliente}</h1>
+                </div>
+                <div class="content">
+                    <p>Estimado/a <strong>{nombre_cliente}</strong>,</p>
+                    <p>Le informamos los siguientes vencimientos que se efectúan en <strong>{mes_actual_nombre_completo} {anio_actual}</strong> correspondientes a su CUIL <strong>{cuil}</strong>:</p>
+                    
+                    <div style="margin: 20px 0;">
+        """
+        
+        # Agrupar vencimientos por tipo
+        vencimientos_por_tipo = {}
+        for venc in vencimientos_para_cliente:
+            tipo = venc.get('Tipo_Vencimiento', 'Sin tipo')
+            if tipo not in vencimientos_por_tipo:
+                vencimientos_por_tipo[tipo] = []
+            vencimientos_por_tipo[tipo].append(venc)
+        
+        for tipo, vencs in vencimientos_por_tipo.items():
+            tipo_formateado = tipo.replace('_', ' ').replace('-', ' ').title()
+            html_content += f"""
+                        <div class="vencimiento-item">
+                            <div class="vencimiento-tipo">{tipo_formateado}</div>
+            """
+            for venc in vencs:
+                fecha = venc.get('Fecha_Vencimiento', 'N/A')
+                html_content += f'<div class="vencimiento-fecha">📅 Fecha: {fecha}</div>'
+                # Agregar información adicional si existe
+                for key, value in venc.items():
+                    if key not in ['Tipo_Vencimiento', 'Fecha_Vencimiento']:
+                        html_content += f'<div style="margin-top: 5px; color: #4b5563;">{key}: {value}</div>'
+            html_content += '</div>'
+        
+        html_content += """
+                    </div>
+                    
+                    <p style="margin-top: 20px;">Este es un email automático. Por favor, no responda a este mensaje.</p>
+                </div>
+                <div class="footer">
+                    <p><strong>EmaGroup</strong></p>
+                    <p>Sistema de Gestión de Vencimientos</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Obtener configuración de Supabase desde variables de entorno
+        supabase_url = os.environ.get('SUPABASE_URL', 'https://yevbgutnuoivcuqnmrzi.supabase.co')
+        supabase_anon_key = os.environ.get('SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldmJndXRudW9pdmN1cW5tcnppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4OTI0NTQsImV4cCI6MjA3ODQ2ODQ1NH0.COkMSMvFvpCM2q9FC0fYukS-mCzLacqilH9q1aHAQR4')
+        
+        # Llamar a la Edge Function de Supabase para enviar el email
+        edge_function_url = f"{supabase_url}/functions/v1/resend-email"
+        
+        payload = {
+            'to': email,
+            'subject': f'Vencimientos {mes_actual_nombre_completo} {anio_actual} - {nombre_cliente}',
+            'html': html_content
+        }
+        
+        try:
+            response = requests.post(
+                edge_function_url,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {supabase_anon_key}'
+                },
+                json=payload,
+                timeout=30
+            )
+            
+            if response.ok:
+                logger.info(f"Email enviado exitosamente a {email}")
+                return jsonify({
+                    'success': True,
+                    'message': f'Email enviado correctamente a {email}'
+                }), 200
+            else:
+                error_data = response.json() if response.text else {}
+                logger.error(f"Error enviando email: {response.status_code} - {error_data}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error al enviar email: {error_data.get("error", "Error desconocido")}'
+                }), 500
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error de conexión al enviar email: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': f'Error de conexión al enviar email: {str(e)}'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error enviando email de vencimientos: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': f'Error al enviar email: {str(e)}'
+        }), 500
+
 # ==================== FIN SISTEMA DE VENCIMIENTOS ====================
 
 def load_extractor_module(script_name):

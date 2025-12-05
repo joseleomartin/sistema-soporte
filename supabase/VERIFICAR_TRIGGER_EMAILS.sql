@@ -141,3 +141,4 @@ SELECT
   'Para ver los RAISE NOTICE del trigger, habilita el logging en Supabase' as nota,
   'O revisa los logs de la base de datos si están disponibles' as nota2;
 
+

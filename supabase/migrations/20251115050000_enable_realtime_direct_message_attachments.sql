@@ -7,3 +7,9 @@
 -- Habilitar realtime para la tabla direct_message_attachments
 ALTER PUBLICATION supabase_realtime ADD TABLE direct_message_attachments;
 
+
+
+
+
+
+

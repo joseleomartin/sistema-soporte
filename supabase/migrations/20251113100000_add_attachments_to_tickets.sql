@@ -20,3 +20,9 @@ ADD COLUMN IF NOT EXISTS attachments jsonb DEFAULT '[]'::jsonb;
 -- Add index for faster queries on attachments
 CREATE INDEX IF NOT EXISTS idx_tickets_attachments ON tickets USING gin(attachments);
 
+
+
+
+
+
+
