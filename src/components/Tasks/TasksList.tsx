@@ -17,6 +17,7 @@ interface Task {
   created_at: string;
   updated_at: string;
   completed_at?: string | null;
+  is_personal?: boolean; // Nueva: indicador de tarea personal
   assigned_users?: Array<{ id: string; full_name: string; avatar_url?: string }>;
   assigned_departments?: Array<{ id: string; name: string }>;
   created_by_profile?: { id: string; full_name: string; avatar_url?: string | null };
@@ -197,7 +198,7 @@ export function TasksList() {
       // Obtener tareas con sus asignaciones
       let tasksData: Task[] = [];
       
-      // Si es admin, obtener todas las tareas
+      // Si es admin, obtener tareas (RLS filtrará automáticamente: solo tareas de equipo o sus propias tareas personales)
       if (profile.role === 'admin') {
         const { data, error } = await supabase
           .from('tasks')
@@ -439,15 +440,13 @@ export function TasksList() {
             <CheckSquare className="w-6 h-6 text-indigo-600" />
             <h1 className="text-2xl font-bold text-gray-900">Tareas</h1>
           </div>
-          {profile?.role === 'admin' && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Nueva Tarea
-            </button>
-          )}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            {profile?.role === 'admin' ? 'Nueva Tarea' : 'Nueva Tarea Personal'}
+          </button>
         </div>
 
         {/* Filtros */}
@@ -524,9 +523,16 @@ export function TasksList() {
                   <div className="p-4">
                     {/* Header */}
                     <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-semibold text-gray-900 text-lg flex-1 pr-2">
-                        {task.title}
-                      </h3>
+                      <div className="flex-1 pr-2">
+                        <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                          {task.title}
+                          {task.is_personal && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300">
+                              Personal
+                            </span>
+                          )}
+                        </h3>
+                      </div>
                       <span
                         className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap"
                         style={{

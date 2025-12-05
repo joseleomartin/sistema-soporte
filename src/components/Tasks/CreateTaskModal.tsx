@@ -34,6 +34,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'urgent'>('medium');
+  // Usuarios no-admin solo pueden crear tareas personales
+  const [isPersonal, setIsPersonal] = useState(profile?.role !== 'admin');
   const [assignmentType, setAssignmentType] = useState<'user' | 'department'>('user');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
@@ -213,12 +215,15 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
       return 'La fecha límite debe ser futura';
     }
 
-    if (assignmentType === 'user' && selectedUserIds.length === 0) {
-      return 'Debes seleccionar al menos un usuario';
-    }
+    // Solo validar asignaciones si NO es una tarea personal
+    if (!isPersonal) {
+      if (assignmentType === 'user' && selectedUserIds.length === 0) {
+        return 'Debes seleccionar al menos un usuario';
+      }
 
-    if (assignmentType === 'department' && !selectedDepartmentId) {
-      return 'Debes seleccionar un área';
+      if (assignmentType === 'department' && !selectedDepartmentId) {
+        return 'Debes seleccionar un área';
+      }
     }
 
     return null;
@@ -269,9 +274,10 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             priority,
             status: 'pending',
             created_by: profile.id,
-            task_manager_id: taskManagerId || null,
+            task_manager_id: (!isPersonal && taskManagerId) ? taskManagerId : null,
             is_recurring: isRecurring,
-            recurrence_pattern: recurrencePattern
+            recurrence_pattern: recurrencePattern,
+            is_personal: isPersonal // Nuevo campo
           }
         ])
         .select()
@@ -279,32 +285,35 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
       if (taskError) throw taskError;
 
-      // Crear las asignaciones (puede ser múltiples usuarios o un departamento)
-      const assignments = [];
+      // Crear las asignaciones solo si NO es una tarea personal
+      // (las tareas personales se auto-asignan automáticamente con el trigger)
+      if (!isPersonal) {
+        const assignments = [];
 
-      if (assignmentType === 'user') {
-        // Crear una asignación por cada usuario seleccionado
-        for (const userId of selectedUserIds) {
+        if (assignmentType === 'user') {
+          // Crear una asignación por cada usuario seleccionado
+          for (const userId of selectedUserIds) {
+            assignments.push({
+              task_id: taskData.id,
+              assigned_to_user: userId,
+              assigned_by: profile.id
+            });
+          }
+        } else {
+          // Crear una asignación para el departamento
           assignments.push({
             task_id: taskData.id,
-            assigned_to_user: userId,
+            assigned_to_department: selectedDepartmentId,
             assigned_by: profile.id
           });
         }
-      } else {
-        // Crear una asignación para el departamento
-        assignments.push({
-          task_id: taskData.id,
-          assigned_to_department: selectedDepartmentId,
-          assigned_by: profile.id
-        });
+
+        const { error: assignmentError } = await supabase
+          .from('task_assignments')
+          .insert(assignments);
+
+        if (assignmentError) throw assignmentError;
       }
-
-      const { error: assignmentError } = await supabase
-        .from('task_assignments')
-        .insert(assignments);
-
-      if (assignmentError) throw assignmentError;
 
       // Subir archivos si hay alguno seleccionado
       if (selectedFiles.length > 0) {
@@ -543,7 +552,37 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             </div>
           </div>
 
-          {/* Tipo de Asignación */}
+          {/* Tarea Personal */}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <label className={`flex items-center gap-3 ${profile?.role === 'admin' ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}>
+              <input
+                type="checkbox"
+                checked={isPersonal}
+                onChange={(e) => {
+                  setIsPersonal(e.target.checked);
+                  // Limpiar selecciones de asignación cuando se marca como personal
+                  if (e.target.checked) {
+                    setSelectedUserIds([]);
+                    setSelectedDepartmentId('');
+                    setTaskManagerId('');
+                  }
+                }}
+                disabled={profile?.role !== 'admin'} // Solo admins pueden deseleccionar
+                className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:cursor-not-allowed"
+              />
+              <div className="flex-1">
+                <span className="text-sm font-medium text-gray-900">Tarea Personal</span>
+                <p className="text-xs text-gray-600 mt-1">
+                  {profile?.role === 'admin' 
+                    ? 'Esta tarea será solo para ti. No se asignará a otros usuarios ni departamentos.' 
+                    : 'Como usuario regular, solo puedes crear tareas personales.'}
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* Tipo de Asignación (solo si NO es personal) */}
+          {!isPersonal && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Asignar a <span className="text-red-500">*</span>
@@ -633,8 +672,10 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
               </select>
             )}
           </div>
+          )}
 
-          {/* Administrador de Tarea (Opcional) */}
+          {/* Administrador de Tarea (Opcional) - Solo para tareas de equipo */}
+          {!isPersonal && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Administrador de Tarea <span className="text-gray-400 text-xs">(Opcional)</span>
@@ -655,6 +696,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
               El administrador puede cambiar el estado de la tarea. Puede ser cualquier usuario.
             </p>
           </div>
+          )}
 
           {/* Tarea Recurrente */}
           <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
@@ -731,12 +773,14 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             <button
               type="submit"
               disabled={loading || uploading}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className={`px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                isPersonal ? 'bg-purple-600 hover:bg-purple-700' : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
             >
               {(loading || uploading) && (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               )}
-              {loading ? 'Creando...' : uploading ? 'Subiendo archivos...' : 'Crear Tarea'}
+              {loading ? 'Creando...' : uploading ? 'Subiendo archivos...' : isPersonal ? 'Crear Tarea Personal' : 'Crear Tarea'}
             </button>
           </div>
         </form>
