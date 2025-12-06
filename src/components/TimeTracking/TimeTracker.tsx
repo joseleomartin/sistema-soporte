@@ -187,6 +187,11 @@ export function TimeTracker({ clients, onTimeSaved }: TimeTrackerProps) {
       return;
     }
 
+    if (!departmentId) {
+      setError('Debes seleccionar un área');
+      return;
+    }
+
     if (elapsedTime === 0) {
       setError('No hay tiempo registrado para guardar');
       return;
@@ -214,7 +219,7 @@ export function TimeTracker({ clients, onTimeSaved }: TimeTrackerProps) {
           entry_date: today,
           hours_worked: totalDecimalHours,
           description: description || null,
-          department_id: departmentId || null
+          department_id: departmentId
         });
 
       if (insertError) throw insertError;
@@ -264,22 +269,24 @@ export function TimeTracker({ clients, onTimeSaved }: TimeTrackerProps) {
           </select>
         </div>
 
-        {/* Área (opcional) */}
+        {/* Área */}
         {departments.length > 0 && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Building2 className="w-4 h-4 inline mr-1" />
-              Área (opcional)
+              Área <span className="text-red-500">*</span>
             </label>
             <select
               value={departmentId}
               onChange={(e) => setDepartmentId(e.target.value)}
               disabled={isRunning}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-500"
+              style={{ color: departmentId ? 'inherit' : '#9CA3AF' }}
             >
-              <option value="">Sin área específica</option>
+              <option value="" disabled hidden>Selecciona un área</option>
               {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>
+                <option key={dept.id} value={dept.id} style={{ color: '#111827' }}>
                   {dept.name}
                 </option>
               ))}
