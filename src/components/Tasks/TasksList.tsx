@@ -79,6 +79,7 @@ export function TasksList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [hideCompleted, setHideCompleted] = useState<boolean>(true);
 
   const getAvatarUrl = (avatarPath: string | null | undefined) => {
     if (!avatarPath) return null;
@@ -119,7 +120,7 @@ export function TasksList() {
 
   useEffect(() => {
     filterTasks();
-  }, [tasks, searchQuery, statusFilter, priorityFilter]);
+  }, [tasks, searchQuery, statusFilter, priorityFilter, hideCompleted]);
 
   // Escuchar evento para abrir tarea desde notificación
   useEffect(() => {
@@ -390,6 +391,11 @@ export function TasksList() {
       filtered = filtered.filter(task => task.priority === priorityFilter);
     }
 
+    // Ocultar tareas completadas si está activado
+    if (hideCompleted) {
+      filtered = filtered.filter(task => task.status !== 'completed');
+    }
+
     setFilteredTasks(filtered);
   };
 
@@ -487,6 +493,17 @@ export function TasksList() {
             <option value="medium">Media</option>
             <option value="low">Baja</option>
           </select>
+
+          {/* Checkbox para ocultar completadas */}
+          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={hideCompleted}
+              onChange={(e) => setHideCompleted(e.target.checked)}
+              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            />
+            <span className="text-sm text-gray-700">Ocultar completadas</span>
+          </label>
         </div>
       </div>
 
@@ -522,19 +539,19 @@ export function TasksList() {
                 >
                   <div className="p-4">
                     {/* Header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 pr-2">
-                        <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
-                          {task.title}
+                    <div className="flex items-start justify-between mb-3 gap-2">
+                      <div className="flex-1 pr-2 min-w-0 overflow-hidden">
+                        <h3 className="font-semibold text-gray-900 text-lg break-all" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
+                          <span className="break-all">{task.title}</span>
                           {task.is_personal && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300">
+                            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300 inline-block flex-shrink-0">
                               Personal
                             </span>
                           )}
                         </h3>
                       </div>
                       <span
-                        className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                        className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0"
                         style={{
                           backgroundColor: priority.bg,
                           color: priority.text,

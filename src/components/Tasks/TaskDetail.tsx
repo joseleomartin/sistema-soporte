@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, User, AlertTriangle, Clock, Users, Building2, UserPlus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, User, AlertTriangle, Clock, Users, Building2, UserPlus, Trash2, Edit } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { TaskChat } from './TaskChat';
 import { AddUserToTaskModal } from './AddUserToTaskModal';
+import { EditTaskModal } from './EditTaskModal';
 
 interface Task {
   id: string;
@@ -99,6 +100,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
   const [updating, setUpdating] = useState(false);
   const [isAssigned, setIsAssigned] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [taskManager, setTaskManager] = useState<{ id: string; full_name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -200,6 +202,12 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
         return;
       }
 
+      // Si es el creador de la tarea, puede editar
+      if (task.created_by === profile.id) {
+        setIsAssigned(true);
+        return;
+      }
+
       // Si es el administrador de la tarea, puede editar
       if (task.task_manager_id === profile.id) {
         setIsAssigned(true);
@@ -243,6 +251,16 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
     } catch (error) {
       console.error('Error checking assignment:', error);
     }
+  };
+
+  const canEdit = () => {
+    if (!profile) return false;
+    return (
+      profile.role === 'admin' ||
+      task.created_by === profile.id ||
+      task.task_manager_id === profile.id ||
+      isAssigned
+    );
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -323,6 +341,32 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
     }
   };
 
+  const fetchTask = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          created_by_profile:profiles!tasks_created_by_fkey (
+            id,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('id', task.id)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setTask(data as Task);
+        await loadAssignments();
+        await loadTaskManager();
+      }
+    } catch (error) {
+      console.error('Error fetching task:', error);
+    }
+  };
+
   const priority = priorityConfig[task.priority];
   const PriorityIcon = priority.icon;
 
@@ -337,27 +381,39 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 flex-1">{task.title}</h1>
-          {profile?.role === 'admin' && (
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Eliminar tarea"
-            >
-              {deleting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Eliminando...</span>
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4" />
-                  <span>Eliminar</span>
-                </>
-              )}
-            </button>
-          )}
+          <h1 className="text-2xl font-bold text-gray-900 flex-1 break-all max-w-full" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>{task.title}</h1>
+          <div className="flex items-center gap-2">
+            {canEdit() && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                title="Editar tarea"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Editar</span>
+              </button>
+            )}
+            {profile?.role === 'admin' && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Eliminar tarea"
+              >
+                {deleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Eliminar</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -366,7 +422,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
         <div className="max-w-6xl mx-auto p-6 h-full">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
             {/* Información de la Tarea */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-1 space-y-6 overflow-hidden">
               {/* Cliente */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-sm font-medium text-gray-500 mb-4">Información</h3>
@@ -488,9 +544,9 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
               </div>
 
               {/* Descripción */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-lg shadow-sm p-6 overflow-hidden">
                 <h3 className="text-sm font-medium text-gray-500 mb-3">Descripción</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{task.description}</p>
+                <p className="text-gray-700 whitespace-pre-wrap break-all max-w-full" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>{task.description}</p>
               </div>
 
               {/* Usuarios y Departamentos Asignados */}
@@ -604,6 +660,19 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
           onSuccess={() => {
             setShowAddUserModal(false);
             loadAssignments();
+          }}
+        />
+      )}
+
+      {/* Modal para editar tarea */}
+      {showEditModal && (
+        <EditTaskModal
+          task={task}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            setShowEditModal(false);
+            // Recargar la tarea actualizada
+            fetchTask();
           }}
         />
       )}

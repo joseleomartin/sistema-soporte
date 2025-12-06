@@ -3,7 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { TimeEntry } from './TimeEntry';
 import { TimeReports } from './TimeReports';
 import { TimeTracker } from './TimeTracker';
-import { Clock, BarChart3, Timer } from 'lucide-react';
+import { CostCalculation } from './CostCalculation';
+import { Clock, BarChart3, Timer, Calculator } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Client {
@@ -13,7 +14,7 @@ interface Client {
 
 export function TimeTracking() {
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'entry' | 'timer' | 'reports'>('entry');
+  const [activeTab, setActiveTab] = useState<'entry' | 'timer' | 'reports' | 'costs'>('entry');
   const [clients, setClients] = useState<Client[]>([]);
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'support';
@@ -126,12 +127,28 @@ export function TimeTracking() {
               </div>
             </button>
           )}
+          {profile?.role === 'admin' && (
+            <button
+              onClick={() => setActiveTab('costs')}
+              className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+                activeTab === 'costs'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Calculator className="w-4 h-4" />
+                Cálculo de Costos
+              </div>
+            </button>
+          )}
         </nav>
       </div>
 
       {activeTab === 'entry' && <TimeEntry key={activeTab} />}
       {activeTab === 'timer' && isAdmin && <TimeTracker clients={clients} onTimeSaved={handleTimeSaved} />}
       {activeTab === 'reports' && isAdmin && <TimeReports />}
+      {activeTab === 'costs' && profile?.role === 'admin' && <CostCalculation />}
     </div>
   );
 }

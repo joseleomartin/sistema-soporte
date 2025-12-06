@@ -82,20 +82,20 @@ export function BirthdayCard({ users }: BirthdayCardProps) {
   if (users.length === 0) return null;
 
   return (
-    <div className="bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500 rounded-xl shadow-lg border-2 border-white overflow-hidden mb-6">
-      <div className="p-6 text-white relative overflow-hidden">
+    <div className="bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500 rounded-xl shadow-lg border-2 border-white overflow-hidden mb-8">
+      <div className="p-8 md:p-12 text-white relative overflow-hidden">
         {/* Decoración de fondo */}
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white bg-opacity-20 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-white bg-opacity-20 rounded-full blur-2xl"></div>
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-white bg-opacity-20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-36 h-36 bg-white bg-opacity-20 rounded-full blur-3xl"></div>
         
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-white bg-opacity-20 rounded-full backdrop-blur-sm">
-              <Cake className="w-8 h-8" />
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-4 bg-white bg-opacity-20 rounded-full backdrop-blur-sm">
+              <Cake className="w-12 h-12" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold">¡Feliz Cumpleaños! 🎉</h3>
-              <p className="text-white text-opacity-90 text-sm">
+              <h3 className="text-4xl md:text-5xl font-bold">¡Feliz Cumpleaños! 🎉</h3>
+              <p className="text-white text-opacity-90 text-lg md:text-xl mt-2">
                 {users.length === 1 
                   ? `Hoy es un día especial para ${users[0].full_name}`
                   : `Hoy es un día especial para ${users.length} personas`}
@@ -103,45 +103,45 @@ export function BirthdayCard({ users }: BirthdayCardProps) {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {users.map((user) => (
               <div key={user.id}>
-                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg p-4 flex items-center gap-4">
+                <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-xl p-6 flex items-center gap-6">
                   <div className="flex-shrink-0">
                     {user.avatar_url ? (
                       <img
                         src={user.avatar_url}
                         alt={user.full_name}
-                        className="w-16 h-16 rounded-full object-cover border-2 border-white"
+                        className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-lg"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-white bg-opacity-30 flex items-center justify-center border-2 border-white">
-                        <span className="text-2xl font-bold text-white">
+                      <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white bg-opacity-30 flex items-center justify-center border-4 border-white shadow-lg">
+                        <span className="text-4xl md:text-5xl font-bold text-white">
                           {user.full_name.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-lg text-white">
+                    <p className="font-bold text-2xl md:text-3xl text-white mb-2">
                       {user.full_name}
                     </p>
-                    <p className="text-white text-opacity-90 text-sm">
+                    <p className="text-white text-opacity-90 text-lg md:text-xl">
                       {formatBirthday(user.birthday)} • {getAge(user.birthday)} años
                     </p>
                   </div>
                   <div className="flex-shrink-0">
-                    <Sparkles className="w-6 h-6 text-yellow-300 animate-pulse" />
+                    <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-yellow-300 animate-pulse" />
                   </div>
                 </div>
 
                 {/* Comentarios */}
-                <div className="mt-3 ml-4">
+                <div className="mt-4 ml-6">
                   <button
                     onClick={() => toggleComments(user.id)}
-                    className="flex items-center gap-2 text-white text-opacity-90 hover:text-opacity-100 transition-colors text-sm"
+                    className="flex items-center gap-2 text-white text-opacity-90 hover:text-opacity-100 transition-colors text-base md:text-lg font-medium"
                   >
-                    <MessageCircle className="w-4 h-4" />
+                    <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
                     <span>Comentarios</span>
                   </button>
                   {showComments[user.id] && (

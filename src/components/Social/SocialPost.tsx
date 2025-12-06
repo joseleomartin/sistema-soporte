@@ -45,6 +45,8 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [postMedia, setPostMedia] = useState<PostMedia[]>([]);
+  const [likedUsers, setLikedUsers] = useState<Array<{ id: string; full_name: string; avatar_url?: string | null }>>([]);
+  const [showLikedUsers, setShowLikedUsers] = useState(false);
 
   useEffect(() => {
     // Cargar media del post
@@ -166,8 +168,43 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
 
       if (error) throw error;
       setLikesCount(count || 0);
+      
+      // Si hay likes, obtener los usuarios que dieron like
+      if (count && count > 0) {
+        await fetchLikedUsers();
+      } else {
+        setLikedUsers([]);
+      }
     } catch (error) {
       console.error('Error fetching likes count:', error);
+    }
+  };
+
+  const fetchLikedUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('social_likes')
+        .select(`
+          user_id,
+          profiles:user_id (
+            id,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('post_id', post.id)
+        .order('created_at', { ascending: false })
+        .limit(10); // Limitar a 10 usuarios para no sobrecargar
+
+      if (error) throw error;
+      
+      const users = (data || [])
+        .map((like: any) => like.profiles)
+        .filter(Boolean);
+      
+      setLikedUsers(users);
+    } catch (error) {
+      console.error('Error fetching liked users:', error);
     }
   };
 
@@ -214,6 +251,9 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
 
         if (error) throw error;
       }
+      
+      // Recargar usuarios que dieron like
+      await fetchLikedUsers();
     } catch (error: any) {
       // Revertir en caso de error
       setUserLiked(wasLiked);
@@ -262,7 +302,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
   const canEditOrDelete = profile && (profile.id === post.user_id || profile.role === 'admin');
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col">
       {/* Header */}
       <div className="p-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -412,27 +452,70 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       {/* Actions */}
       <div className="px-3 py-2 border-t border-gray-100 mt-auto flex-shrink-0">
         <div className="flex items-center gap-4">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLike();
-            }}
-            className="flex items-center gap-1.5 transition-all duration-200 hover:scale-110"
-            disabled={!profile}
-          >
-            <Heart
-              className={`w-5 h-5 transition-all duration-200 ${
-                userLiked
-                  ? 'fill-red-500 text-red-500 scale-110'
-                  : 'text-gray-400 hover:text-red-500'
-              }`}
-            />
-            <span className={`text-sm font-medium ${
-              userLiked ? 'text-red-500' : 'text-gray-600'
-            }`}>
-              {likesCount}
-            </span>
-          </button>
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLike();
+              }}
+              onMouseEnter={() => {
+                if (likesCount > 0 && likedUsers.length === 0) {
+                  fetchLikedUsers();
+                }
+                if (likesCount > 0) {
+                  setShowLikedUsers(true);
+                }
+              }}
+              onMouseLeave={() => setShowLikedUsers(false)}
+              className="flex items-center gap-1.5 transition-all duration-200 hover:scale-110"
+              disabled={!profile}
+            >
+              <Heart
+                className={`w-5 h-5 transition-all duration-200 ${
+                  userLiked
+                    ? 'fill-red-500 text-red-500 scale-110'
+                    : 'text-gray-400 hover:text-red-500'
+                }`}
+              />
+              <span className={`text-sm font-medium ${
+                userLiked ? 'text-red-500' : 'text-gray-600'
+              }`}>
+                {likesCount}
+              </span>
+            </button>
+            
+            {/* Tooltip con usuarios que dieron like */}
+            {showLikedUsers && likedUsers.length > 0 && (
+              <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50">
+                <p className="text-xs font-semibold text-gray-700 mb-2">
+                  {likesCount === 1 ? 'A 1 persona le gusta' : `A ${likesCount} personas les gusta`}
+                </p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {likedUsers.map((user) => (
+                    <div key={user.id} className="flex items-center gap-2">
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.full_name}
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                          <User className="w-3 h-3 text-gray-500" />
+                        </div>
+                      )}
+                      <span className="text-sm text-gray-900">{user.full_name}</span>
+                    </div>
+                  ))}
+                  {likesCount > likedUsers.length && (
+                    <p className="text-xs text-gray-500 pt-1">
+                      y {likesCount - likedUsers.length} más...
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <button
             onClick={(e) => {
               e.stopPropagation();

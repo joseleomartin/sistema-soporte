@@ -555,7 +555,15 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     );
   }
 
-  const statCards = [
+  const statCards: Array<{
+    icon: any;
+    label: string;
+    value: string | number;
+    color: string;
+    description: string;
+    isText?: boolean;
+    onClick?: () => void;
+  }> = [
     { 
       icon: FolderOpen, 
       label: 'Clientes Asignados', 
@@ -575,7 +583,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       label: 'Tareas Asignadas', 
       value: stats.tasksAssigned, 
       color: 'bg-indigo-50 text-indigo-600',
-      description: 'Tareas pendientes'
+      description: 'Tareas pendientes',
+      onClick: () => onNavigate?.('tasks')
     },
     { 
       icon: Clock, 
@@ -583,7 +592,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       value: formatHoursMinutes(stats.totalHours), 
       color: 'bg-orange-50 text-orange-600',
       description: 'Horas del mes actual',
-      isText: false
+      isText: false,
+      onClick: () => onNavigate?.('time-tracking')
     },
   ];
 
@@ -688,7 +698,13 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
+            <div 
+              key={stat.label} 
+              className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition ${
+                stat.onClick ? 'cursor-pointer hover:shadow-md hover:border-indigo-300' : 'hover:shadow-md'
+              }`}
+              onClick={stat.onClick}
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-lg ${stat.color}`}>
                   <Icon className="w-6 h-6" />

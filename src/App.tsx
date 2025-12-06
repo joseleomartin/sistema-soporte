@@ -131,7 +131,7 @@ function MainApp() {
         onNavigateToForum={handleNavigateToForum}
       />
       <main className="flex-1 overflow-auto ml-64">
-        <div className="max-w-7xl mx-auto p-8">
+        <div className={`${currentView === 'social' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-8`}>
           {renderContent()}
         </div>
       </main>

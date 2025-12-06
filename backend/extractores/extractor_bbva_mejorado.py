@@ -50,7 +50,10 @@ class ExtractorBBVAMejorado:
                     return df
                 else:
                     print("No se encontraron datos válidos")
-                    return None
+                    # Retornar DataFrame vacío en lugar de None para compatibilidad con el sistema
+                    df_vacio = pd.DataFrame(columns=['Fecha', 'Origen', 'Concepto', 'Debito', 'Credito', 'Saldo', 'Pagina', 'Tipo'])
+                    self._guardar_excel_bbva(df_vacio, excel_salida)
+                    return df_vacio
                     
         except Exception as e:
             print(f"Error extrayendo datos: {str(e)}")
