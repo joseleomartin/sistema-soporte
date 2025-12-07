@@ -20,7 +20,14 @@ import {
   CheckSquare,
   Plus,
   CheckCircle,
-  XCircle
+  XCircle,
+  Share2,
+  Cake,
+  AtSign,
+  Ticket,
+  Bell,
+  Heart,
+  BookOpen
 } from 'lucide-react';
 import { CreateEventModal } from '../Calendar/CreateEventModal';
 import { EventDetailsModal } from '../Calendar/EventDetailsModal';
@@ -37,10 +44,15 @@ interface UserStats {
 
 interface RecentActivity {
   id: string;
-  type: 'client' | 'meeting' | 'forum' | 'file';
+  type: 'client' | 'meeting' | 'forum' | 'file' | 'social_post' | 'birthday' | 'task_assigned' | 'task_mention' | 'forum_mention' | 'ticket_comment' | 'notification';
   title: string;
   date: string;
   icon: any;
+  ticket_id?: string;
+  task_id?: string;
+  subforum_id?: string;
+  social_post_id?: string;
+  metadata?: any;
 }
 
 interface UserDashboardProps {
@@ -269,21 +281,202 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         }
       }
 
-      // Obtener actividad reciente
+      // Obtener actividad reciente de múltiples fuentes
+      const activities: RecentActivity[] = [];
+
+      // 1. Obtener mensajes del foro del usuario
       const { data: recentMessages } = await supabase
         .from('forum_messages')
         .select('id, content, created_at, subforum_id, subforums(name)')
         .eq('created_by', profile.id)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
 
-      const activities: RecentActivity[] = (recentMessages || []).map((msg: any) => ({
-        id: msg.id,
-        type: 'forum' as const,
-        title: `Mensaje en ${msg.subforums?.name || 'cliente'}`,
-        date: msg.created_at,
-        icon: MessageSquare,
-      }));
+      if (recentMessages) {
+        recentMessages.forEach((msg: any) => {
+          activities.push({
+            id: msg.id,
+            type: 'forum' as const,
+            title: `Mensaje en ${msg.subforums?.name || 'cliente'}`,
+            date: msg.created_at,
+            icon: MessageSquare,
+            subforum_id: msg.subforum_id,
+          });
+        });
+      }
+
+      // 2. Obtener publicaciones recientes en social (de todos los usuarios)
+      const { data: recentSocialPosts } = await supabase
+        .from('social_posts')
+        .select('id, created_at, user_id, user_profile:profiles!social_posts_user_id_fkey(full_name)')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (recentSocialPosts) {
+        recentSocialPosts.forEach((post: any) => {
+          activities.push({
+            id: post.id,
+            type: 'social_post' as const,
+            title: `${post.user_profile?.full_name || 'Alguien'} publicó en Social`,
+            date: post.created_at,
+            icon: Share2,
+            social_post_id: post.id,
+          });
+        });
+      }
+
+      // 3. Obtener cumpleaños del día
+      const today = new Date();
+      const todayMonth = today.getMonth() + 1;
+      const todayDay = today.getDate();
+      
+      const { data: birthdayUsers } = await supabase
+        .from('profiles')
+        .select('id, full_name, birthday')
+        .not('birthday', 'is', null);
+
+      if (birthdayUsers) {
+        birthdayUsers.forEach((user: any) => {
+          if (user.birthday) {
+            // Parsear la fecha del cumpleaños (puede venir como string YYYY-MM-DD)
+            let birthdayStr = user.birthday;
+            if (typeof birthdayStr === 'string' && birthdayStr.includes('T')) {
+              birthdayStr = birthdayStr.split('T')[0];
+            }
+            
+            // Extraer mes y día del string
+            if (/^\d{4}-\d{2}-\d{2}$/.test(birthdayStr)) {
+              const [, month, day] = birthdayStr.split('-').map(Number);
+              if (month === todayMonth && day === todayDay) {
+                activities.push({
+                  id: `birthday-${user.id}`,
+                  type: 'birthday' as const,
+                  title: `¡Es el cumpleaños de ${user.full_name}! 🎉`,
+                  date: new Date().toISOString(),
+                  icon: Cake,
+                });
+              }
+            } else {
+              // Fallback: usar Date
+              const birthdayDate = new Date(birthdayStr + 'T12:00:00');
+              if (birthdayDate.getMonth() + 1 === todayMonth && birthdayDate.getDate() === todayDay) {
+                activities.push({
+                  id: `birthday-${user.id}`,
+                  type: 'birthday' as const,
+                  title: `¡Es el cumpleaños de ${user.full_name}! 🎉`,
+                  date: new Date().toISOString(),
+                  icon: Cake,
+                });
+              }
+            }
+          }
+        });
+      }
+
+      // 4. Obtener notificaciones recientes (tareas asignadas, menciones, respuestas a tickets)
+      const { data: recentNotifications } = await supabase
+        .from('notifications')
+        .select('id, type, title, message, created_at, task_id, ticket_id, subforum_id, metadata')
+        .eq('user_id', profile.id)
+        .in('type', ['task_assigned', 'task_mention', 'forum_mention', 'ticket_comment'])
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      // Usar un Map para evitar duplicados basados en tipo + ticket_id/task_id
+      // Solo guardamos la notificación más reciente de cada combinación
+      const seenActivities = new Map<string, { 
+        id: string; 
+        date: string; 
+        title: string; 
+        icon: any; 
+        type: string;
+        ticket_id?: string;
+        task_id?: string;
+        subforum_id?: string;
+        metadata?: any;
+      }>();
+
+      if (recentNotifications) {
+        recentNotifications.forEach((notif: any) => {
+          let icon = Bell;
+          let activityTitle = notif.message || notif.title; // Usar el mensaje que es más específico
+
+          // Crear una clave única para agrupar notificaciones similares
+          // Para ticket_comment, agrupar por ticket_id
+          // Para task_assigned/task_mention, agrupar por task_id
+          // Para forum_mention, agrupar por subforum_id
+          let uniqueKey: string;
+          if (notif.type === 'ticket_comment' && notif.ticket_id) {
+            uniqueKey = `ticket_comment-${notif.ticket_id}`;
+          } else if ((notif.type === 'task_assigned' || notif.type === 'task_mention') && notif.task_id) {
+            uniqueKey = `${notif.type}-${notif.task_id}`;
+          } else if (notif.type === 'forum_mention' && notif.subforum_id) {
+            uniqueKey = `forum_mention-${notif.subforum_id}`;
+          } else {
+            // Si no hay ID de referencia, usar el ID de la notificación
+            uniqueKey = `${notif.type}-${notif.id}`;
+          }
+
+          switch (notif.type) {
+            case 'task_assigned':
+              icon = CheckSquare;
+              activityTitle = activityTitle || 'Nueva tarea asignada';
+              break;
+            case 'task_mention':
+              icon = AtSign;
+              activityTitle = activityTitle || 'Fuiste mencionado en una tarea';
+              break;
+            case 'forum_mention':
+              icon = AtSign;
+              activityTitle = activityTitle || 'Fuiste mencionado en un chat';
+              break;
+            case 'ticket_comment':
+              icon = Ticket;
+              // Extraer información del mensaje para hacerlo más específico
+              if (notif.message) {
+                activityTitle = notif.message;
+              } else {
+                activityTitle = activityTitle || 'Nueva respuesta en ticket';
+              }
+              break;
+          }
+
+          // Solo guardar la notificación más reciente de cada grupo
+          const existing = seenActivities.get(uniqueKey);
+          if (!existing || new Date(notif.created_at) > new Date(existing.date)) {
+            seenActivities.set(uniqueKey, {
+              id: notif.id,
+              date: notif.created_at,
+              title: activityTitle,
+              icon: icon,
+              type: notif.type,
+              ticket_id: notif.ticket_id,
+              task_id: notif.task_id,
+              subforum_id: notif.subforum_id,
+              metadata: notif.metadata,
+            });
+          }
+        });
+
+        // Agregar las actividades únicas al array
+        seenActivities.forEach((activity) => {
+          activities.push({
+            id: activity.id,
+            type: activity.type as any,
+            title: activity.title,
+            date: activity.date,
+            icon: activity.icon,
+            ticket_id: activity.ticket_id,
+            task_id: activity.task_id,
+            subforum_id: activity.subforum_id,
+            metadata: activity.metadata,
+          });
+        });
+      }
+
+      // Ordenar todas las actividades por fecha (más recientes primero) y limitar a 10
+      activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const limitedActivities = activities.slice(0, 10);
 
       // Obtener total de horas cargadas (del mes actual)
       const startOfMonth = new Date();
@@ -313,7 +506,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         totalHours: totalHours,
       });
 
-      setRecentActivities(activities);
+      setRecentActivities(limitedActivities);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -325,6 +518,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     if (!profile?.id) return;
 
     try {
+      // Generar eventos recurrentes antes de cargar
+      await supabase.rpc('generate_recurring_events');
+
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
 
@@ -518,6 +714,56 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const handleTaskClick = (taskId: string) => {
     if (onNavigate) {
       onNavigate('tasks');
+    }
+  };
+
+  const handleActivityClick = (activity: RecentActivity) => {
+    if (!onNavigate) return;
+
+    switch (activity.type) {
+      case 'social_post':
+      case 'birthday':
+        onNavigate('social');
+        break;
+      case 'ticket_comment':
+        if (activity.ticket_id) {
+          // Disparar evento para navegar al ticket específico
+          // App.tsx escuchará este evento a través del Sidebar
+          window.dispatchEvent(new CustomEvent('navigateToTicket', {
+            detail: { ticketId: activity.ticket_id }
+          }));
+          onNavigate('tickets');
+        } else {
+          onNavigate('tickets');
+        }
+        break;
+      case 'task_assigned':
+      case 'task_mention':
+        onNavigate('tasks');
+        // Si hay task_id, disparar evento para abrir la tarea específica
+        if (activity.task_id) {
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('openTask', {
+              detail: { taskId: activity.task_id }
+            }));
+          }, 100);
+        }
+        break;
+      case 'forum_mention':
+      case 'forum':
+        onNavigate('forums');
+        // Si hay subforum_id, disparar evento para abrir el subforo específico
+        if (activity.subforum_id) {
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('openForum', {
+              detail: { subforumId: activity.subforum_id }
+            }));
+          }, 100);
+        }
+        break;
+      default:
+        // Para otros tipos, no hacer nada
+        break;
     }
   };
 
@@ -720,9 +966,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
         {/* Calendario */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col max-h-[600px] overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <CalendarIcon className="w-5 h-5 text-blue-600" />
@@ -744,7 +990,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
             </div>
           </div>
           
-          <div className="mb-4">
+          <div className="mb-3">
             <p className="text-center font-semibold text-gray-900">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </p>
@@ -819,7 +1065,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           </div>
 
           {selectedDayEvents.length > 0 && (
-            <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+            <div className="mt-4 space-y-2 max-h-32 overflow-y-auto flex-shrink-0">
               {selectedDayEvents.map((event) => (
                 <button
                   key={event.id}
@@ -888,15 +1134,75 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
               </button>
             </div>
           )}
+
+          {/* Desglose de eventos próximos */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 mb-2">Próximos eventos</h4>
+            <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-2">
+              {events.length > 0 ? (
+                events
+                  .filter(event => {
+                    const eventDate = new Date(event.start_date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return eventDate >= today;
+                  })
+                  .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+                  .slice(0, 10)
+                  .map((event) => (
+                    <button
+                      key={event.id}
+                      onClick={() => {
+                        if (event.isTask) {
+                          handleTaskClick(event.taskId);
+                        } else {
+                          setSelectedEvent(event);
+                        }
+                      }}
+                      className="w-full text-left p-1.5 rounded text-xs hover:bg-gray-50 transition flex items-center gap-2"
+                    >
+                      <div className={`w-8 text-center text-[10px] font-medium flex-shrink-0 ${
+                        event.isTask
+                          ? event.taskPriority === 'urgent' ? 'text-red-600' :
+                            event.taskPriority === 'medium' ? 'text-blue-600' : 'text-green-600'
+                          : event.isPersonal ? 'text-blue-600' : 'text-purple-600'
+                      }`}>
+                        {new Date(event.start_date).getDate()} {new Date(event.start_date).toLocaleDateString('es-ES', { month: 'short' })}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-900 truncate font-medium">{event.title}</p>
+                        {event.isTask && event.taskClient && (
+                          <p className="text-[10px] text-gray-500 truncate">{event.taskClient}</p>
+                        )}
+                      </div>
+                      {event.isTask && (
+                        <CheckSquare className={`w-3 h-3 flex-shrink-0 ${
+                          event.taskPriority === 'urgent' ? 'text-red-500' :
+                          event.taskPriority === 'medium' ? 'text-blue-500' : 'text-green-500'
+                        }`} />
+                      )}
+                      {!event.isTask && !event.isPersonal && (
+                        <CalendarIcon className="w-3 h-3 flex-shrink-0 text-purple-500" />
+                      )}
+                      {event.isPersonal && (
+                        <CalendarIcon className="w-3 h-3 flex-shrink-0 text-blue-500" />
+                      )}
+                    </button>
+                  ))
+              ) : (
+                <p className="text-xs text-gray-400 text-center py-4">No hay eventos próximos</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Accesos Rápidos */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-h-[600px] overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">Accesos Rápidos</h3>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 overflow-y-auto pr-2 max-h-[520px]">
             <button
               onClick={() => onNavigate?.('forums')}
               className="w-full flex items-center gap-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition cursor-pointer"
@@ -927,11 +1233,51 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                 <p className="text-sm text-gray-600">Extractor de tablas y OCR</p>
               </div>
             </button>
+            <button
+              onClick={() => onNavigate?.('time-tracking')}
+              className="w-full flex items-center gap-3 p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition cursor-pointer"
+            >
+              <Clock className="w-5 h-5 text-orange-600" />
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Carga de Horas</p>
+                <p className="text-sm text-gray-600">Registra tus horas trabajadas</p>
+              </div>
+            </button>
+            <button
+              onClick={() => onNavigate?.('social')}
+              className="w-full flex items-center gap-3 p-4 bg-pink-50 rounded-lg hover:bg-pink-100 transition cursor-pointer"
+            >
+              <Heart className="w-5 h-5 text-pink-600" />
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Social</p>
+                <p className="text-sm text-gray-600">Comparte y conecta con tu equipo</p>
+              </div>
+            </button>
+            <button
+              onClick={() => onNavigate?.('tasks')}
+              className="w-full flex items-center gap-3 p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition cursor-pointer"
+            >
+              <CheckSquare className="w-5 h-5 text-indigo-600" />
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Tareas</p>
+                <p className="text-sm text-gray-600">Gestiona tus tareas asignadas</p>
+              </div>
+            </button>
+            <button
+              onClick={() => onNavigate?.('library')}
+              className="w-full flex items-center gap-3 p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition cursor-pointer"
+            >
+              <BookOpen className="w-5 h-5 text-teal-600" />
+              <div className="text-left">
+                <p className="font-medium text-gray-900">Biblioteca</p>
+                <p className="text-sm text-gray-600">Recursos y cursos disponibles</p>
+              </div>
+            </button>
           </div>
         </div>
 
         {/* Actividad Reciente */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-h-[600px] flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-5 h-5 text-purple-600" />
             <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
@@ -945,11 +1291,15 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 flex-1 overflow-y-auto pr-2 min-h-0">
               {recentActivities.map((activity) => {
                 const Icon = activity.icon;
                 return (
-                  <div key={activity.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-purple-300 transition">
+                  <div 
+                    key={activity.id} 
+                    onClick={() => handleActivityClick(activity)}
+                    className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition cursor-pointer"
+                  >
                     <div className="p-2 bg-purple-50 rounded-lg">
                       <Icon className="w-4 h-4 text-purple-600" />
                     </div>

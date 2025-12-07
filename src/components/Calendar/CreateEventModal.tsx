@@ -23,6 +23,12 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
+  const [recurrenceCount, setRecurrenceCount] = useState<number>(12);
+  const [recurrenceMode, setRecurrenceMode] = useState<'day_of_month' | 'weekday'>('day_of_month');
+  const [recurrenceWeekday, setRecurrenceWeekday] = useState<number | null>(null);
+  const [recurrenceWeekPosition, setRecurrenceWeekPosition] = useState<number | null>(null);
 
   const canAssignEvents = profile?.role === 'admin' || profile?.role === 'support';
 
@@ -99,18 +105,31 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
         endDate.setHours(parseInt(hours), parseInt(minutes));
       }
 
+      // Preparar datos base del evento
+      const baseEventData = {
+        title: title.trim(),
+        description: description.trim() || null,
+        start_date: startDate.toISOString(),
+        end_date: endDate?.toISOString() || null,
+        all_day: allDay,
+        color,
+        created_by: profile.id,
+        event_type: 'personal' as const,
+        is_recurring: isRecurring,
+        recurrence_pattern: isRecurring ? 'monthly' : null,
+        recurrence_end_date: isRecurring && recurrenceEndDate ? new Date(recurrenceEndDate + 'T23:59:59').toISOString() : null,
+        recurrence_count: isRecurring && !recurrenceEndDate ? recurrenceCount : null,
+        recurrence_original_date: isRecurring ? startDate.toISOString() : null,
+        parent_event_id: null,
+        recurrence_weekday: isRecurring && recurrenceMode === 'weekday' ? recurrenceWeekday : null,
+        recurrence_week_position: isRecurring && recurrenceMode === 'weekday' ? recurrenceWeekPosition : null,
+      };
+
       // Si no hay usuarios/departamentos asignados, crear evento personal
       if (assignTo.length === 0) {
         const eventData = {
-          title: title.trim(),
-          description: description.trim() || null,
-          start_date: startDate.toISOString(),
-          end_date: endDate?.toISOString() || null,
-          all_day: allDay,
-          color,
-          created_by: profile.id,
+          ...baseEventData,
           assigned_to: null,
-          event_type: 'personal',
         };
 
         const { error: insertError } = await supabase
@@ -120,6 +139,15 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
         if (insertError) {
           console.error('Error al crear evento personal:', insertError);
           throw new Error(`Error al crear evento: ${insertError.message}`);
+        }
+
+        // Si es recurrente, generar eventos futuros
+        if (isRecurring) {
+          // Validar que si es modo weekday, tenga los valores necesarios
+          if (recurrenceMode === 'weekday' && (recurrenceWeekday === null || recurrenceWeekPosition === null)) {
+            throw new Error('Por favor, selecciona el día de la semana y la posición en el mes para eventos recurrentes por día de la semana.');
+          }
+          await supabase.rpc('generate_recurring_events');
         }
       } else if (assignMode === 'departments') {
         // Asignar a todos los usuarios de los departamentos seleccionados
@@ -145,15 +173,9 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
 
         // Crear un evento para cada usuario
         const events = uniqueUserIds.map(userId => ({
-          title: title.trim(),
-          description: description.trim() || null,
-          start_date: startDate.toISOString(),
-          end_date: endDate?.toISOString() || null,
-          all_day: allDay,
-          color,
-          created_by: profile.id,
+          ...baseEventData,
           assigned_to: userId,
-          event_type: 'assigned',
+          event_type: 'assigned' as const,
         }));
 
         const { error: insertError } = await supabase
@@ -164,18 +186,21 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
           console.error('Error al crear eventos por departamento:', insertError);
           throw new Error(`Error al crear eventos: ${insertError.message}`);
         }
+
+        // Si es recurrente, generar eventos futuros
+        if (isRecurring) {
+          // Validar que si es modo weekday, tenga los valores necesarios
+          if (recurrenceMode === 'weekday' && (recurrenceWeekday === null || recurrenceWeekPosition === null)) {
+            throw new Error('Por favor, selecciona el día de la semana y la posición en el mes para eventos recurrentes por día de la semana.');
+          }
+          await supabase.rpc('generate_recurring_events');
+        }
       } else {
         // Crear un evento para cada usuario seleccionado
         const events = assignTo.map(userId => ({
-          title: title.trim(),
-          description: description.trim() || null,
-          start_date: startDate.toISOString(),
-          end_date: endDate?.toISOString() || null,
-          all_day: allDay,
-          color,
-          created_by: profile.id,
+          ...baseEventData,
           assigned_to: userId,
-          event_type: 'assigned',
+          event_type: 'assigned' as const,
         }));
 
         const { error: insertError } = await supabase
@@ -185,6 +210,15 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
         if (insertError) {
           console.error('Error al crear eventos asignados:', insertError);
           throw new Error(`Error al crear eventos: ${insertError.message}`);
+        }
+
+        // Si es recurrente, generar eventos futuros
+        if (isRecurring) {
+          // Validar que si es modo weekday, tenga los valores necesarios
+          if (recurrenceMode === 'weekday' && (recurrenceWeekday === null || recurrenceWeekPosition === null)) {
+            throw new Error('Por favor, selecciona el día de la semana y la posición en el mes para eventos recurrentes por día de la semana.');
+          }
+          await supabase.rpc('generate_recurring_events');
         }
       }
 
@@ -209,7 +243,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
@@ -345,6 +379,225 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                 />
               ))}
             </div>
+          </div>
+
+          {/* Evento Recurrente */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="checkbox"
+                id="isRecurring"
+                checked={isRecurring}
+                onChange={(e) => {
+                  setIsRecurring(e.target.checked);
+                  if (!e.target.checked) {
+                    setRecurrenceMode('day_of_month');
+                    setRecurrenceWeekday(null);
+                    setRecurrenceWeekPosition(null);
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="isRecurring" className="text-sm font-medium text-gray-700">
+                Evento recurrente (se repite mensualmente)
+              </label>
+            </div>
+
+            {isRecurring && (
+              <div className="ml-6 space-y-4 bg-blue-50 p-3 rounded-lg">
+                {/* Modo de recurrencia */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de recurrencia
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="recurrenceDayOfMonth"
+                        name="recurrenceMode"
+                        checked={recurrenceMode === 'day_of_month'}
+                        onChange={() => {
+                          setRecurrenceMode('day_of_month');
+                          setRecurrenceWeekday(null);
+                          setRecurrenceWeekPosition(null);
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="recurrenceDayOfMonth" className="text-sm text-gray-700">
+                        Mismo día del mes (ej: día 15 de cada mes)
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="recurrenceWeekday"
+                        name="recurrenceMode"
+                        checked={recurrenceMode === 'weekday'}
+                        onChange={() => {
+                          setRecurrenceMode('weekday');
+                          // Establecer valores por defecto si no están configurados
+                          if (recurrenceWeekday === null && selectedDate) {
+                            const dayOfWeek = selectedDate.getDay(); // 0 = domingo, 1 = lunes, etc.
+                            setRecurrenceWeekday(dayOfWeek);
+                            // Calcular la posición en el mes (primer, segundo, etc.)
+                            const dayOfMonth = selectedDate.getDate();
+                            const weekPosition = Math.ceil(dayOfMonth / 7);
+                            setRecurrenceWeekPosition(Math.min(weekPosition, 4));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="recurrenceWeekday" className="text-sm text-gray-700">
+                        Día de la semana específico (ej: primer jueves de cada mes)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Configuración de día de la semana */}
+                {recurrenceMode === 'weekday' && (
+                  <div className="space-y-3 bg-white p-3 rounded border border-blue-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Día de la semana
+                      </label>
+                      <div className="grid grid-cols-7 gap-1">
+                        {[
+                          { value: 0, label: 'D', full: 'Domingo' },
+                          { value: 1, label: 'L', full: 'Lunes' },
+                          { value: 2, label: 'M', full: 'Martes' },
+                          { value: 3, label: 'X', full: 'Miércoles' },
+                          { value: 4, label: 'J', full: 'Jueves' },
+                          { value: 5, label: 'V', full: 'Viernes' },
+                          { value: 6, label: 'S', full: 'Sábado' },
+                        ].map((day) => (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => setRecurrenceWeekday(day.value)}
+                            className={`px-2 py-2 text-sm font-medium rounded transition ${
+                              recurrenceWeekday === day.value
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                            title={day.full}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Posición en el mes
+                      </label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {[
+                          { value: 1, label: 'Primer' },
+                          { value: 2, label: 'Segundo' },
+                          { value: 3, label: 'Tercer' },
+                          { value: 4, label: 'Cuarto' },
+                          { value: -1, label: 'Último' },
+                        ].map((pos) => (
+                          <button
+                            key={pos.value}
+                            type="button"
+                            onClick={() => setRecurrenceWeekPosition(pos.value)}
+                            className={`px-3 py-2 text-sm font-medium rounded transition ${
+                              recurrenceWeekPosition === pos.value
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {pos.label}
+                          </button>
+                        ))}
+                      </div>
+                      {recurrenceWeekday !== null && recurrenceWeekPosition !== null && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          El evento será el{' '}
+                          {recurrenceWeekPosition === -1 ? 'último' : ['', 'primer', 'segundo', 'tercer', 'cuarto'][recurrenceWeekPosition]}{' '}
+                          {['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][recurrenceWeekday]} de cada mes
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Configuración de fin de recurrencia */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ¿Cuándo termina la recurrencia?
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="recurrenceEndDate"
+                        name="recurrenceType"
+                        checked={recurrenceEndDate !== ''}
+                        onChange={() => {
+                          setRecurrenceCount(12);
+                          if (!recurrenceEndDate) {
+                            const endDate = new Date(selectedDate || new Date());
+                            endDate.setMonth(endDate.getMonth() + 12);
+                            setRecurrenceEndDate(endDate.toISOString().split('T')[0]);
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="recurrenceEndDate" className="text-sm text-gray-700">
+                        Hasta una fecha específica
+                      </label>
+                    </div>
+                    {recurrenceEndDate && (
+                      <div className="ml-6">
+                        <input
+                          type="date"
+                          value={recurrenceEndDate}
+                          onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                          min={selectedDate?.toISOString().split('T')[0]}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="recurrenceCount"
+                        name="recurrenceType"
+                        checked={recurrenceEndDate === ''}
+                        onChange={() => {
+                          setRecurrenceEndDate('');
+                        }}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <label htmlFor="recurrenceCount" className="text-sm text-gray-700">
+                        Número de ocurrencias
+                      </label>
+                    </div>
+                    {!recurrenceEndDate && (
+                      <div className="ml-6">
+                        <input
+                          type="number"
+                          value={recurrenceCount}
+                          onChange={(e) => setRecurrenceCount(Math.max(1, parseInt(e.target.value) || 1))}
+                          min={1}
+                          max={60}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          El evento se repetirá {recurrenceCount} {recurrenceCount === 1 ? 'vez' : 'veces'} (mensualmente)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Asignar a usuarios o departamentos (solo admin/support) */}
