@@ -844,13 +844,28 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   ];
 
   const formatDate = (dateString: string) => {
+    // Crear fechas en zona horaria local para comparación correcta
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
+    
+    // Obtener fechas en formato YYYY-MM-DD para comparación sin considerar la hora
+    const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Calcular diferencia en días
+    const diffTime = Math.abs(nowOnly.getTime() - dateOnly.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays === 0) return 'Hoy';
-    if (diffDays === 1) return 'Ayer';
+    if (diffDays === 1) {
+      // Verificar si realmente es ayer (no solo 1 día de diferencia)
+      const yesterday = new Date(nowOnly);
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (dateOnly.getTime() === yesterday.getTime()) {
+        return 'Ayer';
+      }
+      return `Hace ${diffDays} días`;
+    }
     if (diffDays < 7) return `Hace ${diffDays} días`;
     if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semanas`;
     return date.toLocaleDateString('es-ES');
