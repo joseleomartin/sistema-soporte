@@ -255,11 +255,12 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
 
   const canEdit = () => {
     if (!profile) return false;
+    // Solo admin, creador o administrador de la tarea pueden editar
+    // Los usuarios asignados NO pueden editar, solo cambiar el estado
     return (
       profile.role === 'admin' ||
       task.created_by === profile.id ||
-      task.task_manager_id === profile.id ||
-      isAssigned
+      task.task_manager_id === profile.id
     );
   };
 

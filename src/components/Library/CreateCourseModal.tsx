@@ -16,11 +16,12 @@ interface Course {
 
 interface CreateCourseModalProps {
   course?: Course | null;
+  type?: 'course' | 'document';
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function CreateCourseModal({ course, onClose, onSuccess }: CreateCourseModalProps) {
+export function CreateCourseModal({ course, type = 'course', onClose, onSuccess }: CreateCourseModalProps) {
   const { profile } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -125,6 +126,7 @@ export function CreateCourseModal({ course, onClose, onSuccess }: CreateCourseMo
       const courseData: any = {
         title: title.trim(),
         description: description.trim(),
+        type: type,
         updated_at: new Date().toISOString(),
       };
 
@@ -197,7 +199,9 @@ export function CreateCourseModal({ course, onClose, onSuccess }: CreateCourseMo
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">
-            {course ? 'Editar Curso' : 'Nuevo Curso'}
+            {course 
+              ? (type === 'document' ? 'Editar Documento' : 'Editar Curso')
+              : (type === 'document' ? 'Nuevo Documento' : 'Nuevo Curso')}
           </h2>
           <button
             onClick={onClose}
@@ -217,7 +221,7 @@ export function CreateCourseModal({ course, onClose, onSuccess }: CreateCourseMo
           {/* Título */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Título del Curso *
+              {type === 'document' ? 'Título del Documento *' : 'Título del Curso *'}
             </label>
             <input
               type="text"

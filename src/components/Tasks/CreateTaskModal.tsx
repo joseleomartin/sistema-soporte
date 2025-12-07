@@ -44,6 +44,9 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [recurrenceMode, setRecurrenceMode] = useState<'day_of_month' | 'weekday'>('day_of_month');
+  const [recurrenceWeekday, setRecurrenceWeekday] = useState<number | null>(null);
+  const [recurrenceWeekPosition, setRecurrenceWeekPosition] = useState<number | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   
@@ -251,6 +254,14 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
         end_date: recurrenceEndDate || null
       } : null;
 
+      // Preparar campos de recurrencia por día de semana (solo para monthly)
+      const recurrenceWeekdayValue = (isRecurring && recurrenceType === 'monthly' && recurrenceMode === 'weekday' && recurrenceWeekday !== null) 
+        ? recurrenceWeekday 
+        : null;
+      const recurrenceWeekPositionValue = (isRecurring && recurrenceType === 'monthly' && recurrenceMode === 'weekday' && recurrenceWeekPosition !== null) 
+        ? recurrenceWeekPosition 
+        : null;
+
       // Convertir dueDate de datetime-local a ISO string con zona horaria
       // datetime-local devuelve "YYYY-MM-DDTHH:mm" sin zona horaria
       // Necesitamos crear un Date en la zona horaria local y convertirlo a ISO
@@ -277,6 +288,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             task_manager_id: (!isPersonal && taskManagerId) ? taskManagerId : null,
             is_recurring: isRecurring,
             recurrence_pattern: recurrencePattern,
+            recurrence_weekday: recurrenceWeekdayValue,
+            recurrence_week_position: recurrenceWeekPositionValue,
             is_personal: isPersonal // Nuevo campo
           }
         ])
@@ -717,7 +730,15 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                   </label>
                   <select
                     value={recurrenceType}
-                    onChange={(e) => setRecurrenceType(e.target.value as 'daily' | 'weekly' | 'monthly')}
+                    onChange={(e) => {
+                      setRecurrenceType(e.target.value as 'daily' | 'weekly' | 'monthly');
+                      // Resetear modo de recurrencia cuando cambia el tipo
+                      if (e.target.value !== 'monthly') {
+                        setRecurrenceMode('day_of_month');
+                        setRecurrenceWeekday(null);
+                        setRecurrenceWeekPosition(null);
+                      }
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
                     <option value="daily">Diaria</option>
@@ -725,22 +746,146 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                     <option value="monthly">Mensual</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Intervalo
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={recurrenceInterval}
-                    onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Cada X días/semanas/meses"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Cada {recurrenceInterval} {recurrenceType === 'daily' ? 'día(s)' : recurrenceType === 'weekly' ? 'semana(s)' : 'mes(es)'}
-                  </p>
-                </div>
+                {recurrenceType === 'monthly' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de recurrencia mensual
+                    </label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          id="recurrenceDayOfMonth"
+                          name="recurrenceMode"
+                          checked={recurrenceMode === 'day_of_month'}
+                          onChange={() => {
+                            setRecurrenceMode('day_of_month');
+                            setRecurrenceWeekday(null);
+                            setRecurrenceWeekPosition(null);
+                          }}
+                          className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        />
+                        <label htmlFor="recurrenceDayOfMonth" className="text-sm text-gray-700">
+                          Mismo día del mes (ej: día 15 de cada mes)
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          id="recurrenceWeekday"
+                          name="recurrenceMode"
+                          checked={recurrenceMode === 'weekday'}
+                          onChange={() => {
+                            setRecurrenceMode('weekday');
+                            // Establecer valores por defecto si no están configurados
+                            if (recurrenceWeekday === null && dueDate) {
+                              const date = new Date(dueDate);
+                              const dayOfWeek = date.getDay(); // 0 = domingo, 1 = lunes, etc.
+                              setRecurrenceWeekday(dayOfWeek);
+                              // Calcular la posición en el mes
+                              const dayOfMonth = date.getDate();
+                              const weekPosition = Math.ceil(dayOfMonth / 7);
+                              setRecurrenceWeekPosition(Math.min(weekPosition, 4));
+                            }
+                          }}
+                          className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                        />
+                        <label htmlFor="recurrenceWeekday" className="text-sm text-gray-700">
+                          Día de la semana específico (ej: primer jueves de cada mes)
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {recurrenceType === 'monthly' && recurrenceMode === 'weekday' && (
+                  <div className="space-y-3 bg-white p-3 rounded border border-indigo-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Día de la semana
+                      </label>
+                      <div className="grid grid-cols-7 gap-1">
+                        {[
+                          { value: 0, label: 'D', full: 'Domingo' },
+                          { value: 1, label: 'L', full: 'Lunes' },
+                          { value: 2, label: 'M', full: 'Martes' },
+                          { value: 3, label: 'X', full: 'Miércoles' },
+                          { value: 4, label: 'J', full: 'Jueves' },
+                          { value: 5, label: 'V', full: 'Viernes' },
+                          { value: 6, label: 'S', full: 'Sábado' },
+                        ].map((day) => (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => setRecurrenceWeekday(day.value)}
+                            className={`px-2 py-2 text-sm font-medium rounded transition ${
+                              recurrenceWeekday === day.value
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                            title={day.full}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Posición en el mes
+                      </label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {[
+                          { value: 1, label: 'Primer' },
+                          { value: 2, label: 'Segundo' },
+                          { value: 3, label: 'Tercer' },
+                          { value: 4, label: 'Cuarto' },
+                          { value: -1, label: 'Último' },
+                        ].map((pos) => (
+                          <button
+                            key={pos.value}
+                            type="button"
+                            onClick={() => setRecurrenceWeekPosition(pos.value)}
+                            className={`px-3 py-2 text-sm font-medium rounded transition ${
+                              recurrenceWeekPosition === pos.value
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {pos.label}
+                          </button>
+                        ))}
+                      </div>
+                      {recurrenceWeekday !== null && recurrenceWeekPosition !== null && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          La tarea será el{' '}
+                          {recurrenceWeekPosition === -1 ? 'último' : ['', 'primer', 'segundo', 'tercer', 'cuarto'][recurrenceWeekPosition]}{' '}
+                          {['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][recurrenceWeekday]} de cada mes
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {recurrenceType !== 'monthly' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Intervalo
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={recurrenceInterval}
+                      onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder="Cada X días/semanas"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Cada {recurrenceInterval} {recurrenceType === 'daily' ? 'día(s)' : 'semana(s)'}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Fecha de fin <span className="text-gray-400 text-xs">(Opcional)</span>
