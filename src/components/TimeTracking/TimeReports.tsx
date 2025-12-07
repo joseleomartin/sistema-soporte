@@ -41,12 +41,19 @@ interface DepartmentReportData {
 export function TimeReports() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
+  // Función para obtener la fecha local en formato YYYY-MM-DD
+  const getLocalDateString = (date: Date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setDate(1); // Primer día del mes actual
-    return date.toISOString().split('T')[0];
+    return getLocalDateString(date);
   });
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(getLocalDateString());
   const [reportType, setReportType] = useState<'client' | 'user' | 'department'>('client');
   
   const [clientReports, setClientReports] = useState<ReportData[]>([]);
