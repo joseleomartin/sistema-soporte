@@ -60,3 +60,5 @@ FROM cron.job
 WHERE jobname = 'daily-hours-reminder';
 
 
+
+

@@ -154,3 +154,5 @@ COMMENT ON TABLE social_likes IS 'Likes de los usuarios en los posts';
 COMMENT ON TABLE social_comments IS 'Comentarios en los posts sociales';
 
 
+
+

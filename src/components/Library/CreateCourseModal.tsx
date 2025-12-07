@@ -12,16 +12,18 @@ interface Course {
   file_name?: string | null;
   file_type?: string | null;
   file_size?: number | null;
+  folder_id?: string | null;
 }
 
 interface CreateCourseModalProps {
   course?: Course | null;
   type?: 'course' | 'document';
+  folderId?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function CreateCourseModal({ course, type = 'course', onClose, onSuccess }: CreateCourseModalProps) {
+export function CreateCourseModal({ course, type = 'course', folderId, onClose, onSuccess }: CreateCourseModalProps) {
   const { profile } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -30,6 +32,8 @@ export function CreateCourseModal({ course, type = 'course', onClose, onSuccess 
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(folderId || null);
+  const [folders, setFolders] = useState<Array<{ id: string; name: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -37,9 +41,28 @@ export function CreateCourseModal({ course, type = 'course', onClose, onSuccess 
       setTitle(course.title);
       setDescription(course.description);
       setYoutubeUrl(course.youtube_url || '');
+      setSelectedFolderId(course.folder_id || null);
       // No cargamos el archivo existente en el estado, solo mostramos que existe
+    } else if (folderId) {
+      setSelectedFolderId(folderId);
     }
-  }, [course]);
+    fetchFolders();
+  }, [course, type, folderId]);
+
+  const fetchFolders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('library_folders')
+        .select('id, name')
+        .eq('type', type)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setFolders(data || []);
+    } catch (error) {
+      console.error('Error fetching folders:', error);
+    }
+  };
 
   const validateYouTubeUrl = (url: string): boolean => {
     if (!url.trim()) return false;
@@ -127,6 +150,7 @@ export function CreateCourseModal({ course, type = 'course', onClose, onSuccess 
         title: title.trim(),
         description: description.trim(),
         type: type,
+        folder_id: selectedFolderId || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -232,6 +256,27 @@ export function CreateCourseModal({ course, type = 'course', onClose, onSuccess 
               required
             />
           </div>
+
+          {/* Carpeta */}
+          {folders.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Carpeta (opcional)
+              </label>
+              <select
+                value={selectedFolderId || ''}
+                onChange={(e) => setSelectedFolderId(e.target.value || null)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Sin carpeta</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Descripción */}
           <div>

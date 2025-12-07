@@ -105,3 +105,5 @@ COMMENT ON FUNCTION create_birthday_notifications() IS
 -- ==================================================================
 -- SELECT create_birthday_notifications();
 
+
+

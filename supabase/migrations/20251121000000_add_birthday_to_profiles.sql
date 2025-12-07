@@ -9,3 +9,5 @@ CREATE INDEX IF NOT EXISTS idx_profiles_birthday ON profiles(birthday);
 COMMENT ON COLUMN profiles.birthday IS 'Fecha de cumpleaños del usuario (solo mes y día se usan para mostrar tarjetas)';
 
 
+
+

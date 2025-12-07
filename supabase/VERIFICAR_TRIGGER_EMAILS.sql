@@ -142,3 +142,5 @@ SELECT
   'O revisa los logs de la base de datos si están disponibles' as nota2;
 
 
+
+

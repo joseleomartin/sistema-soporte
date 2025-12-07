@@ -47,3 +47,5 @@ LIMIT 50;
 -- Descomenta la siguiente línea si quieres eliminar las notificaciones de prueba:
 -- DELETE FROM notifications WHERE type = 'birthday' AND DATE(created_at) = CURRENT_DATE;
 
+
+

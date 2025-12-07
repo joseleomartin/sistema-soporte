@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, User, MoreVertical, Edit2, Trash2, X, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, User, MoreVertical, Trash2, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { PostComments } from './PostComments';
@@ -302,35 +302,35 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
   const canEditOrDelete = profile && (profile.id === post.user_id || profile.role === 'admin');
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col">
+    <div className="bg-white rounded-lg border border-gray-300 overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="p-3 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           {post.user_profile?.avatar_url ? (
             <img
               src={post.user_profile.avatar_url}
               alt={post.user_profile.full_name}
-              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-gray-500" />
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-gray-500" />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-gray-900 text-sm truncate">
+            <p className="font-semibold text-gray-900 text-[15px] truncate">
               {post.user_profile?.full_name || 'Usuario'}
             </p>
-            <p className="text-xs text-gray-500">{formatTimeAgo(post.created_at)}</p>
+            <p className="text-[13px] text-gray-500">{formatTimeAgo(post.created_at)}</p>
           </div>
         </div>
         {canEditOrDelete && (
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="w-5 h-5" />
             </button>
             {showMenu && (
               <>
@@ -356,7 +356,14 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
         )}
       </div>
 
-      {/* Media - Se adapta al tamaño natural */}
+      {/* Content */}
+      {post.content && (
+        <div className="px-4 py-2 flex-shrink-0">
+          <p className="text-gray-900 text-[15px] leading-[1.33] whitespace-pre-wrap break-words">{post.content}</p>
+        </div>
+      )}
+
+      {/* Media - Estilo Facebook */}
       {postMedia.length > 0 && (
         <div className="w-full flex-shrink-0">
           {postMedia.length === 1 ? (
@@ -367,34 +374,25 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                   <img
                     src={postMedia[0].media_url}
                     alt={post.content || 'Post image'}
-                    className="w-full h-auto object-cover cursor-pointer"
+                    className="w-full h-auto object-contain cursor-pointer bg-gray-100"
                     loading="lazy"
                     onClick={() => {
                       setSelectedImageIndex(0);
                       setShowImageModal(true);
                     }}
                   />
-                  <div 
-                    className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200 flex items-center justify-center cursor-pointer"
-                    onClick={() => {
-                      setSelectedImageIndex(0);
-                      setShowImageModal(true);
-                    }}
-                  >
-                    <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                  </div>
                 </div>
               ) : (
                 <video
                   src={postMedia[0].media_url}
                   controls
-                  className="w-full h-auto"
+                  className="w-full h-auto bg-black"
                 />
               )}
             </div>
           ) : (
-            // Múltiples imágenes - Grid
-            <div className={`grid gap-1 ${
+            // Múltiples imágenes - Grid estilo Facebook
+            <div className={`grid gap-0.5 ${
               postMedia.length === 2 ? 'grid-cols-2' :
               postMedia.length === 3 ? 'grid-cols-2' :
               postMedia.length === 4 ? 'grid-cols-2' :
@@ -403,7 +401,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
               {postMedia.slice(0, 4).map((media, index) => (
                 <div
                   key={media.id}
-                  className={`relative group cursor-pointer ${
+                  className={`relative group cursor-pointer bg-gray-100 ${
                     postMedia.length === 3 && index === 0 ? 'row-span-2' : ''
                   }`}
                   onClick={() => {
@@ -416,13 +414,15 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                       <img
                         src={media.media_url}
                         alt={`${post.content || 'Post image'} ${index + 1}`}
-                        className="w-full h-full object-cover aspect-square"
+                        className="w-full h-full object-cover"
+                        style={{
+                          minHeight: postMedia.length === 3 && index === 0 ? '400px' : '200px'
+                        }}
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity duration-200" />
                       {postMedia.length > 4 && index === 3 && (
-                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                          <span className="text-white text-2xl font-bold">
+                        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+                          <span className="text-white text-3xl font-bold">
                             +{postMedia.length - 4}
                           </span>
                         </div>
@@ -432,7 +432,10 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                     <video
                       src={media.media_url}
                       controls
-                      className="w-full h-full object-cover aspect-square"
+                      className="w-full h-full object-cover"
+                      style={{
+                        minHeight: postMedia.length === 3 && index === 0 ? '400px' : '200px'
+                      }}
                     />
                   )}
                 </div>
@@ -442,95 +445,137 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
         </div>
       )}
 
-      {/* Content */}
-      {post.content && (
-        <div className="px-3 pt-2 pb-2 flex-shrink-0">
-          <p className="text-gray-900 text-sm line-clamp-3 whitespace-pre-wrap">{post.content}</p>
-        </div>
-      )}
-
       {/* Actions */}
-      <div className="px-3 py-2 border-t border-gray-100 mt-auto flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="relative">
+      <div className="px-4 py-2 border-t border-gray-200 mt-auto flex-shrink-0 relative">
+        {/* Likes count */}
+        {likesCount > 0 && (
+          <div className="pb-2.5 flex items-center gap-2 relative">
+            <div className="flex items-center -space-x-1">
+              <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center border-2 border-white shadow-sm">
+                <Heart className="w-3.5 h-3.5 text-white fill-white" />
+              </div>
+            </div>
             <button
-              onClick={(e) => {
+              type="button"
+              className="text-[13px] text-gray-700 font-medium cursor-pointer hover:underline text-left"
+              onClick={async (e) => {
                 e.stopPropagation();
-                handleLike();
-              }}
-              onMouseEnter={() => {
-                if (likesCount > 0 && likedUsers.length === 0) {
-                  fetchLikedUsers();
-                }
                 if (likesCount > 0) {
-                  setShowLikedUsers(true);
+                  if (likedUsers.length === 0) {
+                    await fetchLikedUsers();
+                  }
+                  setShowLikedUsers(!showLikedUsers);
                 }
               }}
-              onMouseLeave={() => setShowLikedUsers(false)}
-              className="flex items-center gap-1.5 transition-all duration-200 hover:scale-110"
-              disabled={!profile}
             >
-              <Heart
-                className={`w-5 h-5 transition-all duration-200 ${
-                  userLiked
-                    ? 'fill-red-500 text-red-500 scale-110'
-                    : 'text-gray-400 hover:text-red-500'
-                }`}
-              />
-              <span className={`text-sm font-medium ${
-                userLiked ? 'text-red-500' : 'text-gray-600'
-              }`}>
-                {likesCount}
-              </span>
+              {likesCount === 1 ? '1 persona' : `${likesCount} personas`}
             </button>
             
-            {/* Tooltip con usuarios que dieron like */}
-            {showLikedUsers && likedUsers.length > 0 && (
-              <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50">
-                <p className="text-xs font-semibold text-gray-700 mb-2">
-                  {likesCount === 1 ? 'A 1 persona le gusta' : `A ${likesCount} personas les gusta`}
-                </p>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {likedUsers.map((user) => (
-                    <div key={user.id} className="flex items-center gap-2">
-                      {user.avatar_url ? (
-                        <img
-                          src={user.avatar_url}
-                          alt={user.full_name}
-                          className="w-6 h-6 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                          <User className="w-3 h-3 text-gray-500" />
-                        </div>
-                      )}
-                      <span className="text-sm text-gray-900">{user.full_name}</span>
-                    </div>
-                  ))}
-                  {likesCount > likedUsers.length && (
-                    <p className="text-xs text-gray-500 pt-1">
-                      y {likesCount - likedUsers.length} más...
+            {/* Tooltip/Modal con usuarios que dieron like */}
+            {showLikedUsers && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowLikedUsers(false);
+                  }}
+                />
+                <div 
+                  className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-50"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {likesCount === 1 ? 'A 1 persona le gusta' : `A ${likesCount} personas les gusta`}
                     </p>
-                  )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowLikedUsers(false);
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {likedUsers.length > 0 ? (
+                      <>
+                        {likedUsers.map((user) => (
+                          <div key={user.id} className="flex items-center gap-2 py-1">
+                            {user.avatar_url ? (
+                              <img
+                                src={user.avatar_url}
+                                alt={user.full_name}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                <User className="w-4 h-4 text-gray-500" />
+                              </div>
+                            )}
+                            <span className="text-sm text-gray-900">{user.full_name}</span>
+                          </div>
+                        ))}
+                        {likesCount > likedUsers.length && (
+                          <p className="text-xs text-gray-500 pt-2 border-t border-gray-200">
+                            y {likesCount - likedUsers.length} más...
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-4">
+                        <Loader2 className="w-5 h-5 animate-spin text-gray-400 mx-auto mb-2" />
+                        <p className="text-xs text-gray-500">Cargando...</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex items-center border-t border-gray-200 pt-1 -mx-4 px-4">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLike();
+            }}
+            className="relative flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-colors group"
+            disabled={!profile}
+          >
+            <Heart
+              className={`w-5 h-5 transition-all duration-200 ${
+                userLiked
+                  ? 'fill-red-500 text-red-500'
+                  : 'text-gray-500 group-hover:text-red-500'
+              }`}
+            />
+            <span className={`text-[15px] font-medium ${
+              userLiked ? 'text-red-500' : 'text-gray-600 group-hover:text-red-500'
+            }`}>
+              Me gusta
+            </span>
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               setShowComments(!showComments);
             }}
-            className="flex items-center gap-1.5 text-gray-600 hover:text-blue-600 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-blue-600"
           >
             <MessageCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">{commentsCount}</span>
+            <span className="text-[15px] font-medium">Comentar</span>
           </button>
         </div>
 
         {/* Comentarios - Expandible */}
         {showComments && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-2 pt-2 border-t border-gray-200">
             <PostComments postId={post.id} />
           </div>
         )}

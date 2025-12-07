@@ -251,7 +251,7 @@ export function PostComments({ postId }: PostCommentsProps) {
               <div className="flex-1 min-w-0">
                 <div className="bg-gray-50 rounded-lg p-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold text-gray-900">
+                    <span className="text-sm font-semibold text-gray-900">
                       {comment.user_profile?.full_name || 'Usuario'}
                     </span>
                     {profile && (profile.id === comment.user_id || profile.role === 'admin') && (
@@ -280,7 +280,7 @@ export function PostComments({ postId }: PostCommentsProps) {
                       <textarea
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full p-1.5 border border-gray-300 rounded text-xs resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full p-1.5 border border-gray-300 rounded text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         rows={2}
                         maxLength={1000}
                       />
@@ -303,7 +303,7 @@ export function PostComments({ postId }: PostCommentsProps) {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-700 whitespace-pre-wrap line-clamp-3">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">
                       {comment.content}
                     </p>
                   )}
@@ -340,7 +340,7 @@ export function PostComments({ postId }: PostCommentsProps) {
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Escribe un comentario..."
-              className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs"
+              className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               maxLength={1000}
             />
             <button

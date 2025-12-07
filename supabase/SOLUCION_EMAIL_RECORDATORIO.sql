@@ -38,3 +38,5 @@ WHERE tgname = 'trigger_send_notification_email';
 -- ALTER TABLE notifications ENABLE TRIGGER trigger_send_notification_email;
 
 
+
+

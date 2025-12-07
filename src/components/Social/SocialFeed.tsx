@@ -47,29 +47,7 @@ export function SocialFeed() {
   const [birthdayUsers, setBirthdayUsers] = useState<BirthdayUser[]>([]);
   const loadingRef = useRef(false);
   const postsPerPage = 10;
-  const [columnCount, setColumnCount] = useState(1);
-
-  // Calcular número de columnas según el ancho de la pantalla (menos columnas = posts más grandes)
-  useEffect(() => {
-    const updateColumnCount = () => {
-      const width = window.innerWidth;
-      if (width >= 1920) {
-        setColumnCount(3); // Pantallas muy grandes: 3 columnas
-      } else if (width >= 1280) {
-        setColumnCount(2); // Pantallas grandes: 2 columnas
-      } else if (width >= 1024) {
-        setColumnCount(2); // Pantallas medianas: 2 columnas
-      } else if (width >= 640) {
-        setColumnCount(1); // Tablets: 1 columna
-      } else {
-        setColumnCount(1); // Móviles: 1 columna
-      }
-    };
-
-    updateColumnCount();
-    window.addEventListener('resize', updateColumnCount);
-    return () => window.removeEventListener('resize', updateColumnCount);
-  }, []);
+  // Facebook usa una sola columna centralizada
 
   useEffect(() => {
     fetchPosts();
@@ -399,34 +377,13 @@ export function SocialFeed() {
             </div>
           )}
 
-          <div 
-            className="w-full max-w-full"
-            style={{ 
-              columnCount: columnCount,
-              columnGap: '2rem',
-              columnFill: 'balance',
-              width: '100%',
-              maxWidth: '100%'
-            }}
-          >
+          <div className="max-w-2xl mx-auto space-y-4">
             {posts.map((post) => (
-              <div 
-                key={post.id} 
-                className="mb-4"
-                style={{ 
-                  display: 'inline-block',
-                  width: '100%',
-                  pageBreakInside: 'avoid',
-                  breakInside: 'avoid-column',
-                  WebkitColumnBreakInside: 'avoid',
-                  columnBreakInside: 'avoid'
-                }}
-              >
-                <SocialPost
-                  post={post}
-                  onDelete={() => handleDeletePost(post.id)}
-                />
-              </div>
+              <SocialPost
+                key={post.id}
+                post={post}
+                onDelete={() => handleDeletePost(post.id)}
+              />
             ))}
           </div>
           

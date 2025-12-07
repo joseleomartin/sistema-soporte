@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ExtractionProvider } from './contexts/ExtractionContext';
 import { LoginForm } from './components/Auth/LoginForm';
@@ -28,6 +28,24 @@ function MainApp() {
   const [selectedSubforumId, setSelectedSubforumId] = useState<string | null>(null);
   const [viewKey, setViewKey] = useState(0); // Key para forzar recarga
 
+  // Definir handlers antes de los hooks usando useCallback para evitar recreaciones
+  const handleViewChange = useCallback((view: string) => {
+    setCurrentView(view);
+    setViewKey(prev => prev + 1); // Incrementar key para forzar recarga
+  }, []);
+
+  const handleNavigateToTicket = useCallback((ticketId: string) => {
+    setSelectedTicketId(ticketId);
+    setCurrentView('tickets');
+    setViewKey(prev => prev + 1);
+  }, []);
+
+  const handleNavigateToForum = useCallback((subforumId: string) => {
+    setSelectedSubforumId(subforumId);
+    setCurrentView('forums');
+    setViewKey(prev => prev + 1);
+  }, []);
+
   // Verificar si estamos en el callback de OAuth
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -40,6 +58,22 @@ function MainApp() {
       return;
     }
   }, []);
+
+  // Escuchar eventos de navegación desde actividades del dashboard
+  useEffect(() => {
+    const handleNavigateToTicketEvent = (event: CustomEvent) => {
+      const { ticketId } = event.detail;
+      if (ticketId) {
+        handleNavigateToTicket(ticketId);
+      }
+    };
+
+    window.addEventListener('navigateToTicket', handleNavigateToTicketEvent as EventListener);
+
+    return () => {
+      window.removeEventListener('navigateToTicket', handleNavigateToTicketEvent as EventListener);
+    };
+  }, [handleNavigateToTicket]);
 
   // Si estamos en la ruta de callback, mostrar el componente de callback
   if (window.location.pathname.includes('google-oauth-callback')) {
@@ -70,23 +104,6 @@ function MainApp() {
   if (!user || !profile) {
     return <LoginForm />;
   }
-
-  const handleViewChange = (view: string) => {
-    setCurrentView(view);
-    setViewKey(prev => prev + 1); // Incrementar key para forzar recarga
-  };
-
-  const handleNavigateToTicket = (ticketId: string) => {
-    setSelectedTicketId(ticketId);
-    setCurrentView('tickets');
-    setViewKey(prev => prev + 1);
-  };
-
-  const handleNavigateToForum = (subforumId: string) => {
-    setSelectedSubforumId(subforumId);
-    setCurrentView('forums');
-    setViewKey(prev => prev + 1);
-  };
 
   const renderContent = () => {
     switch (currentView) {

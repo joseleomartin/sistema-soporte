@@ -119,3 +119,9 @@ WHERE id = 'direct-message-attachments';
 -- 4. Si sigue fallando, verifica en la consola del navegador los logs detallados
 -- ============================================
 
+
+
+
+
+
+

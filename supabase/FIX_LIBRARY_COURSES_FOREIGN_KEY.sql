@@ -21,3 +21,5 @@ ALTER TABLE library_courses
 -- LEFT JOIN profiles p ON lc.created_by = p.id;
 
 
+
+

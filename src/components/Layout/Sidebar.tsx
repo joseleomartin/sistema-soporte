@@ -12,7 +12,7 @@ type MenuItem = {
 };
 
 const menuItems: MenuItem[] = [
-  { icon: Home, label: 'Dashboard', view: 'dashboard', roles: ['admin', 'support', 'user'] },
+  { icon: Home, label: 'Inicio', view: 'dashboard', roles: ['admin', 'support', 'user'] },
   { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
   { icon: Video, label: 'Salas de Reunión', view: 'meetings', roles: ['admin', 'support', 'user'] },
   { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },

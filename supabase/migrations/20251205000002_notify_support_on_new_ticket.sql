@@ -117,3 +117,5 @@ COMMENT ON TRIGGER trigger_notify_support_on_new_ticket ON tickets IS
 -- JOIN departments d ON d.id = ud.department_id
 -- WHERE d.name = 'Soporte';
 
+
+

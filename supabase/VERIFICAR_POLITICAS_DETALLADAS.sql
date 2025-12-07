@@ -72,3 +72,4 @@ LIMIT 5;
 
 -- Esto nos ayudará a entender el formato del path y verificar si coincide con las políticas
 
+

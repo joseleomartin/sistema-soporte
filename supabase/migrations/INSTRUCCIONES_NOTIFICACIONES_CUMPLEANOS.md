@@ -101,3 +101,5 @@ ORDER BY n.created_at DESC;
   - AWS Lambda con EventBridge
   - Cualquier servicio que pueda hacer llamadas HTTP a la API de Supabase
 
+
+
