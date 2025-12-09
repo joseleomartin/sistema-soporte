@@ -15,6 +15,7 @@ import {
   Search,
   X,
   FolderPlus,
+  Eye,
 } from 'lucide-react';
 import { startGoogleAuth, getAccessToken, isAuthenticated } from '../../lib/googleAuthRedirect';
 import { listFilesInFolder, downloadFileFromDrive, getFolderInfo, searchFilesRecursively, createFolder, DriveFile, DriveFolder } from '../../lib/googleDriveAPI';
@@ -54,6 +55,8 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
   const [searchResults, setSearchResults] = useState<{ folders: DriveFile[]; files: DriveFile[] } | null>(null);
   // Breadcrumbs solo para subcarpetas (la raíz siempre se muestra por separado)
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
+  // Estado para visualizar archivos
+  const [viewingFile, setViewingFile] = useState<DriveFile | null>(null);
 
   // Actualizar currentFolderId cuando cambia initialFolderId
   useEffect(() => {
@@ -751,6 +754,13 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                       {/* Acciones */}
                       <div className="flex-shrink-0 flex items-center gap-2">
                         <button
+                          onClick={() => setViewingFile(file)}
+                          className="p-2.5 text-green-600 hover:bg-green-50 rounded-lg transition"
+                          title="Ver archivo"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        <button
                           onClick={() => handleDownload(file)}
                           className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
                           title="Descargar archivo"
@@ -760,7 +770,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                         <button
                           onClick={() => window.open(file.webViewLink, '_blank', 'noopener,noreferrer')}
                           className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          title="Ver archivo en Google Drive"
+                          title="Abrir en Google Drive"
                         >
                           <ExternalLink className="w-5 h-5" />
                         </button>
@@ -771,6 +781,100 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal para visualizar archivo */}
+      {viewingFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col">
+            {/* Header del modal */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {getFileIcon(viewingFile.mimeType)}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 truncate">{viewingFile.name}</h3>
+                  <p className="text-sm text-gray-500">
+                    {formatFileSize(viewingFile.size)} • {formatDate(viewingFile.modifiedTime)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownload(viewingFile)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  title="Descargar"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => window.open(viewingFile.webViewLink, '_blank', 'noopener,noreferrer')}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  title="Abrir en Google Drive"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewingFile(null)}
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                  title="Cerrar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido del archivo */}
+            <div className="flex-1 overflow-hidden">
+              {(() => {
+                // Determinar la URL de visualización según el tipo de archivo
+                let previewUrl = '';
+                
+                // Archivos de Google (Docs, Sheets, Slides)
+                if (viewingFile.mimeType === 'application/vnd.google-apps.document') {
+                  previewUrl = `https://docs.google.com/document/d/${viewingFile.id}/preview`;
+                } else if (viewingFile.mimeType === 'application/vnd.google-apps.spreadsheet') {
+                  previewUrl = `https://docs.google.com/spreadsheets/d/${viewingFile.id}/preview`;
+                } else if (viewingFile.mimeType === 'application/vnd.google-apps.presentation') {
+                  previewUrl = `https://docs.google.com/presentation/d/${viewingFile.id}/preview`;
+                } else if (viewingFile.mimeType === 'application/vnd.google-apps.drawing') {
+                  previewUrl = `https://docs.google.com/drawings/d/${viewingFile.id}/preview`;
+                } else if (viewingFile.mimeType === 'application/vnd.google-apps.form') {
+                  previewUrl = `https://docs.google.com/forms/d/${viewingFile.id}/preview`;
+                } else {
+                  // Para otros archivos (PDF, imágenes, etc.), usar el preview de Google Drive
+                  previewUrl = `https://drive.google.com/file/d/${viewingFile.id}/preview`;
+                }
+
+                // Para imágenes, mostrar directamente
+                if (viewingFile.mimeType?.startsWith('image/')) {
+                  return (
+                    <div className="h-full flex items-center justify-center bg-gray-100 p-4">
+                      <img
+                        src={`https://drive.google.com/uc?export=view&id=${viewingFile.id}`}
+                        alt={viewingFile.name}
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          // Si falla la carga directa, usar el preview
+                          (e.target as HTMLImageElement).src = previewUrl;
+                        }}
+                      />
+                    </div>
+                  );
+                }
+
+                // Para otros archivos, usar iframe
+                return (
+                  <iframe
+                    src={previewUrl}
+                    className="w-full h-full border-0"
+                    title={viewingFile.name}
+                    allow="fullscreen"
+                  />
+                );
+              })()}
+            </div>
+          </div>
         </div>
       )}
     </div>
