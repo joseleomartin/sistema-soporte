@@ -51,9 +51,8 @@ REM Si no los configuras aquí, asegúrate de tenerlos en variables de entorno d
 REM o en un archivo .env en la carpeta backend/
 set GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
 set GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
-REM ⚠️ IMPORTANTE: Reemplaza TU_CLIENT_SECRET_AQUI con tu Client Secret real
-REM Obténlo de: Google Cloud Console → APIs y servicios → Credenciales → Tu Client ID → Client Secret
-REM Las credenciales reales están documentadas en CREDENCIALES_GOOGLE_ACTUALIZADAS.md
+REM ⚠️ IMPORTANTE: Credenciales configuradas desde client_secret_*.json
+REM Las credenciales están documentadas en CREDENCIALES_GOOGLE_ACTUALIZADAS.md
 
 echo ================================================
 echo  PASO 1: Iniciando servidor Flask

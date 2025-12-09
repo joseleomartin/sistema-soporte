@@ -3,6 +3,7 @@ import { X, Play, User, FileText, Image, File, Download, Eye, Loader2 } from 'lu
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { CoursePartsManager } from './CoursePartsManager';
+import { GoogleDriveViewer } from '../Forums/GoogleDriveViewer';
 
 interface Course {
   id: string;
@@ -13,6 +14,9 @@ interface Course {
   file_name?: string | null;
   file_type?: string | null;
   file_size?: number | null;
+  google_drive_link?: string | null;
+  google_drive_folder_id?: string | null;
+  type?: 'course' | 'document';
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -80,7 +84,7 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
 
   const videoId = getYouTubeVideoId(course.youtube_url);
   const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : null;
-  const hasFile = course.file_path && course.file_name;
+  const hasFile = course.file_path && course.file_name && !course.google_drive_folder_id;
   const isImage = course.file_type?.startsWith('image/');
   const isPDF = course.file_type?.includes('pdf');
 
@@ -214,8 +218,25 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
               </div>
             )}
 
-            {/* Archivo */}
-            {hasFile && (
+            {/* Google Drive (solo para documentos) */}
+            {course.google_drive_folder_id && (
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Contenido de Google Drive</h3>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <GoogleDriveViewer
+                    folderId={course.google_drive_folder_id}
+                    folderName={course.title}
+                    webViewLink={course.google_drive_link || undefined}
+                    onError={(error) => {
+                      console.error('Error loading Google Drive:', error);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Archivo (solo si no hay Google Drive) */}
+            {hasFile && !course.google_drive_folder_id && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Archivo adjunto</h3>
                 {!showFilePreview ? (
@@ -317,8 +338,10 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
               </div>
             )}
 
-            {/* Gestor de Partes del Curso */}
-            <CoursePartsManager courseId={course.id} isAdmin={isAdmin || false} />
+            {/* Gestor de Partes del Curso (solo para cursos, no para documentos) */}
+            {course.type !== 'document' && (
+              <CoursePartsManager courseId={course.id} isAdmin={isAdmin || false} />
+            )}
           </div>
         </div>
       </div>

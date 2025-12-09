@@ -239,6 +239,67 @@ export async function listFilesInFolder(
 }
 
 /**
+ * Lista archivos y carpetas de la raíz de Google Drive (My Drive)
+ */
+export async function listRootFiles(
+  accessToken: string,
+  pageToken?: string
+): Promise<DriveFolderContent> {
+  try {
+    // Query para obtener archivos y carpetas en la raíz (sin parent específico)
+    const query = `'root' in parents and trashed=false`;
+    let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,modifiedTime,webViewLink,thumbnailLink,iconLink),nextPageToken&orderBy=name&pageSize=1000`;
+    
+    if (pageToken) {
+      url += `&pageToken=${encodeURIComponent(pageToken)}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Token expirado. Por favor, autentica nuevamente.');
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.error?.message || 
+        `Error al listar archivos: ${response.statusText}`
+      );
+    }
+
+    const data: DriveAPIResponse = await response.json();
+
+    const allItems: DriveFile[] = (data.files || []).map((file: any) => {
+      const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+      return {
+        id: file.id,
+        name: file.name,
+        mimeType: file.mimeType,
+        size: file.size,
+        modifiedTime: file.modifiedTime,
+        webViewLink: file.webViewLink,
+        thumbnailLink: file.thumbnailLink,
+        iconLink: file.iconLink,
+        isFolder,
+      };
+    });
+
+    // Separar carpetas y archivos
+    const folders = allItems.filter(item => item.isFolder);
+    const files = allItems.filter(item => !item.isFolder);
+
+    return { folders, files };
+  } catch (error: any) {
+    console.error('Error listando archivos raíz:', error);
+    throw error;
+  }
+}
+
+/**
  * Busca archivos y carpetas recursivamente dentro de una carpeta raíz
  * Usa búsqueda paralela para mejorar el rendimiento
  */

@@ -71,3 +71,5 @@ GROUP BY type;
 
 
 
+
+

@@ -128,7 +128,7 @@ Esto asegura que la aplicación funcione incluso si el backend no está disponib
 ### Backend (Railway/Render):
 ```
 GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
+GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
 ```
 ⚠️ Obtén estos valores de Google Cloud Console → Credenciales → Tu Client ID
 

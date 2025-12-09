@@ -53,6 +53,7 @@ export function CostCalculation() {
   const [editingCosts, setEditingCosts] = useState<{ [clientId: string]: boolean }>({});
   const [priceInputs, setPriceInputs] = useState<{ [clientId: string]: string }>({});
   const [savingCost, setSavingCost] = useState<string | null>(null);
+  const [savedPrices, setSavedPrices] = useState<{ [clientId: string]: number }>({});
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -66,6 +67,13 @@ export function CostCalculation() {
       calculateCosts();
     }
   }, [departments, startDate, endDate]);
+
+  // Cargar precios guardados cuando cambian las fechas
+  useEffect(() => {
+    if (startDate && endDate && profile?.role === 'admin') {
+      loadSavedPrices();
+    }
+  }, [startDate, endDate, profile?.id]);
 
   const loadDepartments = async () => {
     try {
@@ -102,11 +110,103 @@ export function CostCalculation() {
     }
   };
 
+  const loadSavedPrices = async () => {
+    if (!startDate || !endDate || !profile?.id) return;
+
+    try {
+      // Cargar precios guardados para este período
+      const { data: prices, error } = await supabase
+        .from('client_prices')
+        .select('client_id, price_to_charge')
+        .eq('start_date', startDate)
+        .eq('end_date', endDate);
+
+      if (error) throw error;
+
+      // Convertir a objeto para fácil acceso
+      const pricesMap: { [clientId: string]: number } = {};
+      prices?.forEach(price => {
+        pricesMap[price.client_id] = parseFloat(price.price_to_charge.toString());
+      });
+
+      setSavedPrices(pricesMap);
+
+      // También actualizar priceInputs con los valores guardados
+      const inputsMap: { [clientId: string]: string } = {};
+      prices?.forEach(price => {
+        inputsMap[price.client_id] = price.price_to_charge.toString();
+      });
+      setPriceInputs(prev => ({ ...prev, ...inputsMap }));
+    } catch (error) {
+      console.error('Error loading saved prices:', error);
+    }
+  };
+
+  const savePrice = async (clientId: string, price: number) => {
+    if (!startDate || !endDate || !profile?.id) return;
+
+    setSavingCost(clientId);
+    try {
+      // Verificar si ya existe un precio para este cliente y período
+      const { data: existing, error: checkError } = await supabase
+        .from('client_prices')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('start_date', startDate)
+        .eq('end_date', endDate)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      if (existing) {
+        // Actualizar precio existente
+        const { error: updateError } = await supabase
+          .from('client_prices')
+          .update({
+            price_to_charge: price,
+            user_id: profile.id
+          })
+          .eq('id', existing.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Crear nuevo precio
+        const { error: insertError } = await supabase
+          .from('client_prices')
+          .insert({
+            client_id: clientId,
+            start_date: startDate,
+            end_date: endDate,
+            price_to_charge: price,
+            user_id: profile.id
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Actualizar savedPrices
+      setSavedPrices(prev => ({
+        ...prev,
+        [clientId]: price
+      }));
+    } catch (error) {
+      console.error('Error saving price:', error);
+      alert('Error al guardar el precio. Por favor, intenta nuevamente.');
+    } finally {
+      setSavingCost(null);
+    }
+  };
+
   const calculateCosts = async () => {
     if (!startDate || !endDate) return;
 
     setLoading(true);
     try {
+      // Primero cargar precios guardados
+      await loadSavedPrices();
+
       // Obtener todas las entradas de tiempo en el rango de fechas
       const { data: timeEntries, error: entriesError } = await supabase
         .from('time_entries')
@@ -171,10 +271,10 @@ export function CostCalculation() {
           totalCost += areaData.cost;
         });
 
-        // Obtener precio a cobrar guardado (si existe)
+        // Obtener precio a cobrar guardado (prioridad: input actual > precio guardado en BD > 0)
         const savedPrice = priceInputs[client.client_id] 
           ? parseFloat(priceInputs[client.client_id]) 
-          : client.price_to_charge;
+          : (savedPrices[client.client_id] || client.price_to_charge || 0);
 
         const netMargin = savedPrice - totalCost;
 
@@ -213,6 +313,14 @@ export function CostCalculation() {
       }
       return client;
     }));
+  };
+
+  const handlePriceBlur = async (clientId: string, value: string) => {
+    const price = parseFloat(value) || 0;
+    // Guardar automáticamente cuando el usuario sale del campo
+    if (price > 0 && price !== savedPrices[clientId]) {
+      await savePrice(clientId, price);
+    }
   };
 
   const formatCurrency = (amount: number): string => {
@@ -415,11 +523,21 @@ export function CostCalculation() {
                           type="number"
                           step="0.01"
                           min="0"
-                          value={priceInputs[client.client_id] || client.price_to_charge || ''}
+                          value={priceInputs[client.client_id] !== undefined 
+                            ? priceInputs[client.client_id] 
+                            : (savedPrices[client.client_id]?.toString() || client.price_to_charge || '')}
                           onChange={(e) => handlePriceChange(client.client_id, e.target.value)}
+                          onBlur={(e) => handlePriceBlur(client.client_id, e.target.value)}
                           className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="0.00"
+                          disabled={savingCost === client.client_id}
                         />
+                        {savingCost === client.client_id && (
+                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        )}
+                        {savedPrices[client.client_id] !== undefined && savingCost !== client.client_id && (
+                          <span className="text-xs text-green-600" title="Precio guardado">✓</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

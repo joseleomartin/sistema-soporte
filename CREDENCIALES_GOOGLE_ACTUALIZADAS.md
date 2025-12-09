@@ -97,7 +97,7 @@ Los siguientes archivos ya fueron actualizados con las nuevas credenciales:
 
 1. **Seguridad**: El Client Secret nunca debe estar en el frontend. Solo úsalo en el backend.
 
-2. **Archivo JSON Antiguo**: El archivo `backend/client_secret_398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com.json` 
+2. **Archivo JSON Antiguo**: El archivo `backend/client_secret_TU_CLIENT_ID_AQUI.apps.googleusercontent.com.json` 
    es de las credenciales antiguas. Puedes eliminarlo si ya no lo necesitas.
 
 3. **URLs de Redirección en Google Cloud Console**: 

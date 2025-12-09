@@ -13,6 +13,8 @@ interface Course {
   file_type?: string | null;
   file_size?: number | null;
   folder_id?: string | null;
+  google_drive_link?: string | null;
+  google_drive_folder_id?: string | null;
 }
 
 interface CreateCourseModalProps {
@@ -28,6 +30,7 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [googleDriveLink, setGoogleDriveLink] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -36,11 +39,39 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
   const [folders, setFolders] = useState<Array<{ id: string; name: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Extraer ID de carpeta desde un enlace de Google Drive
+  const extractFolderIdFromLink = (link: string): string | null => {
+    // Formato 1: https://drive.google.com/drive/folders/FOLDER_ID
+    // Formato 2: https://drive.google.com/drive/u/0/folders/FOLDER_ID
+    // Formato 3: https://drive.google.com/open?id=FOLDER_ID
+    // Formato 4: FOLDER_ID directo
+    
+    // Intentar extraer de formato estándar
+    const foldersMatch = link.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    if (foldersMatch) {
+      return foldersMatch[1];
+    }
+    
+    // Intentar extraer de formato open?id=
+    const openMatch = link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (openMatch) {
+      return openMatch[1];
+    }
+    
+    // Si es solo un ID (sin URL)
+    if (/^[a-zA-Z0-9_-]+$/.test(link.trim())) {
+      return link.trim();
+    }
+    
+    return null;
+  };
+
   useEffect(() => {
     if (course) {
       setTitle(course.title);
       setDescription(course.description);
       setYoutubeUrl(course.youtube_url || '');
+      setGoogleDriveLink(course.google_drive_link || '');
       setSelectedFolderId(course.folder_id || null);
       // No cargamos el archivo existente en el estado, solo mostramos que existe
     } else if (folderId) {
@@ -127,10 +158,22 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
 
     const hasYouTube = youtubeUrl.trim() && validateYouTubeUrl(youtubeUrl);
     const hasFile = selectedFile !== null;
+    const hasGoogleDrive = googleDriveLink.trim() !== '';
 
-    if (hasYouTube && hasFile) {
-      setError('Solo puedes proporcionar una URL de YouTube o un archivo, no ambos');
+    // Validar que solo haya una opción seleccionada
+    const optionsCount = [hasYouTube, hasFile, hasGoogleDrive].filter(Boolean).length;
+    if (optionsCount > 1) {
+      setError('Solo puedes proporcionar una opción: URL de YouTube, archivo o link de Google Drive');
       return;
+    }
+
+    // Si es documento y tiene Google Drive, validar el link
+    if (type === 'document' && hasGoogleDrive) {
+      const folderId = extractFolderIdFromLink(googleDriveLink.trim());
+      if (!folderId) {
+        setError('El link de Google Drive no es válido. Debe ser un link a una carpeta de Google Drive.');
+        return;
+      }
     }
 
     if (!profile) {
@@ -160,19 +203,34 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
         courseData.file_name = null;
         courseData.file_type = null;
         courseData.file_size = null;
+        courseData.google_drive_link = null;
+        courseData.google_drive_folder_id = null;
+      } else if (hasGoogleDrive && type === 'document') {
+        const folderId = extractFolderIdFromLink(googleDriveLink.trim());
+        courseData.youtube_url = null;
+        courseData.file_path = null;
+        courseData.file_name = null;
+        courseData.file_type = null;
+        courseData.file_size = null;
+        courseData.google_drive_link = googleDriveLink.trim();
+        courseData.google_drive_folder_id = folderId;
       } else if (fileData) {
         courseData.youtube_url = null;
         courseData.file_path = fileData.file_path;
         courseData.file_name = fileData.file_name;
         courseData.file_type = fileData.file_type;
         courseData.file_size = fileData.file_size;
+        courseData.google_drive_link = null;
+        courseData.google_drive_folder_id = null;
       } else {
-        // Si no hay ni YouTube ni archivo, dejar ambos en null
+        // Si no hay ninguna opción, dejar todo en null
         courseData.youtube_url = null;
         courseData.file_path = null;
         courseData.file_name = null;
         courseData.file_type = null;
         courseData.file_size = null;
+        courseData.google_drive_link = null;
+        courseData.google_drive_folder_id = null;
       }
 
       if (course) {
@@ -292,76 +350,111 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
             />
           </div>
 
-          {/* URL de YouTube o Archivo */}
+          {/* Contenido: YouTube, Google Drive (solo documentos) o Archivo (solo cursos) */}
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                URL de YouTube
-              </label>
-              <input
-                type="url"
-                value={youtubeUrl}
-                onChange={(e) => {
-                  setYoutubeUrl(e.target.value);
-                  if (e.target.value.trim()) {
-                    setSelectedFile(null);
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = '';
-                    }
-                  }
-                }}
-                disabled={selectedFile !== null}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                placeholder="https://www.youtube.com/watch?v=..."
-              />
-              <p className="mt-2 text-xs text-gray-500">
-                Puedes usar URLs de YouTube en formato: youtube.com/watch?v=... o youtu.be/...
-              </p>
-            </div>
+            {type === 'course' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL de YouTube
+                  </label>
+                  <input
+                    type="url"
+                    value={youtubeUrl}
+                    onChange={(e) => {
+                      setYoutubeUrl(e.target.value);
+                      if (e.target.value.trim()) {
+                        setSelectedFile(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }
+                    }}
+                    disabled={selectedFile !== null}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                  <p className="mt-2 text-xs text-gray-500">
+                    Puedes usar URLs de YouTube en formato: youtube.com/watch?v=... o youtu.be/...
+                  </p>
+                </div>
 
-            <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                O sube un archivo
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                disabled={youtubeUrl.trim() !== ''}
-                className="hidden"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip,.rar"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={youtubeUrl.trim() !== '' || uploading}
-                className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <Upload className="w-5 h-5 text-gray-400" />
-                <span className="text-sm text-gray-600">
-                  {selectedFile ? selectedFile.name : 'Seleccionar archivo'}
-                </span>
-              </button>
-              {selectedFile && (
-                <div className="mt-2 flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  {getFileIcon(selectedFile.type)}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 truncate">{selectedFile.name}</p>
-                    <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
-                  </div>
+                <div className="relative">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    O sube un archivo
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    disabled={youtubeUrl.trim() !== ''}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip,.rar"
+                  />
                   <button
                     type="button"
-                    onClick={removeFile}
-                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={youtubeUrl.trim() !== '' || uploading}
+                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    <XIcon className="w-4 h-4 text-gray-600" />
+                    <Upload className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm text-gray-600">
+                      {selectedFile ? selectedFile.name : 'Seleccionar archivo'}
+                    </span>
                   </button>
+                  {selectedFile && (
+                    <div className="mt-2 flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      {getFileIcon(selectedFile.type)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 truncate">{selectedFile.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeFile}
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      >
+                        <XIcon className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                  )}
+                  <p className="mt-2 text-xs text-gray-500">
+                    Formatos soportados: PDF, Word, Excel, PowerPoint, imágenes, videos, audio, ZIP
+                  </p>
                 </div>
-              )}
-              <p className="mt-2 text-xs text-gray-500">
-                Formatos soportados: PDF, Word, Excel, PowerPoint, imágenes, videos, audio, ZIP
-              </p>
-            </div>
+              </>
+            )}
+
+            {type === 'document' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Link de Google Drive *
+                </label>
+                <input
+                  type="url"
+                  value={googleDriveLink}
+                  onChange={(e) => {
+                    setGoogleDriveLink(e.target.value);
+                    if (e.target.value.trim()) {
+                      setSelectedFile(null);
+                      setYoutubeUrl('');
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                      }
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://drive.google.com/drive/folders/1ABC..."
+                  required={type === 'document'}
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Ingresa el link completo de la carpeta de Google Drive. Se mostrará todo el contenido de la carpeta.
+                </p>
+                <p className="mt-1 text-xs text-blue-600">
+                  Ejemplo: https://drive.google.com/drive/folders/1ABC123xyz...
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Botones */}

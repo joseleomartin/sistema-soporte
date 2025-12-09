@@ -11,6 +11,9 @@ interface Course {
   file_name?: string | null;
   file_type?: string | null;
   file_size?: number | null;
+  google_drive_link?: string | null;
+  google_drive_folder_id?: string | null;
+  type?: 'course' | 'document';
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -79,7 +82,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
 
   const videoId = getYouTubeVideoId(course.youtube_url);
   const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : null;
-  const hasFile = course.file_path && course.file_name;
+  const hasFile = course.file_path && course.file_name && !course.google_drive_folder_id;
   const isImage = course.file_type?.startsWith('image/');
   const isPDF = course.file_type?.includes('pdf');
 
@@ -197,6 +200,21 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
           <p className="text-sm text-gray-600 mb-4 line-clamp-3">
             {course.description}
           </p>
+        )}
+
+        {/* Indicador de Google Drive (solo para documentos) */}
+        {course.google_drive_folder_id && (
+          <div className="mb-4">
+            <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50">
+              <div className="flex items-center gap-3">
+                <FileText className="w-8 h-8 text-blue-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-900">Carpeta de Google Drive</p>
+                  <p className="text-xs text-blue-700">Contenido disponible en Google Drive</p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Video o Archivo Preview */}

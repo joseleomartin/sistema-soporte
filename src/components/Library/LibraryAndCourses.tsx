@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Plus, BookOpen, Edit, Trash2, Play, Loader2, FileText, GraduationCap, Folder, FolderOpen, ArrowLeft, FolderPlus } from 'lucide-react';
+import { Plus, BookOpen, Edit, Trash2, Play, Loader2, FileText, GraduationCap, Folder, FolderOpen, ArrowLeft, FolderPlus, ExternalLink, Download, Eye, Image } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { CourseCard } from './CourseCard';
 import { CreateCourseModal } from './CreateCourseModal';
 import { CourseDetailModal } from './CourseDetailModal';
 import { CreateFolderModal } from './CreateFolderModal';
+import { GoogleDriveViewer } from '../Forums/GoogleDriveViewer';
+import { listRootFiles, DriveFile } from '../../lib/googleDriveAPI';
+import { getAccessToken, isAuthenticated, startGoogleAuth } from '../../lib/googleAuthRedirect';
 
 interface Course {
   id: string;
@@ -16,6 +19,8 @@ interface Course {
   file_name?: string | null;
   file_type?: string | null;
   file_size?: number | null;
+  google_drive_link?: string | null;
+  google_drive_folder_id?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -56,9 +61,20 @@ export function LibraryAndCourses() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [folderItems, setFolderItems] = useState<Course[]>([]);
+  
+  // Estados para Google Drive
+  const [driveFolders, setDriveFolders] = useState<DriveFile[]>([]);
+  const [driveFiles, setDriveFiles] = useState<DriveFile[]>([]);
+  const [loadingDrive, setLoadingDrive] = useState(false);
+  const [driveAuthenticated, setDriveAuthenticated] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
+  const [currentDriveFolderId, setCurrentDriveFolderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAll();
+    if (activeTab === 'library') {
+      loadGoogleDriveRoot();
+    }
   }, [activeTab]);
 
   useEffect(() => {
@@ -66,6 +82,49 @@ export function LibraryAndCourses() {
       fetchFolderItems();
     }
   }, [selectedFolder]);
+
+  // Cargar contenido de Google Drive root
+  const loadGoogleDriveRoot = async () => {
+    try {
+      setLoadingDrive(true);
+      setDriveError(null);
+      
+      // Verificar autenticación
+      const authenticated = await isAuthenticated();
+      setDriveAuthenticated(authenticated);
+      
+      if (!authenticated) {
+        setLoadingDrive(false);
+        return;
+      }
+
+      // Obtener token
+      const token = await getAccessToken();
+      
+      // Cargar archivos y carpetas del root
+      const content = await listRootFiles(token);
+      setDriveFolders(content.folders);
+      setDriveFiles(content.files);
+      setCurrentDriveFolderId(null); // null significa root
+    } catch (error: any) {
+      console.error('Error cargando Google Drive:', error);
+      setDriveError(error.message || 'Error al cargar Google Drive');
+      setDriveAuthenticated(false);
+    } finally {
+      setLoadingDrive(false);
+    }
+  };
+
+  // Manejar clic en carpeta de Google Drive
+  const handleDriveFolderClick = (folderId: string) => {
+    setCurrentDriveFolderId(folderId);
+  };
+
+  // Volver al root de Google Drive
+  const handleBackToDriveRoot = () => {
+    setCurrentDriveFolderId(null);
+    loadGoogleDriveRoot();
+  };
 
   const fetchAll = async () => {
     try {
@@ -473,8 +532,8 @@ export function LibraryAndCourses() {
         </div>
       </div>
 
-      {/* Carpetas */}
-      {currentFolders.length > 0 && (
+      {/* Carpetas (solo para cursos, no para biblioteca con Google Drive) */}
+      {activeTab === 'courses' && currentFolders.length > 0 && (
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Carpetas</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -516,8 +575,150 @@ export function LibraryAndCourses() {
         </div>
       )}
 
-      {/* Items sin carpeta */}
-      {itemsWithoutFolder.length > 0 && (
+      {/* Vista de Google Drive para Biblioteca */}
+      {activeTab === 'library' && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Google Drive</h2>
+            {!driveAuthenticated && (
+              <button
+                onClick={async () => {
+                  await startGoogleAuth();
+                  setTimeout(() => loadGoogleDriveRoot(), 1000);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                Conectar Google Drive
+              </button>
+            )}
+            {driveAuthenticated && currentDriveFolderId && (
+              <button
+                onClick={handleBackToDriveRoot}
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Volver a raíz
+              </button>
+            )}
+          </div>
+
+          {loadingDrive ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+          ) : driveError ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800">{driveError}</p>
+            </div>
+          ) : !driveAuthenticated ? (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+              <p className="text-sm text-blue-800 mb-4">
+                Conecta tu Google Drive para ver tus carpetas y archivos
+              </p>
+              <button
+                onClick={async () => {
+                  await startGoogleAuth();
+                  setTimeout(() => loadGoogleDriveRoot(), 1000);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Conectar Google Drive
+              </button>
+            </div>
+          ) : currentDriveFolderId ? (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <GoogleDriveViewer
+                folderId={currentDriveFolderId}
+                folderName="Carpeta"
+                onError={(error) => {
+                  setDriveError(error);
+                }}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Carpetas de Google Drive */}
+              {driveFolders.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium text-gray-700 mb-4">Carpetas</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {driveFolders.map((folder) => (
+                      <div
+                        key={folder.id}
+                        onClick={() => handleDriveFolderClick(folder.id)}
+                        className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Folder className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 truncate">{folder.name}</h4>
+                            <p className="text-xs text-gray-500">
+                              {new Date(folder.modifiedTime).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Archivos de Google Drive */}
+              {driveFiles.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-700 mb-4">Archivos</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {driveFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gray-100 rounded-lg">
+                            {file.mimeType?.startsWith('image/') ? (
+                              <Image className="w-6 h-6 text-gray-600" />
+                            ) : (
+                              <File className="w-6 h-6 text-gray-600" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 truncate">{file.name}</h4>
+                            <p className="text-xs text-gray-500">
+                              {file.size ? `${(parseInt(file.size) / 1024).toFixed(1)} KB` : 'N/A'} • {new Date(file.modifiedTime).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <a
+                            href={file.webViewLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Estado vacío */}
+              {driveFolders.length === 0 && driveFiles.length === 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+                  <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No hay carpetas ni archivos en la raíz de Google Drive</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Items sin carpeta (solo para cursos) */}
+      {activeTab === 'courses' && itemsWithoutFolder.length > 0 && (
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             {currentFolders.length > 0 ? `${itemTypePlural.charAt(0).toUpperCase() + itemTypePlural.slice(1)} sin carpeta` : itemTypePlural.charAt(0).toUpperCase() + itemTypePlural.slice(1)}
@@ -536,14 +737,10 @@ export function LibraryAndCourses() {
         </div>
       )}
 
-      {/* Estado vacío */}
-      {currentFolders.length === 0 && itemsWithoutFolder.length === 0 && (
+      {/* Estado vacío (solo para cursos, no para biblioteca con Google Drive) */}
+      {activeTab === 'courses' && currentFolders.length === 0 && itemsWithoutFolder.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          {activeTab === 'courses' ? (
-            <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          ) : (
-            <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          )}
+          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No hay {itemTypePlural} disponibles
           </h3>
@@ -569,7 +766,7 @@ export function LibraryAndCourses() {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="w-5 h-5" />
-                Crear Primer {activeTab === 'courses' ? 'Curso' : 'Documento'}
+                Crear Primer Curso
               </button>
             </div>
           )}

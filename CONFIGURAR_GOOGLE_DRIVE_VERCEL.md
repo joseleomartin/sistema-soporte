@@ -27,7 +27,7 @@ https://tu-proyecto.vercel.app/google-oauth-callback
 1. Ve a: https://console.cloud.google.com/
 2. Selecciona tu proyecto
 3. Ve a **"APIs y servicios"** → **"Credenciales"**
-4. Haz clic en tu **Client ID**: `398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve`
+4. Haz clic en tu **Client ID**: `TU_CLIENT_ID_AQUI`
 
 ---
 

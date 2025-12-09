@@ -3,17 +3,26 @@ import { Plus, Edit2, Trash2, Play, Eye, Download, X, Loader2, FileText, Image, 
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
+interface CourseFile {
+  file_path: string;
+  file_name: string;
+  file_type: string | null;
+  file_size: number | null;
+}
+
 interface CoursePart {
   id: string;
   course_id: string;
   part_number: number;
   title: string;
   description?: string | null;
-  youtube_url?: string | null;
-  file_path?: string | null;
-  file_name?: string | null;
-  file_type?: string | null;
-  file_size?: number | null;
+  youtube_url?: string | null; // Mantener por compatibilidad
+  file_path?: string | null; // Mantener por compatibilidad
+  file_name?: string | null; // Mantener por compatibilidad
+  file_type?: string | null; // Mantener por compatibilidad
+  file_size?: number | null; // Mantener por compatibilidad
+  youtube_urls?: string[] | null; // Nuevo: array de URLs
+  files?: CourseFile[] | null; // Nuevo: array de archivos
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +31,49 @@ interface CoursePartsManagerProps {
   courseId: string;
   isAdmin: boolean;
 }
+
+// Funciones auxiliares compartidas
+const getFileUrl = (filePath: string): string => {
+  const { data } = supabase.storage
+    .from('library-course-files')
+    .getPublicUrl(filePath);
+  return data.publicUrl;
+};
+
+const formatFileSize = (bytes: number | null | undefined): string => {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+};
+
+const getFileIcon = (fileType: string | null | undefined) => {
+  if (!fileType) return <File className="w-5 h-5 text-gray-600" />;
+  if (fileType.startsWith('image/')) {
+    return <Image className="w-5 h-5 text-green-600" />;
+  } else if (fileType.includes('pdf')) {
+    return <FileText className="w-5 h-5 text-red-600" />;
+  } else {
+    return <File className="w-5 h-5 text-gray-600" />;
+  }
+};
+
+const getYouTubeVideoId = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+};
 
 export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProps) {
   const { profile } = useAuth();
@@ -79,47 +131,6 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
     }
   };
 
-  const getFileUrl = (filePath: string): string => {
-    const { data } = supabase.storage
-      .from('library-course-files')
-      .getPublicUrl(filePath);
-    return data.publicUrl;
-  };
-
-  const formatFileSize = (bytes: number | null | undefined): string => {
-    if (!bytes) return '';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  const getFileIcon = (fileType: string | null | undefined) => {
-    if (!fileType) return <File className="w-5 h-5 text-gray-600" />;
-    if (fileType.startsWith('image/')) {
-      return <Image className="w-5 h-5 text-green-600" />;
-    } else if (fileType.includes('pdf')) {
-      return <FileText className="w-5 h-5 text-red-600" />;
-    } else {
-      return <File className="w-5 h-5 text-gray-600" />;
-    }
-  };
-
-  const getYouTubeVideoId = (url: string | null | undefined): string | null => {
-    if (!url) return null;
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
-    ];
-
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match && match[1]) {
-        return match[1];
-      }
-    }
-
-    return null;
-  };
 
   if (loading) {
     return (
@@ -236,8 +247,40 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                   <p className="text-sm text-gray-700 mt-3 whitespace-pre-wrap">{part.description}</p>
                 )}
 
-                {/* YouTube Video */}
-                {part.youtube_url && (() => {
+                {/* YouTube Videos - Nuevo formato (array) */}
+                {part.youtube_urls && part.youtube_urls.length > 0 && (
+                  <div className="mt-4 space-y-4">
+                    <h5 className="text-sm font-semibold text-gray-700">Videos de YouTube:</h5>
+                    {part.youtube_urls.map((url, index) => {
+                      const videoId = getYouTubeVideoId(url);
+                      if (!videoId) return null;
+                      return (
+                        <div key={index} className="space-y-2">
+                          <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
+                            <iframe
+                              src={`https://www.youtube.com/embed/${videoId}`}
+                              title={`${part.title} - Video ${index + 1}`}
+                              className="w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-700 inline-block"
+                          >
+                            Ver en YouTube
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* YouTube Video - Formato antiguo (compatibilidad) */}
+                {(!part.youtube_urls || part.youtube_urls.length === 0) && part.youtube_url && (() => {
                   const videoId = getYouTubeVideoId(part.youtube_url);
                   if (videoId) {
                     return (
@@ -265,8 +308,47 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                   return null;
                 })()}
 
-                {/* Archivo */}
-                {part.file_path && (
+                {/* Archivos - Nuevo formato (array) */}
+                {part.files && part.files.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    <h5 className="text-sm font-semibold text-gray-700">Archivos:</h5>
+                    {part.files.map((file, index) => (
+                      <div key={index} className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          {getFileIcon(file.file_type)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{file.file_name}</p>
+                            <p className="text-xs text-gray-500">{formatFileSize(file.file_size)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {file.file_type?.includes('pdf') && (
+                              <a
+                                href={getFileUrl(file.file_path)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Ver archivo"
+                              >
+                                <Eye className="w-5 h-5" />
+                              </a>
+                            )}
+                            <a
+                              href={getFileUrl(file.file_path)}
+                              download={file.file_name || 'archivo'}
+                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="Descargar"
+                            >
+                              <Download className="w-5 h-5" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Archivo - Formato antiguo (compatibilidad) */}
+                {(!part.files || part.files.length === 0) && part.file_path && (
                   <div className="mt-4">
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
                       <div className="flex items-center gap-3">
@@ -336,8 +418,8 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
   const { profile } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [youtubeUrls, setYoutubeUrls] = useState<string[]>(['']);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [partNumber, setPartNumber] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -370,36 +452,62 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      setYoutubeUrl(''); // Limpiar YouTube si se selecciona archivo
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...newFiles]);
     }
   };
 
-  const uploadFile = async (): Promise<{ file_path: string; file_name: string; file_type: string; file_size: number } | null> => {
-    if (!selectedFile || !profile) return null;
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
-    try {
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `${profile.id}/${fileName}`;
+  const addYouTubeUrlField = () => {
+    setYoutubeUrls(prev => [...prev, '']);
+  };
 
-      const { error: uploadError } = await supabase.storage
-        .from('library-course-files')
-        .upload(filePath, selectedFile);
+  const removeYouTubeUrlField = (index: number) => {
+    setYoutubeUrls(prev => prev.filter((_, i) => i !== index));
+  };
 
-      if (uploadError) throw uploadError;
+  const updateYouTubeUrl = (index: number, value: string) => {
+    setYoutubeUrls(prev => {
+      const newUrls = [...prev];
+      newUrls[index] = value;
+      return newUrls;
+    });
+  };
 
-      return {
-        file_path: filePath,
-        file_name: selectedFile.name,
-        file_type: selectedFile.type,
-        file_size: selectedFile.size,
-      };
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      throw error;
+  const uploadFiles = async (): Promise<CourseFile[]> => {
+    if (selectedFiles.length === 0 || !profile) return [];
+
+    const uploadedFiles: CourseFile[] = [];
+
+    for (const file of selectedFiles) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${profile.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('library-course-files')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        uploadedFiles.push({
+          file_path: filePath,
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+        });
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        throw error;
+      }
     }
+
+    return uploadedFiles;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -411,49 +519,36 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
       return;
     }
 
-    const hasYouTube = youtubeUrl.trim() && validateYouTubeUrl(youtubeUrl);
-    const hasFile = selectedFile !== null;
+    // Validar URLs de YouTube
+    const validYouTubeUrls = youtubeUrls
+      .map(url => url.trim())
+      .filter(url => url && validateYouTubeUrl(url));
 
-    if (hasYouTube && hasFile) {
-      setError('Solo puedes proporcionar una URL de YouTube o un archivo, no ambos');
+    if (youtubeUrls.some(url => url.trim() && !validateYouTubeUrl(url.trim()))) {
+      setError('Una o más URLs de YouTube no son válidas');
       return;
     }
 
     try {
       setSaving(true);
 
-      let fileData = null;
-      if (selectedFile) {
-        fileData = await uploadFile();
-      }
+      // Subir archivos
+      const uploadedFiles = await uploadFiles();
 
       const partData: any = {
         course_id: courseId,
         part_number: partNumber,
         title: title.trim(),
         description: description.trim() || null,
+        youtube_urls: validYouTubeUrls.length > 0 ? validYouTubeUrls : null,
+        files: uploadedFiles.length > 0 ? uploadedFiles : null,
+        // Mantener campos antiguos como null para compatibilidad
+        youtube_url: null,
+        file_path: null,
+        file_name: null,
+        file_type: null,
+        file_size: null,
       };
-
-      if (hasYouTube) {
-        partData.youtube_url = youtubeUrl.trim();
-        partData.file_path = null;
-        partData.file_name = null;
-        partData.file_type = null;
-        partData.file_size = null;
-      } else if (fileData) {
-        partData.youtube_url = null;
-        partData.file_path = fileData.file_path;
-        partData.file_name = fileData.file_name;
-        partData.file_type = fileData.file_type;
-        partData.file_size = fileData.file_size;
-      } else {
-        // Sin YouTube ni archivo - ambos son null
-        partData.youtube_url = null;
-        partData.file_path = null;
-        partData.file_name = null;
-        partData.file_type = null;
-        partData.file_size = null;
-      }
 
       const { error: insertError } = await supabase
         .from('course_parts')
@@ -517,34 +612,70 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            URL de YouTube (opcional)
+            URLs de YouTube (opcional) - Puedes agregar múltiples
           </label>
-          <input
-            type="text"
-            value={youtubeUrl}
-            onChange={(e) => {
-              setYoutubeUrl(e.target.value);
-              if (e.target.value) setSelectedFile(null);
-            }}
-            placeholder="https://www.youtube.com/watch?v=..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          <div className="space-y-2">
+            {youtubeUrls.map((url, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => updateYouTubeUrl(index, e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {youtubeUrls.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeYouTubeUrlField(index)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar URL"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addYouTubeUrlField}
+              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              Agregar otra URL de YouTube
+            </button>
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            O sube un archivo (opcional)
+            Archivos (opcional) - Puedes subir múltiples
           </label>
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
             onChange={handleFileSelect}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
           />
-          {selectedFile && (
-            <p className="text-sm text-gray-600 mt-1">
-              {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-            </p>
+          {selectedFiles.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {selectedFiles.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-700 truncate flex-1">
+                    {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Eliminar archivo"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -573,8 +704,29 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
   const { profile } = useAuth();
   const [title, setTitle] = useState(part.title);
   const [description, setDescription] = useState(part.description || '');
-  const [youtubeUrl, setYoutubeUrl] = useState(part.youtube_url || '');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // Cargar URLs existentes (nuevo formato o formato antiguo)
+  const [youtubeUrls, setYoutubeUrls] = useState<string[]>(() => {
+    if (part.youtube_urls && part.youtube_urls.length > 0) {
+      return part.youtube_urls;
+    } else if (part.youtube_url) {
+      return [part.youtube_url];
+    }
+    return [''];
+  });
+  const [existingFiles, setExistingFiles] = useState<CourseFile[]>(() => {
+    if (part.files && part.files.length > 0) {
+      return part.files;
+    } else if (part.file_path) {
+      return [{
+        file_path: part.file_path,
+        file_name: part.file_name || '',
+        file_type: part.file_type,
+        file_size: part.file_size,
+      }];
+    }
+    return [];
+  });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [partNumber, setPartNumber] = useState(part.part_number);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -589,36 +741,66 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      setYoutubeUrl(''); // Limpiar YouTube si se selecciona archivo
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...newFiles]);
     }
   };
 
-  const uploadFile = async (): Promise<{ file_path: string; file_name: string; file_type: string; file_size: number } | null> => {
-    if (!selectedFile || !profile) return null;
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
-    try {
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `${profile.id}/${fileName}`;
+  const removeExistingFile = (index: number) => {
+    setExistingFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
-      const { error: uploadError } = await supabase.storage
-        .from('library-course-files')
-        .upload(filePath, selectedFile);
+  const addYouTubeUrlField = () => {
+    setYoutubeUrls(prev => [...prev, '']);
+  };
 
-      if (uploadError) throw uploadError;
+  const removeYouTubeUrlField = (index: number) => {
+    setYoutubeUrls(prev => prev.filter((_, i) => i !== index));
+  };
 
-      return {
-        file_path: filePath,
-        file_name: selectedFile.name,
-        file_type: selectedFile.type,
-        file_size: selectedFile.size,
-      };
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      throw error;
+  const updateYouTubeUrl = (index: number, value: string) => {
+    setYoutubeUrls(prev => {
+      const newUrls = [...prev];
+      newUrls[index] = value;
+      return newUrls;
+    });
+  };
+
+  const uploadFiles = async (): Promise<CourseFile[]> => {
+    if (selectedFiles.length === 0 || !profile) return [];
+
+    const uploadedFiles: CourseFile[] = [];
+
+    for (const file of selectedFiles) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${profile.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('library-course-files')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        uploadedFiles.push({
+          file_path: filePath,
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+        });
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        throw error;
+      }
     }
+
+    return uploadedFiles;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -630,52 +812,38 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
       return;
     }
 
-    const hasYouTube = youtubeUrl.trim() && validateYouTubeUrl(youtubeUrl);
-    const hasFile = selectedFile !== null;
-    const hasExistingFile = part.file_path !== null;
+    // Validar URLs de YouTube
+    const validYouTubeUrls = youtubeUrls
+      .map(url => url.trim())
+      .filter(url => url && validateYouTubeUrl(url));
 
-    if (hasYouTube && (hasFile || hasExistingFile)) {
-      setError('Solo puedes proporcionar una URL de YouTube o un archivo, no ambos');
+    if (youtubeUrls.some(url => url.trim() && !validateYouTubeUrl(url.trim()))) {
+      setError('Una o más URLs de YouTube no son válidas');
       return;
     }
 
     try {
       setSaving(true);
 
-      let fileData = null;
-      if (selectedFile) {
-        fileData = await uploadFile();
-      }
+      // Subir nuevos archivos
+      const uploadedFiles = await uploadFiles();
+
+      // Combinar archivos existentes con los nuevos
+      const allFiles = [...existingFiles, ...uploadedFiles];
 
       const updateData: any = {
         part_number: partNumber,
         title: title.trim(),
         description: description.trim() || null,
+        youtube_urls: validYouTubeUrls.length > 0 ? validYouTubeUrls : null,
+        files: allFiles.length > 0 ? allFiles : null,
+        // Mantener campos antiguos como null para compatibilidad
+        youtube_url: null,
+        file_path: null,
+        file_name: null,
+        file_type: null,
+        file_size: null,
       };
-
-      if (hasYouTube) {
-        updateData.youtube_url = youtubeUrl.trim();
-        updateData.file_path = null;
-        updateData.file_name = null;
-        updateData.file_type = null;
-        updateData.file_size = null;
-      } else if (fileData) {
-        updateData.youtube_url = null;
-        updateData.file_path = fileData.file_path;
-        updateData.file_name = fileData.file_name;
-        updateData.file_type = fileData.file_type;
-        updateData.file_size = fileData.file_size;
-      } else if (hasExistingFile) {
-        // Mantener el archivo existente
-        updateData.youtube_url = null;
-      } else {
-        // Sin YouTube ni archivo - ambos son null
-        updateData.youtube_url = null;
-        updateData.file_path = null;
-        updateData.file_name = null;
-        updateData.file_type = null;
-        updateData.file_size = null;
-      }
 
       const { error: updateError } = await supabase
         .from('course_parts')
@@ -740,39 +908,92 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            URL de YouTube (opcional)
+            URLs de YouTube (opcional) - Puedes agregar múltiples
           </label>
-          <input
-            type="text"
-            value={youtubeUrl}
-            onChange={(e) => {
-              setYoutubeUrl(e.target.value);
-              if (e.target.value) setSelectedFile(null);
-            }}
-            placeholder="https://www.youtube.com/watch?v=..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+          <div className="space-y-2">
+            {youtubeUrls.map((url, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => updateYouTubeUrl(index, e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {youtubeUrls.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeYouTubeUrlField(index)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar URL"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addYouTubeUrlField}
+              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              Agregar otra URL de YouTube
+            </button>
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            O sube un archivo nuevo (opcional - dejar vacío para mantener el actual o eliminar)
+            Archivos existentes
           </label>
-          {part.file_name && !selectedFile && (
-            <p className="text-sm text-gray-600 mb-2">
-              Archivo actual: {part.file_name}
-            </p>
+          {existingFiles.length > 0 && (
+            <div className="mb-2 space-y-2">
+              {existingFiles.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-700 truncate flex-1">
+                    {file.file_name} ({formatFileSize(file.file_size)})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeExistingFile(index)}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Eliminar archivo"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
+          <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">
+            Agregar nuevos archivos (opcional) - Puedes subir múltiples
+          </label>
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
             onChange={handleFileSelect}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
           />
-          {selectedFile && (
-            <p className="text-sm text-gray-600 mt-1">
-              {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-            </p>
+          {selectedFiles.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {selectedFiles.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-700 truncate flex-1">
+                    {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Eliminar archivo"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
         <div className="flex items-center gap-2">
