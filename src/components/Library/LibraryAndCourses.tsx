@@ -121,7 +121,14 @@ export function LibraryAndCourses() {
         .eq('key', 'library_google_drive_link')
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error) {
+        // Si es error de permisos o no existe, simplemente no hay link configurado
+        if (error.code === 'PGRST116' || error.code === '42501') {
+          // PGRST116 = no rows returned, 42501 = insufficient privileges
+          setLibraryDriveLink('');
+          setLibraryDriveFolderId(null);
+          return;
+        }
         console.error('Error cargando link de Google Drive:', error);
         return;
       }
@@ -130,9 +137,14 @@ export function LibraryAndCourses() {
         setLibraryDriveLink(data.value);
         const folderId = extractFolderIdFromLink(data.value);
         setLibraryDriveFolderId(folderId);
+      } else {
+        setLibraryDriveLink('');
+        setLibraryDriveFolderId(null);
       }
     } catch (error) {
       console.error('Error cargando link de Google Drive:', error);
+      setLibraryDriveLink('');
+      setLibraryDriveFolderId(null);
     }
   };
 
