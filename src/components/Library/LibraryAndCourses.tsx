@@ -7,8 +7,7 @@ import { CreateCourseModal } from './CreateCourseModal';
 import { CourseDetailModal } from './CourseDetailModal';
 import { CreateFolderModal } from './CreateFolderModal';
 import { GoogleDriveViewer } from '../Forums/GoogleDriveViewer';
-import { listRootFiles, DriveFile } from '../../lib/googleDriveAPI';
-import { getAccessToken, isAuthenticated, startGoogleAuth } from '../../lib/googleAuthRedirect';
+import { isAuthenticated, startGoogleAuth } from '../../lib/googleAuthRedirect';
 
 interface Course {
   id: string;
@@ -63,17 +62,20 @@ export function LibraryAndCourses() {
   const [folderItems, setFolderItems] = useState<Course[]>([]);
   
   // Estados para Google Drive
-  const [driveFolders, setDriveFolders] = useState<DriveFile[]>([]);
-  const [driveFiles, setDriveFiles] = useState<DriveFile[]>([]);
+  const [libraryDriveLink, setLibraryDriveLink] = useState<string>('');
+  const [libraryDriveFolderId, setLibraryDriveFolderId] = useState<string | null>(null);
+  const [editingDriveLink, setEditingDriveLink] = useState(false);
+  const [tempDriveLink, setTempDriveLink] = useState<string>('');
+  const [savingDriveLink, setSavingDriveLink] = useState(false);
   const [loadingDrive, setLoadingDrive] = useState(false);
   const [driveAuthenticated, setDriveAuthenticated] = useState(false);
   const [driveError, setDriveError] = useState<string | null>(null);
-  const [currentDriveFolderId, setCurrentDriveFolderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAll();
     if (activeTab === 'library') {
-      loadGoogleDriveRoot();
+      loadLibraryDriveLink();
+      checkDriveAuth();
     }
   }, [activeTab]);
 
@@ -83,47 +85,104 @@ export function LibraryAndCourses() {
     }
   }, [selectedFolder]);
 
-  // Cargar contenido de Google Drive root
-  const loadGoogleDriveRoot = async () => {
+  // Extraer ID de carpeta desde un enlace de Google Drive
+  const extractFolderIdFromLink = (link: string): string | null => {
+    // Formato 1: https://drive.google.com/drive/folders/FOLDER_ID
+    // Formato 2: https://drive.google.com/drive/u/0/folders/FOLDER_ID
+    // Formato 3: https://drive.google.com/open?id=FOLDER_ID
+    // Formato 4: FOLDER_ID directo
+    
+    // Intentar extraer de formato estándar
+    const foldersMatch = link.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    if (foldersMatch) {
+      return foldersMatch[1];
+    }
+    
+    // Intentar extraer de formato open?id=
+    const openMatch = link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (openMatch) {
+      return openMatch[1];
+    }
+    
+    // Si es solo un ID (sin URL)
+    if (/^[a-zA-Z0-9_-]+$/.test(link.trim())) {
+      return link.trim();
+    }
+    
+    return null;
+  };
+
+  // Cargar link de Google Drive desde app_settings
+  const loadLibraryDriveLink = async () => {
     try {
-      setLoadingDrive(true);
-      setDriveError(null);
-      
-      // Verificar autenticación
-      const authenticated = await isAuthenticated();
-      setDriveAuthenticated(authenticated);
-      
-      if (!authenticated) {
-        setLoadingDrive(false);
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'library_google_drive_link')
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error cargando link de Google Drive:', error);
         return;
       }
 
-      // Obtener token
-      const token = await getAccessToken();
-      
-      // Cargar archivos y carpetas del root
-      const content = await listRootFiles(token);
-      setDriveFolders(content.folders);
-      setDriveFiles(content.files);
-      setCurrentDriveFolderId(null); // null significa root
-    } catch (error: any) {
-      console.error('Error cargando Google Drive:', error);
-      setDriveError(error.message || 'Error al cargar Google Drive');
-      setDriveAuthenticated(false);
-    } finally {
-      setLoadingDrive(false);
+      if (data?.value) {
+        setLibraryDriveLink(data.value);
+        const folderId = extractFolderIdFromLink(data.value);
+        setLibraryDriveFolderId(folderId);
+      }
+    } catch (error) {
+      console.error('Error cargando link de Google Drive:', error);
     }
   };
 
-  // Manejar clic en carpeta de Google Drive
-  const handleDriveFolderClick = (folderId: string) => {
-    setCurrentDriveFolderId(folderId);
+  // Guardar link de Google Drive
+  const saveLibraryDriveLink = async () => {
+    if (!tempDriveLink.trim()) {
+      setDriveError('Por favor, ingresa un link de Google Drive');
+      return;
+    }
+
+    const folderId = extractFolderIdFromLink(tempDriveLink.trim());
+    if (!folderId) {
+      setDriveError('El link de Google Drive no es válido. Debe ser un link a una carpeta.');
+      return;
+    }
+
+    try {
+      setSavingDriveLink(true);
+      setDriveError(null);
+
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({
+          key: 'library_google_drive_link',
+          value: tempDriveLink.trim(),
+          description: 'Link de Google Drive para mostrar en la biblioteca. Debe ser un link a una carpeta.',
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      setLibraryDriveLink(tempDriveLink.trim());
+      setLibraryDriveFolderId(folderId);
+      setEditingDriveLink(false);
+    } catch (error: any) {
+      console.error('Error guardando link de Google Drive:', error);
+      setDriveError(error.message || 'Error al guardar el link');
+    } finally {
+      setSavingDriveLink(false);
+    }
   };
 
-  // Volver al root de Google Drive
-  const handleBackToDriveRoot = () => {
-    setCurrentDriveFolderId(null);
-    loadGoogleDriveRoot();
+  // Verificar autenticación de Google Drive
+  const checkDriveAuth = async () => {
+    try {
+      const authenticated = await isAuthenticated();
+      setDriveAuthenticated(authenticated);
+    } catch (error) {
+      setDriveAuthenticated(false);
+    }
   };
 
   const fetchAll = async () => {
@@ -580,139 +639,138 @@ export function LibraryAndCourses() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Google Drive</h2>
-            {!driveAuthenticated && (
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setEditingDriveLink(true);
+                  setTempDriveLink(libraryDriveLink);
+                  setDriveError(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              >
+                {libraryDriveLink ? 'Editar Link' : 'Configurar Link'}
+              </button>
+            )}
+            {!driveAuthenticated && libraryDriveFolderId && (
               <button
                 onClick={async () => {
                   await startGoogleAuth();
-                  setTimeout(() => loadGoogleDriveRoot(), 1000);
+                  setTimeout(() => checkDriveAuth(), 1000);
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
                 Conectar Google Drive
               </button>
             )}
-            {driveAuthenticated && currentDriveFolderId && (
-              <button
-                onClick={handleBackToDriveRoot}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Volver a raíz
-              </button>
-            )}
           </div>
 
-          {loadingDrive ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          {/* Formulario para editar link (solo admins) */}
+          {isAdmin && editingDriveLink && (
+            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Link de Google Drive
+                </label>
+                <input
+                  type="url"
+                  value={tempDriveLink}
+                  onChange={(e) => setTempDriveLink(e.target.value)}
+                  placeholder="https://drive.google.com/drive/folders/1ABC..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500">
+                  Ingresa el link completo de la carpeta de Google Drive que quieres mostrar
+                </p>
+                {driveError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-800">{driveError}</p>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={saveLibraryDriveLink}
+                    disabled={savingDriveLink}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingDriveLink ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Guardar'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingDriveLink(false);
+                      setTempDriveLink('');
+                      setDriveError(null);
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
             </div>
-          ) : driveError ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">{driveError}</p>
-            </div>
-          ) : !driveAuthenticated ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-              <p className="text-sm text-blue-800 mb-4">
-                Conecta tu Google Drive para ver tus carpetas y archivos
-              </p>
-              <button
-                onClick={async () => {
-                  await startGoogleAuth();
-                  setTimeout(() => loadGoogleDriveRoot(), 1000);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Conectar Google Drive
-              </button>
-            </div>
-          ) : currentDriveFolderId ? (
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <GoogleDriveViewer
-                folderId={currentDriveFolderId}
-                folderName="Carpeta"
-                onError={(error) => {
-                  setDriveError(error);
-                }}
-              />
-            </div>
-          ) : (
+          )}
+
+          {/* Mostrar contenido de Google Drive */}
+          {libraryDriveFolderId ? (
             <>
-              {/* Carpetas de Google Drive */}
-              {driveFolders.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium text-gray-700 mb-4">Carpetas</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {driveFolders.map((folder) => (
-                      <div
-                        key={folder.id}
-                        onClick={() => handleDriveFolderClick(folder.id)}
-                        className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 rounded-lg">
-                            <Folder className="w-6 h-6 text-blue-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-gray-900 truncate">{folder.name}</h4>
-                            <p className="text-xs text-gray-500">
-                              {new Date(folder.modifiedTime).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              {!driveAuthenticated ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                  <p className="text-sm text-blue-800 mb-4">
+                    Conecta tu Google Drive para ver el contenido de la carpeta
+                  </p>
+                  <button
+                    onClick={async () => {
+                      await startGoogleAuth();
+                      setTimeout(() => checkDriveAuth(), 1000);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Conectar Google Drive
+                  </button>
                 </div>
-              )}
-
-              {/* Archivos de Google Drive */}
-              {driveFiles.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-medium text-gray-700 mb-4">Archivos</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {driveFiles.map((file) => (
-                      <div
-                        key={file.id}
-                        className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-gray-100 rounded-lg">
-                            {file.mimeType?.startsWith('image/') ? (
-                              <Image className="w-6 h-6 text-gray-600" />
-                            ) : (
-                              <FileIcon className="w-6 h-6 text-gray-600" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-gray-900 truncate">{file.name}</h4>
-                            <p className="text-xs text-gray-500">
-                              {file.size ? `${(parseInt(file.size) / 1024).toFixed(1)} KB` : 'N/A'} • {new Date(file.modifiedTime).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <a
-                            href={file.webViewLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Estado vacío */}
-              {driveFolders.length === 0 && driveFiles.length === 0 && (
-                <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                  <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No hay carpetas ni archivos en la raíz de Google Drive</p>
+              ) : (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <GoogleDriveViewer
+                    folderId={libraryDriveFolderId}
+                    folderName="Biblioteca"
+                    webViewLink={libraryDriveLink}
+                    onError={(error) => {
+                      setDriveError(error);
+                    }}
+                  />
                 </div>
               )}
             </>
+          ) : (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+              <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {isAdmin ? 'No hay link de Google Drive configurado' : 'Biblioteca no configurada'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {isAdmin
+                  ? 'Configura un link de Google Drive para mostrar el contenido de la biblioteca'
+                  : 'La biblioteca aún no está configurada. Contacta a un administrador.'}
+              </p>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setEditingDriveLink(true);
+                    setTempDriveLink('');
+                    setDriveError(null);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Configurar Link
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
