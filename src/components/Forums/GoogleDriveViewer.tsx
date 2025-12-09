@@ -4,7 +4,7 @@ import {
   FolderOpen,
   FileText,
   Image,
-  File,
+  File as FileIcon,
   RefreshCw,
   Loader2,
   AlertCircle,
@@ -348,7 +348,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
     } else if (mimeType.includes('word') || mimeType.includes('document')) {
       return <FileText className="w-5 h-5 text-blue-600" />;
     } else {
-      return <File className="w-5 h-5 text-gray-600" />;
+      return <FileIcon className="w-5 h-5 text-gray-600" />;
     }
   };
 
@@ -670,7 +670,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
         </div>
       ) : totalItems === 0 ? (
         <div className="text-center py-12">
-          <File className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <FileIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             Carpeta vacía
           </h3>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, BookOpen, Edit, Trash2, Play, Loader2, FileText, GraduationCap, Folder, FolderOpen, ArrowLeft, FolderPlus, ExternalLink, Download, Eye, Image } from 'lucide-react';
+import { Plus, BookOpen, Edit, Trash2, Play, Loader2, FileText, GraduationCap, Folder, FolderOpen, ArrowLeft, FolderPlus, ExternalLink, Download, Eye, Image, File as FileIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { CourseCard } from './CourseCard';
@@ -680,7 +680,7 @@ export function LibraryAndCourses() {
                             {file.mimeType?.startsWith('image/') ? (
                               <Image className="w-6 h-6 text-gray-600" />
                             ) : (
-                              <File className="w-6 h-6 text-gray-600" />
+                              <FileIcon className="w-6 h-6 text-gray-600" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
