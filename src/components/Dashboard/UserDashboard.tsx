@@ -491,6 +491,31 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         });
       }
 
+      // 5. Obtener eventos de calendario asignados al usuario
+      const { data: assignedEvents } = await supabase
+        .from('calendar_events')
+        .select('id, title, start_date, created_at, created_by_profile:profiles!calendar_events_created_by_fkey(full_name)')
+        .eq('assigned_to', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (assignedEvents) {
+        assignedEvents.forEach((event: any) => {
+          const creatorName = event.created_by_profile?.full_name || 'Un administrador';
+          activities.push({
+            id: event.id,
+            type: 'calendar_event' as const,
+            title: `${creatorName} te ha asignado el evento "${event.title}"`,
+            date: event.created_at,
+            icon: CalendarIcon,
+            event_id: event.id,
+            metadata: {
+              start_date: event.start_date,
+            },
+          });
+        });
+      }
+
       // Ordenar todas las actividades por fecha (más recientes primero) y limitar a 10
       activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const limitedActivities = activities.slice(0, 10);
