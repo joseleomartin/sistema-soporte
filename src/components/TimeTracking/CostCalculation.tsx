@@ -55,25 +55,53 @@ export function CostCalculation() {
   const [savingCost, setSavingCost] = useState<string | null>(null);
   const [savedPrices, setSavedPrices] = useState<{ [clientId: string]: number }>({});
 
+  // Cargar departamentos al inicio
   useEffect(() => {
     if (profile?.role === 'admin') {
       loadDepartments();
-      calculateCosts();
     }
-  }, [profile?.id, startDate, endDate]);
+  }, [profile?.id]);
 
+  // Cargar precios y calcular costos cuando cambian las fechas o departments
   useEffect(() => {
-    if (departments.length > 0) {
-      calculateCosts();
-    }
-  }, [departments, startDate, endDate]);
+    if (startDate && endDate && profile?.role === 'admin' && departments.length > 0) {
+      // Cargar precios primero, luego calcular costos pasando los valores directamente
+      const loadAndCalculate = async () => {
+        try {
+          // Cargar precios directamente
+          const { data: prices, error } = await supabase
+            .from('client_prices')
+            .select('client_id, price_to_charge')
+            .eq('start_date', startDate)
+            .eq('end_date', endDate);
 
-  // Cargar precios guardados cuando cambian las fechas
-  useEffect(() => {
-    if (startDate && endDate && profile?.role === 'admin') {
-      loadSavedPrices();
+          if (error) throw error;
+
+          // Convertir a objetos
+          const pricesMap: { [clientId: string]: number } = {};
+          const inputsMap: { [clientId: string]: string } = {};
+          
+          prices?.forEach(price => {
+            const priceValue = parseFloat(price.price_to_charge.toString());
+            pricesMap[price.client_id] = priceValue;
+            inputsMap[price.client_id] = price.price_to_charge.toString();
+          });
+
+          // Actualizar estados
+          setSavedPrices(pricesMap);
+          setPriceInputs(prev => ({ ...prev, ...inputsMap }));
+
+          // Calcular costos pasando los precios directamente
+          calculateCosts(pricesMap, inputsMap);
+        } catch (error) {
+          console.error('Error loading saved prices:', error);
+          // Calcular sin precios si hay error
+          calculateCosts({}, {});
+        }
+      };
+      loadAndCalculate();
     }
-  }, [startDate, endDate, profile?.id]);
+  }, [departments.length, startDate, endDate, profile?.id]);
 
   const loadDepartments = async () => {
     try {
@@ -186,14 +214,29 @@ export function CostCalculation() {
         if (insertError) throw insertError;
       }
 
-      // Actualizar savedPrices
+      // Actualizar savedPrices y priceInputs
       setSavedPrices(prev => ({
         ...prev,
         [clientId]: price
       }));
+      
+      setPriceInputs(prev => ({
+        ...prev,
+        [clientId]: price.toString()
+      }));
 
-      // Recalcular costos para actualizar el margen inmediatamente
-      await calculateCosts();
+      // Actualizar el margen inmediatamente sin recalcular todo
+      setClientCosts(prev => prev.map(client => {
+        if (client.client_id === clientId) {
+          const netMargin = price - client.total_cost;
+          return {
+            ...client,
+            price_to_charge: price,
+            net_margin: netMargin
+          };
+        }
+        return client;
+      }));
     } catch (error) {
       console.error('Error saving price:', error);
       alert('Error al guardar el precio. Por favor, intenta nuevamente.');
@@ -202,13 +245,14 @@ export function CostCalculation() {
     }
   };
 
-  const calculateCosts = async () => {
-    if (!startDate || !endDate) return;
+  const calculateCosts = async (currentSavedPrices?: { [clientId: string]: number }, currentPriceInputs?: { [clientId: string]: string }) => {
+    if (!startDate || !endDate || departments.length === 0) return;
 
     setLoading(true);
     try {
-      // Primero cargar precios guardados
-      await loadSavedPrices();
+      // Usar los precios pasados como parámetro o los del estado
+      const pricesToUse = currentSavedPrices !== undefined ? currentSavedPrices : savedPrices;
+      const inputsToUse = currentPriceInputs !== undefined ? currentPriceInputs : priceInputs;
 
       // Obtener todas las entradas de tiempo en el rango de fechas
       const { data: timeEntries, error: entriesError } = await supabase
@@ -274,12 +318,17 @@ export function CostCalculation() {
           totalCost += areaData.cost;
         });
 
-        // Obtener precio a cobrar guardado (prioridad: input actual > precio guardado en BD > 0)
-        // Si hay un input con valor válido (no vacío), usarlo; sino usar el precio guardado
-        const inputValue = priceInputs[client.client_id];
-        const savedPrice = inputValue !== undefined && inputValue !== '' && !isNaN(parseFloat(inputValue))
-          ? parseFloat(inputValue)
-          : (savedPrices[client.client_id] || 0);
+        // Obtener precio a cobrar (prioridad: input actual > precio guardado > 0)
+        const inputValue = inputsToUse[client.client_id];
+        let savedPrice = 0;
+        
+        if (inputValue !== undefined && inputValue !== '' && !isNaN(parseFloat(inputValue))) {
+          // Usar valor del input si existe y es válido
+          savedPrice = parseFloat(inputValue);
+        } else if (pricesToUse[client.client_id] !== undefined && pricesToUse[client.client_id] !== null) {
+          // Usar precio guardado de la BD
+          savedPrice = pricesToUse[client.client_id];
+        }
 
         const netMargin = savedPrice - totalCost;
 
