@@ -24,6 +24,7 @@ interface Vacation {
   end_date: string;
   days_count: number;
   status: 'pending' | 'approved' | 'rejected';
+  type: 'vacation' | 'license';
   reason?: string;
   approved_by?: string;
   approved_at?: string;
@@ -405,6 +406,13 @@ function VacationCard({
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
             {getStatusBadge()}
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+              vacation.type === 'vacation' 
+                ? 'bg-blue-100 text-blue-700' 
+                : 'bg-purple-100 text-purple-700'
+            }`}>
+              {vacation.type === 'vacation' ? 'Vacaciones' : 'Licencia'}
+            </span>
             {isAdmin && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <User className="w-4 h-4" />
@@ -542,6 +550,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
   onSuccess: () => void;
 }) {
   const { profile } = useAuth();
+  const [type, setType] = useState<'vacation' | 'license'>('vacation');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
@@ -574,6 +583,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
         .from('vacations')
         .insert({
           user_id: profile.id,
+          type: type,
           start_date: startDate,
           end_date: endDate,
           reason: reason || null
@@ -596,6 +606,36 @@ function CreateVacationModal({ onClose, onSuccess }: {
         <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones / Licencias</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo *
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setType('vacation')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  type === 'vacation'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Vacaciones
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('license')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  type === 'license'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Licencia
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Fecha de inicio *
@@ -673,6 +713,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
   const { profile } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [type, setType] = useState<'vacation' | 'license'>('vacation');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
@@ -733,6 +774,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
         .from('vacations')
         .insert({
           user_id: selectedUserId,
+          type: type,
           start_date: startDate,
           end_date: endDate,
           reason: reason || null,
@@ -766,6 +808,36 @@ function AssignVacationModal({ onClose, onSuccess }: {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo *
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setType('vacation')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  type === 'vacation'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Vacaciones
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('license')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  type === 'license'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Licencia
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Usuario *
@@ -1015,18 +1087,23 @@ export function VacationCalendar({
                 {dayVacations.slice(0, 5).map((vacation) => {
                   const isApproved = vacation.status === 'approved';
                   const isPending = vacation.status === 'pending';
+                  const isVacation = vacation.type === 'vacation';
                   
                   return (
                     <div
                       key={vacation.id}
                       className={`text-[9px] px-0.5 py-0.5 rounded truncate leading-tight ${
                         isApproved
-                          ? 'bg-green-100 text-green-700'
+                          ? isVacation
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-purple-100 text-purple-700'
                           : isPending
-                          ? 'bg-yellow-100 text-yellow-700'
+                          ? isVacation
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-purple-50 text-purple-600'
                           : 'bg-gray-100 text-gray-600'
                       }`}
-                      title={`${vacation.user_profile?.full_name || 'Usuario'}: ${vacation.reason || 'Vacaciones'} (${isApproved ? 'Aprobada' : isPending ? 'Pendiente' : 'Rechazada'})`}
+                      title={`${vacation.user_profile?.full_name || 'Usuario'}: ${isVacation ? 'Vacaciones' : 'Licencia'} - ${vacation.reason || ''} (${isApproved ? 'Aprobada' : isPending ? 'Pendiente' : 'Rechazada'})`}
                     >
                       {vacation.user_profile?.full_name || 'Usuario'}
                     </div>
@@ -1045,7 +1122,7 @@ export function VacationCalendar({
 
       {/* Leyenda */}
       <div className="mt-3 pt-2 border-t border-gray-200">
-        <div className="flex items-center gap-2 text-[10px]">
+        <div className="flex flex-wrap items-center gap-2 text-[10px]">
           <div className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 bg-green-100 border border-green-300 rounded"></div>
             <span className="text-gray-600">Vacaciones aprobadas</span>
@@ -1053,6 +1130,10 @@ export function VacationCalendar({
           <div className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 bg-yellow-100 border border-yellow-300 rounded"></div>
             <span className="text-gray-600">Vacaciones pendientes</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2.5 h-2.5 bg-purple-100 border border-purple-300 rounded"></div>
+            <span className="text-gray-600">Licencias</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 bg-blue-50 border border-blue-300 rounded"></div>

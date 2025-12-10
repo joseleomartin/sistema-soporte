@@ -704,17 +704,20 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
             // Crear fecha en formato YYYY-MM-DD para el ID
             const dateStr = `${dayYear}-${String(dayMonth + 1).padStart(2, '0')}-${String(dayDate).padStart(2, '0')}`;
             
+            const typeLabel = vacation.type === 'vacation' ? 'Vacaciones' : 'Licencia';
+            const typeColor = vacation.type === 'vacation' ? '#F59E0B' : '#A855F7'; // Naranja para vacaciones, púrpura para licencias
             vacationEvents.push({
               id: `vacation-${vacation.id}-${dateStr}`,
               title: profile.role === 'admin' || profile.role === 'support'
-                ? `Vacaciones / Licencias: ${vacation.user_profile?.full_name || 'Usuario'}`
-                : 'Vacaciones / Licencias',
+                ? `${typeLabel}: ${vacation.user_profile?.full_name || 'Usuario'}`
+                : typeLabel,
               start_date: `${dateStr}T00:00:00`,
               end_date: `${dateStr}T23:59:59`,
-              color: '#F59E0B', // Color naranja/ámbar para vacaciones
+              color: typeColor,
               isPersonal: vacation.user_id === profile.id,
               isTask: false,
               isVacation: true,
+              vacationType: vacation.type,
               vacationId: vacation.id,
               vacationDays: vacation.days_count,
               vacationUser: vacation.user_profile?.full_name
@@ -1135,6 +1138,10 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                 : event.taskPriority === 'medium' 
                                   ? 'bg-blue-500' 
                                   : 'bg-green-500'
+                              : event.isVacation
+                                ? event.vacationType === 'vacation'
+                                  ? 'bg-yellow-500'
+                                  : 'bg-purple-500'
                               : event.isPersonal 
                                 ? 'bg-blue-500' 
                                 : 'bg-purple-500'
@@ -1142,6 +1149,10 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                           title={
                             event.isTask 
                               ? `Tarea: ${event.title}` 
+                              : event.isVacation
+                                ? event.vacationType === 'vacation'
+                                  ? 'Vacaciones'
+                                  : 'Licencia'
                               : event.isPersonal 
                                 ? 'Evento personal' 
                                 : 'Evento asignado'
@@ -1697,6 +1708,10 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                         : event.taskPriority === 'medium' 
                                           ? 'bg-blue-200 text-blue-900' 
                                           : 'bg-green-200 text-green-900'
+                                      : event.isVacation
+                                        ? event.vacationType === 'vacation'
+                                          ? 'bg-yellow-200 text-yellow-900'
+                                          : 'bg-purple-200 text-purple-900'
                                       : event.isPersonal 
                                         ? 'bg-blue-200 text-blue-900' 
                                         : 'bg-purple-200 text-purple-900'
@@ -1876,6 +1891,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
   onSuccess: () => void;
 }) {
   const { profile } = useAuth();
+  const [type, setType] = useState<'vacation' | 'license'>('vacation');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
@@ -1908,6 +1924,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
         .from('vacations')
         .insert({
           user_id: profile.id,
+          type: type,
           start_date: startDate,
           end_date: endDate,
           reason: reason || null
@@ -1930,6 +1947,36 @@ function CreateVacationModal({ onClose, onSuccess }: {
         <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones / Licencias</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo *
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setType('vacation')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  type === 'vacation'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Vacaciones
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('license')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  type === 'license'
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Licencia
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Fecha de inicio *
