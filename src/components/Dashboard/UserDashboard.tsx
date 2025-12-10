@@ -116,6 +116,21 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     }
   }, [profile?.id, profile?.avatar_url, profile?.role]);
 
+  // Detectar si se debe abrir el modal del calendario desde el email
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const openCalendar = urlParams.get('openCalendar');
+    
+    if (openCalendar === 'true') {
+      // Abrir el modal del calendario
+      setShowCalendarModal(true);
+      
+      // Limpiar el parámetro de la URL sin recargar la página
+      const newUrl = window.location.pathname + (window.location.hash || '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
   useEffect(() => {
     // Recargar eventos cuando cambia el mes
     if (profile?.id) {

@@ -64,6 +64,13 @@ Deno.serve(async (req) => {
     
     // Verificar si es un recordatorio de horas para personalizar el botón
     const isHoursReminder = record.metadata?.is_hours_reminder === true || record.metadata?.is_hours_reminder === 'true'
+    
+    // Si es un evento de calendario, agregar parámetro para abrir el modal del calendario
+    const isCalendarEvent = record.type === 'calendar_event'
+    if (isCalendarEvent) {
+      redirectUrl = `${FRONTEND_URL}?openCalendar=true`
+    }
+    
     const buttonText = isHoursReminder ? 'Ir a Cargar Horas' : 'Ir a la plataforma'
     const buttonHelpText = isHoursReminder 
       ? 'Haz clic en el botón para ir directamente a la sección de carga de horas.'
@@ -226,6 +233,7 @@ Deno.serve(async (req) => {
     { status: 429, headers: { 'Content-Type': 'application/json' } }
   )
 })
+
 
 
 
