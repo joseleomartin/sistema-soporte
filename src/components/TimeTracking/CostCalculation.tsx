@@ -114,7 +114,7 @@ export function CostCalculation() {
     if (!startDate || !endDate || !profile?.id) return;
 
     try {
-      // Cargar precios guardados para este período
+      // Cargar precios guardados para este período exacto
       const { data: prices, error } = await supabase
         .from('client_prices')
         .select('client_id, price_to_charge')
@@ -191,6 +191,9 @@ export function CostCalculation() {
         ...prev,
         [clientId]: price
       }));
+
+      // Recalcular costos para actualizar el margen inmediatamente
+      await calculateCosts();
     } catch (error) {
       console.error('Error saving price:', error);
       alert('Error al guardar el precio. Por favor, intenta nuevamente.');
@@ -272,9 +275,11 @@ export function CostCalculation() {
         });
 
         // Obtener precio a cobrar guardado (prioridad: input actual > precio guardado en BD > 0)
-        const savedPrice = priceInputs[client.client_id] 
-          ? parseFloat(priceInputs[client.client_id]) 
-          : (savedPrices[client.client_id] || client.price_to_charge || 0);
+        // Si hay un input con valor válido (no vacío), usarlo; sino usar el precio guardado
+        const inputValue = priceInputs[client.client_id];
+        const savedPrice = inputValue !== undefined && inputValue !== '' && !isNaN(parseFloat(inputValue))
+          ? parseFloat(inputValue)
+          : (savedPrices[client.client_id] || 0);
 
         const netMargin = savedPrice - totalCost;
 
@@ -551,9 +556,9 @@ export function CostCalculation() {
                         )}
                         {formatCurrency(client.net_margin)}
                       </div>
-                      {client.total_cost > 0 && (
+                      {client.price_to_charge > 0 && (
                         <div className="text-xs text-gray-500 mt-1">
-                          {((client.net_margin / client.total_cost) * 100).toFixed(1)}% margen
+                          {((client.net_margin / client.price_to_charge) * 100).toFixed(1)}% margen
                         </div>
                       )}
                     </td>
