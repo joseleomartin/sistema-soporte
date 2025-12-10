@@ -16,6 +16,7 @@ import { TasksList } from './components/Tasks/TasksList';
 import { VacationsManagement } from './components/Vacations/VacationsManagement';
 import { TimeTracking } from './components/TimeTracking/TimeTracking';
 import { LibraryAndCourses } from './components/Library/LibraryAndCourses';
+import { InternalPolicies } from './components/InternalPolicies/InternalPolicies';
 import { SocialFeed } from './components/Social/SocialFeed';
 import { MessagesBell } from './components/DirectMessages/MessagesBell';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
@@ -145,6 +146,8 @@ function MainApp() {
         return <TimeTracking key={`time-tracking-${viewKey}`} />;
       case 'library':
         return <LibraryAndCourses key={`library-${viewKey}`} />;
+      case 'internal-policies':
+        return <InternalPolicies key={`internal-policies-${viewKey}`} />;
       case 'social':
         return <SocialFeed key={`social-${viewKey}`} />;
       case 'settings':
