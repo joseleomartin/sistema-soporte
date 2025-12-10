@@ -44,7 +44,7 @@ interface UserStats {
 
 interface RecentActivity {
   id: string;
-  type: 'client' | 'meeting' | 'forum' | 'file' | 'social_post' | 'birthday' | 'task_assigned' | 'task_mention' | 'forum_mention' | 'ticket_comment' | 'notification';
+  type: 'client' | 'meeting' | 'forum' | 'file' | 'social_post' | 'birthday' | 'task_assigned' | 'task_mention' | 'forum_mention' | 'ticket_comment' | 'notification' | 'calendar_event';
   title: string;
   date: string;
   icon: any;
@@ -52,6 +52,7 @@ interface RecentActivity {
   task_id?: string;
   subforum_id?: string;
   social_post_id?: string;
+  event_id?: string;
   metadata?: any;
 }
 
@@ -775,6 +776,17 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
               detail: { subforumId: activity.subforum_id }
             }));
           }, 100);
+        }
+        break;
+      case 'calendar_event':
+        // Abrir el modal del calendario cuando se hace click en un evento asignado
+        setShowCalendarModal(true);
+        // Si hay event_id, podríamos seleccionar ese evento específico en el futuro
+        if (activity.event_id && activity.metadata?.start_date) {
+          // Establecer la fecha del evento en el calendario
+          const eventDate = new Date(activity.metadata.start_date);
+          setCurrentDate(eventDate);
+          setSelectedDate(eventDate);
         }
         break;
       default:
