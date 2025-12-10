@@ -389,7 +389,7 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
                     onChange={handleFileSelect}
                     disabled={youtubeUrl.trim() !== ''}
                     className="hidden"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip,.rar"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip,.rar,.csv"
                   />
                   <button
                     type="button"
@@ -418,9 +418,9 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
                       </button>
                     </div>
                   )}
-                  <p className="mt-2 text-xs text-gray-500">
-                    Formatos soportados: PDF, Word, Excel, PowerPoint, imágenes, videos, audio, ZIP
-                  </p>
+              <p className="mt-2 text-xs text-gray-500">
+                Formatos soportados: PDF, Word, Excel, PowerPoint, imágenes, videos, audio, ZIP, CSV
+              </p>
                 </div>
               </>
             )}

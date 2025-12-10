@@ -654,7 +654,7 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,text/csv"
             onChange={handleFileSelect}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
           />
@@ -972,7 +972,7 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,text/csv"
             onChange={handleFileSelect}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
           />
