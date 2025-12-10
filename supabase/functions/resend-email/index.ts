@@ -62,6 +62,11 @@ Deno.serve(async (req) => {
     // Construir URL de redirección - solo la URL base sin hash
     let redirectUrl = FRONTEND_URL
     
+    // Log para depuración
+    console.log('🔍 Tipo de notificación:', record.type)
+    console.log('🔍 Ticket ID:', record.ticket_id)
+    console.log('🔍 Record completo:', JSON.stringify(record, null, 2))
+    
     // Verificar si es un recordatorio de horas para personalizar el botón
     const isHoursReminder = record.metadata?.is_hours_reminder === true || record.metadata?.is_hours_reminder === 'true'
     
@@ -69,12 +74,21 @@ Deno.serve(async (req) => {
     const isCalendarEvent = record.type === 'calendar_event'
     if (isCalendarEvent) {
       redirectUrl = `${FRONTEND_URL}?openCalendar=true`
+      console.log('✅ Redirigiendo a calendario:', redirectUrl)
     }
     
     // Si es un ticket (ticket_created, ticket_comment, ticket_status), agregar parámetro para navegar al ticket
     const isTicketNotification = record.type === 'ticket_created' || record.type === 'ticket_comment' || record.type === 'ticket_status'
-    if (isTicketNotification && record.ticket_id) {
-      redirectUrl = `${FRONTEND_URL}?ticketId=${record.ticket_id}`
+    if (isTicketNotification) {
+      // Intentar obtener ticket_id de diferentes formas posibles
+      const ticketId = record.ticket_id || record.ticketId || (record.metadata && record.metadata.ticket_id)
+      
+      if (ticketId) {
+        redirectUrl = `${FRONTEND_URL}?ticketId=${ticketId}`
+        console.log('✅ Redirigiendo a ticket:', redirectUrl)
+      } else {
+        console.log('⚠️ Es una notificación de ticket pero no se encontró ticket_id')
+      }
     }
     
     const buttonText = isHoursReminder ? 'Ir a Cargar Horas' : 'Ir a la plataforma'
