@@ -83,6 +83,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const [allVacations, setAllVacations] = useState<any[]>([]);
   const [vacationCalendarDate, setVacationCalendarDate] = useState(new Date());
   const [showVacationCalendarModal, setShowVacationCalendarModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
 
   // Función helper para formatear horas decimales a horas y minutos
   const formatHoursMinutes = (decimalHours: number) => {
@@ -983,7 +984,11 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
         {/* Calendario */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col max-h-[600px] overflow-hidden">
+        <div 
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col max-h-[600px] overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setShowCalendarModal(true)}
+          title="Click para expandir calendario"
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <CalendarIcon className="w-5 h-5 text-blue-600" />
@@ -991,16 +996,32 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
             </h3>
             <div className="flex items-center gap-2">
               <button
-                onClick={previousMonth}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  previousMonth();
+                }}
                 className="p-1 hover:bg-gray-100 rounded transition"
               >
                 <ChevronLeft className="w-5 h-5 text-gray-600" />
               </button>
               <button
-                onClick={nextMonth}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextMonth();
+                }}
                 className="p-1 hover:bg-gray-100 rounded transition"
               >
                 <ChevronRight className="w-5 h-5 text-gray-600" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCalendarModal(true);
+                }}
+                className="p-1.5 hover:bg-blue-50 rounded transition text-blue-600"
+                title="Expandir calendario"
+              >
+                <ChevronUp className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -1035,7 +1056,10 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
               return (
                 <button
                   key={day}
-                  onClick={() => handleDayClick(day)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDayClick(day);
+                  }}
                   className={`
                     aspect-square flex flex-col items-center justify-center text-sm rounded-lg transition relative
                     ${isToday(day) 
@@ -1527,6 +1551,265 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                 currentDate={vacationCalendarDate}
                 onDateChange={setVacationCalendarDate}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal expandido del calendario */}
+      {showCalendarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowCalendarModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="w-6 h-6 text-blue-600" />
+                <h2 className="text-2xl font-semibold text-gray-900">Calendario</h2>
+              </div>
+              <button
+                onClick={() => setShowCalendarModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Cerrar"
+              >
+                <XCircle className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Calendario expandido */}
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={previousMonth}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                      >
+                        <ChevronLeft className="w-5 h-5 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={nextMonth}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                      >
+                        <ChevronRight className="w-5 h-5 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Días de la semana */}
+                  <div className="grid grid-cols-7 gap-2 mb-3">
+                    {dayNames.map((day) => (
+                      <div key={day} className="text-center text-sm font-semibold text-gray-700 py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Días del mes - versión expandida */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {/* Espacios vacíos antes del primer día */}
+                    {Array.from({ length: startingDayOfWeek }).map((_, index) => (
+                      <div key={`empty-${index}`} className="aspect-square" />
+                    ))}
+                    
+                    {/* Días del mes */}
+                    {calendarDays.map((day) => {
+                      const dayEvents = getEventsForDay(day);
+                      const hasEvents = dayEvents.length > 0;
+                      
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => handleDayClick(day)}
+                          className={`
+                            aspect-square flex flex-col items-start justify-start p-2 text-base rounded-lg transition relative min-h-[80px] border
+                            ${isToday(day) 
+                              ? 'bg-blue-600 text-white font-bold border-blue-700' 
+                              : isSelected(day)
+                                ? 'bg-blue-100 text-blue-900 font-semibold border-blue-300'
+                                : 'hover:bg-gray-50 text-gray-700 border-gray-200'
+                            }
+                          `}
+                        >
+                          <span className="mb-1">{day}</span>
+                          {hasEvents && (
+                            <div className="flex flex-col gap-1 w-full mt-1">
+                              {dayEvents.slice(0, 3).map((event, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`text-xs px-1.5 py-0.5 rounded truncate ${
+                                    event.isTask 
+                                      ? event.taskPriority === 'urgent' 
+                                        ? 'bg-red-200 text-red-900' 
+                                        : event.taskPriority === 'medium' 
+                                          ? 'bg-blue-200 text-blue-900' 
+                                          : 'bg-green-200 text-green-900'
+                                      : event.isPersonal 
+                                        ? 'bg-blue-200 text-blue-900' 
+                                        : 'bg-purple-200 text-purple-900'
+                                  } ${isToday(day) ? 'bg-white bg-opacity-30 text-white' : ''}`}
+                                  title={event.title}
+                                >
+                                  {event.title.length > 15 ? `${event.title.substring(0, 15)}...` : event.title}
+                                </div>
+                              ))}
+                              {dayEvents.length > 3 && (
+                                <div className={`text-xs px-1.5 py-0.5 rounded ${isToday(day) ? 'text-white' : 'text-gray-600'}`}>
+                                  +{dayEvents.length - 3} más
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Panel lateral con eventos */}
+                <div className="lg:w-80 flex-shrink-0">
+                  <div className="bg-gray-50 rounded-lg p-4 sticky top-20">
+                    {selectedDayEvents.length > 0 ? (
+                      <>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                          Eventos del {selectedDate ? `${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]}` : 'día'}
+                        </h4>
+                        <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                          {selectedDayEvents.map((event) => (
+                            <button
+                              key={event.id}
+                              onClick={() => {
+                                if (event.isTask) {
+                                  handleTaskClick(event.taskId);
+                                  setShowCalendarModal(false);
+                                } else {
+                                  setSelectedEvent(event);
+                                }
+                              }}
+                              className={`w-full text-left p-3 rounded-lg text-sm transition hover:shadow-md ${
+                                event.isTask
+                                  ? event.taskPriority === 'urgent'
+                                    ? 'bg-red-50 border border-red-200 hover:bg-red-100'
+                                    : event.taskPriority === 'medium'
+                                      ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
+                                      : 'bg-green-50 border border-green-200 hover:bg-green-100'
+                                  : event.isPersonal 
+                                    ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100' 
+                                    : 'bg-purple-50 border border-purple-200 hover:bg-purple-100'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                {event.isTask && (
+                                  <CheckSquare className={`w-4 h-4 flex-shrink-0 ${
+                                    event.taskPriority === 'urgent' ? 'text-red-600' :
+                                    event.taskPriority === 'medium' ? 'text-blue-600' : 'text-green-600'
+                                  }`} />
+                                )}
+                                <p className={`font-semibold flex-1 ${
+                                  event.isTask
+                                    ? event.taskPriority === 'urgent' ? 'text-red-900' :
+                                      event.taskPriority === 'medium' ? 'text-blue-900' : 'text-green-900'
+                                    : event.isPersonal ? 'text-blue-900' : 'text-purple-900'
+                                }`}>
+                                  {event.title}
+                                </p>
+                              </div>
+                              {event.isTask && (
+                                <>
+                                  <p className="text-xs text-gray-600 mb-1">
+                                    Cliente: {event.taskClient}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    Estado: {event.taskStatus === 'pending' ? 'Pendiente' :
+                                             event.taskStatus === 'in_progress' ? 'En Progreso' :
+                                             event.taskStatus === 'completed' ? 'Completada' : 'Cancelada'}
+                                  </p>
+                                </>
+                              )}
+                              {!event.isTask && !event.isPersonal && event.created_by_profile && (
+                                <p className="text-xs text-purple-600">
+                                  Asignado por: {event.created_by_profile.full_name}
+                                </p>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => setShowEventModal(true)}
+                          className="w-full mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                        >
+                          + Agregar evento
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4">Próximos eventos</h4>
+                        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                          {events.length > 0 ? (
+                            events
+                              .filter(event => {
+                                const eventDate = new Date(event.start_date);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                return eventDate >= today;
+                              })
+                              .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+                              .slice(0, 15)
+                              .map((event) => (
+                                <button
+                                  key={event.id}
+                                  onClick={() => {
+                                    if (event.isTask) {
+                                      handleTaskClick(event.taskId);
+                                      setShowCalendarModal(false);
+                                    } else {
+                                      setSelectedEvent(event);
+                                    }
+                                  }}
+                                  className="w-full text-left p-2 rounded text-sm hover:bg-gray-100 transition flex items-center gap-2"
+                                >
+                                  <div className={`w-12 text-center text-xs font-medium flex-shrink-0 ${
+                                    event.isTask
+                                      ? event.taskPriority === 'urgent' ? 'text-red-600' :
+                                        event.taskPriority === 'medium' ? 'text-blue-600' : 'text-green-600'
+                                      : event.isPersonal ? 'text-blue-600' : 'text-purple-600'
+                                  }`}>
+                                    {new Date(event.start_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-gray-900 truncate">{event.title}</p>
+                                    {event.isTask && event.taskClient && (
+                                      <p className="text-xs text-gray-500 truncate">{event.taskClient}</p>
+                                    )}
+                                  </div>
+                                  {event.isTask ? (
+                                    <CheckSquare className={`w-4 h-4 flex-shrink-0 ${
+                                      event.taskPriority === 'urgent' ? 'text-red-500' :
+                                      event.taskPriority === 'medium' ? 'text-blue-500' : 'text-green-500'
+                                    }`} />
+                                  ) : event.isPersonal ? (
+                                    <CalendarIcon className="w-4 h-4 flex-shrink-0 text-blue-500" />
+                                  ) : (
+                                    <CalendarIcon className="w-4 h-4 flex-shrink-0 text-purple-500" />
+                                  )}
+                                </button>
+                              ))
+                          ) : (
+                            <p className="text-sm text-gray-500 text-center py-4">No hay eventos próximos</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setShowEventModal(true)}
+                          className="w-full mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                        >
+                          + Agregar evento
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
