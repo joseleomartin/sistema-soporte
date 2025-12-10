@@ -71,6 +71,12 @@ Deno.serve(async (req) => {
       redirectUrl = `${FRONTEND_URL}?openCalendar=true`
     }
     
+    // Si es un ticket (ticket_created, ticket_comment, ticket_status), agregar parámetro para navegar al ticket
+    const isTicketNotification = record.type === 'ticket_created' || record.type === 'ticket_comment' || record.type === 'ticket_status'
+    if (isTicketNotification && record.ticket_id) {
+      redirectUrl = `${FRONTEND_URL}?ticketId=${record.ticket_id}`
+    }
+    
     const buttonText = isHoursReminder ? 'Ir a Cargar Horas' : 'Ir a la plataforma'
     const buttonHelpText = isHoursReminder 
       ? 'Haz clic en el botón para ir directamente a la sección de carga de horas.'

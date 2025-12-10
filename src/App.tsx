@@ -75,6 +75,21 @@ function MainApp() {
     };
   }, [handleNavigateToTicket]);
 
+  // Detectar si se debe navegar a un ticket específico desde el email
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticketId = urlParams.get('ticketId');
+    
+    if (ticketId && user && profile) {
+      // Navegar al ticket específico
+      handleNavigateToTicket(ticketId);
+      
+      // Limpiar el parámetro de la URL sin recargar la página
+      const newUrl = window.location.pathname + (window.location.hash || '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [user, profile, handleNavigateToTicket]);
+
   // Si estamos en la ruta de callback, mostrar el componente de callback
   if (window.location.pathname.includes('google-oauth-callback')) {
     return <GoogleOAuthCallback />;
