@@ -88,6 +88,15 @@ def root():
         logger.error(f"Error en endpoint raíz: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+# Orígenes permitidos para endpoints sensibles (Google OAuth)
+ALLOWED_ORIGINS = [
+    'https://app.somosemagroup.com',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+]
+
 # Directorio de extractores
 EXTRACTORES_DIR = Path(__file__).parent / 'extractores'
 TEMP_DIR = Path(tempfile.gettempdir()) / 'extractores_temp'
@@ -1787,6 +1796,16 @@ def exchange_google_token():
     """Intercambia código de autorización por token de acceso"""
     try:
         logger.info("Request recibido en /api/google/oauth/token")
+        
+        # Verificar origen de la petición
+        origin = request.headers.get('Origin', '')
+        if origin and origin not in ALLOWED_ORIGINS:
+            logger.warning(f"Origen no permitido intentando acceder a /api/google/oauth/token: {origin}")
+            return jsonify({
+                'error': 'Origen no permitido',
+                'message': 'Esta petición solo puede ser realizada desde orígenes autorizados'
+            }), 403
+        
         data = request.json
         
         if not data:
@@ -1812,6 +1831,8 @@ def exchange_google_token():
             }), 500
         
         logger.info(f"Intercambiando código por token (redirect_uri: {redirect_uri})")
+        logger.info(f"Client ID usado: {client_id[:20]}..." if client_id else "Client ID: NO CONFIGURADO")
+        logger.info(f"Client Secret configurado: {'SÍ' if client_secret else 'NO'}")
         
         # Intercambiar código por token
         token_response = requests.post('https://oauth2.googleapis.com/token', data={
@@ -1856,6 +1877,16 @@ def refresh_google_token():
     """Refresca un token de acceso usando refresh token"""
     try:
         logger.info("Request recibido en /api/google/oauth/refresh")
+        
+        # Verificar origen de la petición
+        origin = request.headers.get('Origin', '')
+        if origin and origin not in ALLOWED_ORIGINS:
+            logger.warning(f"Origen no permitido intentando acceder a /api/google/oauth/refresh: {origin}")
+            return jsonify({
+                'error': 'Origen no permitido',
+                'message': 'Esta petición solo puede ser realizada desde orígenes autorizados'
+            }), 403
+        
         data = request.json
         
         if not data:
@@ -1914,6 +1945,16 @@ def get_google_client_id():
     """Devuelve el Client ID de Google (sin el secret)"""
     try:
         logger.info("Request recibido en /api/google/client-id")
+        
+        # Verificar origen de la petición
+        origin = request.headers.get('Origin', '')
+        if origin and origin not in ALLOWED_ORIGINS:
+            logger.warning(f"Origen no permitido intentando acceder a /api/google/client-id: {origin}")
+            return jsonify({
+                'error': 'Origen no permitido',
+                'message': 'Esta petición solo puede ser realizada desde orígenes autorizados'
+            }), 403
+        
         client_id = os.getenv('GOOGLE_CLIENT_ID')
         
         if not client_id:
@@ -1923,7 +1964,7 @@ def get_google_client_id():
                 'message': 'Configura GOOGLE_CLIENT_ID en las variables de entorno del backend'
             }), 500
         
-        logger.info("Client ID devuelto exitosamente")
+        logger.info(f"Client ID devuelto exitosamente para origen: {origin if origin else 'No Origin'}")
         # Solo devolvemos el Client ID, nunca el secret
         return jsonify({'client_id': client_id}), 200
         

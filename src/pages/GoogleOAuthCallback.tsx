@@ -17,7 +17,31 @@ export function GoogleOAuthCallback() {
         // Si hay un error de Google
         if (error) {
           setStatus('error');
-          setErrorMessage(`Error de Google: ${error}`);
+          let detailedMessage = `Error de Google: ${error}`;
+          
+          // Mensajes más específicos según el error
+          if (error === 'invalid_client') {
+            detailedMessage = `Error 401: invalid_client - Las credenciales de Google son incorrectas o el redirect_uri no está configurado.
+            
+Solución:
+1. Ve a Google Cloud Console: https://console.cloud.google.com/apis/credentials
+2. Selecciona tu Client ID
+3. En "URI de redirección autorizados", agrega:
+   ${window.location.origin}/google-oauth-callback
+4. Guarda y espera 1-2 minutos
+5. Verifica que el Client ID en el frontend coincida con el Client Secret en el backend`;
+          } else if (error === 'redirect_uri_mismatch') {
+            detailedMessage = `Error: redirect_uri_mismatch - La URL de redirección no está autorizada.
+            
+Solución:
+1. Ve a Google Cloud Console: https://console.cloud.google.com/apis/credentials
+2. Selecciona tu Client ID
+3. En "URI de redirección autorizados", agrega:
+   ${window.location.origin}/google-oauth-callback
+4. Guarda y espera 1-2 minutos`;
+          }
+          
+          setErrorMessage(detailedMessage);
           return;
         }
 
@@ -88,9 +112,11 @@ export function GoogleOAuthCallback() {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
               Error en la autenticación
             </h2>
-            <p className="text-gray-600 mb-4">
-              {errorMessage || 'Ocurrió un error al procesar tu autenticación.'}
-            </p>
+            <div className="text-gray-600 mb-4 text-left">
+              <p className="mb-2 whitespace-pre-line">
+                {errorMessage || 'Ocurrió un error al procesar tu autenticación.'}
+              </p>
+            </div>
             <button
               onClick={() => window.location.href = window.location.origin}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"

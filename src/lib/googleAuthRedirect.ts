@@ -129,7 +129,12 @@ export async function startGoogleAuth(): Promise<void> {
   authUrl.searchParams.set('state', state);
   
   console.log('🔐 Redirigiendo a Google para autenticación...');
+  console.log('📍 Client ID usado:', clientId);
   console.log('📍 URL de retorno:', redirectUri);
+  console.log('📍 Origen actual:', window.location.origin);
+  console.log('⚠️ IMPORTANTE: Verifica que este redirect_uri esté configurado en Google Cloud Console');
+  console.log('⚠️ Ve a: https://console.cloud.google.com/apis/credentials');
+  console.log('⚠️ Agrega esta URL en "URI de redirección autorizados":', redirectUri);
   
   // Redirigir a Google
   window.location.href = authUrl.toString();
