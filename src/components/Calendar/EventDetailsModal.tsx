@@ -2,6 +2,7 @@ import { X, Calendar, Clock, User, FileText, Trash2, Edit } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface EventDetailsModalProps {
   event: any;
@@ -57,9 +58,10 @@ export function EventDetailsModal({ event, onClose, onEventDeleted, onEventUpdat
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+  // Usar portal para renderizar fuera del árbol DOM del calendario
+  const modalContent = (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4" onClick={onClose} style={{ zIndex: 99999 }}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full relative" onClick={(e) => e.stopPropagation()} style={{ zIndex: 100000 }}>
         {/* Header con color del evento */}
         <div 
           className="p-6 rounded-t-xl"
@@ -177,6 +179,9 @@ export function EventDetailsModal({ event, onClose, onEventDeleted, onEventUpdat
       </div>
     </div>
   );
+
+  // Renderizar usando portal directamente en el body
+  return createPortal(modalContent, document.body);
 }
 
 

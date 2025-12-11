@@ -1563,7 +1563,12 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       {selectedEvent && (
         <EventDetailsModal
           event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
+          onClose={() => {
+            setSelectedEvent(null);
+            // Reabrir el modal del calendario si estaba abierto antes
+            // El modal del calendario se cerró cuando se seleccionó el evento
+            setShowCalendarModal(true);
+          }}
           onEventDeleted={() => {
             loadEvents();
             setSelectedEvent(null);
@@ -1621,7 +1626,11 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
 
       {/* Modal expandido del calendario */}
       {showCalendarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowCalendarModal(false)}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{ zIndex: selectedEvent ? 40 : 50 }} onClick={() => {
+          if (!selectedEvent) {
+            setShowCalendarModal(false);
+          }
+        }}>
           <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-2">
@@ -1746,12 +1755,15 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                           {selectedDayEvents.map((event) => (
                             <button
                               key={event.id}
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 if (event.isTask) {
                                   handleTaskClick(event.taskId);
                                   setShowCalendarModal(false);
                                 } else {
                                   setSelectedEvent(event);
+                                  // Cerrar el modal del calendario para que el modal de detalles aparezca encima
+                                  setShowCalendarModal(false);
                                 }
                               }}
                               className={`w-full text-left p-3 rounded-lg text-sm transition hover:shadow-md ${
@@ -1826,7 +1838,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                               .map((event) => (
                                 <button
                                   key={event.id}
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     if (event.isTask) {
                                       handleTaskClick(event.taskId);
                                       setShowCalendarModal(false);
