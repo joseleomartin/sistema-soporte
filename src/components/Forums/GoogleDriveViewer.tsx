@@ -152,19 +152,24 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       } catch (tokenError: any) {
         // Si el error es que no se pudo renovar pero hay refresh token, intentar una vez más
         const refreshToken = localStorage.getItem('google_drive_refresh_token');
-        if (refreshToken && retryCount === 0 && (
-          tokenError.message.includes('renovar') || 
-          tokenError.message.includes('expirado') ||
-          tokenError.message.includes('No hay token')
-        )) {
+        const errorMessage = tokenError.message || '';
+        const isRenewalError = errorMessage.includes('renovar') || 
+                              errorMessage.includes('expirado') ||
+                              errorMessage.includes('No hay token') ||
+                              errorMessage.includes('refrescar');
+        
+        if (refreshToken && retryCount === 0 && isRenewalError) {
           console.log('🔄 Error al obtener token, reintentando con refresh token...');
           await new Promise(resolve => setTimeout(resolve, 1500));
           return loadFiles(1);
         }
         
         // Si no hay refresh token o ya intentamos, marcar como no autenticado
-        if (!refreshToken || tokenError.message.includes('inválido')) {
+        // Esto hará que se muestre la pantalla de autenticación completa
+        if (!refreshToken || errorMessage.includes('inválido') || isRenewalError) {
           setAuthenticated(false);
+          // Establecer el error para que se muestre el botón de re-autenticación
+          setError(errorMessage);
         }
         throw tokenError;
       }
@@ -238,9 +243,18 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       const errorMessage = err.message || 'Error al cargar archivos';
       setError(errorMessage);
       
-      if (errorMessage.includes('Token expirado') || errorMessage.includes('401') || 
-          errorMessage.includes('Unauthorized') || errorMessage.includes('No hay token') ||
-          errorMessage.includes('renovar') || errorMessage.includes('autentica nuevamente')) {
+      // Detectar cualquier error relacionado con autenticación
+      const isAuthError = errorMessage.includes('Token') || 
+                         errorMessage.includes('401') || 
+                         errorMessage.includes('Unauthorized') || 
+                         errorMessage.includes('No hay token') ||
+                         errorMessage.includes('renovar') || 
+                         errorMessage.includes('autentica') ||
+                         errorMessage.includes('refrescar token') ||
+                         errorMessage.includes('No se pudo') ||
+                         errorMessage.includes('No se puede');
+      
+      if (isAuthError) {
         setAuthenticated(false);
         // Si hay refresh token, intentar reconectar automáticamente una vez
         const refreshToken = localStorage.getItem('google_drive_refresh_token');
@@ -664,10 +678,20 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                 Puedes seleccionar una nueva carpeta desde el selector de carpetas.
               </p>
             )}
-            {(error.includes('Token expirado') || 
-              error.includes('renovar') || 
-              error.includes('autentica nuevamente') ||
-              error.includes('autenticar')) && (
+            {/* Mostrar botón de re-autenticación para cualquier error relacionado con autenticación */}
+            {(() => {
+              const lowerError = error.toLowerCase();
+              const isAuthError = lowerError.includes('token') || 
+                                 lowerError.includes('renovar') || 
+                                 lowerError.includes('autentica') ||
+                                 lowerError.includes('refrescar') ||
+                                 lowerError.includes('no se pudo') ||
+                                 lowerError.includes('no se puede') ||
+                                 lowerError.includes('401') ||
+                                 lowerError.includes('unauthorized') ||
+                                 lowerError.includes('expirado');
+              return isAuthError;
+            })() && (
               <button
                 onClick={handleAuthenticate}
                 className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center gap-2"
