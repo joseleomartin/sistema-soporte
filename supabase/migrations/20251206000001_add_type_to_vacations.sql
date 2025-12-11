@@ -23,3 +23,5 @@ CREATE INDEX IF NOT EXISTS idx_vacations_type ON vacations(type);
 -- - Los usuarios deberán seleccionar explícitamente si es 'vacation' o 'license'
 -- ============================================
 
+
+

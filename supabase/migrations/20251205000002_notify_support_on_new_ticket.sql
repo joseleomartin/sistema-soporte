@@ -121,3 +121,5 @@ COMMENT ON TRIGGER trigger_notify_support_on_new_ticket ON tickets IS
 
 
 
+
+

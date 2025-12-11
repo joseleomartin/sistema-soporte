@@ -173,65 +173,94 @@ export async function listFilesInFolder(
 ): Promise<DriveFolderContent> {
   try {
     const query = `'${folderId}' in parents and trashed=false`;
-    let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,modifiedTime,webViewLink,thumbnailLink,iconLink),nextPageToken&orderBy=name&pageSize=1000`;
+    // Reducir pageSize para mejorar rendimiento inicial (cargar más rápido)
+    let url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,modifiedTime,webViewLink,thumbnailLink,iconLink),nextPageToken&orderBy=name&pageSize=500`;
     
     if (pageToken) {
       url += `&pageToken=${encodeURIComponent(pageToken)}`;
     }
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    // Agregar timeout a la solicitud
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 segundos
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Token expirado. Por favor, autentica nuevamente.');
-      }
-      if (response.status === 404) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Token expirado. Por favor, autentica nuevamente.');
+        }
+        if (response.status === 404) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.error?.message || 
+            'Carpeta no encontrada. Puede que no exista o no tengas permisos para acceder a ella.'
+          );
+        }
+        if (response.status === 403) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.error?.message || 
+            'No tienes permisos para acceder a esta carpeta.'
+          );
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error?.message || 
-          'Carpeta no encontrada. Puede que no exista o no tengas permisos para acceder a ella.'
+          `Error al listar archivos: ${response.statusText}`
         );
       }
-      if (response.status === 403) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error?.message || 
-          'No tienes permisos para acceder a esta carpeta.'
-        );
+
+      const data: DriveAPIResponse = await response.json();
+
+      const allItems: DriveFile[] = (data.files || []).map((file: any) => {
+        const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+        return {
+          id: file.id,
+          name: file.name,
+          mimeType: file.mimeType,
+          size: file.size,
+          modifiedTime: file.modifiedTime,
+          webViewLink: file.webViewLink,
+          thumbnailLink: file.thumbnailLink,
+          iconLink: file.iconLink,
+          isFolder,
+        };
+      });
+
+      // Separar carpetas y archivos
+      const folders = allItems.filter(item => item.isFolder);
+      const files = allItems.filter(item => !item.isFolder);
+
+      // Si hay más páginas y tenemos menos de 1000 items, cargar la siguiente página
+      // (solo para la primera carga, no recursivo para evitar demoras)
+      if (data.nextPageToken && (folders.length + files.length) < 1000) {
+        try {
+          const nextPage = await listFilesInFolder(folderId, accessToken, data.nextPageToken);
+          folders.push(...nextPage.folders);
+          files.push(...nextPage.files);
+        } catch (err) {
+          // Si falla cargar la siguiente página, devolver lo que tenemos
+          console.warn('No se pudo cargar la siguiente página de resultados:', err);
+        }
       }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error?.message || 
-        `Error al listar archivos: ${response.statusText}`
-      );
+
+      return { folders, files };
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Timeout: La solicitud está tardando demasiado. Por favor, verifica tu conexión.');
+      }
+      throw error;
     }
-
-    const data: DriveAPIResponse = await response.json();
-
-    const allItems: DriveFile[] = (data.files || []).map((file: any) => {
-      const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
-      return {
-        id: file.id,
-        name: file.name,
-        mimeType: file.mimeType,
-        size: file.size,
-        modifiedTime: file.modifiedTime,
-        webViewLink: file.webViewLink,
-        thumbnailLink: file.thumbnailLink,
-        iconLink: file.iconLink,
-        isFolder,
-      };
-    });
-
-    // Separar carpetas y archivos
-    const folders = allItems.filter(item => item.isFolder);
-    const files = allItems.filter(item => !item.isFolder);
-
-    return { folders, files };
   } catch (error: any) {
     console.error('Error listando archivos:', error);
     throw error;

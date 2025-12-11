@@ -18,7 +18,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { startGoogleAuth, getAccessToken, isAuthenticated } from '../../lib/googleAuthRedirect';
-import { listFilesInFolder, downloadFileFromDrive, getFolderInfo, searchFilesRecursively, createFolder, DriveFile, DriveFolder } from '../../lib/googleDriveAPI';
+import { listFilesInFolder, downloadFileFromDrive, getFolderInfo, searchFilesRecursively, createFolder, DriveFile, DriveFolder, DriveFolderContent } from '../../lib/googleDriveAPI';
 import { GoogleDriveUpload } from './GoogleDriveUpload';
 
 interface GoogleDriveViewerProps {
@@ -147,34 +147,32 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
         throw tokenError;
       }
       
-      // Primero intentar cargar contenido (lo más importante)
-      let content;
+      // Crear un timeout para evitar que se quede colgado
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: La solicitud está tardando demasiado')), 30000); // 30 segundos
+      });
+      
+      // Cargar contenido y obtener información de carpeta en paralelo (si es necesario)
+      const needsFolderInfo = (!currentFolderName || currentFolderId === initialFolderId);
+      
+      const contentPromise = listFilesInFolder(currentFolderId, token);
+      const folderInfoPromise = needsFolderInfo 
+        ? getFolderInfo(currentFolderId, token).catch(() => null) // No crítico, no fallar si esto falla
+        : Promise.resolve(null);
+      
+      // Ejecutar ambas promesas en paralelo con timeout
       try {
-        content = await listFilesInFolder(currentFolderId, token);
+        const [content, folderInfo] = await Promise.race([
+          Promise.all([contentPromise, folderInfoPromise]),
+          timeoutPromise
+        ]) as [DriveFolderContent, DriveFolder | null];
+        
+        // Establecer archivos y carpetas inmediatamente
         setFolders(content.folders);
         setFiles(content.files);
-      } catch (listError: any) {
-        // Si falla listar, ese es el error principal
-        const errorMessage = listError.message || 'Error al cargar archivos';
-        setError(errorMessage);
         
-        if (errorMessage.includes('Token expirado') || errorMessage.includes('401')) {
-          setAuthenticated(false);
-        }
-        
-        if (errorMessage.includes('404') || errorMessage.includes('no encontrada') || errorMessage.includes('File not found')) {
-          setError('No se pudo acceder a esta carpeta. Verifica que el ID de la carpeta sea correcto y que tengas permisos para acceder a ella.');
-        }
-        
-        onError?.(errorMessage);
-        return;
-      }
-      
-      // Luego intentar obtener información de la carpeta (opcional, no crítico)
-      // Solo intentar si no tenemos nombre o si es la carpeta inicial
-      if (!currentFolderName || currentFolderId === initialFolderId) {
-        try {
-          const folderInfo = await getFolderInfo(currentFolderId, token);
+        // Actualizar nombre de carpeta si se obtuvo
+        if (folderInfo) {
           setCurrentFolderName(folderInfo.name);
           
           // Actualizar breadcrumb actual si existe
@@ -188,22 +186,29 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
               });
             }
           }
-        } catch (err: any) {
-          // Esto no es crítico, solo no podemos mostrar el nombre exacto
-          // No loguear el error completo para evitar ruido en consola
-          if (err.message?.includes('File not found')) {
-            // Si la carpeta no existe, usar nombre genérico
-            if (!currentFolderName) {
-              setCurrentFolderName('Carpeta');
-            }
-          } else {
-            // Otros errores, no crítico
-            if (!currentFolderName) {
-              setCurrentFolderName('Carpeta');
-            }
-          }
-          // No mostrar error al usuario porque ya tenemos los archivos
+        } else if (!currentFolderName) {
+          // Si no se pudo obtener el nombre, usar genérico
+          setCurrentFolderName('Carpeta');
         }
+      } catch (listError: any) {
+        // Si falla listar, ese es el error principal
+        const errorMessage = listError.message || 'Error al cargar archivos';
+        setError(errorMessage);
+        
+        if (errorMessage.includes('Token expirado') || errorMessage.includes('401')) {
+          setAuthenticated(false);
+        }
+        
+        if (errorMessage.includes('404') || errorMessage.includes('no encontrada') || errorMessage.includes('File not found')) {
+          setError('No se pudo acceder a esta carpeta. Verifica que el ID de la carpeta sea correcto y que tengas permisos para acceder a ella.');
+        }
+        
+        if (errorMessage.includes('Timeout')) {
+          setError('La carga está tardando demasiado. Por favor, verifica tu conexión a internet e intenta nuevamente.');
+        }
+        
+        onError?.(errorMessage);
+        return;
       }
     } catch (err: any) {
       // Error general (token, etc.)

@@ -110,3 +110,5 @@ COMMENT ON COLUMN client_prices.user_id IS 'Usuario que configuró el precio (ge
 -- FIN DE LA MIGRACIÓN
 -- ==================================================================
 
+
+

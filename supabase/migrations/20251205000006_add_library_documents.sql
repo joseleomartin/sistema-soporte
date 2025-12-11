@@ -34,3 +34,5 @@ COMMENT ON COLUMN library_courses.type IS 'Tipo de recurso: course (curso) o doc
 
 
 
+
+

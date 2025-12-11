@@ -62,3 +62,5 @@ ALTER TABLE user_departments ENABLE ROW LEVEL SECURITY;
 
 
 
+
+

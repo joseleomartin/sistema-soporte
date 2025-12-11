@@ -24,3 +24,5 @@ CREATE INDEX IF NOT EXISTS idx_departments_hourly_cost ON departments(hourly_cos
 
 
 
+
+

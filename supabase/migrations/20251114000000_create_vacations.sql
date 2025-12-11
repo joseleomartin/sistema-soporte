@@ -116,3 +116,5 @@ CREATE TRIGGER calculate_vacation_days_trigger
 
 
 
+
+
