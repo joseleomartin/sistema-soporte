@@ -47,21 +47,30 @@ set PORT=5000
 set EXTRACTOR_PORT=5000
 
 REM Configurar Google OAuth
-REM ⚠️ IMPORTANTE: Las credenciales deben configurarse como variables de entorno del sistema
-REM o en un archivo .env (que debe estar en .gitignore)
+REM El script intentará obtener las credenciales en este orden:
+REM 1. Variables de entorno del sistema (si ya están configuradas)
+REM 2. Archivo .env en esta carpeta (si existe)
+REM 3. Archivo client_secret_*.json en esta carpeta (si existe)
 REM
-REM Para configurar las credenciales:
-REM 1. Obtén las credenciales del archivo client_secret_*.json en esta carpeta
-REM 2. Configura las variables de entorno del sistema Windows:
-REM    - Ve a: Panel de Control > Sistema > Configuración avanzada del sistema > Variables de entorno
-REM    - Agrega: GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET con los valores del archivo JSON
-REM 3. O crea un archivo .env en la carpeta backend/ con:
-REM    GOOGLE_CLIENT_ID=tu_client_id_real.apps.googleusercontent.com
-REM    GOOGLE_CLIENT_SECRET=tu_client_secret_real
-REM    (Asegúrate de que .env esté en .gitignore)
+REM Si ninguna de las opciones anteriores está disponible, configura las credenciales manualmente:
+REM - Crea un archivo .env en esta carpeta con:
+REM   GOOGLE_CLIENT_ID=tu_client_id_real.apps.googleusercontent.com
+REM   GOOGLE_CLIENT_SECRET=tu_client_secret_real
+REM - O configura las variables de entorno del sistema Windows
 REM
-REM Si las variables de entorno no están configuradas, el script intentará leerlas del archivo .env
-REM o del archivo client_secret_*.json si existe
+REM Las credenciales reales están en el archivo client_secret_*.json en esta carpeta
+REM
+REM Cargar credenciales desde archivo JSON si no están en variables de entorno
+if "%GOOGLE_CLIENT_ID%"=="" (
+    REM Buscar archivo client_secret_*.json
+    for %%f in (client_secret_*.json) do (
+        REM Extraer Client ID y Client Secret del archivo JSON usando PowerShell
+        for /f "delims=" %%i in ('powershell -Command "$json = Get-Content '%%f' | ConvertFrom-Json; $json.web.client_id"') do set GOOGLE_CLIENT_ID=%%i
+        for /f "delims=" %%i in ('powershell -Command "$json = Get-Content '%%f' | ConvertFrom-Json; $json.web.client_secret"') do set GOOGLE_CLIENT_SECRET=%%i
+        goto :credentials_loaded
+    )
+    :credentials_loaded
+)
 
 echo ================================================
 echo  PASO 1: Iniciando servidor Flask
