@@ -38,17 +38,14 @@ const getGoogleClientId = (): string | undefined => {
     }
   }
   
-  // Fallback 2: usar Client ID hardcodeado (temporal hasta que Vite cargue .env)
-  // IMPORTANTE: Este Client ID debe ser de tipo "Aplicación web", no "Escritorio"
-  console.log('⚠️ [getGoogleClientId] Usando Client ID de fallback (hardcoded)');
-  console.log('💡 NOTA: Asegúrate de que este Client ID sea de tipo "Aplicación web" en Google Cloud Console');
-  return '398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com';
+  // No usar Client ID hardcodeado - esto causa errores si el Client ID no existe
+  console.error('❌ [getGoogleClientId] No se encontró Client ID en variables de entorno ni en localStorage');
+  console.error('❌ NO se usará un Client ID hardcodeado para evitar errores');
+  return undefined;
 };
 
-// Client ID de Google (fallback directo si no está en variables de entorno)
-const FALLBACK_CLIENT_ID = '398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com';
-
-const GOOGLE_CLIENT_ID = getGoogleClientId() || FALLBACK_CLIENT_ID;
+// Client ID de Google - debe obtenerse de variables de entorno o backend
+const GOOGLE_CLIENT_ID = getGoogleClientId();
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const TOKEN_STORAGE_KEY = 'google_drive_token';
 const TOKEN_EXPIRY_KEY = 'google_drive_token_expiry';

@@ -68,14 +68,28 @@ async function getGoogleClientId(): Promise<string> {
   // Fallback: usar variable de entorno del frontend
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   if (!clientId) {
-    throw new Error(
-      'VITE_GOOGLE_CLIENT_ID no está configurada en las variables de entorno. ' +
-      'Por favor, agrega VITE_GOOGLE_CLIENT_ID=tu_client_id en tu archivo .env ' +
-      'o configura VITE_BACKEND_URL para obtenerlo del backend.'
-    );
+    const errorMessage = 
+      'VITE_GOOGLE_CLIENT_ID no está configurada en las variables de entorno.\n\n' +
+      'SOLUCIÓN:\n' +
+      '1. Si usas backend: Configura VITE_BACKEND_URL en Vercel para obtener el Client ID del backend\n' +
+      '2. Si no usas backend: Agrega VITE_GOOGLE_CLIENT_ID en Vercel (Settings → Environment Variables)\n\n' +
+      'IMPORTANTE: El Client ID debe existir en Google Cloud Console y ser de tipo "Aplicación web"';
+    console.error('❌', errorMessage);
+    throw new Error(errorMessage);
+  }
+  
+  // Validar formato del Client ID
+  if (!clientId.includes('.apps.googleusercontent.com')) {
+    const errorMessage = 
+      `El Client ID no tiene el formato correcto: ${clientId}\n\n` +
+      'Un Client ID válido debe terminar en .apps.googleusercontent.com\n' +
+      'Verifica que el Client ID esté correctamente configurado en las variables de entorno.';
+    console.error('❌', errorMessage);
+    throw new Error(errorMessage);
   }
   
   cachedClientId = clientId;
+  console.log('✅ Client ID obtenido de variable de entorno:', clientId.substring(0, 30) + '...');
   return clientId;
 }
 
@@ -132,9 +146,15 @@ export async function startGoogleAuth(): Promise<void> {
   console.log('📍 Client ID usado:', clientId);
   console.log('📍 URL de retorno:', redirectUri);
   console.log('📍 Origen actual:', window.location.origin);
-  console.log('⚠️ IMPORTANTE: Verifica que este redirect_uri esté configurado en Google Cloud Console');
-  console.log('⚠️ Ve a: https://console.cloud.google.com/apis/credentials');
-  console.log('⚠️ Agrega esta URL en "URI de redirección autorizados":', redirectUri);
+  console.log('');
+  console.log('⚠️ IMPORTANTE: Si recibes error "The OAuth client was not found":');
+  console.log('   1. Verifica que este Client ID exista en Google Cloud Console');
+  console.log('   2. Ve a: https://console.cloud.google.com/apis/credentials');
+  console.log('   3. Busca el Client ID:', clientId);
+  console.log('   4. Si no existe, crea uno nuevo de tipo "Aplicación web"');
+  console.log('   5. Agrega esta URL en "URI de redirección autorizados":', redirectUri);
+  console.log('   6. Agrega este origen en "Orígenes JavaScript autorizados":', window.location.origin);
+  console.log('');
   
   // Redirigir a Google
   window.location.href = authUrl.toString();
