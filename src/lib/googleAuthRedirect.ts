@@ -387,10 +387,21 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
         
         const errorMessage = error.error_description || error.error || error.message || 'Error desconocido';
         
-        // Si es 401 o 500, intentar método directo como fallback
-        // 401 puede ser por credenciales incorrectas/no configuradas en el backend
-        // 500 puede ser por error del servidor
-        if (tokenResponse.status === 401 || tokenResponse.status >= 500) {
+        // Si es 401, el backend está disponible pero las credenciales no están configuradas
+        // Intentar método directo como fallback solo si VITE_GOOGLE_CLIENT_SECRET está disponible
+        if (tokenResponse.status === 401) {
+          const hasClientSecret = !!import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
+          if (hasClientSecret) {
+            console.warn(`Backend devolvió error 401 (${errorMessage}), intentando método directo como fallback`);
+            throw new Error('BACKEND_ERROR');
+          } else {
+            // Si no hay client secret, el problema es que el backend no tiene las credenciales configuradas
+            throw new Error(`El backend no tiene las credenciales de Google configuradas (error 401: ${errorMessage}). Por favor, configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el backend o configura VITE_GOOGLE_CLIENT_SECRET en Vercel.`);
+          }
+        }
+        
+        // Si es 500 o error del servidor, intentar método directo como fallback
+        if (tokenResponse.status >= 500) {
           console.warn(`Backend devolvió error ${tokenResponse.status} (${errorMessage}), intentando método directo como fallback`);
           throw new Error('BACKEND_ERROR');
         }
@@ -431,10 +442,11 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
   
   if (!clientSecret) {
+    // Si llegamos aquí, significa que el backend falló y no hay client secret configurado
     const errorMessage = backendUrl 
-      ? 'El backend no está disponible y VITE_GOOGLE_CLIENT_SECRET no está configurada. ' +
-        'Por favor, configura VITE_GOOGLE_CLIENT_SECRET en las variables de entorno de Vercel ' +
-        'o asegúrate de que el backend esté disponible y configurado correctamente.'
+      ? 'No se puede refrescar el token automáticamente. El backend no tiene las credenciales de Google configuradas y VITE_GOOGLE_CLIENT_SECRET no está configurada en Vercel. ' +
+        'Por favor, configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el backend (variables de entorno) ' +
+        'o configura VITE_GOOGLE_CLIENT_SECRET en Vercel (Settings → Environment Variables).'
       : 'VITE_GOOGLE_CLIENT_SECRET no está configurada. ' +
         'Por favor, agrega esta variable en Vercel (Settings → Environment Variables).';
     
