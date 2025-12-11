@@ -233,6 +233,9 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
     );
   }
   
+  // Obtener client_id (async)
+  const clientId = await getGoogleClientId();
+  
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
@@ -240,7 +243,7 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
     },
     body: new URLSearchParams({
       code,
-      client_id: getGoogleClientId(),
+      client_id: clientId,
       client_secret: clientSecret,
       redirect_uri: redirectUri,
       grant_type: 'authorization_code',
@@ -319,13 +322,30 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
         headers['User-Agent'] = 'Mozilla/5.0';
       }
       
-      const tokenResponse = await fetch(`${backendUrl}/api/google/oauth/refresh`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          refresh_token: refreshToken,
-        }),
-      });
+      // Agregar timeout para evitar que se quede colgado
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
+      
+      let tokenResponse: Response;
+      try {
+        tokenResponse = await fetch(`${backendUrl}/api/google/oauth/refresh`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            refresh_token: refreshToken,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        // Si es un error de red o timeout, intentar método directo
+        if (fetchError.name === 'AbortError' || fetchError.message?.includes('fetch')) {
+          console.warn('Backend no disponible (timeout o error de red), usando método directo');
+          throw new Error('BACKEND_TIMEOUT');
+        }
+        throw fetchError;
+      }
       
       if (!tokenResponse.ok) {
         let error;
@@ -342,6 +362,12 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
           throw new Error(`Error de autenticación: ${errorMessage}. Verifica que GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET estén configurados en el backend.`);
         }
         
+        // Si es 500 o error del servidor, intentar método directo
+        if (tokenResponse.status >= 500) {
+          console.warn('Backend devolvió error del servidor, usando método directo');
+          throw new Error('BACKEND_ERROR');
+        }
+        
         throw new Error(`Error al refrescar token: ${errorMessage}`);
       }
       
@@ -354,8 +380,15 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
       
       return tokenData.access_token;
     } catch (error: any) {
-      // Si el backend falla, intentar método directo como fallback
-      console.warn('Backend no disponible para refresh, usando método directo:', error.message);
+      // Si el backend falla con timeout o error de red, intentar método directo como fallback
+      if (error.message === 'BACKEND_TIMEOUT' || error.message === 'BACKEND_ERROR' || 
+          error.message?.includes('fetch') || error.message?.includes('network') ||
+          error.message?.includes('Failed to fetch')) {
+        console.warn('Backend no disponible para refresh, usando método directo:', error.message);
+      } else {
+        // Si es otro tipo de error (como credenciales incorrectas), relanzarlo
+        throw error;
+      }
     }
   }
   
@@ -363,13 +396,18 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
   
   if (!clientSecret) {
-    throw new Error(
-      'No se puede refrescar token: ' +
-      (backendUrl 
-        ? 'El backend no está disponible y VITE_GOOGLE_CLIENT_SECRET no está configurada.'
-        : 'VITE_GOOGLE_CLIENT_SECRET no está configurada.')
-    );
+    const errorMessage = backendUrl 
+      ? 'El backend no está disponible y VITE_GOOGLE_CLIENT_SECRET no está configurada. ' +
+        'Por favor, configura VITE_GOOGLE_CLIENT_SECRET en las variables de entorno de Vercel ' +
+        'o asegúrate de que el backend esté disponible y configurado correctamente.'
+      : 'VITE_GOOGLE_CLIENT_SECRET no está configurada. ' +
+        'Por favor, agrega esta variable en Vercel (Settings → Environment Variables).';
+    
+    throw new Error(`No se puede refrescar token: ${errorMessage}`);
   }
+  
+  // Usar función async para obtener client_id
+  const clientId = await getGoogleClientId();
   
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -377,7 +415,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      client_id: getGoogleClientId(),
+      client_id: clientId,
       client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
@@ -385,7 +423,9 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   });
   
   if (!tokenResponse.ok) {
-    throw new Error('Error al refrescar token');
+    const error = await tokenResponse.json().catch(() => ({}));
+    const errorMessage = error.error_description || error.error || 'Error desconocido';
+    throw new Error(`Error al refrescar token: ${errorMessage}`);
   }
   
   const tokenData = await tokenResponse.json();
