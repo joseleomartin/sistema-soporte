@@ -1830,6 +1830,23 @@ def exchange_google_token():
                 'message': 'Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en las variables de entorno del backend'
             }), 500
         
+        # Validar que no sean placeholders
+        if 'TU_CLIENT_ID' in client_id.upper() or 'EXAMPLE' in client_id.upper() or 'PLACEHOLDER' in client_id.upper():
+            logger.error(f"GOOGLE_CLIENT_ID es un placeholder: {client_id}")
+            return jsonify({
+                'error': 'Client ID no configurado correctamente',
+                'message': f'El Client ID configurado parece ser un placeholder: {client_id}. ' +
+                          'Por favor, configura un Client ID real de Google Cloud Console.'
+            }), 500
+        
+        if 'TU_CLIENT_SECRET' in client_secret.upper() or 'EXAMPLE' in client_secret.upper() or 'PLACEHOLDER' in client_secret.upper():
+            logger.error("GOOGLE_CLIENT_SECRET es un placeholder")
+            return jsonify({
+                'error': 'Client Secret no configurado correctamente',
+                'message': 'El Client Secret configurado parece ser un placeholder. ' +
+                          'Por favor, configura un Client Secret real de Google Cloud Console.'
+            }), 500
+        
         logger.info(f"Intercambiando código por token (redirect_uri: {redirect_uri})")
         logger.info(f"Client ID usado: {client_id[:20]}..." if client_id else "Client ID: NO CONFIGURADO")
         logger.info(f"Client Secret configurado: {'SÍ' if client_secret else 'NO'}")
@@ -1964,7 +1981,18 @@ def get_google_client_id():
                 'message': 'Configura GOOGLE_CLIENT_ID en las variables de entorno del backend'
             }), 500
         
+        # Validar que no sea un placeholder
+        if 'TU_CLIENT_ID' in client_id.upper() or 'EXAMPLE' in client_id.upper() or 'PLACEHOLDER' in client_id.upper():
+            logger.error(f"GOOGLE_CLIENT_ID es un placeholder, no un Client ID real: {client_id}")
+            return jsonify({
+                'error': 'Client ID no configurado correctamente',
+                'message': f'El Client ID configurado parece ser un placeholder: {client_id}. ' +
+                          'Por favor, configura un Client ID real de Google Cloud Console. ' +
+                          'Edita el archivo 8-iniciar-todo-ngrok.bat o configura GOOGLE_CLIENT_ID como variable de entorno del sistema.'
+            }), 500
+        
         logger.info(f"Client ID devuelto exitosamente para origen: {origin if origin else 'No Origin'}")
+        logger.info(f"Client ID (primeros 30 caracteres): {client_id[:30]}...")
         # Solo devolvemos el Client ID, nunca el secret
         return jsonify({'client_id': client_id}), 200
         

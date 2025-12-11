@@ -46,15 +46,22 @@ REM Configurar puerto
 set PORT=5000
 set EXTRACTOR_PORT=5000
 
-REM Configurar Google OAuth (obtén estos valores de Google Cloud Console)
-REM Si no los configuras aquí, asegúrate de tenerlos en variables de entorno del sistema
-REM o en un archivo .env en la carpeta backend/
-REM ⚠️ IMPORTANTE: Reemplaza los valores de ejemplo con tus credenciales reales
-REM Las credenciales reales están en el archivo client_secret_*.json
-set GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
-set GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
-REM ⚠️ IMPORTANTE: Credenciales configuradas desde client_secret_*.json
-REM Las credenciales están documentadas en CREDENCIALES_GOOGLE_ACTUALIZADAS.md
+REM Configurar Google OAuth
+REM ⚠️ IMPORTANTE: Las credenciales deben configurarse como variables de entorno del sistema
+REM o en un archivo .env (que debe estar en .gitignore)
+REM
+REM Para configurar las credenciales:
+REM 1. Obtén las credenciales del archivo client_secret_*.json en esta carpeta
+REM 2. Configura las variables de entorno del sistema Windows:
+REM    - Ve a: Panel de Control > Sistema > Configuración avanzada del sistema > Variables de entorno
+REM    - Agrega: GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET con los valores del archivo JSON
+REM 3. O crea un archivo .env en la carpeta backend/ con:
+REM    GOOGLE_CLIENT_ID=tu_client_id_real.apps.googleusercontent.com
+REM    GOOGLE_CLIENT_SECRET=tu_client_secret_real
+REM    (Asegúrate de que .env esté en .gitignore)
+REM
+REM Si las variables de entorno no están configuradas, el script intentará leerlas del archivo .env
+REM o del archivo client_secret_*.json si existe
 
 echo ================================================
 echo  PASO 1: Iniciando servidor Flask
