@@ -68,23 +68,27 @@ export function CostCalculation() {
       // Cargar precios primero, luego calcular costos pasando los valores directamente
       const loadAndCalculate = async () => {
         try {
-          // Cargar precios directamente
+          // Cargar precios estáticos (más reciente por cliente, sin importar fechas)
           const { data: prices, error } = await supabase
             .from('client_prices')
             .select('client_id, price_to_charge')
-            .eq('start_date', startDate)
-            .eq('end_date', endDate);
+            .order('updated_at', { ascending: false });
 
           if (error) throw error;
 
-          // Convertir a objetos
+          // Convertir a objetos (solo el más reciente por cliente)
           const pricesMap: { [clientId: string]: number } = {};
           const inputsMap: { [clientId: string]: string } = {};
           
+          // Usar un Set para asegurar que solo tomamos el primero (más reciente) de cada cliente
+          const seenClients = new Set<string>();
           prices?.forEach(price => {
-            const priceValue = parseFloat(price.price_to_charge.toString());
-            pricesMap[price.client_id] = priceValue;
-            inputsMap[price.client_id] = price.price_to_charge.toString();
+            if (!seenClients.has(price.client_id)) {
+              seenClients.add(price.client_id);
+              const priceValue = parseFloat(price.price_to_charge.toString());
+              pricesMap[price.client_id] = priceValue;
+              inputsMap[price.client_id] = price.price_to_charge.toString();
+            }
           });
 
           // Actualizar estados
@@ -139,31 +143,32 @@ export function CostCalculation() {
   };
 
   const loadSavedPrices = async () => {
-    if (!startDate || !endDate || !profile?.id) return;
+    if (!profile?.id) return;
 
     try {
-      // Cargar precios guardados para este período exacto
+      // Cargar precios estáticos (más reciente por cliente, sin importar fechas)
       const { data: prices, error } = await supabase
         .from('client_prices')
         .select('client_id, price_to_charge')
-        .eq('start_date', startDate)
-        .eq('end_date', endDate);
+        .order('updated_at', { ascending: false });
 
       if (error) throw error;
 
-      // Convertir a objeto para fácil acceso
+      // Convertir a objeto para fácil acceso (solo el más reciente por cliente)
       const pricesMap: { [clientId: string]: number } = {};
+      const inputsMap: { [clientId: string]: string } = {};
+      const seenClients = new Set<string>();
+      
       prices?.forEach(price => {
-        pricesMap[price.client_id] = parseFloat(price.price_to_charge.toString());
+        if (!seenClients.has(price.client_id)) {
+          seenClients.add(price.client_id);
+          const priceValue = parseFloat(price.price_to_charge.toString());
+          pricesMap[price.client_id] = priceValue;
+          inputsMap[price.client_id] = price.price_to_charge.toString();
+        }
       });
 
       setSavedPrices(pricesMap);
-
-      // También actualizar priceInputs con los valores guardados
-      const inputsMap: { [clientId: string]: string } = {};
-      prices?.forEach(price => {
-        inputsMap[price.client_id] = price.price_to_charge.toString();
-      });
       setPriceInputs(prev => ({ ...prev, ...inputsMap }));
     } catch (error) {
       console.error('Error loading saved prices:', error);
@@ -171,42 +176,42 @@ export function CostCalculation() {
   };
 
   const savePrice = async (clientId: string, price: number) => {
-    if (!startDate || !endDate || !profile?.id) return;
+    if (!profile?.id) return;
 
     setSavingCost(clientId);
     try {
-      // Verificar si ya existe un precio para este cliente y período
+      // Verificar si ya existe un precio para este cliente (sin importar fechas)
       const { data: existing, error: checkError } = await supabase
         .from('client_prices')
         .select('id')
         .eq('client_id', clientId)
-        .eq('start_date', startDate)
-        .eq('end_date', endDate)
-        .single();
+        .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
         throw checkError;
       }
 
       if (existing) {
-        // Actualizar precio existente
+        // Actualizar precio existente (precio estático por cliente)
         const { error: updateError } = await supabase
           .from('client_prices')
           .update({
             price_to_charge: price,
-            user_id: profile.id
+            user_id: profile.id,
+            start_date: startDate || null,
+            end_date: endDate || null
           })
           .eq('id', existing.id);
 
         if (updateError) throw updateError;
       } else {
-        // Crear nuevo precio
+        // Crear nuevo precio estático (las fechas son opcionales)
         const { error: insertError } = await supabase
           .from('client_prices')
           .insert({
             client_id: clientId,
-            start_date: startDate,
-            end_date: endDate,
+            start_date: startDate || null,
+            end_date: endDate || null,
             price_to_charge: price,
             user_id: profile.id
           });

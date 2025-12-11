@@ -357,17 +357,15 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
         
         const errorMessage = error.error_description || error.error || error.message || 'Error desconocido';
         
-        // Si es 401, probablemente las credenciales no están configuradas
-        if (tokenResponse.status === 401) {
-          throw new Error(`Error de autenticación: ${errorMessage}. Verifica que GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET estén configurados en el backend.`);
-        }
-        
-        // Si es 500 o error del servidor, intentar método directo
-        if (tokenResponse.status >= 500) {
-          console.warn('Backend devolvió error del servidor, usando método directo');
+        // Si es 401 o 500, intentar método directo como fallback
+        // 401 puede ser por credenciales incorrectas/no configuradas en el backend
+        // 500 puede ser por error del servidor
+        if (tokenResponse.status === 401 || tokenResponse.status >= 500) {
+          console.warn(`Backend devolvió error ${tokenResponse.status} (${errorMessage}), intentando método directo como fallback`);
           throw new Error('BACKEND_ERROR');
         }
         
+        // Para otros errores (400, 403, etc.), lanzar el error
         throw new Error(`Error al refrescar token: ${errorMessage}`);
       }
       
@@ -380,13 +378,13 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
       
       return tokenData.access_token;
     } catch (error: any) {
-      // Si el backend falla con timeout o error de red, intentar método directo como fallback
+      // Si el backend falla con timeout, error de red, 401 o 500, intentar método directo como fallback
       if (error.message === 'BACKEND_TIMEOUT' || error.message === 'BACKEND_ERROR' || 
           error.message?.includes('fetch') || error.message?.includes('network') ||
           error.message?.includes('Failed to fetch')) {
         console.warn('Backend no disponible para refresh, usando método directo:', error.message);
       } else {
-        // Si es otro tipo de error (como credenciales incorrectas), relanzarlo
+        // Si es otro tipo de error que no podemos manejar, relanzarlo
         throw error;
       }
     }
