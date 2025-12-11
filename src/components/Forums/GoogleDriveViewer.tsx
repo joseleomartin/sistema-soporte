@@ -217,7 +217,8 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
         const errorMessage = listError.message || 'Error al cargar archivos';
         setError(errorMessage);
         
-        if (errorMessage.includes('Token expirado') || errorMessage.includes('401')) {
+        if (errorMessage.includes('Token expirado') || errorMessage.includes('401') ||
+            errorMessage.includes('renovar') || errorMessage.includes('autentica nuevamente')) {
           setAuthenticated(false);
         }
         
@@ -238,15 +239,20 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       setError(errorMessage);
       
       if (errorMessage.includes('Token expirado') || errorMessage.includes('401') || 
-          errorMessage.includes('Unauthorized') || errorMessage.includes('No hay token')) {
+          errorMessage.includes('Unauthorized') || errorMessage.includes('No hay token') ||
+          errorMessage.includes('renovar') || errorMessage.includes('autentica nuevamente')) {
         setAuthenticated(false);
-        // Si hay refresh token, intentar reconectar automáticamente
+        // Si hay refresh token, intentar reconectar automáticamente una vez
         const refreshToken = localStorage.getItem('google_drive_refresh_token');
         if (refreshToken && retryCount === 0) {
           console.log('🔄 Intentando reconectar automáticamente...');
           setTimeout(() => {
             checkAuthAndLoadFiles();
           }, 2000);
+        } else {
+          // Si no hay refresh token o ya intentamos, asegurar que el error se muestre
+          // para que el usuario pueda re-autenticar manualmente
+          setError(errorMessage);
         }
       }
       
@@ -658,12 +664,16 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                 Puedes seleccionar una nueva carpeta desde el selector de carpetas.
               </p>
             )}
-            {error.includes('Token expirado') && (
+            {(error.includes('Token expirado') || 
+              error.includes('renovar') || 
+              error.includes('autentica nuevamente') ||
+              error.includes('autenticar')) && (
               <button
                 onClick={handleAuthenticate}
-                className="mt-2 text-sm text-red-600 hover:text-red-700 underline"
+                className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center gap-2"
               >
-                Re-autenticar
+                <FolderOpen className="w-4 h-4" />
+                Re-autenticar con Google
               </button>
             )}
           </div>
