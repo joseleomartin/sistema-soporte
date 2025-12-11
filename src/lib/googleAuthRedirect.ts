@@ -271,32 +271,62 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
 
 /**
  * Obtiene el token de acceso válido
+ * Intenta renovar automáticamente si está próximo a expirar o expiró
  */
-export async function getAccessToken(): Promise<string> {
+export async function getAccessToken(retryCount = 0): Promise<string> {
   const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
   const storedExpiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  const refreshToken = localStorage.getItem('google_drive_refresh_token');
+  
+  // Si no hay token pero hay refresh token, intentar renovar directamente
+  if ((!storedToken || !storedExpiry) && refreshToken) {
+    console.log('🔄 No hay token guardado, pero hay refresh token. Renovando...');
+    try {
+      return await refreshAccessToken(refreshToken);
+    } catch (error) {
+      console.error('Error renovando token sin token guardado:', error);
+      throw new Error('No se pudo renovar el token. Por favor, autentica nuevamente.');
+    }
+  }
   
   if (!storedToken || !storedExpiry) {
     throw new Error('No hay token guardado. Por favor, autentica primero.');
   }
   
-  // Verificar si el token expiró (con margen de 5 minutos)
+  // Verificar si el token expiró (con margen de 10 minutos para renovar proactivamente)
   const expiryTime = parseInt(storedExpiry, 10);
   const now = Date.now();
-  const margin = 5 * 60 * 1000; // 5 minutos
+  const margin = 10 * 60 * 1000; // 10 minutos (renovación proactiva)
   
   if (now >= expiryTime - margin) {
-    // Intentar refrescar el token
-    const refreshToken = localStorage.getItem('google_drive_refresh_token');
+    // Intentar refrescar el token automáticamente
     if (refreshToken) {
       try {
         return await refreshAccessToken(refreshToken);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error refrescando token:', error);
-        throw new Error('Token expirado. Por favor, autentica nuevamente.');
+        
+        // Si es un error recuperable y no hemos intentado demasiadas veces, reintentar
+        if (retryCount < 2 && (
+          error.message?.includes('network') || 
+          error.message?.includes('fetch') ||
+          error.message?.includes('timeout') ||
+          error.message?.includes('BACKEND')
+        )) {
+          console.log(`🔄 Reintentando renovación de token (intento ${retryCount + 1}/2)...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Backoff exponencial
+          return await getAccessToken(retryCount + 1);
+        }
+        
+        // Si el error es que el refresh token es inválido, no lanzar error genérico
+        if (error.message?.includes('invalid_grant') || error.message?.includes('invalid')) {
+          throw new Error('El token de renovación es inválido. Por favor, autentica nuevamente.');
+        }
+        
+        throw new Error('No se pudo renovar el token automáticamente. Por favor, autentica nuevamente.');
       }
     } else {
-      throw new Error('Token expirado. Por favor, autentica nuevamente.');
+      throw new Error('Token expirado y no hay token de renovación. Por favor, autentica nuevamente.');
     }
   }
   
@@ -376,6 +406,13 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
       localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.access_token);
       localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
       
+      // Si Google devuelve un nuevo refresh token, guardarlo también
+      // (a veces Google devuelve un nuevo refresh token)
+      if (tokenData.refresh_token) {
+        localStorage.setItem('google_drive_refresh_token', tokenData.refresh_token);
+        console.log('✅ Nuevo refresh token guardado');
+      }
+      
       return tokenData.access_token;
     } catch (error: any) {
       // Si el backend falla con timeout, error de red, 401 o 500, intentar método directo como fallback
@@ -423,6 +460,17 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   if (!tokenResponse.ok) {
     const error = await tokenResponse.json().catch(() => ({}));
     const errorMessage = error.error_description || error.error || 'Error desconocido';
+    
+    // Si el error es invalid_grant, el refresh token es inválido o expiró
+    // En este caso, necesitamos re-autenticar
+    if (error.error === 'invalid_grant' || errorMessage.includes('invalid_grant')) {
+      // Limpiar el refresh token inválido
+      localStorage.removeItem('google_drive_refresh_token');
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(TOKEN_EXPIRY_KEY);
+      throw new Error('El token de renovación expiró o es inválido. Por favor, autentica nuevamente.');
+    }
+    
     throw new Error(`Error al refrescar token: ${errorMessage}`);
   }
   
@@ -432,6 +480,13 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   const expiryTime = Date.now() + (tokenData.expires_in * 1000);
   localStorage.setItem(TOKEN_STORAGE_KEY, tokenData.access_token);
   localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+  
+  // Si Google devuelve un nuevo refresh token, guardarlo también
+  // (a veces Google devuelve un nuevo refresh token)
+  if (tokenData.refresh_token) {
+    localStorage.setItem('google_drive_refresh_token', tokenData.refresh_token);
+    console.log('✅ Nuevo refresh token guardado');
+  }
   
   return tokenData.access_token;
 }
@@ -446,6 +501,7 @@ export function isAuthenticated(): boolean {
   const refreshToken = localStorage.getItem('google_drive_refresh_token');
   
   // Si tiene refresh token, está autenticado (puede refrescar el access token)
+  // Esto es lo más importante: si hay refresh token, siempre consideramos autenticado
   if (refreshToken) {
     return true;
   }
@@ -460,6 +516,37 @@ export function isAuthenticated(): boolean {
   const margin = 5 * 60 * 1000; // 5 minutos
   
   return now < expiryTime - margin;
+}
+
+/**
+ * Renueva el token proactivamente si está próximo a expirar
+ * Esta función puede ser llamada periódicamente para mantener la sesión activa
+ */
+export async function refreshTokenIfNeeded(): Promise<void> {
+  const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const storedExpiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  const refreshToken = localStorage.getItem('google_drive_refresh_token');
+  
+  // Solo renovar si hay refresh token y el token está próximo a expirar
+  if (!refreshToken || !storedToken || !storedExpiry) {
+    return;
+  }
+  
+  const expiryTime = parseInt(storedExpiry, 10);
+  const now = Date.now();
+  const margin = 15 * 60 * 1000; // 15 minutos antes de expirar
+  
+  // Si el token expira en menos de 15 minutos, renovarlo proactivamente
+  if (now >= expiryTime - margin) {
+    try {
+      console.log('🔄 Renovando token proactivamente...');
+      await refreshAccessToken(refreshToken);
+      console.log('✅ Token renovado exitosamente');
+    } catch (error) {
+      // No lanzar error, solo loguear. El token se renovará cuando se necesite
+      console.warn('⚠️ No se pudo renovar el token proactivamente:', error);
+    }
+  }
 }
 
 /**

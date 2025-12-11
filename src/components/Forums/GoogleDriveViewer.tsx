@@ -17,7 +17,7 @@ import {
   FolderPlus,
   Eye,
 } from 'lucide-react';
-import { startGoogleAuth, getAccessToken, isAuthenticated } from '../../lib/googleAuthRedirect';
+import { startGoogleAuth, getAccessToken, isAuthenticated, refreshTokenIfNeeded } from '../../lib/googleAuthRedirect';
 import { listFilesInFolder, downloadFileFromDrive, getFolderInfo, searchFilesRecursively, createFolder, DriveFile, DriveFolder, DriveFolderContent } from '../../lib/googleDriveAPI';
 import { GoogleDriveUpload } from './GoogleDriveUpload';
 
@@ -71,6 +71,23 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
   useEffect(() => {
     checkAuthAndLoadFiles();
   }, [currentFolderId]);
+
+  // Renovar token proactivamente cada 10 minutos si está autenticado
+  useEffect(() => {
+    if (!authenticated) return;
+
+    // Renovar inmediatamente si es necesario
+    refreshTokenIfNeeded();
+
+    // Configurar intervalo para renovar cada 10 minutos
+    const interval = setInterval(() => {
+      refreshTokenIfNeeded().catch(err => {
+        console.warn('Error en renovación proactiva:', err);
+      });
+    }, 10 * 60 * 1000); // 10 minutos
+
+    return () => clearInterval(interval);
+  }, [authenticated]);
 
   // Búsqueda recursiva cuando hay término de búsqueda
   useEffect(() => {
@@ -130,19 +147,24 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       setLoading(true);
       let token: string;
       try {
+        // getAccessToken ya maneja la renovación automática internamente
         token = await getAccessToken();
       } catch (tokenError: any) {
-        // Si el token expiró, intentar refrescar
-        if (tokenError.message.includes('expirado') || tokenError.message.includes('No hay token')) {
-          console.log('🔄 Token expirado, intentando reconectar...');
+        // Si el error es que no se pudo renovar pero hay refresh token, intentar una vez más
+        const refreshToken = localStorage.getItem('google_drive_refresh_token');
+        if (refreshToken && retryCount === 0 && (
+          tokenError.message.includes('renovar') || 
+          tokenError.message.includes('expirado') ||
+          tokenError.message.includes('No hay token')
+        )) {
+          console.log('🔄 Error al obtener token, reintentando con refresh token...');
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          return loadFiles(1);
+        }
+        
+        // Si no hay refresh token o ya intentamos, marcar como no autenticado
+        if (!refreshToken || tokenError.message.includes('inválido')) {
           setAuthenticated(false);
-          // Si hay refresh token, intentar autenticar de nuevo automáticamente
-          const refreshToken = localStorage.getItem('google_drive_refresh_token');
-          if (refreshToken && retryCount === 0) {
-            // Esperar un momento y reintentar
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return loadFiles(1);
-          }
         }
         throw tokenError;
       }
