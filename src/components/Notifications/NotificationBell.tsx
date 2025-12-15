@@ -5,7 +5,19 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
-  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention' | 'task_mention' | 'direct_message' | 'birthday' | 'ticket_created' | 'time_entry_reminder';
+  type:
+    | 'calendar_event'
+    | 'ticket_comment'
+    | 'ticket_status'
+    | 'task_assigned'
+    | 'forum_mention'
+    | 'task_mention'
+    | 'direct_message'
+    | 'birthday'
+    | 'ticket_created'
+    | 'time_entry_reminder'
+    | 'social_post'
+    | 'professional_news';
   title: string;
   message: string;
   read: boolean;
@@ -25,9 +37,10 @@ interface NotificationBellProps {
   onNavigateToForum?: (subforumId: string) => void;
   onNavigateToSocial?: () => void;
   onNavigateToTimeTracking?: () => void;
+  onNavigateToProfessionalNews?: () => void;
 }
 
-export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial, onNavigateToTimeTracking }: NotificationBellProps) {
+export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial, onNavigateToTimeTracking, onNavigateToProfessionalNews }: NotificationBellProps) {
   const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -247,6 +260,20 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         // Fallback: usar window.location si no hay callback
         window.location.hash = 'social';
       }
+    } else if (notification.type === 'social_post') {
+      // Navegar al feed Social
+      if (onNavigateToSocial) {
+        onNavigateToSocial();
+      } else {
+        window.location.hash = 'social';
+      }
+    } else if (notification.type === 'professional_news') {
+      // Navegar a Novedades Profesionales
+      if (onNavigateToProfessionalNews) {
+        onNavigateToProfessionalNews();
+      } else {
+        window.location.hash = 'professional-news';
+      }
     } else if (notification.type === 'ticket_created' && notification.ticket_id) {
       // Navegar al ticket específico
       if (onNavigateToTicket) {
@@ -294,6 +321,10 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         return <Ticket className="w-5 h-5 text-orange-600" />;
       case 'time_entry_reminder':
         return <Clock className="w-5 h-5 text-blue-600" />;
+      case 'social_post':
+        return <MessageSquare className="w-5 h-5 text-pink-600" />;
+      case 'professional_news':
+        return <MessageSquare className="w-5 h-5 text-indigo-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }

@@ -44,7 +44,20 @@ interface UserStats {
 
 interface RecentActivity {
   id: string;
-  type: 'client' | 'meeting' | 'forum' | 'file' | 'social_post' | 'birthday' | 'task_assigned' | 'task_mention' | 'forum_mention' | 'ticket_comment' | 'notification' | 'calendar_event';
+  type:
+    | 'client'
+    | 'meeting'
+    | 'forum'
+    | 'file'
+    | 'social_post'
+    | 'birthday'
+    | 'task_assigned'
+    | 'task_mention'
+    | 'forum_mention'
+    | 'ticket_comment'
+    | 'notification'
+    | 'calendar_event'
+    | 'professional_news';
   title: string;
   date: string;
   icon: any;
@@ -390,7 +403,26 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         });
       }
 
-      // 4. Obtener notificaciones recientes (tareas asignadas, menciones, respuestas a tickets)
+      // 4. Obtener novedades profesionales recientes (para todos los usuarios)
+      const { data: recentNews } = await supabase
+        .from('professional_news')
+        .select('id, title, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (recentNews) {
+        recentNews.forEach((news: any) => {
+          activities.push({
+            id: `news-${news.id}`,
+            type: 'professional_news' as const,
+            title: `Nueva novedad profesional: ${news.title}`,
+            date: news.created_at,
+            icon: BookOpen,
+          });
+        });
+      }
+
+      // 5. Obtener notificaciones recientes (tareas asignadas, menciones, respuestas a tickets)
       const { data: recentNotifications } = await supabase
         .from('notifications')
         .select('id, type, title, message, created_at, task_id, ticket_id, subforum_id, metadata')
@@ -491,7 +523,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         });
       }
 
-      // 5. Obtener eventos de calendario asignados al usuario
+      // 6. Obtener eventos de calendario asignados al usuario
       const { data: assignedEvents } = await supabase
         .from('calendar_events')
         .select('id, title, start_date, created_at, created_by_profile:profiles!calendar_events_created_by_fkey(full_name)')
@@ -769,6 +801,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       case 'social_post':
       case 'birthday':
         onNavigate('social');
+        break;
+      case 'professional_news':
+        onNavigate('professional-news');
         break;
       case 'ticket_comment':
         if (activity.ticket_id) {

@@ -160,6 +160,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
             })}
             onNavigateToSocial={() => onViewChange('social')}
             onNavigateToTimeTracking={onNavigateToTimeTracking || (() => onViewChange('time-tracking'))}
+            onNavigateToProfessionalNews={() => onViewChange('professional-news')}
           />
         </div>
         {profile && (

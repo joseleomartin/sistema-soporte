@@ -18,6 +18,7 @@ import { TimeTracking } from './components/TimeTracking/TimeTracking';
 import { LibraryAndCourses } from './components/Library/LibraryAndCourses';
 import { InternalPolicies } from './components/InternalPolicies/InternalPolicies';
 import { SocialFeed } from './components/Social/SocialFeed';
+import { ProfessionalNews } from './components/ProfessionalNews/ProfessionalNews';
 import { MessagesBell } from './components/DirectMessages/MessagesBell';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
@@ -155,6 +156,8 @@ function MainApp() {
         return <InternalPolicies key={`internal-policies-${viewKey}`} />;
       case 'social':
         return <SocialFeed key={`social-${viewKey}`} />;
+      case 'professional-news':
+        return <ProfessionalNews key={`professional-news-${viewKey}`} />;
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
       default:
