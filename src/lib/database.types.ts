@@ -111,6 +111,13 @@ export interface Database {
           name: string
           description: string | null
           client_name: string
+          cuit: string | null
+          email: string | null
+          access_keys: string | null
+          economic_link: string | null
+          contact_full_name: string | null
+          client_type: string | null
+          phone: string | null
           created_by: string
           created_at: string
           updated_at: string
@@ -120,6 +127,13 @@ export interface Database {
           name: string
           description?: string | null
           client_name: string
+          cuit?: string | null
+          email?: string | null
+          access_keys?: string | null
+          economic_link?: string | null
+          contact_full_name?: string | null
+          client_type?: string | null
+          phone?: string | null
           created_by: string
           created_at?: string
           updated_at?: string
@@ -129,6 +143,13 @@ export interface Database {
           name?: string
           description?: string | null
           client_name?: string
+          cuit?: string | null
+          email?: string | null
+          access_keys?: string | null
+          economic_link?: string | null
+          contact_full_name?: string | null
+          client_type?: string | null
+          phone?: string | null
           created_by?: string
           created_at?: string
           updated_at?: string

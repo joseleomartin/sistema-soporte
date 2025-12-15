@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star } from 'lucide-react';
+import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star, FileSpreadsheet } from 'lucide-react';
 import { CreateForumModal } from './CreateForumModal';
 import { SubforumChat } from './SubforumChat';
 import { ManagePermissionsModal } from './ManagePermissionsModal';
 import { ClientFilesModal } from './ClientFilesModal';
 import { ManageDepartmentPermissionsModal } from './ManageDepartmentPermissionsModal';
 import { BulkAssignUsersModal } from './BulkAssignUsersModal';
+import { EditClientModal } from './EditClientModal';
+import { ClientInfoModal } from './ClientInfoModal';
+import { BulkImportClientsModal } from './BulkImportClientsModal';
 
 interface Subforum {
   id: string;
   name: string;
   description: string | null;
   client_name: string;
+  cuit?: string | null;
+  email?: string | null;
+  access_keys?: string | null;
+  economic_link?: string | null;
+  contact_full_name?: string | null;
+  client_type?: string | null;
+  phone?: string | null;
   forum_id: string;
   created_at: string;
   message_count?: number;
@@ -40,6 +50,9 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   const [showPendingTasksModal, setShowPendingTasksModal] = useState<{ clientName: string; tasks: any[] } | null>(null);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
   const [bulkAssignModalKey, setBulkAssignModalKey] = useState(0);
+  const [editClientFor, setEditClientFor] = useState<Subforum | null>(null);
+  const [showClientInfoFor, setShowClientInfoFor] = useState<Subforum | null>(null);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   
   // Filtros
   const [sortBy, setSortBy] = useState<'alphabetical' | 'activity' | 'none'>('alphabetical');
@@ -460,6 +473,13 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
               Asignación Masiva
             </button>
             <button
+              onClick={() => setShowBulkImportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-medium"
+            >
+              <FileSpreadsheet className="w-5 h-5" />
+              Importar Clientes
+            </button>
+            <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
             >
@@ -643,6 +663,16 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        setEditClientFor(forum);
+                      }}
+                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                      title="Editar datos del cliente"
+                    >
+                      <Settings className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setManageDeptPermissionsFor({ forumId: forum.forum_id, forumName: forum.name });
                       }}
                       className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
@@ -665,16 +695,30 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
               </div>
 
               <div className="flex items-start justify-between mb-4">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowFilesFor(forum);
-                  }}
-                  className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
-                  title="Ver archivos del cliente"
-                >
-                  <FolderOpen className="w-6 h-6 text-blue-600" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowFilesFor(forum);
+                    }}
+                    className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
+                    title="Ver archivos del cliente"
+                  >
+                    <FolderOpen className="w-6 h-6 text-blue-600" />
+                  </button>
+                  {canCreateForum && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowClientInfoFor(forum);
+                      }}
+                      className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
+                      title="Ver ficha del cliente"
+                    >
+                      <FileText className="w-6 h-6 text-blue-600" />
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -731,6 +775,24 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
             setShowCreateModal(false);
             loadSubforums();
           }}
+        />
+      )}
+
+      {editClientFor && (
+        <EditClientModal
+          subforum={editClientFor}
+          onClose={() => setEditClientFor(null)}
+          onSuccess={() => {
+            setEditClientFor(null);
+            loadSubforums();
+          }}
+        />
+      )}
+
+      {showClientInfoFor && (
+        <ClientInfoModal
+          subforum={showClientInfoFor}
+          onClose={() => setShowClientInfoFor(null)}
         />
       )}
 
@@ -831,6 +893,17 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
           onSuccess={() => {
             setShowBulkAssignModal(false);
             setBulkAssignModalKey(prev => prev + 1);
+            loadSubforums();
+          }}
+        />
+      )}
+      
+      {/* Modal de Importación Masiva */}
+      {showBulkImportModal && (
+        <BulkImportClientsModal
+          onClose={() => setShowBulkImportModal(false)}
+          onSuccess={() => {
+            setShowBulkImportModal(false);
             loadSubforums();
           }}
         />

@@ -1,36 +1,88 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { X, Folder, ExternalLink } from 'lucide-react';
+import { X, FolderOpen } from 'lucide-react';
 
-interface CreateForumModalProps {
+interface EditClientModalProps {
+  subforum: {
+    id: string;
+    name: string;
+    description: string | null;
+    client_name: string;
+    forum_id: string;
+    cuit?: string | null;
+    email?: string | null;
+    access_keys?: string | any | null;
+    economic_link?: string | null;
+    contact_full_name?: string | null;
+    client_type?: string | null;
+  };
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) {
+interface AccessKeys {
+  arca: { usuario: string; contraseña: string };
+  agip: { usuario: string; contraseña: string };
+  armba: { usuario: string; contraseña: string };
+}
+
+const parseAccessKeys = (accessKeys: any): AccessKeys => {
+  if (!accessKeys) {
+    return {
+      arca: { usuario: '', contraseña: '' },
+      agip: { usuario: '', contraseña: '' },
+      armba: { usuario: '', contraseña: '' },
+    };
+  }
+  
+  if (typeof accessKeys === 'string') {
+    try {
+      const parsed = JSON.parse(accessKeys);
+      return {
+        arca: parsed.arca || { usuario: '', contraseña: '' },
+        agip: parsed.agip || { usuario: '', contraseña: '' },
+        armba: parsed.armba || { usuario: '', contraseña: '' },
+      };
+    } catch {
+      return {
+        arca: { usuario: '', contraseña: '' },
+        agip: { usuario: '', contraseña: '' },
+        armba: { usuario: '', contraseña: '' },
+      };
+    }
+  }
+  
+  return {
+    arca: accessKeys.arca || { usuario: '', contraseña: '' },
+    agip: accessKeys.agip || { usuario: '', contraseña: '' },
+    armba: accessKeys.armba || { usuario: '', contraseña: '' },
+  };
+};
+
+export function EditClientModal({ subforum, onClose, onSuccess }: EditClientModalProps) {
   const { profile } = useAuth();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [clientName, setClientName] = useState('');
+  const [name, setName] = useState(subforum.name);
+  const [clientName, setClientName] = useState(subforum.client_name);
+  const [description, setDescription] = useState(subforum.description || '');
+  const [cuit, setCuit] = useState(subforum.cuit || '');
+  const [email, setEmail] = useState((subforum.email || '').split('/')[0]?.trim() || '');
+  const [secondaryEmail, setSecondaryEmail] = useState(
+    (subforum.email || '').split('/')[1]?.trim() || ''
+  );
+  const [accessKeys, setAccessKeys] = useState<AccessKeys>(parseAccessKeys(subforum.access_keys));
+  const [economicLink, setEconomicLink] = useState(subforum.economic_link || '');
+  const [contactFullName, setContactFullName] = useState(subforum.contact_full_name || '');
+  const [clientType, setClientType] = useState(subforum.client_type || '');
+  const [phone, setPhone] = useState((subforum as any).phone?.split('/')?.[0]?.trim() || '');
+  const [secondaryPhone, setSecondaryPhone] = useState(
+    (subforum as any).phone?.split('/')?.[1]?.trim() || ''
+  );
   const [driveFolderLink, setDriveFolderLink] = useState('');
-  const [cuit, setCuit] = useState('');
-  const [email, setEmail] = useState('');
-  const [secondaryEmail, setSecondaryEmail] = useState('');
-  const [accessKeys, setAccessKeys] = useState({
-    arca: { usuario: '', contraseña: '' },
-    agip: { usuario: '', contraseña: '' },
-    armba: { usuario: '', contraseña: '' },
-  });
-  const [economicLink, setEconomicLink] = useState('');
-  const [contactFullName, setContactFullName] = useState('');
-  const [clientType, setClientType] = useState('');
-  const [phone, setPhone] = useState('');
-  const [secondaryPhone, setSecondaryPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [driveLinkError, setDriveLinkError] = useState<string | null>(null);
   const [availableClients, setAvailableClients] = useState<string[]>([]);
+  const [driveLinkError, setDriveLinkError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -56,33 +108,6 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
     loadClients();
   }, [profile?.id]);
 
-  // Extraer ID de carpeta desde un enlace de Google Drive
-  const extractFolderIdFromLink = (link: string): string | null => {
-    // Formato 1: https://drive.google.com/drive/folders/FOLDER_ID
-    // Formato 2: https://drive.google.com/drive/u/0/folders/FOLDER_ID
-    // Formato 3: https://drive.google.com/open?id=FOLDER_ID
-    // Formato 4: FOLDER_ID directo
-    
-    // Intentar extraer de formato estándar
-    const foldersMatch = link.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-    if (foldersMatch) {
-      return foldersMatch[1];
-    }
-    
-    // Intentar extraer de formato open?id=
-    const openMatch = link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (openMatch) {
-      return openMatch[1];
-    }
-    
-    // Si es solo un ID (sin URL)
-    if (/^[a-zA-Z0-9_-]+$/.test(link.trim())) {
-      return link.trim();
-    }
-    
-    return null;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.id) return;
@@ -91,36 +116,6 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
     setError('');
 
     try {
-      // Primero, obtener o crear un forum para este cliente
-      let forumId: string;
-
-      // Buscar si ya existe un forum con este nombre de cliente
-      const { data: existingForum } = await supabase
-        .from('forums')
-        .select('id')
-        .eq('name', clientName.trim())
-        .single();
-
-      if (existingForum) {
-        forumId = existingForum.id;
-      } else {
-        // Crear un nuevo forum para este cliente
-        const { data: newForum, error: forumError } = await supabase
-          .from('forums')
-          .insert({
-            name: clientName.trim(),
-            description: `Foro del cliente ${clientName.trim()}`,
-            created_by: profile.id,
-          })
-          .select('id')
-          .single();
-
-        if (forumError) throw forumError;
-        if (!newForum) throw new Error('No se pudo crear el forum');
-
-        forumId = newForum.id;
-      }
-
       // Preparar access_keys como JSONB
       const accessKeysJson = 
         (accessKeys.arca.usuario || accessKeys.arca.contraseña ||
@@ -135,13 +130,13 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
       const combinedPhone =
         [phone.trim(), secondaryPhone.trim()].filter((v) => v.length > 0).join(' / ') || null;
 
-      // Ahora crear el subforum con el forum_id
-      const { data: newSubforum, error: createError } = await supabase
+      // Actualizar subforum (cliente)
+      const { data: updatedSubforum, error: subforumError } = await supabase
         .from('subforums')
-        .insert({
+        .update({
           name: name.trim(),
-          description: description.trim() || null,
           client_name: clientName.trim(),
+          description: description.trim() || null,
           cuit: cuit.trim() || null,
           email: combinedEmail,
           access_keys: accessKeysJson,
@@ -149,46 +144,68 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
           contact_full_name: contactFullName.trim() || null,
           client_type: clientType.trim() || null,
           phone: combinedPhone,
-          forum_id: forumId,
-          created_by: profile.id,
         })
-        .select('id')
+        .eq('id', subforum.id)
+        .select('id, name')
         .single();
 
-      if (createError) throw createError;
-      if (!newSubforum) throw new Error('No se pudo crear el subforo');
+      if (subforumError) throw subforumError;
 
-      // Si se proporcionó un enlace de Google Drive, guardar el mapeo
-      if (driveFolderLink.trim() && newSubforum.id) {
+      // Si se proporcionó un enlace de Google Drive, actualizar el mapeo
+      if (driveFolderLink.trim() && updatedSubforum?.id) {
+        const extractFolderIdFromLink = (link: string): string | null => {
+          const foldersMatch = link.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+          if (foldersMatch) return foldersMatch[1];
+
+          const openMatch = link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+          if (openMatch) return openMatch[1];
+
+          if (/^[a-zA-Z0-9_-]+$/.test(link.trim())) {
+            return link.trim();
+          }
+
+          return null;
+        };
+
         const folderId = extractFolderIdFromLink(driveFolderLink.trim());
-        
         if (folderId) {
           try {
-            // Usar la función RPC para guardar el mapeo
             const { error: driveError } = await supabase.rpc('save_client_drive_mapping', {
-              p_subforum_id: newSubforum.id,
+              p_subforum_id: updatedSubforum.id,
               p_google_drive_folder_id: folderId,
               p_folder_name: name.trim() || clientName.trim(),
             });
-            
+
             if (driveError) {
-              console.warn('No se pudo guardar el mapeo de Google Drive:', driveError);
-              // No bloquear la creación del subforum si falla el mapeo de Drive
+              console.warn('No se pudo actualizar el mapeo de Google Drive:', driveError);
             }
           } catch (driveError: any) {
-            // No bloquear la creación del subforum si falla el mapeo de Drive
-            console.warn('No se pudo guardar el mapeo de Google Drive:', driveError);
+            console.warn('No se pudo actualizar el mapeo de Google Drive:', driveError);
           }
-        } else if (driveFolderLink.trim()) {
-          // Si hay un enlace pero no es válido, mostrar advertencia pero no bloquear
-          console.warn('El enlace de Google Drive proporcionado no es válido');
+        } else {
+          setDriveLinkError('El enlace de Google Drive no es válido.');
+        }
+      }
+
+      // Mantener sincronizado el nombre del forum padre con el nombre del cliente
+      if (clientName.trim() !== subforum.client_name.trim()) {
+        const { error: forumError } = await supabase
+          .from('forums')
+          .update({
+            name: clientName.trim(),
+          })
+          .eq('id', subforum.forum_id);
+
+        if (forumError) {
+          // No bloquear si falla esta parte, pero dejar log
+          console.warn('No se pudo actualizar el nombre del forum padre:', forumError);
         }
       }
 
       onSuccess();
     } catch (err: any) {
-      console.error('Error creating subforum:', err);
-      setError(err.message || 'Error al crear el subforo');
+      console.error('Error actualizando cliente:', err);
+      setError(err.message || 'Error al actualizar el cliente');
     } finally {
       setLoading(false);
     }
@@ -198,7 +215,7 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-900">Crear Subforo</h2>
+          <h2 className="text-xl font-bold text-gray-900">Editar Cliente</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition"
@@ -207,10 +224,10 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
           </button>
         </div>
 
-        <form id="create-forum-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3">
+        <form id="edit-client-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre del Subforo
+              Nombre del Espacio de Trabajo
             </label>
             <input
               type="text"
@@ -219,13 +236,13 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
               maxLength={100}
-              placeholder="Ej: Soporte Técnico"
+              placeholder="Ej: AF CLASSIC"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cliente
+              Nombre del Cliente
             </label>
             <input
               type="text"
@@ -234,7 +251,7 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
               maxLength={100}
-              placeholder="Nombre del cliente"
+              placeholder="Nombre legal o comercial del cliente"
             />
           </div>
 
@@ -248,7 +265,7 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
               rows={2}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               maxLength={500}
-              placeholder="Descripción del subforo..."
+              placeholder="Descripción breve del cliente o del espacio de trabajo..."
             />
           </div>
 
@@ -455,27 +472,28 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
                 placeholder="Otro teléfono de contacto"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de cliente
-              </label>
-              <select
-                value={clientType}
-                onChange={(e) => setClientType(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-              >
-                <option value="">Seleccionar tipo de cliente</option>
-                <option value="Monotributista">Monotributista</option>
-                <option value="Responsable Inscripto">Responsable Inscripto</option>
-                <option value="Persona Jurídica">Persona Jurídica</option>
-              </select>
-            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo de cliente
+            </label>
+            <select
+              value={clientType}
+              onChange={(e) => setClientType(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            >
+              <option value="">Seleccionar tipo de cliente</option>
+              <option value="Monotributista">Monotributista</option>
+              <option value="Responsable Inscripto">Responsable Inscripto</option>
+              <option value="Persona Jurídica">Persona Jurídica</option>
+            </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <div className="flex items-center gap-2">
-                <Folder className="w-4 h-4" />
+                <FolderOpen className="w-4 h-4" />
                 Carpeta de Google Drive (opcional)
               </div>
             </label>
@@ -484,11 +502,10 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
               value={driveFolderLink}
               onChange={(e) => {
                 setDriveFolderLink(e.target.value);
-                // Validar en tiempo real
                 if (e.target.value.trim()) {
-                  const folderId = extractFolderIdFromLink(e.target.value.trim());
-                  if (!folderId) {
-                    setDriveLinkError('El enlace no es válido. Debe ser un enlace de carpeta de Google Drive.');
+                  // validación simple, la validación fuerte se hace en el submit
+                  if (!e.target.value.includes('drive.google.com') && !/^[a-zA-Z0-9_-]+$/.test(e.target.value.trim())) {
+                    setDriveLinkError('El enlace no parece ser una carpeta de Google Drive válida.');
                   } else {
                     setDriveLinkError(null);
                   }
@@ -504,20 +521,18 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
             {driveLinkError && (
               <p className="text-xs text-red-600 mt-1">{driveLinkError}</p>
             )}
-            {!driveLinkError && driveFolderLink.trim() && (
-              <p className="text-xs text-green-600 mt-1">✓ Enlace válido</p>
-            )}
             <p className="text-xs text-gray-500 mt-1">
-              Pega el enlace de la carpeta de Google Drive asociada a este cliente.
+              Si cambias el enlace, se actualizará la carpeta de Google Drive asociada a este cliente.
             </p>
-            <button
-              type="button"
-              onClick={() => window.open('https://drive.google.com', '_blank', 'noopener,noreferrer')}
-              className="mt-1 text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Abrir Google Drive
-            </button>
+          </div>
+
+          <div className="flex items-start gap-2 text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg p-2">
+            <FolderOpen className="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0" />
+            <p>
+              Esta edición solo cambia el nombre y la descripción del cliente dentro de la
+              plataforma. Los archivos existentes y la carpeta de Google Drive asociada se
+              mantienen sin cambios.
+            </p>
           </div>
 
           {error && (
@@ -537,14 +552,16 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
           </button>
           <button
             type="submit"
-            form="create-forum-form"
+            form="edit-client-form"
             disabled={loading}
             className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Creando...' : 'Crear Subforo'}
+            {loading ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+
