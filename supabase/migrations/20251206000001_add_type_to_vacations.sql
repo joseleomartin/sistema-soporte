@@ -25,3 +25,4 @@ CREATE INDEX IF NOT EXISTS idx_vacations_type ON vacations(type);
 
 
 
+

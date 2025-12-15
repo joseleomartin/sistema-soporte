@@ -1,92 +1,72 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Extractor mejorado para Banco BBVA
-Optimizado para la estructura real de PDFs de BBVA
+Extractor BBVA - Versión Reconstruida desde Cero
+Diseñado para capturar TODAS las transacciones de forma precisa
 """
 
 import pandas as pd
 import pdfplumber
 import re
-from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 
 class ExtractorBBVAMejorado:
     def __init__(self):
         self.bank_name = "Banco BBVA"
-        self.patrones_fecha = [
-            r'\d{1,2}/\d{1,2}',  # DD/MM
-            r'\d{1,2}/\d{1,2}/\d{4}',  # DD/MM/YYYY
-        ]
-        self.patrones_monto = [
-            r'-?\d+[.,]\d{2}',  # Montos con coma o punto decimal
-            r'\$\s*\d+[.,]\d{2}',  # Montos con símbolo $
-            r'-?\d+\.\d{3},\d{2}',  # Montos con separador de miles (ej: 1.032,55)
-            r'\d+\.\d{3},\d{2}',  # Montos positivos con separador de miles
+        
+        # Patrones optimizados
+        self.patron_fecha = re.compile(r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b')
+        # Monto: debe tener coma decimal (formato: 1.234,56 o -1.234,56)
+        self.patron_monto = re.compile(r'-?\d{1,3}(?:\.\d{3})*,\d{2}')
+        # Saldo: formato grande con múltiples puntos (ej: 46.937.227,09)
+        self.patron_saldo = re.compile(r'\d{1,3}(?:\.\d{3}){1,2},\d{2}')
+        
+        # Palabras que indican headers (excluir)
+        # Nota: 'iva' se removió porque aparece en transacciones reales (ej: "IVA TASA GENERAL")
+        self.headers = {
+            'fecha', 'origen', 'concepto', 'debito', 'credito', 'saldo',
+            'movimientos', 'cuentas', 'detalle', 'banco', 'bbva',
+            'argentina', 'cuit', 'responsable', 'inscripto',
+            'consolidado', 'resumen'
+        }
+        
+        # Patrones que indican headers de tabla (más específicos)
+        self.patrones_header = [
+            re.compile(r'fecha\s+origen\s+concepto', re.IGNORECASE),
+            re.compile(r'debito\s+credito\s+saldo', re.IGNORECASE),
+            re.compile(r'banco\s+bbva\s+argentina', re.IGNORECASE),
         ]
     
-    def extraer_datos(self, pdf_path, excel_salida):
+    def extraer_datos(self, pdf_path: str, excel_salida: str) -> Optional[pd.DataFrame]:
         """Extraer datos del PDF de BBVA y guardar en Excel"""
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 all_data = []
                 
                 for page_num, page in enumerate(pdf.pages):
-                    print(f"Procesando página {page_num + 1}/{len(pdf.pages)}")
+                    print(f"Procesando pagina {page_num + 1}/{len(pdf.pages)}")
                     
-                    # Estrategia 1: Extraer de tablas (más confiable para BBVA)
-                    datos_tabla = self._extraer_de_tablas_bbva(page, page_num + 1)
-                    if datos_tabla:
-                        all_data.extend(datos_tabla)
-                        continue
-                    
-                    # Estrategia 2: Extraer de texto estructurado
-                    datos_texto = self._extraer_de_texto_bbva(page, page_num + 1)
-                    if datos_texto:
-                        all_data.extend(datos_texto)
+                    datos_pagina = self._extraer_de_pagina(page, page_num + 1)
+                    if datos_pagina:
+                        all_data.extend(datos_pagina)
+                        print(f"  Extraidos {len(datos_pagina)} registros")
                 
                 if all_data:
-                    df = self._procesar_datos_bbva(all_data)
-                    self._guardar_excel_bbva(df, excel_salida)
+                    df = self._procesar_y_limpiar_datos(all_data)
+                    self._guardar_excel(df, excel_salida)
                     return df
                 else:
-                    print("No se encontraron datos válidos")
-                    # Retornar DataFrame vacío en lugar de None para compatibilidad con el sistema
-                    df_vacio = pd.DataFrame(columns=['Fecha', 'Origen', 'Concepto', 'Debito', 'Credito', 'Saldo', 'Pagina', 'Tipo'])
-                    self._guardar_excel_bbva(df_vacio, excel_salida)
-                    return df_vacio
+                    print("No se encontraron datos validos")
+                    return None
                     
         except Exception as e:
             print(f"Error extrayendo datos: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
     
-    def _extraer_de_tablas_bbva(self, page, pagina):
-        """Extraer datos de tablas de BBVA con lógica específica"""
-        datos = []
-        
-        try:
-            tables = page.extract_tables()
-            
-            for table_num, table in enumerate(tables):
-                if not table or len(table) < 2:
-                    continue
-                
-                print(f"  Procesando tabla {table_num + 1} con {len(table)} filas")
-                
-                # Buscar filas de transacciones
-                for row_num, row in enumerate(table[1:], 1):  # Saltar header
-                    if self._es_fila_transaccion_bbva_mejorada(row):
-                        data_row = self._procesar_fila_bbva_mejorada(row, pagina, table_num + 1)
-                        if data_row:
-                            datos.append(data_row)
-                            print(f"    Fila {row_num}: {data_row['Fecha']} - {data_row['Concepto'][:30]}...")
-        
-        except Exception as e:
-            print(f"Error procesando tablas: {e}")
-        
-        return datos
-    
-    def _extraer_de_texto_bbva(self, page, pagina):
-        """Extraer datos de texto estructurado de BBVA"""
+    def _extraer_de_pagina(self, page, pagina: int) -> List[Dict]:
+        """Extraer datos de una página"""
         datos = []
         
         try:
@@ -96,463 +76,516 @@ class ExtractorBBVAMejorado:
             
             lines = text.split('\n')
             
-            # BUSCAR SALDO INICIAL EN TEXTO LIBRE
-            for line_num, line in enumerate(lines):
+            # Agrupar líneas continuadas (transacciones que se dividen en múltiples líneas)
+            lineas_agrupadas = self._agrupar_lineas_continuadas(lines)
+            
+            for linea_num, line in enumerate(lineas_agrupadas, 1):
                 line = line.strip()
                 
-                # Verificar si es saldo inicial (formato: 3.943.380,03 o SALDO ANTERIOR 3.943.380,03)
-                if re.match(r'^\d+\.\d{3}\.\d{3},\d{2}$', line) or 'SALDO ANTERIOR' in line.upper():
-                    # Extraer saldo de la línea
-                    saldo_match = re.search(r'\d+\.\d{3}\.\d{3},\d{2}', line)
-                    if saldo_match:
-                        saldo_inicial = self._corregir_saldo_completo(saldo_match.group())
-                        if saldo_inicial:
-                            data_row = {
-                                'Fecha': 'SALDO INICIAL',
-                                'Origen': '',
-                                'Concepto': 'Saldo Inicial',
-                                'Debito': None,
-                                'Credito': None,
-                                'Saldo': saldo_inicial,
-                                'Pagina': pagina,
-                                'Linea': line_num + 1,
-                                'Tipo': 'Saldo Inicial'
-                            }
-                            datos.append(data_row)
-                            print(f"Saldo inicial encontrado en texto: {saldo_inicial}")
-                            print(f"Data row creado: {data_row}")
-                            continue
+                # Filtrar líneas vacías o muy cortas
+                if not line or len(line) < 5:
+                    continue
                 
-                # Procesar líneas de transacción normales
-                if self._es_linea_transaccion_bbva_mejorada(line):
-                    data_row = self._procesar_linea_bbva_mejorada(line, pagina, line_num + 1)
-                    if data_row:
-                        datos.append(data_row)
+                # Procesar línea
+                registro = self._procesar_linea(line, pagina, linea_num)
+                if registro:
+                    datos.append(registro)
         
         except Exception as e:
-            print(f"Error procesando texto: {e}")
+            print(f"Error procesando pagina {pagina}: {e}")
         
         return datos
     
-    def _es_fila_transaccion_bbva_mejorada(self, row):
-        """Validar si una fila contiene una transacción de BBVA (versión mejorada)"""
-        if not row or not any(cell for cell in row if cell):
-            return False
+    def _agrupar_lineas_continuadas(self, lines: List[str]) -> List[str]:
+        """Agrupar líneas que pertenecen a la misma transacción"""
+        lineas_agrupadas = []
+        linea_actual = ""
+        fecha_actual = None
         
-        row_text = ' '.join([str(cell) for cell in row if cell])
+        for line in lines:
+            line = line.strip()
+            if not line or len(line) < 3:
+                continue
+            
+            # Buscar fecha en la línea
+            fecha_match = self.patron_fecha.search(line)
+            tiene_montos = bool(self.patron_monto.search(line))
+            
+            # Verificar si es header (no procesar)
+            es_header = False
+            palabras = line.lower().split()
+            if len(palabras) >= 3:
+                palabras_header = sum(1 for p in palabras if p in self.headers)
+                if palabras_header >= 3:
+                    es_header = True
+                # Verificar patrones de header
+                for patron in self.patrones_header:
+                    if patron.search(line):
+                        es_header = True
+                        break
+            
+            if es_header:
+                # Si es header, guardar línea anterior y continuar
+                if linea_actual:
+                    lineas_agrupadas.append(linea_actual)
+                    linea_actual = ""
+                continue
+            
+            # Si la línea tiene fecha, es el inicio de una nueva transacción
+            if fecha_match:
+                # Guardar línea anterior si existe
+                if linea_actual:
+                    lineas_agrupadas.append(linea_actual)
+                # Iniciar nueva línea
+                linea_actual = line
+                fecha_actual = fecha_match.group()
+            # Si no tiene fecha pero tiene montos
+            elif tiene_montos:
+                if linea_actual:
+                    # Agregar a la línea actual (continuación)
+                    linea_actual += " " + line
+                else:
+                    # Línea independiente con montos pero sin fecha - procesarla igual
+                    # (ej: "LEY NRO 25.413 SOBRE CREDIT-13.750,44")
+                    lineas_agrupadas.append(line)
+            # Si no tiene fecha ni montos, pero la línea actual existe, podría ser continuación del concepto
+            elif linea_actual and len(line) > 5:
+                # Verificar si parece ser continuación (no empieza con número grande, no es header)
+                palabras_header = sum(1 for p in palabras if p in self.headers)
+                if palabras_header < 2:  # No es header
+                    linea_actual += " " + line
+            # Si no tiene fecha ni montos y no hay línea actual, podría ser inicio de concepto
+            # (esperar a ver si viene una línea con montos)
+            elif not linea_actual and len(line) > 10:
+                # Verificar si parece inicio de transacción (no es header)
+                palabras_header = sum(1 for p in palabras if p in self.headers)
+                if palabras_header < 2:
+                    # Podría ser inicio de concepto, guardar temporalmente
+                    linea_actual = line
         
-        # Excluir encabezados y texto informativo
-        excluir = [
-            'fecha', 'origen', 'concepto', 'debito', 'credito', 'saldo',
-            'movimientos', 'cuentas', 'detalle',
-            'banco bbva', 'argentina', 'cuit', 'iva responsable'
-        ]
+        # Agregar última línea si existe
+        if linea_actual:
+            lineas_agrupadas.append(linea_actual)
         
-        if any(palabra in row_text.lower() for palabra in excluir):
-            return False
-        
-        # INCLUIR "SALDO ANTERIOR" como transacción válida
-        if 'saldo anterior' in row_text.lower():
-            return True
-        
-        # INCLUIR SALDO INICIAL: Si la fila contiene solo un saldo (formato: 3.943.380,03)
-        # Patrón correcto: dígitos, punto, 3 dígitos, punto, 3 dígitos, coma, 2 dígitos
-        if re.match(r'^\d+\.\d{3}\.\d{3},\d{2}$', row_text.strip()):
-            return True
-        
-        # Debe tener fecha en formato DD/MM
-        tiene_fecha = re.search(r'\d{1,2}/\d{1,2}', row_text)
-        
-        # Debe tener monto (debito o credito)
-        tiene_monto = any(re.search(pattern, row_text) for pattern in self.patrones_monto)
-        
-        # Debe tener texto descriptivo
-        tiene_descripcion = len(row_text.strip()) > 10
-        
-        return tiene_fecha and (tiene_monto or tiene_descripcion)
+        return lineas_agrupadas
     
-    def _es_linea_transaccion_bbva_mejorada(self, line):
-        """Validar si una línea contiene una transacción de BBVA (versión mejorada)"""
-        if not line or len(line) < 15:
-            return False
+    def _procesar_linea(self, texto: str, pagina: int, linea: int) -> Optional[Dict]:
+        """Procesar una línea de texto y extraer transacción"""
+        texto_original = texto
+        texto_lower = texto.lower()
         
-        # Excluir líneas informativas
-        excluir = [
-            'fecha', 'origen', 'concepto', 'debito', 'credito', 'saldo',
-            'saldo anterior', 'movimientos', 'cuentas', 'detalle',
-            'banco bbva', 'argentina', 'cuit', 'iva responsable'
-        ]
+        # 1. MANEJAR SALDO ANTERIOR / SALDO INICIAL
+        if 'saldo anterior' in texto_lower or 'saldo inicial' in texto_lower:
+            saldo = self._extraer_saldo(texto)
+            if saldo:
+                return {
+                    'Fecha': 'SALDO INICIAL',
+                    'Origen': '',
+                    'Concepto': 'Saldo Anterior',
+                    'Debito': None,
+                    'Credito': None,
+                    'Saldo': saldo,
+                    'Pagina': pagina,
+                    'Linea': linea,
+                    'Tipo': 'Saldo Inicial'
+                }
         
-        if any(palabra in line.lower() for palabra in excluir):
-            return False
+        # 2. BUSCAR FECHA (puede estar en cualquier parte del texto)
+        fecha_match = self.patron_fecha.search(texto)
         
-        # Debe tener fecha
-        tiene_fecha = any(re.search(pattern, line) for pattern in self.patrones_fecha)
+        # Verificar si tiene montos primero (más importante que la fecha)
+        tiene_montos = bool(self.patron_monto.search(texto))
         
-        # Debe tener monto o descripción significativa
-        tiene_monto = any(re.search(pattern, line) for pattern in self.patrones_monto)
-        tiene_descripcion = len(line.strip()) > 20
+        # Si no hay fecha pero hay montos, procesar igual (es una transacción válida)
+        if not fecha_match:
+            if not tiene_montos:
+                # Sin fecha ni montos, no es transacción
+                return None
+            # Tiene montos pero no fecha - procesar igual
+            fecha_match = None
         
-        return tiene_fecha and (tiene_monto or tiene_descripcion)
-    
-    def _procesar_fila_bbva_mejorada(self, row, pagina, tabla):
-        """Procesar fila de tabla de BBVA (versión mejorada)"""
-        try:
-            row_text = ' '.join([str(cell) for cell in row if cell])
+        # 3. VERIFICAR SI ES HEADER (solo si NO tiene montos)
+        # Si tiene montos, definitivamente es una transacción, no un header
+        if tiene_montos:
+            # No es header, continuar procesamiento
+            pass
+        else:
+            # Verificar patrones específicos de headers
+            for patron in self.patrones_header:
+                if patron.search(texto):
+                    return None  # Es un header de tabla
             
-            # MANEJAR SALDO INICIAL: Si la fila contiene solo un saldo (formato: 3.943.380,03)
-            if re.match(r'^\d+\.\d{3}\.\d{3},\d{2}$', row_text.strip()):
-                saldo_inicial = self._corregir_saldo_completo(row_text.strip())
-                if saldo_inicial:
-                    data_row = {
-                        'Fecha': 'SALDO INICIAL',
-                        'Origen': '',
-                        'Concepto': 'Saldo Inicial',
-                        'Debito': None,
-                        'Credito': None,
-                        'Saldo': saldo_inicial,
-                        'Pagina': pagina,
-                        'Tabla': tabla,
-                        'Tipo': 'Saldo Inicial'
-                    }
-                    return data_row
-            
-            # MANEJAR SALDO ANTERIOR ESPECIALMENTE
-            if 'saldo anterior' in row_text.lower():
-                # Extraer el saldo inicial
-                saldo_inicial = self._extraer_saldo_inicial(row_text)
-                if saldo_inicial:
-                    data_row = {
-                        'Fecha': 'SALDO ANTERIOR',
-                        'Origen': '',
-                        'Concepto': 'Saldo Anterior',
-                        'Debito': None,
-                        'Credito': None,
-                        'Saldo': saldo_inicial,
-                        'Pagina': pagina,
-                        'Tabla': tabla,
-                        'Tipo': 'Saldo Inicial'
-                    }
-                    return data_row
-            
-            # Mapear columnas según estructura real de BBVA
-            fecha = self._extraer_campo_seguro(row, 0)
-            origen = self._extraer_campo_seguro(row, 1)
-            concepto = self._extraer_campo_seguro(row, 2)
-            debito_raw = self._extraer_campo_seguro(row, 3)
-            credito_raw = self._extraer_campo_seguro(row, 4)
-            saldo = self._extraer_campo_seguro(row, 5)
-            
-            # Si no hay suficientes columnas, intentar extraer de texto combinado
-            if not fecha and not concepto:
-                fecha = self._extraer_fecha_de_texto(row_text)
-                concepto = self._extraer_concepto_de_texto(row_text)
-                debito_raw = self._extraer_monto_de_texto(row_text, 'debito')
-                credito_raw = self._extraer_monto_de_texto(row_text, 'credito')
-                saldo = self._extraer_monto_de_texto(row_text, 'saldo')
-            
-            # LÓGICA CORRECTA: O débito O crédito, nunca ambos
-            debito_final = None
-            credito_final = None
-            
-            if debito_raw and self._es_monto_valido(debito_raw):
-                # Si hay débito, es una transacción de débito
-                debito_final = self._limpiar_monto_bbva(debito_raw)
-            elif credito_raw and self._es_monto_valido(credito_raw):
-                # Si hay crédito, es una transacción de crédito
-                credito_final = self._limpiar_monto_bbva(credito_raw)
-            
-            data_row = {
-                'Fecha': self._limpiar_fecha_bbva(fecha),
-                'Origen': self._limpiar_texto(origen),
-                'Concepto': self._limpiar_concepto_bbva(concepto),
-                'Debito': debito_final,
-                'Credito': credito_final,
-                'Saldo': self._corregir_saldo_completo(self._limpiar_monto_bbva(saldo)),
-                'Pagina': pagina,
-                'Tabla': tabla,
-                'Tipo': 'Tabla'
-            }
-            
-            # Validar que tenga al menos fecha y concepto
-            if data_row['Fecha'] and data_row['Concepto']:
-                return data_row
-            
-        except Exception as e:
-            print(f"Error procesando fila: {e}")
+            # Verificar palabras de header (solo si no tiene montos)
+            palabras = texto_lower.split()
+            if len(palabras) >= 3:
+                palabras_header = sum(1 for p in palabras if p in self.headers)
+                # Solo filtrar si tiene muchas palabras de header Y no tiene montos
+                if palabras_header >= 3:
+                    return None
         
-        return None
-    
-    def _procesar_linea_bbva_mejorada(self, line, pagina, linea):
-        """Procesar línea de texto de BBVA (versión mejorada)"""
-        try:
-            debito_raw = self._extraer_monto_de_texto(line, 'debito')
-            credito_raw = self._extraer_monto_de_texto(line, 'credito')
-            
-            # LÓGICA CORRECTA: O débito O crédito, nunca ambos
-            debito_final = None
-            credito_final = None
-            
-            if debito_raw and self._es_monto_valido(debito_raw):
-                # Si hay débito, es una transacción de débito
-                debito_final = self._limpiar_monto_bbva(debito_raw)
-            elif credito_raw and self._es_monto_valido(credito_raw):
-                # Si hay crédito, es una transacción de crédito
-                credito_final = self._limpiar_monto_bbva(credito_raw)
-            
-            data_row = {
-                'Fecha': self._extraer_fecha_de_texto(line),
-                'Origen': self._extraer_origen_de_texto(line),
-                'Concepto': self._extraer_concepto_de_texto(line),
-                'Debito': debito_final,
-                'Credito': credito_final,
-                'Saldo': self._corregir_saldo_completo(self._extraer_monto_de_texto(line, 'saldo')),
-                'Pagina': pagina,
-                'Linea': linea,
-                'Tipo': 'Texto'
-            }
-            
-            # Validar que tenga al menos fecha y concepto
-            if data_row['Fecha'] and data_row['Concepto']:
-                return data_row
-            
-        except Exception as e:
-            print(f"Error procesando línea: {e}")
-        
-        return None
-    
-    def _extraer_campo_seguro(self, row, indice):
-        """Extraer campo por índice de forma segura"""
-        if indice < len(row) and row[indice]:
-            return str(row[indice]).strip()
-        return None
-    
-    def _extraer_fecha_de_texto(self, text):
-        """Extraer fecha de texto"""
-        for pattern in self.patrones_fecha:
-            match = re.search(pattern, text)
-            if match:
-                return match.group().strip()
-        return None
-    
-    def _extraer_concepto_de_texto(self, text):
-        """Extraer concepto de texto - CORREGIDO"""
-        # Remover fechas y montos para obtener concepto
-        concepto = text
-        
-        # Remover fechas
-        for pattern in self.patrones_fecha:
-            concepto = re.sub(pattern, '', concepto)
-        
-        # Remover montos (más específico)
-        concepto = re.sub(r'-?\d+\.\d{3},\d{2}', '', concepto)  # Montos con separador de miles
-        concepto = re.sub(r'-?\d+,\d{2}', '', concepto)  # Montos simples
-        concepto = re.sub(r'\$\s*\d+[.,]\d{2}', '', concepto)  # Montos con símbolo $
-        
-        # Remover caracteres especiales y espacios extra
-        concepto = re.sub(r'[\$\s]+', ' ', concepto)
-        concepto = re.sub(r'\s+', ' ', concepto).strip()
-        
-        return concepto if concepto and len(concepto) > 3 else None
-    
-    def _extraer_origen_de_texto(self, text):
-        """Extraer origen de texto"""
-        # Buscar letras o números al inicio
-        match = re.search(r'^([A-Z]|\d+)', text.strip())
-        if match:
-            return match.group().strip()
-        return None
-    
-    def _extraer_monto_de_texto(self, text, tipo):
-        """Extraer monto de texto según tipo - MEJORADO PARA SALDO"""
-        # Buscar todos los formatos de monto de BBVA (más amplio)
-        # Incluir saldos con formato completo: 3.942.821,92
-        montos = re.findall(r'-?\d+\.\d{3}\.\d{3},\d{2}|-?\d+\.\d{3},\d{2}|-?\d+,\d{2}|\d+\.\d{3}\.\d{3},\d{2}|\d+\.\d{3},\d{2}', text)
-        
-        if not montos:
-            return None
-        
-        if tipo == 'debito':
-            # Buscar montos negativos (débitos)
-            for monto in montos:
-                if '-' in monto:
-                    return monto.replace('-', '')  # Remover el signo negativo
-        elif tipo == 'credito':
-            # Buscar montos positivos (créditos)
-            for monto in montos:
-                if '-' not in monto:
-                    return monto
-        elif tipo == 'saldo':
-            # LÓGICA ESPECÍFICA PARA SALDO BBVA: Buscar el monto más grande al final
-            saldos_candidatos = []
-            for monto in montos:
-                # Remover signos negativos para comparar
-                monto_limpio = monto.replace('-', '')
-                # Priorizar montos que parecen saldos (grandes, con formato completo)
-                if len(monto_limpio) >= 8:  # Al menos 8 caracteres para ser un saldo
-                    saldos_candidatos.append(monto_limpio)
-            
-            if saldos_candidatos:
-                # Devolver el monto más grande (probablemente el saldo)
-                saldo_seleccionado = max(saldos_candidatos, key=len)
-                # Aplicar corrección de saldo completo
-                return self._corregir_saldo_completo(saldo_seleccionado)
+        # Si hay fecha, usarla; si no, intentar extraer de otra forma
+        if fecha_match:
+            fecha = fecha_match.group()
+            fecha_normalizada = self._normalizar_fecha(fecha)
+        else:
+            # Buscar fecha en cualquier parte del texto (puede estar después del concepto)
+            todas_fechas = self.patron_fecha.findall(texto)
+            if todas_fechas:
+                # Usar la primera fecha encontrada
+                fecha = todas_fechas[0]
+                fecha_normalizada = self._normalizar_fecha(fecha)
             else:
-                # Si no hay candidatos claros, usar el último monto
-                return montos[-1]
+                # No hay fecha, pero tiene montos - usar fecha vacía o "SIN FECHA"
+                fecha = ""
+                fecha_normalizada = ""
         
-        return None
-    
-    def _limpiar_fecha_bbva(self, fecha):
-        """Limpiar fecha específica de BBVA"""
-        if not fecha or pd.isna(fecha):
+        # 4. BUSCAR MONTOS (buscar de forma más exhaustiva)
+        montos_encontrados = list(self.patron_monto.findall(texto))
+        
+        # Si no se encontraron montos con el patrón estándar, intentar buscar montos pegados al texto
+        # (ej: "TRANSFERENCIA 20298122015-2.836.106,00" o "CREDIT-13.750,44")
+        if not montos_encontrados:
+            # Buscar montos que pueden estar pegados sin espacio: texto-monto
+            # Patrón: cualquier carácter alfanumérico seguido directamente de un monto
+            patron_monto_pegado = re.compile(r'[A-Z0-9](-?\d{1,3}(?:\.\d{3})*,\d{2})')
+            matches_pegados = patron_monto_pegado.findall(texto)
+            if matches_pegados:
+                montos_encontrados.extend(matches_pegados)
+        
+        # Eliminar duplicados manteniendo el orden
+        montos_encontrados = list(dict.fromkeys(montos_encontrados))
+        
+        if not montos_encontrados:
+            # Sin montos, puede ser una línea informativa
             return None
-        fecha_str = str(fecha).strip()
-        # Validar formato DD/MM
-        if re.match(r'\d{1,2}/\d{1,2}', fecha_str):
-            return fecha_str
-        return None
-    
-    def _limpiar_concepto_bbva(self, concepto):
-        """Limpiar concepto específico de BBVA"""
-        if not concepto or pd.isna(concepto):
+        
+        # 5. IDENTIFICAR DÉBITO, CRÉDITO Y SALDO
+        debito = None
+        credito = None
+        saldo = None
+        
+        # Limpiar y validar todos los montos
+        montos_limpios = []
+        for monto_str in montos_encontrados:
+            monto_limpio = self._limpiar_monto(monto_str)
+            if monto_limpio:
+                montos_limpios.append((monto_str, monto_limpio))
+        
+        if not montos_limpios:
             return None
-        concepto_str = str(concepto).strip()
-        # Limpiar caracteres especiales pero mantener el contenido
-        concepto_str = re.sub(r'\s+', ' ', concepto_str)
-        return concepto_str if concepto_str and len(concepto_str) > 3 else None
+        
+        # El último monto es siempre el saldo (formato estándar BBVA)
+        if len(montos_limpios) > 0:
+            saldo = montos_limpios[-1][1]
+            montos_sin_saldo = montos_limpios[:-1]
+        else:
+            montos_sin_saldo = []
+        
+        # Procesar montos que no son saldo (débito o crédito)
+        for monto_str, monto_limpio in montos_sin_saldo:
+            # Si es negativo, es débito
+            if monto_str.startswith('-'):
+                if not debito:  # Solo tomar el primero
+                    debito = monto_limpio
+            else:
+                # Si es positivo, es crédito
+                if not credito:  # Solo tomar el primero
+                    credito = monto_limpio
+        
+        # Si solo hay un monto y no se asignó como saldo, podría ser débito/crédito
+        # (caso especial: transacciones con un solo monto)
+        if len(montos_limpios) == 1 and not debito and not credito:
+            monto_str, monto_limpio = montos_limpios[0]
+            if monto_str.startswith('-'):
+                debito = monto_limpio
+                saldo = None  # No hay saldo si solo hay un monto
+            else:
+                credito = monto_limpio
+                saldo = None
+        
+        # 6. EXTRAER ORIGEN
+        if fecha:
+            origen = self._extraer_origen(texto, fecha)
+        else:
+            # Si no hay fecha, buscar origen al inicio del texto
+            origen = self._extraer_origen_sin_fecha(texto)
+        
+        # 7. EXTRAER CONCEPTO
+        concepto = self._extraer_concepto(texto, fecha if fecha else "", origen, debito, credito, saldo)
+        
+        # 8. VALIDAR REGISTRO
+        # Validar que tenga al menos un monto (débito, crédito o saldo)
+        if not debito and not credito and not saldo:
+            return None  # Sin montos, no es transacción válida
+        
+        # Si el concepto es muy corto pero tiene montos, intentar extraer mejor
+        if not concepto or len(concepto.strip()) < 3:
+            # Si tiene montos, es una transacción válida aunque el concepto sea corto
+            # Intentar extraer concepto de forma más permisiva
+            concepto_alternativo = self._extraer_concepto_alternativo(texto, fecha if fecha else "", origen)
+            if concepto_alternativo and len(concepto_alternativo.strip()) >= 3:
+                concepto = concepto_alternativo
+            else:
+                # Si aún así no hay concepto, pero tiene montos, usar texto limpio
+                if debito or credito or saldo:
+                    # Limpiar texto pero mantener palabras importantes
+                    concepto_temp = texto
+                    # Remover fecha
+                    if fecha:
+                        concepto_temp = concepto_temp.replace(fecha, '', 1)
+                    # Remover origen si existe
+                    if origen:
+                        concepto_temp = re.sub(r'^\s*' + re.escape(origen) + r'\s+', '', concepto_temp, count=1)
+                        concepto_temp = re.sub(r'^\s*' + re.escape(origen) + r'\b', '', concepto_temp, count=1)
+                    # Remover solo montos, mantener el resto
+                    concepto_temp = re.sub(r'-?\d{1,3}(?:\.\d{3})*,\d{2}', '', concepto_temp)
+                    concepto_temp = re.sub(r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b', '', concepto_temp)
+                    concepto_temp = re.sub(r'\s+', ' ', concepto_temp).strip()
+                    concepto = concepto_temp[:80] if concepto_temp else "Transaccion sin concepto"
+                else:
+                    return None
+        
+        # 9. CREAR REGISTRO
+        # Si no hay fecha pero hay montos, usar "SIN FECHA" o dejar vacío
+        fecha_final = fecha_normalizada if fecha_normalizada else "SIN FECHA"
+        
+        registro = {
+            'Fecha': fecha_final,
+            'Origen': origen or '',
+            'Concepto': concepto.strip() if concepto else "Transaccion",
+            'Debito': debito,
+            'Credito': credito,
+            'Saldo': saldo,
+            'Pagina': pagina,
+            'Linea': linea,
+            'Tipo': 'Transaccion'
+        }
+        
+        return registro
     
-    def _limpiar_monto_bbva(self, monto):
-        """Limpiar monto específico de BBVA - CORREGIDO"""
-        if not monto or pd.isna(monto):
-            return None
-        monto_str = str(monto).strip()
-        # Remover símbolos de moneda y espacios
-        monto_str = re.sub(r'[\$\s]', '', monto_str)
-        # Validar formatos de BBVA: 1.032,55, 558,11, 3.943.380,03
-        if re.match(r'^-?\d+\.\d{3}\.\d{3},\d{2}$', monto_str) or re.match(r'^-?\d+\.\d{3},\d{2}$', monto_str) or re.match(r'^-?\d+,\d{2}$', monto_str):
-            return monto_str
-        elif re.match(r'^\d+\.\d{3}\.\d{3},\d{2}$', monto_str) or re.match(r'^\d+\.\d{3},\d{2}$', monto_str) or re.match(r'^\d+,\d{2}$', monto_str):
-            return monto_str
-        return None
+    def _normalizar_fecha(self, fecha: str) -> str:
+        """Normalizar formato de fecha a DD/MM"""
+        if '/' not in fecha:
+            return fecha
+        
+        partes = fecha.split('/')
+        if len(partes) >= 2:
+            dia = partes[0].zfill(2)
+            mes = partes[1].zfill(2)
+            return f"{dia}/{mes}"
+        
+        return fecha
     
-    def _limpiar_texto(self, texto):
-        """Limpiar texto"""
-        if not texto or pd.isna(texto):
-            return None
-        return str(texto).strip()
-    
-    def _es_monto_valido(self, monto):
-        """Validar si un monto es válido para BBVA"""
-        if not monto or pd.isna(monto):
-            return False
-        monto_str = str(monto).strip()
-        # Validar formatos de BBVA: 1.032,55 o 558,11
-        return re.match(r'^-?\d+\.\d{3},\d{2}$', monto_str) or re.match(r'^-?\d+,\d{2}$', monto_str)
-    
-    def _extraer_saldo_inicial(self, text):
-        """Extraer saldo inicial de texto que contiene 'SALDO ANTERIOR'"""
-        # Buscar el patrón de saldo inicial: 3.943.380,03
-        patron_saldo = r'\d+\.\d{3},\d{2}'
-        match = re.search(patron_saldo, text)
+    def _extraer_saldo(self, texto: str) -> Optional[str]:
+        """Extraer saldo de texto que contiene 'SALDO ANTERIOR'"""
+        match = self.patron_saldo.search(texto)
         if match:
-            return match.group()
+            return self._limpiar_monto(match.group())
+        
+        # También buscar cualquier monto grande
+        montos = self.patron_monto.findall(texto)
+        if montos:
+            # El más grande probablemente es el saldo
+            return self._limpiar_monto(max(montos, key=len))
+        
         return None
     
-    def _corregir_saldo_completo(self, saldo):
-        """Corregir saldo que puede estar truncado (faltando el 3.) - MEJORADO"""
-        if not saldo or pd.isna(saldo):
+    def _extraer_origen(self, texto: str, fecha: str) -> Optional[str]:
+        """Extraer origen (código corto después de la fecha)"""
+        # Buscar posición de la fecha
+        pos_fecha = texto.find(fecha)
+        if pos_fecha == -1:
             return None
         
-        saldo_str = str(saldo).strip()
+        # Texto después de la fecha
+        texto_despues = texto[pos_fecha + len(fecha):].strip()
         
-        # Si el saldo ya tiene el formato completo, devolverlo tal como está
-        if re.match(r'^\d+\.\d{3},\d{2}$', saldo_str) and len(saldo_str) >= 10:
-            return saldo_str
+        if not texto_despues:
+            return None
         
-        # Usar la función de detección de saldos truncados
-        saldo_corregido = self._detectar_saldo_truncado(saldo_str)
+        # Primero intentar detectar patrones como "D 587", "D 500", etc. (letra + número)
+        match = re.search(r'^([A-Z]\s*\d{1,4})\b', texto_despues)
+        if match:
+            origen = match.group(1).replace(' ', '')
+            if 1 <= len(origen) <= 6:
+                return origen
         
-        # Si se detectó y corrigió un saldo truncado, devolverlo
-        if saldo_corregido != saldo_str:
-            return saldo_corregido
+        # Si no se encontró el patrón, buscar palabra simple
+        palabras = texto_despues.split()
+        if palabras:
+            primera = palabras[0].strip()
+            # Limpiar caracteres especiales
+            primera_limpia = re.sub(r'[^\w]', '', primera)
+            
+            # Si es corta y alfanumérica, probablemente es origen
+            if 1 <= len(primera_limpia) <= 5 and primera_limpia.isalnum():
+                return primera_limpia
         
-        # Si no coincide con ningún patrón, devolver el saldo original
-        return saldo_str
+        return None
     
-    def _detectar_saldo_truncado(self, saldo_str):
-        """Detectar si un saldo está truncado y corregirlo"""
-        if not saldo_str:
-            return saldo_str
+    def _extraer_origen_sin_fecha(self, texto: str) -> Optional[str]:
+        """Extraer origen cuando no hay fecha visible (buscar al inicio)"""
+        # Buscar patrones comunes de origen al inicio: "D 500", "D 587", etc.
+        match = re.search(r'^([A-Z]\s*\d{1,4})\b', texto)
+        if match:
+            origen = match.group(1).replace(' ', '')
+            if 1 <= len(origen) <= 6:
+                return origen
         
-        # Patrones comunes de saldos truncados en BBVA
-        patrones_truncados = [
-            (r'^(\d{3}\.\d{3},\d{2})$', '3.\\1'),  # 942.821,92 -> 3.942.821,92
-            (r'^(\d{2}\.\d{3},\d{2})$', '3.0\\1'),  # 28.198,58 -> 3.028.198,58
-            (r'^(\d{1}\.\d{3},\d{2})$', '3.00\\1'), # 5.270,97 -> 3.005.270,97
-        ]
+        # Buscar cualquier código corto alfanumérico al inicio
+        palabras = texto.split()
+        if palabras:
+            primera = palabras[0].strip()
+            primera_limpia = re.sub(r'[^\w]', '', primera)
+            if 1 <= len(primera_limpia) <= 5 and primera_limpia.isalnum():
+                return primera_limpia
         
-        for patron, reemplazo in patrones_truncados:
-            if re.match(patron, saldo_str):
-                return re.sub(patron, reemplazo, saldo_str)
-        
-        return saldo_str
+        return None
     
-    def _procesar_datos_bbva(self, datos):
-        """Procesar y limpiar datos de BBVA"""
+    def _extraer_concepto(
+        self, 
+        texto: str, 
+        fecha: str, 
+        origen: Optional[str],
+        debito: Optional[str],
+        credito: Optional[str],
+        saldo: Optional[str]
+    ) -> Optional[str]:
+        """Extraer concepto limpiando fechas, origen y montos"""
+        concepto = texto
+        
+        # Remover fecha (solo la primera ocurrencia) si existe
+        if fecha:
+            concepto = concepto.replace(fecha, '', 1)
+        
+        # Remover origen si existe (solo la primera ocurrencia)
+        if origen:
+            # Buscar y remover origen al inicio (después de fecha)
+            # Intentar con espacios: "D587 " o "D 587 "
+            concepto = re.sub(r'^\s*' + re.escape(origen) + r'\s+', '', concepto, count=1)
+            # También intentar sin espacios pero con límite de palabra
+            concepto = re.sub(r'^\s*' + re.escape(origen) + r'\b', '', concepto, count=1)
+            # Si el origen tiene formato "D587", también intentar "D 587"
+            if len(origen) > 1 and origen[0].isalpha() and origen[1:].isdigit():
+                origen_con_espacio = origen[0] + ' ' + origen[1:]
+                concepto = re.sub(r'^\s*' + re.escape(origen_con_espacio) + r'\s+', '', concepto, count=1)
+        
+        # Remover todos los montos (pero mantener el formato)
+        # Primero remover saldo si existe
+        if saldo:
+            concepto = concepto.replace(saldo, '')
+        
+        # Remover débito y crédito
+        if debito:
+            concepto = concepto.replace(f"-{debito}", '')
+            concepto = concepto.replace(debito, '')
+        if credito:
+            concepto = concepto.replace(credito, '')
+        
+        # Remover cualquier monto restante con regex
+        concepto = re.sub(r'-?\d{1,3}(?:\.\d{3})*,\d{2}', '', concepto)
+        
+        # Remover fechas que puedan quedar (formato DD/MM/YYYY)
+        concepto = re.sub(r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b', '', concepto)
+        
+        # Remover números sueltos largos al final (códigos de referencia)
+        # Pero mantener números que sean parte de palabras (ej: "TR.NE4005246", "25.413")
+        concepto = re.sub(r'\b\d{6,}\b', '', concepto)  # Números muy largos sueltos
+        
+        # Limpiar espacios múltiples
+        concepto = re.sub(r'\s+', ' ', concepto)
+        concepto = concepto.strip()
+        
+        # Remover caracteres especiales al inicio/fin
+        concepto = concepto.strip(' -/.,:')
+        
+        return concepto if concepto and len(concepto) > 2 else None
+    
+    def _extraer_concepto_alternativo(
+        self, 
+        texto: str, 
+        fecha: str, 
+        origen: Optional[str]
+    ) -> Optional[str]:
+        """Método alternativo para extraer concepto cuando el método principal falla"""
+        concepto = texto
+        
+        # Remover fecha si existe
+        if fecha:
+            concepto = concepto.replace(fecha, '', 1)
+        
+        # Remover origen
+        if origen:
+            concepto = re.sub(r'^\s*' + re.escape(origen) + r'\s+', '', concepto, count=1)
+        
+        # Remover solo montos grandes (saldos), mantener montos pequeños que puedan ser parte del concepto
+        concepto = re.sub(r'\d{1,3}(?:\.\d{3}){2,},\d{2}', '', concepto)  # Saldos grandes
+        
+        # Limpiar espacios
+        concepto = re.sub(r'\s+', ' ', concepto)
+        concepto = concepto.strip()
+        
+        return concepto if concepto and len(concepto) >= 3 else None
+    
+    def _limpiar_monto(self, monto: str) -> Optional[str]:
+        """Limpiar y normalizar monto"""
+        if not monto:
+            return None
+        
+        monto_str = str(monto).strip()
+        
+        # Remover espacios y símbolos
+        monto_str = re.sub(r'[\s\$]', '', monto_str)
+        
+        # Remover signo negativo (se maneja por separado)
+        es_negativo = monto_str.startswith('-')
+        if es_negativo:
+            monto_str = monto_str[1:]
+        
+        # Validar formato: debe tener coma decimal
+        if re.match(r'^\d{1,3}(?:\.\d{3})*,\d{2}$', monto_str):
+            return monto_str
+        
+        return None
+    
+    def _procesar_y_limpiar_datos(self, datos: List[Dict]) -> pd.DataFrame:
+        """Procesar y limpiar datos extraídos"""
         if not datos:
             return pd.DataFrame()
         
         df = pd.DataFrame(datos)
         
-        # Limpiar datos (pero preservar saldo inicial)
-        print(f"Datos antes de limpiar: {len(df)} registros")
-        saldo_inicial_antes = df[df['Tipo'] == 'Saldo Inicial']
-        if not saldo_inicial_antes.empty:
-            print(f"Saldo inicial antes de limpiar: {saldo_inicial_antes.iloc[0].to_dict()}")
+        # Eliminar duplicados exactos
+        df = df.drop_duplicates()
         
-        df = df.dropna(subset=['Fecha', 'Concepto'], how='all')
+        # Ordenar por página y línea
+        if 'Pagina' in df.columns and 'Linea' in df.columns:
+            df = df.sort_values(['Pagina', 'Linea'])
         
-        print(f"Datos después de limpiar: {len(df)} registros")
-        saldo_inicial_despues = df[df['Tipo'] == 'Saldo Inicial']
-        if not saldo_inicial_despues.empty:
-            print(f"Saldo inicial después de limpiar: {saldo_inicial_despues.iloc[0].to_dict()}")
-        else:
-            print("Saldo inicial perdido durante la limpieza")
-        
-        # Limpiar fechas
-        if 'Fecha' in df.columns:
-            df['Fecha'] = df['Fecha'].apply(self._limpiar_fecha_bbva)
-        
-        # Limpiar montos
-        for col in ['Debito', 'Credito', 'Saldo']:
-            if col in df.columns:
-                df[col] = df[col].apply(self._limpiar_monto_bbva)
-        
-        # Limpiar conceptos
-        if 'Concepto' in df.columns:
-            df['Concepto'] = df['Concepto'].apply(self._limpiar_concepto_bbva)
+        # Limpiar valores NaN
+        df['Concepto'] = df['Concepto'].fillna('')
+        df['Origen'] = df['Origen'].fillna('')
         
         return df
     
-    def _guardar_excel_bbva(self, df, excel_path):
-        """Guardar Excel con formato específico para BBVA"""
+    def _guardar_excel(self, df: pd.DataFrame, excel_path: str):
+        """Guardar DataFrame en Excel con formato"""
         try:
             with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
                 df.to_excel(writer, sheet_name='Transacciones BBVA', index=False)
                 
-                # Ajustar columnas específicas para BBVA
+                # Ajustar ancho de columnas
                 worksheet = writer.sheets['Transacciones BBVA']
                 column_widths = {
-                    'A': 15,  # Fecha
-                    'B': 10,  # Origen
-                    'C': 60,  # Concepto
+                    'A': 12,  # Fecha
+                    'B': 8,   # Origen
+                    'C': 50,  # Concepto
                     'D': 15,  # Debito
                     'E': 15,  # Credito
-                    'F': 15,  # Saldo
-                    'G': 8,   # Página
-                    'H': 8,   # Tabla/Linea
-                    'I': 10   # Tipo
+                    'F': 18,  # Saldo
+                    'G': 8,   # Pagina
+                    'H': 8,   # Linea
+                    'I': 12   # Tipo
                 }
                 
                 for col, width in column_widths.items():
@@ -564,9 +597,381 @@ class ExtractorBBVAMejorado:
             
         except Exception as e:
             print(f"Error guardando Excel: {e}")
+            import traceback
+            traceback.print_exc()
 
 # Función principal para compatibilidad
-def extraer_datos_bbva(pdf_path, excel_salida):
+def extraer_datos_bbva(pdf_path: str, excel_salida: str) -> Optional[pd.DataFrame]:
+    """Función principal para extraer datos de BBVA"""
+    extractor = ExtractorBBVAMejorado()
+    return extractor.extraer_datos(pdf_path, excel_salida)
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Extractor BBVA - Versión Reconstruida desde Cero
+Diseñado para capturar TODAS las transacciones de forma precisa
+"""
+
+import pandas as pd
+import pdfplumber
+import re
+from typing import List, Dict, Optional
+
+class ExtractorBBVAMejorado:
+    def __init__(self):
+        self.bank_name = "Banco BBVA"
+        
+        # Patrones optimizados
+        self.patron_fecha = re.compile(r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b')
+        # Monto: debe tener coma decimal (formato: 1.234,56 o -1.234,56)
+        self.patron_monto = re.compile(r'-?\d{1,3}(?:\.\d{3})*,\d{2}')
+        # Saldo: formato grande con múltiples puntos (ej: 46.937.227,09)
+        self.patron_saldo = re.compile(r'\d{1,3}(?:\.\d{3}){1,2},\d{2}')
+        
+        # Palabras que indican headers (excluir)
+        self.headers = {
+            'fecha', 'origen', 'concepto', 'debito', 'credito', 'saldo',
+            'movimientos', 'cuentas', 'detalle', 'banco', 'bbva',
+            'argentina', 'cuit', 'iva', 'responsable', 'inscripto',
+            'consolidado', 'resumen'
+        }
+    
+    def extraer_datos(self, pdf_path: str, excel_salida: str) -> Optional[pd.DataFrame]:
+        """Extraer datos del PDF de BBVA y guardar en Excel"""
+        try:
+            with pdfplumber.open(pdf_path) as pdf:
+                all_data = []
+                
+                for page_num, page in enumerate(pdf.pages):
+                    print(f"Procesando pagina {page_num + 1}/{len(pdf.pages)}")
+                    
+                    datos_pagina = self._extraer_de_pagina(page, page_num + 1)
+                    if datos_pagina:
+                        all_data.extend(datos_pagina)
+                        print(f"  Extraidos {len(datos_pagina)} registros")
+                
+                if all_data:
+                    df = self._procesar_y_limpiar_datos(all_data)
+                    self._guardar_excel(df, excel_salida)
+                    return df
+                else:
+                    print("No se encontraron datos validos")
+                    return None
+                    
+        except Exception as e:
+            print(f"Error extrayendo datos: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    def _extraer_de_pagina(self, page, pagina: int) -> List[Dict]:
+        """Extraer datos de una página"""
+        datos = []
+        
+        try:
+            text = page.extract_text()
+            if not text:
+                return datos
+            
+            lines = text.split('\n')
+            
+            for linea_num, line in enumerate(lines, 1):
+                line = line.strip()
+                
+                # Filtrar líneas vacías o muy cortas
+                if not line or len(line) < 5:
+                    continue
+                
+                # Procesar línea
+                registro = self._procesar_linea(line, pagina, linea_num)
+                if registro:
+                    datos.append(registro)
+        
+        except Exception as e:
+            print(f"Error procesando pagina {pagina}: {e}")
+        
+        return datos
+    
+    def _procesar_linea(self, texto: str, pagina: int, linea: int) -> Optional[Dict]:
+        """Procesar una línea de texto y extraer transacción"""
+        texto_original = texto
+        texto_lower = texto.lower()
+        
+        # 1. MANEJAR SALDO ANTERIOR / SALDO INICIAL
+        if 'saldo anterior' in texto_lower or 'saldo inicial' in texto_lower:
+            saldo = self._extraer_saldo(texto)
+            if saldo:
+                return {
+                    'Fecha': 'SALDO INICIAL',
+                    'Origen': '',
+                    'Concepto': 'Saldo Anterior',
+                    'Debito': None,
+                    'Credito': None,
+                    'Saldo': saldo,
+                    'Pagina': pagina,
+                    'Linea': linea,
+                    'Tipo': 'Saldo Inicial'
+                }
+        
+        # 2. VERIFICAR SI ES HEADER
+        palabras = texto_lower.split()
+        if len(palabras) >= 3:
+            palabras_header = sum(1 for p in palabras if p in self.headers)
+            if palabras_header >= 3:  # Si tiene 3+ palabras de header, es header
+                return None
+        
+        # 3. BUSCAR FECHA (requisito obligatorio)
+        fecha_match = self.patron_fecha.search(texto)
+        if not fecha_match:
+            return None  # Sin fecha, no es transacción
+        
+        fecha = fecha_match.group()
+        fecha_normalizada = self._normalizar_fecha(fecha)
+        
+        # 4. BUSCAR MONTOS
+        montos_encontrados = self.patron_monto.findall(texto)
+        
+        if not montos_encontrados:
+            # Sin montos, puede ser una línea informativa
+            return None
+        
+        # 5. IDENTIFICAR DÉBITO, CRÉDITO Y SALDO
+        debito = None
+        credito = None
+        saldo = None
+        
+        # El último monto es siempre el saldo
+        if len(montos_encontrados) > 0:
+            saldo = self._limpiar_monto(montos_encontrados[-1])
+            montos_sin_saldo = montos_encontrados[:-1]
+        else:
+            montos_sin_saldo = []
+        
+        # Procesar montos que no son saldo
+        for monto_str in montos_sin_saldo:
+            monto_limpio = self._limpiar_monto(monto_str)
+            if not monto_limpio:
+                continue
+            
+            # Si es negativo, es débito
+            if monto_str.startswith('-'):
+                if not debito:  # Solo tomar el primero
+                    debito = monto_limpio
+            else:
+                # Si es positivo, es crédito
+                if not credito:  # Solo tomar el primero
+                    credito = monto_limpio
+        
+        # 6. EXTRAER ORIGEN
+        origen = self._extraer_origen(texto, fecha)
+        
+        # 7. EXTRAER CONCEPTO
+        concepto = self._extraer_concepto(texto, fecha, origen, debito, credito, saldo)
+        
+        # 8. VALIDAR REGISTRO
+        if not concepto or len(concepto.strip()) < 3:
+            return None
+        
+        # Validar que tenga al menos un monto (débito, crédito o saldo)
+        if not debito and not credito and not saldo:
+            return None  # Sin montos, no es transacción válida
+        
+        # 9. CREAR REGISTRO
+        registro = {
+            'Fecha': fecha_normalizada,
+            'Origen': origen or '',
+            'Concepto': concepto.strip(),
+            'Debito': debito,
+            'Credito': credito,
+            'Saldo': saldo,
+            'Pagina': pagina,
+            'Linea': linea,
+            'Tipo': 'Transaccion'
+        }
+        
+        return registro
+    
+    def _normalizar_fecha(self, fecha: str) -> str:
+        """Normalizar formato de fecha a DD/MM"""
+        if '/' not in fecha:
+            return fecha
+        
+        partes = fecha.split('/')
+        if len(partes) >= 2:
+            dia = partes[0].zfill(2)
+            mes = partes[1].zfill(2)
+            return f"{dia}/{mes}"
+        
+        return fecha
+    
+    def _extraer_saldo(self, texto: str) -> Optional[str]:
+        """Extraer saldo de texto que contiene 'SALDO ANTERIOR'"""
+        match = self.patron_saldo.search(texto)
+        if match:
+            return self._limpiar_monto(match.group())
+        
+        # También buscar cualquier monto grande
+        montos = self.patron_monto.findall(texto)
+        if montos:
+            # El más grande probablemente es el saldo
+            return self._limpiar_monto(max(montos, key=len))
+        
+        return None
+    
+    def _extraer_origen(self, texto: str, fecha: str) -> Optional[str]:
+        """Extraer origen (código corto después de la fecha)"""
+        # Buscar posición de la fecha
+        pos_fecha = texto.find(fecha)
+        if pos_fecha == -1:
+            return None
+        
+        # Texto después de la fecha
+        texto_despues = texto[pos_fecha + len(fecha):].strip()
+        
+        if not texto_despues:
+            return None
+        
+        # Origen suele ser corto (1-5 caracteres) y alfanumérico
+        palabras = texto_despues.split()
+        if palabras:
+            primera = palabras[0].strip()
+            # Limpiar caracteres especiales
+            primera_limpia = re.sub(r'[^\w]', '', primera)
+            
+            # Si es corta y alfanumérica, probablemente es origen
+            if 1 <= len(primera_limpia) <= 5 and primera_limpia.isalnum():
+                return primera_limpia
+        
+        return None
+    
+    def _extraer_concepto(
+        self, 
+        texto: str, 
+        fecha: str, 
+        origen: Optional[str],
+        debito: Optional[str],
+        credito: Optional[str],
+        saldo: Optional[str]
+    ) -> Optional[str]:
+        """Extraer concepto limpiando fechas, origen y montos"""
+        concepto = texto
+        
+        # Remover fecha (solo la primera ocurrencia)
+        concepto = concepto.replace(fecha, '', 1)
+        
+        # Remover origen si existe (solo la primera ocurrencia)
+        if origen:
+            # Buscar y remover origen al inicio (después de fecha)
+            concepto = re.sub(r'^\s*' + re.escape(origen) + r'\s+', '', concepto, count=1)
+            # También intentar sin espacios
+            concepto = re.sub(r'^\s*' + re.escape(origen) + r'\b', '', concepto, count=1)
+        
+        # Remover todos los montos (pero mantener el formato)
+        # Primero remover saldo si existe
+        if saldo:
+            concepto = concepto.replace(saldo, '')
+        
+        # Remover débito y crédito
+        if debito:
+            concepto = concepto.replace(f"-{debito}", '')
+            concepto = concepto.replace(debito, '')
+        if credito:
+            concepto = concepto.replace(credito, '')
+        
+        # Remover cualquier monto restante con regex
+        concepto = re.sub(r'-?\d{1,3}(?:\.\d{3})*,\d{2}', '', concepto)
+        
+        # Remover fechas que puedan quedar (formato DD/MM/YYYY)
+        concepto = re.sub(r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b', '', concepto)
+        
+        # Remover números sueltos largos al final (códigos de referencia)
+        # Pero mantener números que sean parte de palabras (ej: "TR.NE4005246", "25.413")
+        concepto = re.sub(r'\b\d{6,}\b', '', concepto)  # Números muy largos sueltos
+        
+        # Limpiar espacios múltiples
+        concepto = re.sub(r'\s+', ' ', concepto)
+        concepto = concepto.strip()
+        
+        # Remover caracteres especiales al inicio/fin
+        concepto = concepto.strip(' -/.,:')
+        
+        return concepto if concepto and len(concepto) > 2 else None
+    
+    def _limpiar_monto(self, monto: str) -> Optional[str]:
+        """Limpiar y normalizar monto"""
+        if not monto:
+            return None
+        
+        monto_str = str(monto).strip()
+        
+        # Remover espacios y símbolos
+        monto_str = re.sub(r'[\s\$]', '', monto_str)
+        
+        # Remover signo negativo (se maneja por separado)
+        es_negativo = monto_str.startswith('-')
+        if es_negativo:
+            monto_str = monto_str[1:]
+        
+        # Validar formato: debe tener coma decimal
+        if re.match(r'^\d{1,3}(?:\.\d{3})*,\d{2}$', monto_str):
+            return monto_str
+        
+        return None
+    
+    def _procesar_y_limpiar_datos(self, datos: List[Dict]) -> pd.DataFrame:
+        """Procesar y limpiar datos extraídos"""
+        if not datos:
+            return pd.DataFrame()
+        
+        df = pd.DataFrame(datos)
+        
+        # Eliminar duplicados exactos
+        df = df.drop_duplicates()
+        
+        # Ordenar por página y línea
+        if 'Pagina' in df.columns and 'Linea' in df.columns:
+            df = df.sort_values(['Pagina', 'Linea'])
+        
+        # Limpiar valores NaN
+        df['Concepto'] = df['Concepto'].fillna('')
+        df['Origen'] = df['Origen'].fillna('')
+        
+        return df
+    
+    def _guardar_excel(self, df: pd.DataFrame, excel_path: str):
+        """Guardar DataFrame en Excel con formato"""
+        try:
+            with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='Transacciones BBVA', index=False)
+                
+                # Ajustar ancho de columnas
+                worksheet = writer.sheets['Transacciones BBVA']
+                column_widths = {
+                    'A': 12,  # Fecha
+                    'B': 8,   # Origen
+                    'C': 50,  # Concepto
+                    'D': 15,  # Debito
+                    'E': 15,  # Credito
+                    'F': 18,  # Saldo
+                    'G': 8,   # Pagina
+                    'H': 8,   # Linea
+                    'I': 12   # Tipo
+                }
+                
+                for col, width in column_widths.items():
+                    if col in worksheet.column_dimensions:
+                        worksheet.column_dimensions[col].width = width
+            
+            print(f"Excel guardado: {excel_path}")
+            print(f"Total de registros: {len(df)}")
+            
+        except Exception as e:
+            print(f"Error guardando Excel: {e}")
+            import traceback
+            traceback.print_exc()
+
+# Función principal para compatibilidad
+def extraer_datos_bbva(pdf_path: str, excel_salida: str) -> Optional[pd.DataFrame]:
     """Función principal para extraer datos de BBVA"""
     extractor = ExtractorBBVAMejorado()
     return extractor.extraer_datos(pdf_path, excel_salida)

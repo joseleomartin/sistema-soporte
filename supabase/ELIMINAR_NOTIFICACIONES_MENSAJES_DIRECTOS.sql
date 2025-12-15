@@ -25,3 +25,4 @@ DROP TRIGGER IF EXISTS trigger_notify_direct_message ON direct_messages;
 
 
 
+

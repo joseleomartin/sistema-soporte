@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare, Cake, Ticket } from 'lucide-react';
+import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare, Cake, Ticket, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
-  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention' | 'task_mention' | 'direct_message' | 'birthday' | 'ticket_created';
+  type: 'calendar_event' | 'ticket_comment' | 'ticket_status' | 'task_assigned' | 'forum_mention' | 'task_mention' | 'direct_message' | 'birthday' | 'ticket_created' | 'time_entry_reminder';
   title: string;
   message: string;
   read: boolean;
@@ -24,9 +24,10 @@ interface NotificationBellProps {
   onNavigateToTasks?: () => void;
   onNavigateToForum?: (subforumId: string) => void;
   onNavigateToSocial?: () => void;
+  onNavigateToTimeTracking?: () => void;
 }
 
-export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial }: NotificationBellProps) {
+export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial, onNavigateToTimeTracking }: NotificationBellProps) {
   const { profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -175,8 +176,23 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
     setShowDropdown(false);
     
     // Navegar según el tipo de notificación
-    if (notification.type === 'calendar_event' && onNavigateToCalendar) {
-      onNavigateToCalendar();
+    if (notification.type === 'calendar_event') {
+      const isHoursReminder =
+        notification.title.toLowerCase().includes('recordatorio de carga de horas') ||
+        notification.message.toLowerCase().includes('recordatorio diario para que cargues las horas') ||
+        notification.metadata?.type === 'time_entry_reminder';
+
+      if (isHoursReminder) {
+        // Ir a Carga de Horas
+        if (onNavigateToTimeTracking) {
+          onNavigateToTimeTracking();
+        } else {
+          window.location.hash = 'time-tracking';
+        }
+      } else if (onNavigateToCalendar) {
+        // Otros eventos de calendario → calendario
+        onNavigateToCalendar();
+      }
     } else if ((notification.type === 'ticket_comment' || notification.type === 'ticket_status') && notification.ticket_id && onNavigateToTicket) {
       onNavigateToTicket(notification.ticket_id);
     } else if (notification.type === 'task_assigned' && notification.task_id) {
@@ -239,6 +255,14 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         // Fallback: usar window.location si no hay callback
         window.location.hash = `tickets?ticket=${notification.ticket_id}`;
       }
+    } else if (notification.type === 'time_entry_reminder') {
+      // Navegar a Carga de Horas
+      if (onNavigateToTimeTracking) {
+        onNavigateToTimeTracking();
+      } else {
+        // Fallback: usar window.location si no hay callback
+        window.location.hash = 'time-tracking';
+      }
     }
   };
 
@@ -268,6 +292,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         return <Cake className="w-5 h-5 text-pink-600" />;
       case 'ticket_created':
         return <Ticket className="w-5 h-5 text-orange-600" />;
+      case 'time_entry_reminder':
+        return <Clock className="w-5 h-5 text-blue-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }

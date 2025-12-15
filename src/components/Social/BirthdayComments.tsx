@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Edit2, Trash2, User } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { EmojiPicker } from '../EmojiPicker';
 
 interface Comment {
   id: string;
@@ -29,6 +30,7 @@ export function BirthdayComments({ birthdayUserId }: BirthdayCommentsProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchComments();
@@ -337,12 +339,28 @@ export function BirthdayComments({ birthdayUserId }: BirthdayCommentsProps) {
           </div>
           <div className="flex-1 flex gap-1.5">
             <input
+              ref={inputRef}
               type="text"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Escribe un comentario de felicitación..."
               className="flex-1 px-2 py-1.5 border border-white border-opacity-30 rounded-lg focus:ring-2 focus:ring-white focus:border-transparent text-xs bg-white bg-opacity-10 text-white placeholder-white placeholder-opacity-50"
               maxLength={1000}
+            />
+            <EmojiPicker
+              onEmojiSelect={(emoji) => {
+                const input = inputRef.current;
+                if (input) {
+                  const cursorPos = input.selectionStart || 0;
+                  const textBefore = newComment.substring(0, cursorPos);
+                  const textAfter = newComment.substring(cursorPos);
+                  setNewComment(textBefore + emoji + textAfter);
+                  setTimeout(() => {
+                    input.focus();
+                    input.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+                  }, 0);
+                }
+              }}
             />
             <button
               type="submit"
@@ -357,6 +375,7 @@ export function BirthdayComments({ birthdayUserId }: BirthdayCommentsProps) {
     </div>
   );
 }
+
 
 
 

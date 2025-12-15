@@ -1,4 +1,4 @@
-import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText } from 'lucide-react';
+import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText, ChevronDown, ChevronRight, Briefcase } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { NotificationBell } from '../Notifications/NotificationBell';
@@ -9,23 +9,40 @@ type MenuItem = {
   label: string;
   view: string;
   roles: ('admin' | 'support' | 'user')[];
+  children?: MenuItem[];
 };
 
 const menuItems: MenuItem[] = [
   { icon: Home, label: 'Inicio', view: 'dashboard', roles: ['admin', 'support', 'user'] },
-  { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
-  { icon: Video, label: 'Salas de Reunión', view: 'meetings', roles: ['admin', 'support', 'user'] },
-  { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
-  { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
-  { icon: Clock, label: 'Carga de Horas', view: 'time-tracking', roles: ['admin', 'support', 'user'] },
-  { icon: BookOpen, label: 'Biblioteca y Cursos', view: 'library', roles: ['admin', 'support', 'user'] },
-  { icon: Heart, label: 'Social', view: 'social', roles: ['admin', 'support', 'user'] },
-  { icon: Building2, label: 'Areas', view: 'departments', roles: ['admin', 'support'] },
-  { icon: Calendar, label: 'Vacaciones / Licencias', view: 'vacations', roles: ['admin', 'support'] },
+  { icon: Video, label: 'Sala de Reuniones', view: 'meetings', roles: ['admin', 'support', 'user'] },
+  {
+    icon: Users,
+    label: 'Personas',
+    view: 'personas',
+    roles: ['admin', 'support', 'user'],
+    children: [
+      { icon: FileText, label: 'Onboarding y Políticas Internas', view: 'internal-policies', roles: ['admin', 'support', 'user'] },
+      { icon: BookOpen, label: 'Bibliotecas y Cursos', view: 'library', roles: ['admin', 'support', 'user'] },
+      { icon: Briefcase, label: 'Novedades Profesionales', view: 'professional-news', roles: ['admin', 'support', 'user'] },
+      { icon: Calendar, label: 'Vacaciones y Licencias', view: 'vacations', roles: ['admin', 'support'] },
+      { icon: Heart, label: 'Social', view: 'social', roles: ['admin', 'support', 'user'] },
+    ]
+  },
+  {
+    icon: Building2,
+    label: 'Negocio',
+    view: 'negocio',
+    roles: ['admin', 'support', 'user'],
+    children: [
+      { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
+      { icon: Clock, label: 'Carga de Horas', view: 'time-tracking', roles: ['admin', 'support', 'user'] },
+      { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
+      { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
+    ]
+  },
+  { icon: Ticket, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
   { icon: Users, label: 'Usuarios', view: 'users', roles: ['admin'] },
   { icon: Settings, label: 'Mi Perfil', view: 'settings', roles: ['admin', 'support', 'user'] },
-  { icon: Ticket, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
-  { icon: FileText, label: 'Onboarding / Políticas internas', view: 'internal-policies', roles: ['admin', 'support', 'user'] },
 ];
 
 interface SidebarProps {
@@ -34,14 +51,16 @@ interface SidebarProps {
   onNavigateToTicket?: (ticketId: string) => void;
   onNavigateToTask?: (taskId: string) => void;
   onNavigateToForum?: (subforumId: string) => void;
+  onNavigateToTimeTracking?: () => void;
 }
 
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask, onNavigateToForum }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask, onNavigateToForum, onNavigateToTimeTracking }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { activeJobsCount } = useExtraction();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (profile?.avatar_url) {
@@ -52,6 +71,50 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   const filteredItems = menuItems.filter(item =>
     profile && item.roles.includes(profile.role)
   );
+
+  const toggleSubmenu = (view: string) => {
+    setOpenSubmenus(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(view)) {
+        newSet.delete(view);
+      } else {
+        newSet.add(view);
+      }
+      return newSet;
+    });
+  };
+
+  const isSubmenuOpen = (view: string) => openSubmenus.has(view);
+
+  const isItemActive = (item: MenuItem): boolean => {
+    if (item.view === currentView) return true;
+    if (item.children) {
+      return item.children.some(child => child.view === currentView);
+    }
+    return false;
+  };
+
+  // Auto-abrir submenús si el item activo está dentro
+  useEffect(() => {
+    const itemsToOpen = new Set<string>();
+    filteredItems.forEach(item => {
+      if (item.children) {
+        const hasActiveChild = item.children.some(child => 
+          profile && child.roles.includes(profile.role) && child.view === currentView
+        );
+        if (hasActiveChild) {
+          itemsToOpen.add(item.view);
+        }
+      }
+    });
+    if (itemsToOpen.size > 0) {
+      setOpenSubmenus(prev => {
+        const newSet = new Set(prev);
+        itemsToOpen.forEach(view => newSet.add(view));
+        return newSet;
+      });
+    }
+  }, [currentView, profile?.role]);
 
   const handleNavigateToCalendar = () => {
     onViewChange('dashboard'); // El calendario está en el dashboard
@@ -96,6 +159,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
               onViewChange('forums');
             })}
             onNavigateToSocial={() => onViewChange('social')}
+            onNavigateToTimeTracking={onNavigateToTimeTracking || (() => onViewChange('time-tracking'))}
           />
         </div>
         {profile && (
@@ -129,12 +193,24 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         <ul className="space-y-1">
           {filteredItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentView === item.view;
+            const hasChildren = item.children && item.children.length > 0;
+            const isActive = isItemActive(item);
+            const isOpen = isSubmenuOpen(item.view);
             const showBadge = item.view === 'tools' && activeJobsCount > 0;
+            const filteredChildren = item.children?.filter(child =>
+              profile && child.roles.includes(profile.role)
+            );
+
             return (
               <li key={item.view}>
                 <button
-                  onClick={() => onViewChange(item.view)}
+                  onClick={() => {
+                    if (hasChildren) {
+                      toggleSubmenu(item.view);
+                    } else {
+                      onViewChange(item.view);
+                    }
+                  }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition relative ${
                     isActive
                       ? 'bg-blue-50 text-blue-700 font-medium'
@@ -143,12 +219,48 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                 >
                   <Icon className="w-5 h-5" />
                   <span className="flex-1 text-left">{item.label}</span>
+                  {hasChildren && (
+                    isOpen ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )
+                  )}
                   {showBadge && (
                     <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
                       {activeJobsCount}
                     </span>
                   )}
                 </button>
+                {hasChildren && isOpen && filteredChildren && filteredChildren.length > 0 && (
+                  <ul className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                    {filteredChildren.map((child) => {
+                      const ChildIcon = child.icon;
+                      const isChildActive = currentView === child.view;
+                      const showChildBadge = child.view === 'tools' && activeJobsCount > 0;
+                      return (
+                        <li key={child.view}>
+                          <button
+                            onClick={() => onViewChange(child.view)}
+                            className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition relative ${
+                              isChildActive
+                                ? 'bg-blue-50 text-blue-700 font-medium'
+                                : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                          >
+                            <ChildIcon className="w-4 h-4" />
+                            <span className="flex-1 text-left text-sm">{child.label}</span>
+                            {showChildBadge && (
+                              <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
+                                {activeJobsCount}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </li>
             );
           })}

@@ -3,6 +3,7 @@ import { Send, Paperclip, Download, X, FileText, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { TaskMentionAutocomplete } from './TaskMentionAutocomplete';
+import { EmojiPicker } from '../EmojiPicker';
 
 interface Message {
   id: string;
@@ -768,6 +769,21 @@ export function TaskChat({ taskId }: TaskChatProps) {
               />
             )}
           </div>
+          <EmojiPicker
+            onEmojiSelect={(emoji) => {
+              const textarea = textareaRef.current;
+              if (textarea) {
+                const cursorPos = textarea.selectionStart || 0;
+                const textBefore = newMessage.substring(0, cursorPos);
+                const textAfter = newMessage.substring(cursorPos);
+                setNewMessage(textBefore + emoji + textAfter);
+                setTimeout(() => {
+                  textarea.focus();
+                  textarea.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+                }, 0);
+              }
+            }}
+          />
           <button
             onClick={handleSend}
             disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploading}

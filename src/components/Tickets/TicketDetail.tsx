@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft, Clock, User, Calendar, MessageSquare, Send, AlertCircle, Paperclip, X, Download, FileText } from 'lucide-react';
+import { EmojiPicker } from '../EmojiPicker';
 
 interface TicketDetailProps {
   ticketId: string;
@@ -57,6 +58,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<any>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     loadTicketData();
@@ -538,6 +540,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
 
             <form onSubmit={handleAddComment} className="border-t border-gray-200 pt-4">
               <textarea
+                ref={commentTextareaRef}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Escribe un comentario..."
@@ -582,14 +585,31 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                     Adjuntar Archivos
                   </label>
                 </div>
-                <button
-                  type="submit"
-                  disabled={submitting || uploading || (!newComment.trim() && selectedFiles.length === 0)}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-4 h-4" />
-                  {uploading ? 'Subiendo archivos...' : submitting ? 'Enviando...' : 'Enviar Comentario'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <EmojiPicker
+                    onEmojiSelect={(emoji) => {
+                      const textarea = commentTextareaRef.current;
+                      if (textarea) {
+                        const cursorPos = textarea.selectionStart || 0;
+                        const textBefore = newComment.substring(0, cursorPos);
+                        const textAfter = newComment.substring(cursorPos);
+                        setNewComment(textBefore + emoji + textAfter);
+                        setTimeout(() => {
+                          textarea.focus();
+                          textarea.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+                        }, 0);
+                      }
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting || uploading || (!newComment.trim() && selectedFiles.length === 0)}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-4 h-4" />
+                    {uploading ? 'Subiendo archivos...' : submitting ? 'Enviando...' : 'Enviar Comentario'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

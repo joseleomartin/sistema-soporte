@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeft, Send, Paperclip, X, Download, FileText, Search, Filter, Trash2 } from 'lucide-react';
 import { MentionAutocomplete } from './MentionAutocomplete';
+import { EmojiPicker } from '../EmojiPicker';
 
 interface Attachment {
   name: string;
@@ -814,6 +815,21 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
             >
               <Paperclip className="w-5 h-5" />
             </label>
+            <EmojiPicker
+              onEmojiSelect={(emoji) => {
+                const textarea = textareaRef.current;
+                if (textarea) {
+                  const cursorPos = textarea.selectionStart || 0;
+                  const textBefore = newMessage.substring(0, cursorPos);
+                  const textAfter = newMessage.substring(cursorPos);
+                  setNewMessage(textBefore + emoji + textAfter);
+                  setTimeout(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+                  }, 0);
+                }
+              }}
+            />
             <button
               type="submit"
               disabled={submitting || uploading || (!newMessage.trim() && selectedFiles.length === 0)}

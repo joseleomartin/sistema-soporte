@@ -47,6 +47,11 @@ function MainApp() {
     setViewKey(prev => prev + 1);
   }, []);
 
+  const handleNavigateToTimeTracking = useCallback(() => {
+    setCurrentView('time-tracking');
+    setViewKey(prev => prev + 1);
+  }, []);
+
   // Verificar si estamos en el callback de OAuth
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -164,6 +169,7 @@ function MainApp() {
         onViewChange={handleViewChange}
         onNavigateToTicket={handleNavigateToTicket}
         onNavigateToForum={handleNavigateToForum}
+        onNavigateToTimeTracking={handleNavigateToTimeTracking}
       />
       <main className="flex-1 overflow-auto ml-64">
         <div className={`${currentView === 'social' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-8`}>

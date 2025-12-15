@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, Paperclip, Download, Image, FileText, File } fr
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { EmojiPicker } from '../EmojiPicker';
 
 interface Attachment {
   id: string;
@@ -272,6 +273,7 @@ export function MessagesBell() {
   const signedUrlCacheRef = useRef<Map<string, { url: string; expiresAt: number }>>(new Map());
   const isInitialLoadRef = useRef<boolean>(true);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastMessageCountRef = useRef<number>(0);
   const isScrollingRef = useRef<boolean>(false);
   const addingTempMessageRef = useRef<boolean>(false);
@@ -1576,6 +1578,7 @@ export function MessagesBell() {
                     <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   <textarea
+                    ref={textareaRef}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => {
@@ -1588,6 +1591,21 @@ export function MessagesBell() {
                     rows={1}
                     className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[36px] sm:min-h-[40px] max-h-32 overflow-y-auto"
                     disabled={sending || uploading}
+                  />
+                  <EmojiPicker
+                    onEmojiSelect={(emoji) => {
+                      const textarea = textareaRef.current;
+                      if (textarea) {
+                        const cursorPos = textarea.selectionStart || 0;
+                        const textBefore = newMessage.substring(0, cursorPos);
+                        const textAfter = newMessage.substring(cursorPos);
+                        setNewMessage(textBefore + emoji + textAfter);
+                        setTimeout(() => {
+                          textarea.focus();
+                          textarea.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+                        }, 0);
+                      }
+                    }}
                   />
                   <button
                     onClick={sendMessage}

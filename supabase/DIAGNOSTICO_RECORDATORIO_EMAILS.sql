@@ -75,3 +75,4 @@ GROUP BY type;
 
 
 
+

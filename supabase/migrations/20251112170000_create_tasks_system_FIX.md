@@ -251,3 +251,4 @@ El archivo `project/supabase/migrations/20251112170000_create_tasks_system.sql` 
 
 
 
+

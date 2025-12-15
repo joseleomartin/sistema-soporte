@@ -47,29 +47,16 @@ set PORT=5000
 set EXTRACTOR_PORT=5000
 
 REM Configurar Google OAuth
-REM El script intentará obtener las credenciales en este orden:
-REM 1. Variables de entorno del sistema (si ya están configuradas)
-REM 2. Archivo .env en esta carpeta (si existe)
-REM 3. Archivo client_secret_*.json en esta carpeta (si existe)
-REM
-REM Si ninguna de las opciones anteriores está disponible, configura las credenciales manualmente:
-REM - Crea un archivo .env en esta carpeta con:
-REM   GOOGLE_CLIENT_ID=tu_client_id_real.apps.googleusercontent.com
-REM   GOOGLE_CLIENT_SECRET=tu_client_secret_real
-REM - O configura las variables de entorno del sistema Windows
-REM
-REM Las credenciales reales están en el archivo client_secret_*.json en esta carpeta
-REM
-REM Cargar credenciales desde archivo JSON si no están en variables de entorno
+REM ⚠️ IMPORTANTE:
+REM - NO guardar credenciales reales en este archivo (repositorio público con escaneo de secretos)
+REM - Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en variables de entorno de tu sistema
+REM - Opcionalmente, puedes usar un archivo .env local (no commiteado) y cargarlas desde alli
+REM Ejemplo de valores por defecto seguros (placeholders):
 if "%GOOGLE_CLIENT_ID%"=="" (
-    REM Buscar archivo client_secret_*.json
-    for %%f in (client_secret_*.json) do (
-        REM Extraer Client ID y Client Secret del archivo JSON usando PowerShell
-        for /f "delims=" %%i in ('powershell -Command "$json = Get-Content '%%f' | ConvertFrom-Json; $json.web.client_id"') do set GOOGLE_CLIENT_ID=%%i
-        for /f "delims=" %%i in ('powershell -Command "$json = Get-Content '%%f' | ConvertFrom-Json; $json.web.client_secret"') do set GOOGLE_CLIENT_SECRET=%%i
-        goto :credentials_loaded
-    )
-    :credentials_loaded
+    set GOOGLE_CLIENT_ID=TU_GOOGLE_CLIENT_ID_AQUI
+)
+if "%GOOGLE_CLIENT_SECRET%"=="" (
+    set GOOGLE_CLIENT_SECRET=TU_GOOGLE_CLIENT_SECRET_AQUI
 )
 
 echo ================================================
