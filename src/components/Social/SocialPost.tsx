@@ -317,11 +317,25 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
   };
 
   const loadEmbedScript = (platform: string) => {
-    if (scriptsLoaded[platform]) return;
-
     const scriptId = `embed-script-${platform}`;
+    
+    // Si el script ya está cargado en la página, solo procesar
     if (document.getElementById(scriptId)) {
-      setScriptsLoaded((prev) => ({ ...prev, [platform]: true }));
+      if (!scriptsLoaded[platform]) {
+        setScriptsLoaded((prev) => ({ ...prev, [platform]: true }));
+      }
+      // Procesar inmediatamente si el script ya está cargado
+      setTimeout(() => {
+        processEmbed(platform);
+      }, 100);
+      return;
+    }
+
+    // Si ya marcamos este script como cargado, no hacer nada más
+    if (scriptsLoaded[platform]) {
+      setTimeout(() => {
+        processEmbed(platform);
+      }, 100);
       return;
     }
 
@@ -346,19 +360,23 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
         setScriptsLoaded((prev) => ({ ...prev, [platform]: true }));
         // Procesar embeds después de un pequeño delay para asegurar que el DOM esté listo
         setTimeout(() => {
-          if (platform === 'instagram' && window.instgrm) {
-            // Procesar todos los embeds de Instagram en la página
-            window.instgrm.Embeds.process();
-          } else if (platform === 'tiktok' && window.tiktokEmbed) {
-            window.tiktokEmbed.lib.render();
-          } else if ((platform === 'x' || platform === 'twitter') && window.twttr) {
-            window.twttr.widgets.load();
-          } else if (platform === 'facebook' && window.FB) {
-            window.FB.XFBML.parse();
-          }
+          processEmbed(platform);
         }, 500);
       };
       document.body.appendChild(script);
+    }
+  };
+
+  const processEmbed = (platform: string) => {
+    if (platform === 'instagram' && window.instgrm) {
+      // Procesar todos los embeds de Instagram en la página
+      window.instgrm.Embeds.process();
+    } else if (platform === 'tiktok' && window.tiktokEmbed) {
+      window.tiktokEmbed.lib.render();
+    } else if ((platform === 'x' || platform === 'twitter') && window.twttr) {
+      window.twttr.widgets.load();
+    } else if (platform === 'facebook' && window.FB) {
+      window.FB.XFBML.parse();
     }
   };
 
@@ -448,7 +466,11 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
         <div className="w-full flex-shrink-0 bg-gray-100 dark:bg-slate-900 p-4">
           <div className="max-w-2xl mx-auto">
             {post.reel_platform === 'instagram' && (
-              <div className="instagram-embed-wrapper" key={`instagram-${post.id}-${post.reel_url}`}>
+              <div 
+                className="instagram-embed-wrapper" 
+                key={`instagram-${post.id}-${post.reel_url}`}
+                data-embed-id={post.id}
+              >
                 <blockquote
                   className="instagram-media"
                   data-instgrm-permalink={post.reel_url}

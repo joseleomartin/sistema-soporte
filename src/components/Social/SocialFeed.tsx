@@ -55,6 +55,28 @@ export function SocialFeed() {
     fetchPosts();
     fetchBirthdayUsers();
 
+    // Procesar embeds después de que los posts se carguen (múltiples intentos)
+    const processEmbeds = () => {
+      if (window.instgrm) {
+        window.instgrm.Embeds.process();
+      }
+      if (window.tiktokEmbed) {
+        window.tiktokEmbed.lib.render();
+      }
+      if (window.twttr) {
+        window.twttr.widgets.load();
+      }
+      if (window.FB) {
+        window.FB.XFBML.parse();
+      }
+    };
+
+    const timers: NodeJS.Timeout[] = [];
+    [500, 1000, 2000, 3000].forEach((delay) => {
+      const timer = setTimeout(processEmbeds, delay);
+      timers.push(timer);
+    });
+
     // Suscripción a nuevos posts en tiempo real
     const channel = supabase
       .channel('social_posts_changes')
@@ -104,6 +126,7 @@ export function SocialFeed() {
 
     return () => {
       supabase.removeChannel(channel);
+      timers.forEach(timer => clearTimeout(timer));
     };
   }, []);
 
@@ -308,6 +331,27 @@ export function SocialFeed() {
 
       setHasMore(postsWithCounts.length === postsPerPage);
       setPage(pageNum);
+
+      // Procesar embeds después de cargar posts (múltiples intentos para asegurar que se carguen)
+      const processEmbeds = () => {
+        if (window.instgrm) {
+          window.instgrm.Embeds.process();
+        }
+        if (window.tiktokEmbed) {
+          window.tiktokEmbed.lib.render();
+        }
+        if (window.twttr) {
+          window.twttr.widgets.load();
+        }
+        if (window.FB) {
+          window.FB.XFBML.parse();
+        }
+      };
+
+      // Procesar embeds con múltiples intentos
+      [500, 1000, 2000, 3000].forEach((delay) => {
+        setTimeout(processEmbeds, delay);
+      });
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
