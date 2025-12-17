@@ -372,22 +372,22 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
   const PriorityIcon = priority.icon;
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex-shrink-0">
         <div className="flex items-center gap-4 mb-4">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 flex-1 break-all max-w-full" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>{task.title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex-1 break-all max-w-full" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>{task.title}</h1>
           <div className="flex items-center gap-2">
             {canEdit() && (
               <button
                 onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
                 title="Editar tarea"
               >
                 <Edit className="w-4 h-4" />
@@ -398,7 +398,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Eliminar tarea"
               >
                 {deleting ? (
@@ -425,39 +425,39 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
             {/* Información de la Tarea */}
             <div className="lg:col-span-1 space-y-6 overflow-hidden">
               {/* Cliente */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-500 mb-4">Información</h3>
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Información</h3>
                 
                 <div className="space-y-4">
                   {/* Cliente */}
                   {task.client_name && (
                     <div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <User className="w-4 h-4" />
                         <span>Cliente</span>
                       </div>
-                      <p className="text-base font-medium text-gray-900">{task.client_name}</p>
+                      <p className="text-base font-medium text-gray-900 dark:text-white">{task.client_name}</p>
                     </div>
                   )}
 
                   {/* Creador de la Tarea */}
                   {task.created_by_profile && (
                     <div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <User className="w-4 h-4" />
                         <span>Creada por</span>
                       </div>
-                      <p className="text-base font-medium text-gray-900">{task.created_by_profile.full_name}</p>
+                      <p className="text-base font-medium text-gray-900 dark:text-white">{task.created_by_profile.full_name}</p>
                     </div>
                   )}
 
                   {/* Timer de Tarea */}
                   <div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                       <Clock className="w-4 h-4" />
                       <span>Tiempo</span>
                     </div>
-                    <div className="flex flex-col gap-1 text-sm text-gray-700">
+                    <div className="flex flex-col gap-1 text-sm text-gray-700 dark:text-gray-300">
                       <span>⏱️ Creada hace {formatDuration(task.created_at)}</span>
                       {task.completed_at && (
                         <span>✅ Completada en {formatDuration(task.created_at, task.completed_at)}</span>
@@ -468,22 +468,22 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                   {/* Administrador de Tarea */}
                   {taskManager && (
                     <div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <User className="w-4 h-4" />
                         <span>Administrador</span>
                       </div>
-                      <p className="text-base font-medium text-gray-900">{taskManager.full_name}</p>
+                      <p className="text-base font-medium text-gray-900 dark:text-white">{taskManager.full_name}</p>
                     </div>
                   )}
 
                   {/* Fecha Límite - Solo mostrar si la tarea no está completada */}
                   {task.status !== 'completed' && (
                     <div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <Calendar className="w-4 h-4" />
                         <span>Fecha Límite</span>
                       </div>
-                      <p className="text-base font-medium text-gray-900">
+                      <p className="text-base font-medium text-gray-900 dark:text-white">
                         {new Date(task.due_date).toLocaleString('es-ES', {
                           dateStyle: 'full',
                           timeStyle: 'short'
@@ -494,7 +494,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
 
                   {/* Prioridad */}
                   <div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
                       <PriorityIcon className="w-4 h-4" />
                       <span>Prioridad</span>
                     </div>
@@ -512,7 +512,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
 
                   {/* Estado */}
                   <div>
-                    <label className="block text-sm text-gray-500 mb-2">Estado</label>
+                    <label className="block text-sm text-gray-500 dark:text-gray-400 mb-2">Estado</label>
                     <select
                       value={task.status}
                       onChange={(e) => handleStatusChange(e.target.value)}
@@ -523,7 +523,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                           isAssigned
                         ) || updating
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {statusOptions.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -536,7 +536,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                       task.task_manager_id === profile?.id ||
                       isAssigned
                     ) && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Solo el administrador de la tarea, usuarios asignados o administradores pueden cambiar el estado
                       </p>
                     )}
@@ -545,19 +545,19 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
               </div>
 
               {/* Descripción */}
-              <div className="bg-white rounded-lg shadow-sm p-6 overflow-hidden">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Descripción</h3>
-                <p className="text-gray-700 whitespace-pre-wrap break-all max-w-full" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>{task.description}</p>
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 overflow-hidden border border-gray-200 dark:border-slate-700">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Descripción</h3>
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all max-w-full" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>{task.description}</p>
               </div>
 
               {/* Usuarios y Departamentos Asignados */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium text-gray-500">Asignados</h3>
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Asignados</h3>
                   {profile?.role === 'admin' && (
                     <button
                       onClick={() => setShowAddUserModal(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                     >
                       <UserPlus className="w-4 h-4" />
                       Agregar Usuario
@@ -571,7 +571,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                   {/* Usuarios Asignados */}
                   {task.assigned_users && task.assigned_users.length > 0 && (
                     <div className="mb-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
                         <Users className="w-4 h-4" />
                         <span>Usuarios ({task.assigned_users.length})</span>
                       </div>
@@ -583,8 +583,8 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                               key={user.id}
                               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
                                 isCurrentUser
-                                  ? 'bg-indigo-600 text-white border-2 border-indigo-700'
-                                  : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                  ? 'bg-indigo-600 dark:bg-indigo-500 text-white border-2 border-indigo-700 dark:border-indigo-600'
+                                  : 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/50'
                               }`}
                             >
                               {getAvatarUrl(user.avatar_url) ? (
@@ -595,7 +595,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                                 />
                               ) : (
                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium ${
-                                  isCurrentUser ? 'bg-indigo-800' : 'bg-indigo-600'
+                                  isCurrentUser ? 'bg-indigo-800 dark:bg-indigo-700' : 'bg-indigo-600 dark:bg-indigo-500'
                                 }`}>
                                   {user.full_name.charAt(0).toUpperCase()}
                                 </div>
@@ -613,7 +613,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                   {/* Departamentos Asignados */}
                   {task.assigned_departments && task.assigned_departments.length > 0 && (
                     <div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
                         <Building2 className="w-4 h-4" />
                         <span>Áreas ({task.assigned_departments.length})</span>
                       </div>
@@ -621,7 +621,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                         {task.assigned_departments.map((dept) => (
                           <div
                             key={dept.id}
-                            className="flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-sm"
+                            className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700/50 rounded-lg text-sm"
                           >
                             <Users className="w-4 h-4" />
                             <span className="font-medium">{dept.name}</span>
@@ -632,16 +632,16 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
                   )}
                   </>
                 ) : (
-                  <p className="text-sm text-gray-500 text-center py-4">No hay usuarios asignados</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No hay usuarios asignados</p>
                 )}
               </div>
             </div>
 
             {/* Chat */}
             <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-sm h-[600px] flex flex-col overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                  <h3 className="text-lg font-semibold text-gray-900">Chat de la Tarea</h3>
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm h-[600px] flex flex-col overflow-hidden border border-gray-200 dark:border-slate-700">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Chat de la Tarea</h3>
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <TaskChat taskId={task.id} />

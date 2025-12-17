@@ -188,7 +188,7 @@ export function VacationsManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -198,11 +198,11 @@ export function VacationsManagement() {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Gestión de Vacaciones / Licencias</h2>
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Vacaciones / Licencias</h2>
         {isAdmin ? (
           <button
             onClick={() => setShowAssignModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
           >
             <Plus className="w-5 h-5" />
             Asignar Vacaciones / Licencias
@@ -210,7 +210,7 @@ export function VacationsManagement() {
         ) : (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
           >
             <Plus className="w-5 h-5" />
             Solicitar Vacaciones / Licencias
@@ -221,52 +221,52 @@ export function VacationsManagement() {
       {message && (
         <div className={`mb-6 rounded-lg p-4 flex items-start gap-3 ${
           message.type === 'success' 
-            ? 'bg-green-50 border border-green-200' 
-            : 'bg-red-50 border border-red-200'
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50' 
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50'
         }`}>
           {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           )}
-          <p className={message.type === 'success' ? 'text-green-700' : 'text-red-700'}>
+          <p className={message.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
             {message.text}
           </p>
         </div>
       )}
 
       {/* Filtros y Vista */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Buscar por nombre, email o razón..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
+            <Filter className="w-5 h-5 text-gray-400 dark:text-gray-500" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Todos los estados</option>
               <option value="pending">Pendientes</option>
               <option value="approved">Aprobadas</option>
               <option value="rejected">Rechazadas</option>
             </select>
-            <div className="flex items-center gap-1 border border-gray-300 rounded-lg overflow-hidden">
+            <div className="flex items-center gap-1 border border-gray-300 dark:border-slate-600 rounded-lg overflow-hidden">
               <button
                 onClick={() => setViewMode('list')}
                 className={`px-3 py-2 transition-colors ${
                   viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'
                 }`}
                 title="Vista de lista"
               >
@@ -276,8 +276,8 @@ export function VacationsManagement() {
                 onClick={() => setViewMode('calendar')}
                 className={`px-3 py-2 transition-colors ${
                   viewMode === 'calendar'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                    ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'
                 }`}
                 title="Vista de calendario"
               >
@@ -290,14 +290,14 @@ export function VacationsManagement() {
 
       {/* Contenido según vista */}
       {viewMode === 'list' ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
           {filteredVacations.length === 0 ? (
             <div className="p-12 text-center">
-              <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-              <p className="text-gray-500">No se encontraron vacaciones / licencias</p>
+              <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-600" />
+              <p className="text-gray-500 dark:text-gray-400">No se encontraron vacaciones / licencias</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 dark:divide-slate-700">
               {filteredVacations.map((vacation) => (
                 <VacationCard
                   key={vacation.id}
@@ -378,21 +378,21 @@ function VacationCard({
     switch (vacation.status) {
       case 'approved':
         return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:text-green-300">
             <CheckCircle className="w-3 h-3" />
             Aprobada
           </span>
         );
       case 'rejected':
         return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300">
             <XCircle className="w-3 h-3" />
             Rechazada
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
             <Clock className="w-3 h-3" />
             Pendiente
           </span>
@@ -401,20 +401,20 @@ function VacationCard({
   };
 
   return (
-    <div className="p-6 hover:bg-gray-50 transition-colors">
+    <div className="p-6 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-3">
             {getStatusBadge()}
             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
               vacation.type === 'vacation' 
-                ? 'bg-blue-100 text-blue-700' 
-                : 'bg-purple-100 text-purple-700'
+                ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
+                : 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
             }`}>
               {vacation.type === 'vacation' ? 'Vacaciones' : 'Licencia'}
             </span>
             {isAdmin && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                 <User className="w-4 h-4" />
                 <span>{vacation.user_profile?.full_name || 'Usuario'}</span>
               </div>
@@ -423,8 +423,8 @@ function VacationCard({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Fecha de inicio</p>
-              <p className="font-medium text-gray-900">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Fecha de inicio</p>
+              <p className="font-medium text-gray-900 dark:text-white">
                 {startDate.toLocaleDateString('es-ES', { 
                   weekday: 'short', 
                   year: 'numeric', 
@@ -434,8 +434,8 @@ function VacationCard({
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">Fecha de fin</p>
-              <p className="font-medium text-gray-900">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Fecha de fin</p>
+              <p className="font-medium text-gray-900 dark:text-white">
                 {endDate.toLocaleDateString('es-ES', { 
                   weekday: 'short', 
                   year: 'numeric', 
@@ -445,27 +445,27 @@ function VacationCard({
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">Días</p>
-              <p className="font-medium text-gray-900">{vacation.days_count} día(s)</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Días</p>
+              <p className="font-medium text-gray-900 dark:text-white">{vacation.days_count} día(s)</p>
             </div>
           </div>
 
           {vacation.reason && (
             <div className="mb-3">
-              <p className="text-xs text-gray-500 mb-1">Razón</p>
-              <p className="text-sm text-gray-700">{vacation.reason}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Razón</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{vacation.reason}</p>
             </div>
           )}
 
           {vacation.status === 'rejected' && vacation.rejection_reason && (
-            <div className="mb-3 p-3 bg-red-50 rounded-lg">
-              <p className="text-xs text-red-600 font-medium mb-1">Razón del rechazo</p>
-              <p className="text-sm text-red-700">{vacation.rejection_reason}</p>
+            <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50">
+              <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">Razón del rechazo</p>
+              <p className="text-sm text-red-700 dark:text-red-300">{vacation.rejection_reason}</p>
             </div>
           )}
 
           {vacation.status === 'approved' && vacation.approved_by_profile && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Aprobada por: {vacation.approved_by_profile.full_name}
               {vacation.approved_at && (
                 <> el {new Date(vacation.approved_at).toLocaleDateString('es-ES')}</>
@@ -479,13 +479,13 @@ function VacationCard({
           <div className="flex items-center gap-2 ml-4">
             <button
               onClick={() => onApprove(vacation.id)}
-              className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors"
             >
               Aprobar
             </button>
             <button
               onClick={() => setShowRejectModal(true)}
-              className="px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+              className="px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
             >
               Rechazar
             </button>
@@ -495,7 +495,7 @@ function VacationCard({
         {canEdit && !isAdmin && (
           <button
             onClick={() => onDelete(vacation.id)}
-            className="ml-4 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+            className="ml-4 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
           >
             Eliminar
           </button>
@@ -504,16 +504,16 @@ function VacationCard({
 
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Rechazar Vacación / Licencia</h3>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Rechazar Vacación / Licencia</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               Por favor, proporciona una razón para rechazar esta solicitud de vacaciones / licencias.
             </p>
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Razón del rechazo..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
               rows={4}
             />
             <div className="flex items-center justify-end gap-3">
@@ -522,7 +522,7 @@ function VacationCard({
                   setShowRejectModal(false);
                   setRejectionReason('');
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
               >
                 Cancelar
               </button>
@@ -532,7 +532,7 @@ function VacationCard({
                   setShowRejectModal(false);
                   setRejectionReason('');
                 }}
-                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                className="px-4 py-2 text-white bg-red-600 dark:bg-red-500 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
               >
                 Rechazar
               </button>
@@ -602,12 +602,12 @@ function CreateVacationModal({ onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones / Licencias</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Solicitar Vacaciones / Licencias</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tipo *
             </label>
             <div className="flex gap-3">
@@ -617,7 +617,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
                 className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
                   type === 'vacation'
                     ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    : 'border-gray-300 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                 }`}
               >
                 Vacaciones
@@ -628,7 +628,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
                 className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
                   type === 'license'
                     ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    : 'border-gray-300 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                 }`}
               >
                 Licencia
@@ -637,7 +637,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Fecha de inicio *
             </label>
             <input
@@ -645,13 +645,13 @@ function CreateVacationModal({ onClose, onSuccess }: {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               min={new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Fecha de fin *
             </label>
             <input
@@ -659,27 +659,27 @@ function CreateVacationModal({ onClose, onSuccess }: {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               min={startDate || new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Razón (opcional)
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe el motivo de tus vacaciones / licencias..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
@@ -687,14 +687,14 @@ function CreateVacationModal({ onClose, onSuccess }: {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-white bg-blue-600 dark:bg-blue-500 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
             >
               {loading ? 'Enviando...' : 'Solicitar'}
             </button>
@@ -796,12 +796,12 @@ function AssignVacationModal({ onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900">Asignar Vacaciones / Licencias</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Asignar Vacaciones / Licencias</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -809,7 +809,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tipo *
             </label>
             <div className="flex gap-3">
@@ -819,7 +819,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
                 className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
                   type === 'vacation'
                     ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    : 'border-gray-300 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                 }`}
               >
                 Vacaciones
@@ -830,7 +830,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
                 className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
                   type === 'license'
                     ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    : 'border-gray-300 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                 }`}
               >
                 Licencia
@@ -839,18 +839,18 @@ function AssignVacationModal({ onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Usuario *
             </label>
             {loadingUsers ? (
-              <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-500">
+              <div className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-slate-700">
                 Cargando usuarios...
               </div>
             ) : (
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
                 <option value="">Seleccionar usuario</option>
@@ -864,20 +864,20 @@ function AssignVacationModal({ onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Fecha de inicio *
             </label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Fecha de fin *
             </label>
             <input
@@ -885,27 +885,27 @@ function AssignVacationModal({ onClose, onSuccess }: {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               min={startDate}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Razón (opcional)
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Razón de las vacaciones / licencias..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
@@ -913,14 +913,14 @@ function AssignVacationModal({ onClose, onSuccess }: {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading || loadingUsers}
-              className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-white bg-blue-600 dark:bg-blue-500 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50"
             >
               {loading ? 'Asignando...' : 'Asignar Vacaciones / Licencias'}
             </button>
@@ -1017,31 +1017,31 @@ export function VacationCalendar({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 max-w-full mx-auto">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5 max-w-full mx-auto">
       {/* Header del calendario */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <button
             onClick={goToPreviousMonth}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
             title="Mes anterior"
           >
-            <ChevronLeft className="w-3.5 h-3.5 text-gray-600" />
+            <ChevronLeft className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
           </button>
-          <h3 className="text-base font-bold text-gray-900">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white">
             {monthNames[month]} {year}
           </h3>
           <button
             onClick={goToNextMonth}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
             title="Mes siguiente"
           >
-            <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+            <ChevronRight className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
         <button
           onClick={goToCurrentMonth}
-          className="px-2.5 py-1 text-[10px] text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          className="px-2.5 py-1 text-[10px] text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
         >
           Hoy
         </button>
@@ -1052,7 +1052,7 @@ export function VacationCalendar({
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-[10px] font-semibold text-gray-600 py-0.5"
+            className="text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 py-0.5"
           >
             {day}
           </div>
@@ -1075,12 +1075,12 @@ export function VacationCalendar({
             <div
               key={day}
               className={`
-                border border-gray-200 rounded p-2 flex flex-col h-[140px]
-                ${today ? 'bg-blue-50 border-blue-300' : 'bg-white hover:bg-gray-50'}
+                border border-gray-200 dark:border-slate-700 rounded p-2 flex flex-col h-[140px]
+                ${today ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600' : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700'}
                 transition-colors
               `}
             >
-              <div className={`text-[10px] font-medium mb-0.5 ${today ? 'text-blue-600' : 'text-gray-700'}`}>
+              <div className={`text-[10px] font-medium mb-0.5 ${today ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>
                 {day}
               </div>
               <div className="flex-1 overflow-y-auto space-y-0.5">
@@ -1095,13 +1095,13 @@ export function VacationCalendar({
                       className={`text-[9px] px-0.5 py-0.5 rounded truncate leading-tight ${
                         isApproved
                           ? isVacation
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-purple-100 text-purple-700'
+                            ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700/50'
+                            : 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700/50'
                           : isPending
                           ? isVacation
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-purple-50 text-purple-600'
-                          : 'bg-gray-100 text-gray-600'
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-700/50'
+                            : 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300 border border-purple-200 dark:border-purple-700/50'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-slate-600'
                       }`}
                       title={`${vacation.user_profile?.full_name || 'Usuario'}: ${isVacation ? 'Vacaciones' : 'Licencia'} - ${vacation.reason || ''} (${isApproved ? 'Aprobada' : isPending ? 'Pendiente' : 'Rechazada'})`}
                     >
@@ -1110,7 +1110,7 @@ export function VacationCalendar({
                   );
                 })}
                 {dayVacations.length > 5 && (
-                  <div className="text-[9px] px-0.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                  <div className="text-[9px] px-0.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded border border-gray-200 dark:border-slate-600">
                     +{dayVacations.length - 5}
                   </div>
                 )}
@@ -1121,23 +1121,23 @@ export function VacationCalendar({
       </div>
 
       {/* Leyenda */}
-      <div className="mt-3 pt-2 border-t border-gray-200">
+      <div className="mt-3 pt-2 border-t border-gray-200 dark:border-slate-700">
         <div className="flex flex-wrap items-center gap-2 text-[10px]">
           <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 bg-green-100 border border-green-300 rounded"></div>
-            <span className="text-gray-600">Vacaciones aprobadas</span>
+            <div className="w-2.5 h-2.5 bg-green-100 dark:bg-green-900/20 border border-green-300 dark:border-green-700/50 rounded"></div>
+            <span className="text-gray-600 dark:text-gray-300">Vacaciones aprobadas</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 bg-yellow-100 border border-yellow-300 rounded"></div>
-            <span className="text-gray-600">Vacaciones pendientes</span>
+            <div className="w-2.5 h-2.5 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700/50 rounded"></div>
+            <span className="text-gray-600 dark:text-gray-300">Vacaciones pendientes</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 bg-purple-100 border border-purple-300 rounded"></div>
-            <span className="text-gray-600">Licencias</span>
+            <div className="w-2.5 h-2.5 bg-purple-100 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-700/50 rounded"></div>
+            <span className="text-gray-600 dark:text-gray-300">Licencias</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 bg-blue-50 border border-blue-300 rounded"></div>
-            <span className="text-gray-600">Día actual</span>
+            <div className="w-2.5 h-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-600 rounded"></div>
+            <span className="text-gray-600 dark:text-gray-300">Día actual</span>
           </div>
         </div>
       </div>

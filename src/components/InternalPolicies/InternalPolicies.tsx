@@ -132,7 +132,7 @@ export function InternalPolicies() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -141,8 +141,8 @@ export function InternalPolicies() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Onboarding / Políticas internas</h2>
-          <p className="text-gray-600 mt-2">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Onboarding / Políticas internas</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
             Documentos y videos de onboarding y políticas internas de la empresa
           </p>
         </div>
@@ -157,25 +157,25 @@ export function InternalPolicies() {
         )}
       </div>
 
-      {message && (
+          {message && (
         <div className={`mb-6 rounded-lg p-4 flex items-start gap-3 ${
           message.type === 'success' 
-            ? 'bg-green-50 border border-green-200' 
-            : 'bg-red-50 border border-red-200'
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50' 
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50'
         }`}>
           {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           )}
-          <p className={message.type === 'success' ? 'text-green-700' : 'text-red-700'}>
+          <p className={message.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
             {message.text}
           </p>
         </div>
       )}
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <input
@@ -183,14 +183,14 @@ export function InternalPolicies() {
               placeholder="Buscar por título o descripción..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
             />
-            <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
           </div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as any)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
           >
             <option value="all">Todos los tipos</option>
             <option value="document">Documentos</option>
@@ -201,15 +201,15 @@ export function InternalPolicies() {
 
       {/* Lista de políticas */}
       {filteredPolicies.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-500 text-lg mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
+          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-gray-600" />
+          <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">
             {searchTerm || typeFilter !== 'all' 
               ? 'No se encontraron políticas con los filtros aplicados' 
               : 'No hay políticas de onboarding disponibles'}
           </p>
           {isAdmin && !searchTerm && typeFilter === 'all' && (
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 dark:text-gray-500">
               Haz clic en "Agregar Política" para comenzar
             </p>
           )}
@@ -270,7 +270,7 @@ function PolicyCard({
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col relative">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow flex flex-col relative">
         {/* Botón eliminar en la esquina superior derecha */}
         {isAdmin && (
           <button
@@ -284,7 +284,7 @@ function PolicyCard({
 
         {/* Previsualización */}
         {isVideo && youtubeThumbnail ? (
-          <div className="w-full h-48 bg-gray-100 overflow-hidden cursor-pointer relative group" onClick={() => setShowViewer(true)}>
+          <div className="w-full h-48 bg-gray-100 dark:bg-slate-700 overflow-hidden cursor-pointer relative group" onClick={() => setShowViewer(true)}>
             <img
               src={youtubeThumbnail}
               alt={policy.title}
@@ -297,7 +297,7 @@ function PolicyCard({
             </div>
           </div>
         ) : isImage && fileUrl ? (
-          <div className="w-full h-48 bg-gray-100 overflow-hidden cursor-pointer" onClick={() => setShowViewer(true)}>
+          <div className="w-full h-48 bg-gray-100 dark:bg-slate-700 overflow-hidden cursor-pointer" onClick={() => setShowViewer(true)}>
             <img
               src={fileUrl}
               alt={policy.title}
@@ -306,7 +306,7 @@ function PolicyCard({
           </div>
         ) : isPdf && fileUrl ? (
           <div 
-            className="w-full h-48 bg-gray-900 overflow-hidden cursor-pointer relative group border-b border-gray-200"
+            className="w-full h-48 bg-gray-900 overflow-hidden cursor-pointer relative group border-b border-gray-200 dark:border-slate-700"
             onClick={() => setShowViewer(true)}
           >
             <iframe
@@ -328,23 +328,23 @@ function PolicyCard({
         ) : (
           <div 
             className={`w-full h-48 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity ${
-              isVideo ? 'bg-red-50' : 'bg-blue-50'
+              isVideo ? 'bg-red-50 dark:bg-red-900/20' : 'bg-blue-50 dark:bg-blue-900/20'
             }`}
             onClick={() => setShowViewer(true)}
           >
             {isVideo ? (
               <div className="text-center">
-                <Video className="w-16 h-16 text-red-600 mx-auto mb-2" />
-                <p className="text-sm text-red-700 font-medium">Video</p>
+                <Video className="w-16 h-16 text-red-600 dark:text-red-400 mx-auto mb-2" />
+                <p className="text-sm text-red-700 dark:text-red-300 font-medium">Video</p>
               </div>
             ) : (
               <div className="text-center">
-                <FileText className="w-16 h-16 text-blue-600 mx-auto mb-2" />
-                <p className="text-sm text-blue-700 font-medium">
+                <FileText className="w-16 h-16 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
+                <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
                   {policy.file_name?.split('.').pop()?.toUpperCase() || 'Documento'}
                 </p>
                 {policy.file_size && (
-                  <p className="text-xs text-blue-600 mt-1">{formatFileSize(policy.file_size)}</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{formatFileSize(policy.file_size)}</p>
                 )}
               </div>
             )}
@@ -354,9 +354,9 @@ function PolicyCard({
         <div className="p-6 flex-1 flex flex-col">
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-semibold text-gray-900 truncate flex-1">{policy.title}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white truncate flex-1">{policy.title}</h3>
               <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded flex-shrink-0 ${
-                isVideo ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                isVideo ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300' : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
               }`}>
                 {isVideo ? 'Video' : 'Documento'}
               </span>
@@ -364,12 +364,12 @@ function PolicyCard({
           </div>
 
           {policy.description && (
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-1">{policy.description}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-2 flex-1">{policy.description}</p>
           )}
 
-          <div className="mt-auto pt-4 border-t border-gray-200">
+          <div className="mt-auto pt-4 border-t border-gray-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 {policy.created_by_profile?.full_name && (
                   <p>Creado por: {policy.created_by_profile.full_name}</p>
                 )}
@@ -377,7 +377,7 @@ function PolicyCard({
               </div>
               <button
                 onClick={() => setShowViewer(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
               >
                 <Eye className="w-4 h-4" />
                 Ver
@@ -390,19 +390,19 @@ function PolicyCard({
       {/* Modal para ver la política */}
       {showViewer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowViewer(false)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-              <h3 className="text-xl font-bold text-gray-900">{policy.title}</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{policy.title}</h3>
               <button
                 onClick={() => setShowViewer(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
             <div className="p-6">
               {policy.description && (
-                <p className="text-gray-700 mb-6">{policy.description}</p>
+                <p className="text-gray-700 dark:text-gray-300 mb-6">{policy.description}</p>
               )}
               
               {isVideo && videoId ? (
@@ -417,19 +417,19 @@ function PolicyCard({
                 </div>
               ) : policy.file_path ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
                     <div className="flex items-center gap-3">
-                      <FileText className="w-8 h-8 text-blue-600" />
+                      <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                       <div>
-                        <p className="font-medium text-gray-900">{policy.file_name}</p>
-                        <p className="text-sm text-gray-500">{formatFileSize(policy.file_size)}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{policy.file_name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{formatFileSize(policy.file_size)}</p>
                       </div>
                     </div>
                     <a
                       href={getFileUrl(policy.file_path)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
                     >
                       <Download className="w-4 h-4" />
                       Descargar
@@ -442,14 +442,14 @@ function PolicyCard({
                       <img
                         src={getFileUrl(policy.file_path)}
                         alt={policy.title}
-                        className="w-full rounded-lg border border-gray-200"
+                        className="w-full rounded-lg border border-gray-200 dark:border-slate-700"
                       />
                     </div>
                   )}
                   
                   {/* Mostrar PDFs */}
                   {policy.file_type === 'application/pdf' && (
-                    <div className="w-full border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                    <div className="w-full border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-slate-800">
                       <iframe
                         src={`${getFileUrl(policy.file_path)}#toolbar=1`}
                         className="w-full h-[600px]"
@@ -461,7 +461,7 @@ function PolicyCard({
                   {/* Para otros tipos de documentos, intentar mostrar en iframe o embed */}
                   {!policy.file_type?.startsWith('image/') && policy.file_type !== 'application/pdf' && (
                     <div className="w-full space-y-4">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
                         <p className="text-sm text-blue-800 mb-2">
                           Este tipo de archivo no se puede visualizar directamente en el navegador.
                         </p>
@@ -475,7 +475,7 @@ function PolicyCard({
                         policy.file_type?.includes('application/vnd.openxmlformats') ||
                         policy.file_name?.endsWith('.txt') ||
                         policy.file_name?.endsWith('.csv')) && (
-                        <div className="w-full border border-gray-200 rounded-lg overflow-hidden bg-white">
+                        <div className="w-full border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800">
                           <iframe
                             src={getFileUrl(policy.file_path)}
                             className="w-full h-[600px]"
@@ -495,7 +495,7 @@ function PolicyCard({
                         policy.file_name?.endsWith('.xlsx') ||
                         policy.file_name?.endsWith('.ppt') ||
                         policy.file_name?.endsWith('.pptx')) && (
-                        <div className="w-full border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                        <div className="w-full border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-slate-800">
                           <iframe
                             src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(getFileUrl(policy.file_path))}`}
                             className="w-full h-[600px]"
@@ -619,20 +619,20 @@ function CreatePolicyModal({ onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-auto">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-auto">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-900">Agregar Política</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Agregar Política</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tipo *
             </label>
             <div className="flex gap-3">
@@ -646,8 +646,8 @@ function CreatePolicyModal({ onClose, onSuccess }: {
                 }}
                 className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
                   type === 'document'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 font-medium'
+                    : 'border-gray-300 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                 }`}
               >
                 Documento
@@ -661,8 +661,8 @@ function CreatePolicyModal({ onClose, onSuccess }: {
                 }}
                 className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
                   type === 'video'
-                    ? 'border-red-500 bg-red-50 text-red-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 font-medium'
+                    : 'border-gray-300 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50'
                 }`}
               >
                 Video (YouTube)
@@ -671,33 +671,33 @@ function CreatePolicyModal({ onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Título *
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Descripción (opcional)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               rows={3}
             />
           </div>
 
           {type === 'video' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 URL de YouTube *
               </label>
               <input
@@ -705,16 +705,16 @@ function CreatePolicyModal({ onClose, onSuccess }: {
                 value={youtubeUrl}
                 onChange={(e) => setYoutubeUrl(e.target.value)}
                 placeholder="https://www.youtube.com/watch?v=..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                 required
               />
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 Puedes usar URLs de YouTube en formato: youtube.com/watch?v=... o youtu.be/...
               </p>
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Archivo *
               </label>
               <input
@@ -727,15 +727,15 @@ function CreatePolicyModal({ onClose, onSuccess }: {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors flex items-center justify-center gap-2"
+                className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors flex items-center justify-center gap-2 bg-white dark:bg-slate-800"
               >
-                <Upload className="w-5 h-5 text-gray-400" />
-                <span className="text-sm text-gray-600">
+                <Upload className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                <span className="text-sm text-gray-600 dark:text-gray-300">
                   {selectedFile ? selectedFile.name : 'Seleccionar archivo'}
                 </span>
               </button>
               {selectedFile && (
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                 </p>
               )}
@@ -743,8 +743,8 @@ function CreatePolicyModal({ onClose, onSuccess }: {
           )}
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
@@ -752,14 +752,14 @@ function CreatePolicyModal({ onClose, onSuccess }: {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={uploading}
-              className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 text-white bg-blue-600 dark:bg-blue-500 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               {uploading ? (
                 <>

@@ -337,8 +337,8 @@ export function SocialFeed() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Social</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Social</h1>
+          <p className="text-gray-600 dark:text-gray-300">
             Comparte momentos, ideas y contenido con tu equipo
           </p>
         </div>
@@ -353,11 +353,11 @@ export function SocialFeed() {
 
       {/* Posts Feed */}
       {posts.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <p className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
+          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No hay publicaciones aún
           </p>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
             Sé el primero en compartir algo con tu equipo
           </p>
           <button
@@ -393,7 +393,7 @@ export function SocialFeed() {
               <button
                 onClick={handleLoadMore}
                 disabled={loadingRef.current}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                className="px-6 py-2 bg-gray-100 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
               >
                 {loadingRef.current ? (
                   <>

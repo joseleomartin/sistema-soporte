@@ -302,7 +302,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
   const canEditOrDelete = profile && (profile.id === post.user_id || profile.role === 'admin');
 
   return (
-    <div className="bg-white rounded-lg border border-gray-300 overflow-hidden flex flex-col">
+    <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-300 dark:border-slate-700 overflow-hidden flex flex-col">
       {/* Header */}
       <div className="px-4 pt-3 pb-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -313,22 +313,22 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
               className="w-10 h-10 rounded-full object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-              <User className="w-5 h-5 text-gray-500" />
+            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-gray-900 text-[15px] truncate">
+            <p className="font-semibold text-gray-900 dark:text-white text-[15px] truncate">
               {post.user_profile?.full_name || 'Usuario'}
             </p>
-            <p className="text-[13px] text-gray-500">{formatTimeAgo(post.created_at)}</p>
+            <p className="text-[13px] text-gray-500 dark:text-gray-400">{formatTimeAgo(post.created_at)}</p>
           </div>
         </div>
         {canEditOrDelete && (
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
             >
               <MoreVertical className="w-5 h-5" />
             </button>
@@ -338,13 +338,13 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-20">
                   <button
                     onClick={() => {
                       setShowMenu(false);
                       handleDelete();
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" />
                     Eliminar
@@ -359,7 +359,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       {/* Content */}
       {post.content && (
         <div className="px-4 py-2 flex-shrink-0">
-          <p className="text-gray-900 text-[15px] leading-[1.33] whitespace-pre-wrap break-words">{post.content}</p>
+          <p className="text-gray-900 dark:text-white text-[15px] leading-[1.33] whitespace-pre-wrap break-words">{post.content}</p>
         </div>
       )}
 
@@ -374,7 +374,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                   <img
                     src={postMedia[0].media_url}
                     alt={post.content || 'Post image'}
-                    className="w-full h-auto object-contain cursor-pointer bg-gray-100"
+                    className="w-full h-auto object-contain cursor-pointer bg-gray-100 dark:bg-slate-700"
                     loading="lazy"
                     onClick={() => {
                       setSelectedImageIndex(0);
@@ -401,7 +401,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
               {postMedia.slice(0, 4).map((media, index) => (
                 <div
                   key={media.id}
-                  className={`relative group cursor-pointer bg-gray-100 ${
+                  className={`relative group cursor-pointer bg-gray-100 dark:bg-slate-700 ${
                     postMedia.length === 3 && index === 0 ? 'row-span-2' : ''
                   }`}
                   onClick={() => {
@@ -446,7 +446,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       )}
 
       {/* Actions */}
-      <div className="px-4 py-2 border-t border-gray-200 mt-auto flex-shrink-0 relative">
+      <div className="px-4 py-2 border-t border-gray-200 dark:border-slate-700 mt-auto flex-shrink-0 relative">
         {/* Likes count */}
         {likesCount > 0 && (
           <div className="pb-2.5 flex items-center gap-2 relative">
@@ -457,7 +457,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
             </div>
             <button
               type="button"
-              className="text-[13px] text-gray-700 font-medium cursor-pointer hover:underline text-left"
+              className="text-[13px] text-gray-700 dark:text-gray-300 font-medium cursor-pointer hover:underline text-left"
               onClick={async (e) => {
                 e.stopPropagation();
                 if (likesCount > 0) {
@@ -482,11 +482,11 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                   }}
                 />
                 <div 
-                  className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-50"
+                  className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 p-3 z-50"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
                       {likesCount === 1 ? 'A 1 persona le gusta' : `A ${likesCount} personas les gusta`}
                     </p>
                     <button
@@ -495,7 +495,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                         e.stopPropagation();
                         setShowLikedUsers(false);
                       }}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -512,15 +512,15 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                                 className="w-8 h-8 rounded-full object-cover"
                               />
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                <User className="w-4 h-4 text-gray-500" />
+                              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
+                                <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                               </div>
                             )}
-                            <span className="text-sm text-gray-900">{user.full_name}</span>
+                            <span className="text-sm text-gray-900 dark:text-white">{user.full_name}</span>
                           </div>
                         ))}
                         {likesCount > likedUsers.length && (
-                          <p className="text-xs text-gray-500 pt-2 border-t border-gray-200">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-slate-700">
                             y {likesCount - likedUsers.length} más...
                           </p>
                         )}
@@ -528,7 +528,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                     ) : (
                       <div className="text-center py-4">
                         <Loader2 className="w-5 h-5 animate-spin text-gray-400 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500">Cargando...</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Cargando...</p>
                       </div>
                     )}
                   </div>
@@ -539,24 +539,24 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
         )}
 
         {/* Action buttons */}
-        <div className="flex items-center border-t border-gray-200 pt-1 -mx-4 px-4">
+        <div className="flex items-center border-t border-gray-200 dark:border-slate-700 pt-1 -mx-4 px-4">
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleLike();
             }}
-            className="relative flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-colors group"
+            className="relative flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group"
             disabled={!profile}
           >
             <Heart
               className={`w-5 h-5 transition-all duration-200 ${
                 userLiked
                   ? 'fill-red-500 text-red-500'
-                  : 'text-gray-500 group-hover:text-red-500'
+                  : 'text-gray-500 dark:text-gray-400 group-hover:text-red-500'
               }`}
             />
             <span className={`text-[15px] font-medium ${
-              userLiked ? 'text-red-500' : 'text-gray-600 group-hover:text-red-500'
+              userLiked ? 'text-red-500' : 'text-gray-600 dark:text-gray-300 group-hover:text-red-500'
             }`}>
               Me gusta
             </span>
@@ -566,7 +566,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
               e.stopPropagation();
               setShowComments(!showComments);
             }}
-            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-blue-600"
+            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
           >
             <MessageCircle className="w-5 h-5" />
             <span className="text-[15px] font-medium">Comentar</span>
@@ -575,7 +575,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
 
         {/* Comentarios - Expandible */}
         {showComments && (
-          <div className="mt-2 pt-2 border-t border-gray-200">
+          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-slate-700">
             <PostComments postId={post.id} />
           </div>
         )}
@@ -646,12 +646,12 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                     className="w-8 h-8 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                    <User className="w-4 h-4 text-gray-500" />
+                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
+                    <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </div>
                 )}
                 <div>
-                  <p className="font-semibold text-sm">
+                  <p className="font-semibold text-sm text-white">
                     {post.user_profile?.full_name || 'Usuario'}
                   </p>
                   <p className="text-xs text-gray-300">{formatTimeAgo(post.created_at)}</p>

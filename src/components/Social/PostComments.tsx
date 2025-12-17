@@ -228,7 +228,7 @@ export function PostComments({ postId }: PostCommentsProps) {
       {/* Lista de comentarios */}
       <div className="space-y-3 mb-3 max-h-48 overflow-y-auto">
         {comments.length === 0 ? (
-          <p className="text-xs text-gray-500 text-center py-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
             No hay comentarios aún
           </p>
         ) : (
@@ -243,17 +243,17 @@ export function PostComments({ postId }: PostCommentsProps) {
                     className="w-6 h-6 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                    <User className="w-3 h-3 text-gray-500" />
+                  <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
+                    <User className="w-3 h-3 text-gray-500 dark:text-gray-400" />
                   </div>
                 )}
               </div>
 
               {/* Contenido */}
               <div className="flex-1 min-w-0">
-                <div className="bg-gray-50 rounded-lg p-2">
+                <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
                       {comment.user_profile?.full_name || 'Usuario'}
                     </span>
                     {profile && (profile.id === comment.user_id || profile.role === 'admin') && (
@@ -261,7 +261,7 @@ export function PostComments({ postId }: PostCommentsProps) {
                         {profile.id === comment.user_id && (
                           <button
                             onClick={() => handleEdit(comment)}
-                            className="p-0.5 text-gray-400 hover:text-blue-600 transition-colors"
+                            className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             title="Editar"
                           >
                             <Edit2 className="w-3 h-3" />
@@ -269,7 +269,7 @@ export function PostComments({ postId }: PostCommentsProps) {
                         )}
                         <button
                           onClick={() => handleDelete(comment.id)}
-                          className="p-0.5 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                           title="Eliminar"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -282,7 +282,7 @@ export function PostComments({ postId }: PostCommentsProps) {
                       <textarea
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full p-1.5 border border-gray-300 rounded text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full p-1.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         rows={2}
                         maxLength={1000}
                       />
@@ -298,19 +298,19 @@ export function PostComments({ postId }: PostCommentsProps) {
                             setEditingId(null);
                             setEditContent('');
                           }}
-                          className="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                          className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors"
                         >
                           Cancelar
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap line-clamp-3">
                       {comment.content}
                     </p>
                   )}
                 </div>
-                <span className="text-xs text-gray-500 mt-0.5 block">
+                <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
                   {formatTimeAgo(comment.created_at)}
                 </span>
               </div>
@@ -331,8 +331,8 @@ export function PostComments({ postId }: PostCommentsProps) {
                 className="w-6 h-6 rounded-full object-cover"
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                <User className="w-3 h-3 text-gray-500" />
+              <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
+                <User className="w-3 h-3 text-gray-500 dark:text-gray-400" />
               </div>
             )}
           </div>
@@ -343,7 +343,7 @@ export function PostComments({ postId }: PostCommentsProps) {
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Escribe un comentario..."
-              className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="flex-1 px-2 py-1.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               maxLength={1000}
             />
             <EmojiPicker

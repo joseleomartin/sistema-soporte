@@ -145,20 +145,20 @@ export function Consilador() {
     <div className="h-full overflow-auto">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold text-gray-900">Consiliador</h1>
-          <span className="bg-yellow-100 text-yellow-800 text-sm font-semibold px-3 py-1 rounded-full border border-yellow-300">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Consiliador</h1>
+          <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-sm font-semibold px-3 py-1 rounded-full border border-yellow-300 dark:border-yellow-700/50">
             Experimental
           </span>
         </div>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-300">
           Compara y concilia datos financieros entre dos archivos Excel
         </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 mb-6">
         {/* Área de Carga Archivo 1 */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Archivo Excel 1
           </label>
           <div
@@ -168,8 +168,8 @@ export function Consilador() {
             onDrop={(e) => handleDrop(e, setArchivo1, setDragActive1)}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition ${
               dragActive1
-                ? 'border-purple-500 bg-purple-50'
-                : 'border-gray-300 hover:border-gray-400'
+                ? 'border-purple-500 dark:border-purple-400 bg-purple-50 dark:bg-purple-900/20'
+                : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
             }`}
           >
             <input
@@ -180,11 +180,11 @@ export function Consilador() {
               className="hidden"
             />
             <label htmlFor="file-upload-1" className="cursor-pointer">
-              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-lg font-medium text-gray-700 mb-2">
+              <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-lg font-medium text-gray-700 dark:text-white mb-2">
                 {archivo1 ? archivo1.name : 'Arrastra y suelta el primer archivo Excel aquí'}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 o haz clic para seleccionar un archivo
               </p>
             </label>
@@ -193,7 +193,7 @@ export function Consilador() {
 
         {/* Área de Carga Archivo 2 */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Archivo Excel 2
           </label>
           <div
@@ -203,8 +203,8 @@ export function Consilador() {
             onDrop={(e) => handleDrop(e, setArchivo2, setDragActive2)}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition ${
               dragActive2
-                ? 'border-purple-500 bg-purple-50'
-                : 'border-gray-300 hover:border-gray-400'
+                ? 'border-purple-500 dark:border-purple-400 bg-purple-50 dark:bg-purple-900/20'
+                : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
             }`}
           >
             <input
@@ -215,11 +215,11 @@ export function Consilador() {
               className="hidden"
             />
             <label htmlFor="file-upload-2" className="cursor-pointer">
-              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-lg font-medium text-gray-700 mb-2">
+              <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-lg font-medium text-gray-700 dark:text-white mb-2">
                 {archivo2 ? archivo2.name : 'Arrastra y suelta el segundo archivo Excel aquí'}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 o haz clic para seleccionar un archivo
               </p>
             </label>
@@ -232,8 +232,8 @@ export function Consilador() {
           disabled={!archivo1 || !archivo2 || isProcessing}
           className={`w-full py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
             !archivo1 || !archivo2 || isProcessing
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-purple-600 text-white hover:bg-purple-700'
+              ? 'bg-gray-300 dark:bg-slate-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              : 'bg-purple-600 dark:bg-purple-500 text-white hover:bg-purple-700 dark:hover:bg-purple-600'
           }`}
         >
           {isProcessing ? (
@@ -255,33 +255,33 @@ export function Consilador() {
         <div
           className={`rounded-xl shadow-sm border p-6 mb-6 ${
             localMessage.type === 'success'
-              ? 'bg-blue-50 border-blue-200'
-              : 'bg-red-50 border-red-200'
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'
+              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'
           }`}
         >
           <div className="flex items-start gap-3">
             {localMessage.type === 'success' ? (
-              <CheckCircle2 className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             ) : (
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             )}
             <div className="flex-1">
               <p
                 className={`text-sm ${
-                  localMessage.type === 'success' ? 'text-blue-900' : 'text-red-900'
+                  localMessage.type === 'success' ? 'text-blue-900 dark:text-blue-200' : 'text-red-900 dark:text-red-300'
                 }`}
               >
                 {localMessage.text}
               </p>
               {localMessage.type === 'success' && (
-                <p className="text-xs text-blue-700 mt-2">
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
                   💡 Revisa el panel de notificaciones en la esquina inferior derecha para ver el progreso y descargar el resultado.
                 </p>
               )}
             </div>
             <button
               onClick={() => setLocalMessage(null)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
             >
               ✕
             </button>
@@ -290,28 +290,28 @@ export function Consilador() {
       )}
 
       {/* Información sobre Conciliación */}
-      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6 mb-6">
-        <h3 className="text-lg font-semibold text-purple-900 mb-3 flex items-center gap-2">
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-800/50 rounded-xl p-6 mb-6">
+        <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-200 mb-3 flex items-center gap-2">
           <Scale className="w-5 h-5" />
           ¿Qué es un Consiliador?
         </h3>
-        <p className="text-sm text-purple-800 mb-3">
+        <p className="text-sm text-purple-800 dark:text-purple-300 mb-3">
           Un consiliador (conciliador) es una herramienta que permite comparar y conciliar información 
           financiera de diferentes fuentes, identificando diferencias, coincidencias y discrepancias 
           entre registros contables, extractos bancarios y otros documentos.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-          <div className="bg-white rounded-lg p-3">
-            <p className="text-xs font-medium text-purple-900 mb-1">✅ Funcionalidades Principales</p>
-            <ul className="text-xs text-purple-700 space-y-1 mt-2">
+          <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-purple-200 dark:border-purple-800/50">
+            <p className="text-xs font-medium text-purple-900 dark:text-purple-200 mb-1">✅ Funcionalidades Principales</p>
+            <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1 mt-2">
               <li>• Comparación automática de archivos Excel</li>
               <li>• Identificación de diferencias</li>
               <li>• Generación de reporte con 3 hojas</li>
             </ul>
           </div>
-          <div className="bg-white rounded-lg p-3">
-            <p className="text-xs font-medium text-purple-900 mb-1">✅ Resultado de la Comparación</p>
-            <ul className="text-xs text-purple-700 space-y-1 mt-2">
+          <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-purple-200 dark:border-purple-800/50">
+            <p className="text-xs font-medium text-purple-900 dark:text-purple-200 mb-1">✅ Resultado de la Comparación</p>
+            <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1 mt-2">
               <li>• Faltantes en Archivo 1</li>
               <li>• Faltantes en Archivo 2</li>
               <li>• Retenciones consolidadas</li>

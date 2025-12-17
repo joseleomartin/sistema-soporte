@@ -880,10 +880,10 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">Error al cargar el perfil</p>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">Error al cargar el perfil</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="px-4 py-2 bg-blue-600 text-gray-900 dark:text-white rounded-lg hover:bg-blue-700 transition"
           >
             Recargar página
           </button>
@@ -905,21 +905,21 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       icon: FolderOpen, 
       label: 'Clientes Asignados', 
       value: stats.clientsAccess, 
-      color: 'bg-blue-50 text-blue-600',
+      color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600',
       description: 'Clientes con acceso'
     },
     { 
       icon: MessageSquare, 
       label: 'Mensajes Enviados', 
       value: stats.forumPosts, 
-      color: 'bg-purple-50 text-purple-600',
+      color: 'bg-purple-50 dark:bg-purple-900/30 text-purple-400',
       description: 'En chats de clientes'
     },
     { 
       icon: CheckSquare, 
       label: 'Tareas Asignadas', 
       value: stats.tasksAssigned, 
-      color: 'bg-indigo-50 text-indigo-600',
+      color: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-400',
       description: 'Tareas pendientes',
       onClick: () => onNavigate?.('tasks')
     },
@@ -927,7 +927,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       icon: Clock, 
       label: 'Horas Cargadas', 
       value: formatHoursMinutes(stats.totalHours), 
-      color: 'bg-orange-50 text-orange-600',
+      color: 'bg-orange-50 dark:bg-orange-900/30 text-orange-400',
       description: 'Horas del mes actual',
       isText: false,
       onClick: () => onNavigate?.('time-tracking')
@@ -1013,9 +1013,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   return (
     <div>
       {/* Header con información del perfil */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-8 mb-8 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-8 mb-8 text-gray-900 dark:text-white">
         <div className="flex items-center gap-6">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-white flex items-center justify-center flex-shrink-0 ring-4 ring-white ring-opacity-50">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-white dark:bg-slate-800 flex items-center justify-center flex-shrink-0 ring-4 ring-white ring-opacity-50">
             {avatarUrl ? (
               <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
@@ -1052,8 +1052,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           return (
             <div 
               key={stat.label} 
-              className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition ${
-                stat.onClick ? 'cursor-pointer hover:shadow-md hover:border-indigo-300' : 'hover:shadow-md'
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 transition ${
+                stat.onClick ? 'cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-slate-600' : 'hover:shadow-md'
               }`}
               onClick={stat.onClick}
             >
@@ -1062,11 +1062,11 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                   <Icon className="w-6 h-6" />
                 </div>
               </div>
-              <p className="text-sm font-medium text-gray-600 mb-1">{stat.label}</p>
-              <p className={`${stat.isText ? 'text-2xl' : 'text-3xl'} font-bold text-gray-900 mb-1`}>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">{stat.label}</p>
+              <p className={`${stat.isText ? 'text-2xl' : 'text-3xl'} font-bold text-gray-900 dark:text-white mb-1`}>
                 {stat.value}
               </p>
-              <p className="text-xs text-gray-500">{stat.description}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{stat.description}</p>
             </div>
           );
         })}
@@ -1075,13 +1075,13 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
         {/* Calendario */}
         <div 
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col max-h-[600px] overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+          className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5 flex flex-col max-h-[600px] overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => setShowCalendarModal(true)}
           title="Click para expandir calendario"
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Calendario
             </h3>
             <div className="flex items-center gap-2">
@@ -1090,25 +1090,25 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                   e.stopPropagation();
                   previousMonth();
                 }}
-                className="p-1 hover:bg-gray-100 rounded transition"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition"
               >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
+                <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   nextMonth();
                 }}
-                className="p-1 hover:bg-gray-100 rounded transition"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition"
               >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
+                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowCalendarModal(true);
                 }}
-                className="p-1.5 hover:bg-blue-50 rounded transition text-blue-600"
+                className="p-1.5 hover:bg-blue-50 dark:bg-blue-900/30 rounded transition text-blue-600"
                 title="Expandir calendario"
               >
                 <ChevronUp className="w-4 h-4" />
@@ -1117,7 +1117,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           </div>
           
           <div className="mb-3">
-            <p className="text-center font-semibold text-gray-900">
+            <p className="text-center font-semibold text-gray-900 dark:text-white">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </p>
           </div>
@@ -1125,7 +1125,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           {/* Días de la semana */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {dayNames.map((day) => (
-              <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
+              <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1">
                 {day}
               </div>
             ))}
@@ -1155,8 +1155,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                     ${isToday(day) 
                       ? 'bg-blue-600 text-white font-bold' 
                       : isSelected(day)
-                        ? 'bg-blue-100 text-blue-900 font-semibold'
-                        : 'hover:bg-gray-100 text-gray-700'
+                        ? 'bg-blue-100 dark:bg-blue-600/30 text-blue-900 dark:text-blue-300 font-semibold'
+                        : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300'
                     }
                   `}
                 >
@@ -1169,17 +1169,17 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                           className={`w-1 h-1 rounded-full ${
                             event.isTask 
                               ? event.taskPriority === 'urgent' 
-                                ? 'bg-red-500' 
+                                ? 'bg-red-500 dark:bg-red-400' 
                                 : event.taskPriority === 'medium' 
-                                  ? 'bg-blue-500' 
-                                  : 'bg-green-500'
+                                  ? 'bg-blue-500 dark:bg-blue-400' 
+                                  : 'bg-green-500 dark:bg-green-400'
                               : event.isVacation
                                 ? event.vacationType === 'vacation'
-                                  ? 'bg-yellow-500'
-                                  : 'bg-purple-500'
+                                  ? 'bg-yellow-500 dark:bg-yellow-400'
+                                  : 'bg-purple-500 dark:bg-purple-400'
                               : event.isPersonal 
-                                ? 'bg-blue-500' 
-                                : 'bg-purple-500'
+                                ? 'bg-blue-500 dark:bg-blue-400' 
+                                : 'bg-purple-500 dark:bg-purple-400'
                           }`}
                           title={
                             event.isTask 
@@ -1216,37 +1216,37 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                   className={`w-full text-left p-2 rounded-lg text-xs transition hover:shadow-md ${
                     event.isTask
                       ? event.taskPriority === 'urgent'
-                        ? 'bg-red-50 border border-red-200 hover:bg-red-100'
+                        ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/40'
                         : event.taskPriority === 'medium'
-                          ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
-                          : 'bg-green-50 border border-green-200 hover:bg-green-100'
+                          ? 'bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700/50 hover:bg-blue-100 dark:hover:bg-blue-800/50'
+                          : 'bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700/50 hover:bg-green-100 dark:hover:bg-green-800/50'
                       : event.isPersonal 
-                        ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100' 
-                        : 'bg-purple-50 border border-purple-200 hover:bg-purple-100'
+                        ? 'bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700/50 hover:bg-blue-100 dark:hover:bg-blue-800/50' 
+                        : 'bg-purple-50 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-700/50 hover:bg-purple-100 dark:hover:bg-purple-800/50'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     {event.isTask && (
                       <CheckSquare className={`w-3 h-3 flex-shrink-0 ${
-                        event.taskPriority === 'urgent' ? 'text-red-600' :
-                        event.taskPriority === 'medium' ? 'text-blue-600' : 'text-green-600'
+                        event.taskPriority === 'urgent' ? 'text-red-600 dark:text-red-400' :
+                        event.taskPriority === 'medium' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'
                       }`} />
                     )}
                     <p className={`font-medium flex-1 ${
                       event.isTask
-                        ? event.taskPriority === 'urgent' ? 'text-red-900' :
-                          event.taskPriority === 'medium' ? 'text-blue-900' : 'text-green-900'
-                        : event.isPersonal ? 'text-blue-900' : 'text-purple-900'
+                        ? event.taskPriority === 'urgent' ? 'text-red-900 dark:text-red-200' :
+                          event.taskPriority === 'medium' ? 'text-blue-900 dark:text-blue-200' : 'text-green-900 dark:text-green-200'
+                        : event.isPersonal ? 'text-blue-900 dark:text-blue-200' : 'text-purple-900 dark:text-purple-200'
                     }`}>
                       {event.title}
                     </p>
                   </div>
                   {event.isTask && (
                     <>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                         Cliente: {event.taskClient}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Estado: {event.taskStatus === 'pending' ? 'Pendiente' :
                                  event.taskStatus === 'in_progress' ? 'En Progreso' :
                                  event.taskStatus === 'completed' ? 'Completada' : 'Cancelada'}
@@ -1254,18 +1254,18 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                     </>
                   )}
                   {!event.isTask && !event.isPersonal && event.created_by_profile && (
-                    <p className="text-xs text-purple-600 mt-1">
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
                       Asignado por: {event.created_by_profile.full_name}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {event.isTask ? 'Click para ir a Tareas' : 'Click para ver detalles'}
                   </p>
                 </button>
               ))}
               <button
                 onClick={() => setShowEventModal(true)}
-                className="w-full mt-2 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition"
+                className="w-full mt-2 px-3 py-1.5 bg-blue-600 text-gray-900 dark:text-white text-xs rounded-lg hover:bg-blue-700 transition"
               >
                 + Agregar evento
               </button>
@@ -1273,8 +1273,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           )}
 
           {/* Desglose de eventos próximos */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <h4 className="text-xs font-semibold text-gray-700 mb-2">Próximos eventos</h4>
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+            <h4 className="text-xs font-semibold text-gray-200 mb-2">Próximos eventos</h4>
             <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-2">
               {events.length > 0 ? (
                 events
@@ -1296,7 +1296,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                           setSelectedEvent(event);
                         }
                       }}
-                      className="w-full text-left p-1.5 rounded text-xs hover:bg-gray-50 transition flex items-center gap-2"
+                      className="w-full text-left p-1.5 rounded text-xs hover:bg-gray-100 dark:hover:bg-slate-700 transition flex items-center gap-2"
                     >
                       <div className={`w-8 text-center text-[10px] font-medium flex-shrink-0 ${
                         event.isTask
@@ -1307,9 +1307,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                         {new Date(event.start_date).getDate()} {new Date(event.start_date).toLocaleDateString('es-ES', { month: 'short' })}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 truncate font-medium">{event.title}</p>
+                        <p className="text-gray-900 dark:text-white truncate font-medium">{event.title}</p>
                         {event.isTask && event.taskClient && (
-                          <p className="text-[10px] text-gray-500 truncate">{event.taskClient}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{event.taskClient}</p>
                         )}
                       </div>
                       {event.isTask && (
@@ -1327,103 +1327,103 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                     </button>
                   ))
               ) : (
-                <p className="text-xs text-gray-400 text-center py-4">No hay eventos próximos</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-4">No hay eventos próximos</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Accesos Rápidos */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-h-[600px] overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 max-h-[600px] overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Accesos Rápidos</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Accesos Rápidos</h3>
           </div>
           <div className="space-y-3 overflow-y-auto pr-2 max-h-[520px]">
             <button
               onClick={() => onNavigate?.('forums')}
-              className="w-full flex items-center gap-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition cursor-pointer"
+              className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/40 transition cursor-pointer"
             >
-              <FolderOpen className="w-5 h-5 text-blue-600" />
+              <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <div className="text-left">
-                <p className="font-medium text-gray-900">Mis Clientes</p>
-                <p className="text-sm text-gray-600">Ver archivos y comunicación</p>
+                <p className="font-medium text-gray-900 dark:text-white">Mis Clientes</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Ver archivos y comunicación</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('meetings')}
-              className="w-full flex items-center gap-3 p-4 bg-green-50 rounded-lg hover:bg-green-100 transition cursor-pointer"
+              className="w-full flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/30 rounded-lg hover:bg-green-100 dark:hover:bg-green-800/40 transition cursor-pointer"
             >
-              <Video className="w-5 h-5 text-green-600" />
+              <Video className="w-5 h-5 text-green-600 dark:text-green-400" />
               <div className="text-left">
-                <p className="font-medium text-gray-900">Salas de Reunión</p>
-                <p className="text-sm text-gray-600">Únete a videollamadas</p>
+                <p className="font-medium text-gray-900 dark:text-white">Salas de Reunión</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Únete a videollamadas</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('tools')}
-              className="w-full flex items-center gap-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition cursor-pointer"
+              className="w-full flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-800/40 transition cursor-pointer"
             >
-              <Wrench className="w-5 h-5 text-purple-600" />
+              <Wrench className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               <div className="text-left">
-                <p className="font-medium text-gray-900">Herramientas</p>
-                <p className="text-sm text-gray-600">Extractor de tablas y OCR</p>
+                <p className="font-medium text-gray-900 dark:text-white">Herramientas</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Extractor de tablas y OCR</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('time-tracking')}
-              className="w-full flex items-center gap-3 p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition cursor-pointer"
+              className="w-full flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-800/40 transition cursor-pointer"
             >
-              <Clock className="w-5 h-5 text-orange-600" />
+              <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               <div className="text-left">
-                <p className="font-medium text-gray-900">Carga de Horas</p>
-                <p className="text-sm text-gray-600">Registra tus horas trabajadas</p>
+                <p className="font-medium text-gray-900 dark:text-white">Carga de Horas</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Registra tus horas trabajadas</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('social')}
-              className="w-full flex items-center gap-3 p-4 bg-pink-50 rounded-lg hover:bg-pink-100 transition cursor-pointer"
+              className="w-full flex items-center gap-3 p-4 bg-pink-50 dark:bg-pink-900/30 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-800/40 transition cursor-pointer"
             >
-              <Heart className="w-5 h-5 text-pink-600" />
+              <Heart className="w-5 h-5 text-pink-600 dark:text-pink-400" />
               <div className="text-left">
-                <p className="font-medium text-gray-900">Social</p>
-                <p className="text-sm text-gray-600">Comparte y conecta con tu equipo</p>
+                <p className="font-medium text-gray-900 dark:text-white">Social</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Comparte y conecta con tu equipo</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('tasks')}
-              className="w-full flex items-center gap-3 p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition cursor-pointer"
+              className="w-full flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800/40 transition cursor-pointer"
             >
-              <CheckSquare className="w-5 h-5 text-indigo-600" />
+              <CheckSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <div className="text-left">
-                <p className="font-medium text-gray-900">Tareas</p>
-                <p className="text-sm text-gray-600">Gestiona tus tareas asignadas</p>
+                <p className="font-medium text-gray-900 dark:text-white">Tareas</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona tus tareas asignadas</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('library')}
-              className="w-full flex items-center gap-3 p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition cursor-pointer"
+              className="w-full flex items-center gap-3 p-4 bg-teal-50 dark:bg-teal-900/30 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-800/40 transition cursor-pointer"
             >
-              <BookOpen className="w-5 h-5 text-teal-600" />
+              <BookOpen className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               <div className="text-left">
-                <p className="font-medium text-gray-900">Biblioteca</p>
-                <p className="text-sm text-gray-600">Recursos y cursos disponibles</p>
+                <p className="font-medium text-gray-900 dark:text-white">Biblioteca</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Recursos y cursos disponibles</p>
               </div>
             </button>
           </div>
         </div>
 
         {/* Actividad Reciente */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-h-[600px] flex flex-col overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 max-h-[600px] flex flex-col overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Actividad Reciente</h3>
           </div>
           {recentActivities.length === 0 ? (
             <div className="text-center py-12">
-              <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">Sin actividad reciente</p>
-              <p className="text-sm text-gray-500">
+              <Activity className="w-12 h-12 text-gray-600 dark:text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-300 mb-2">Sin actividad reciente</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Comienza interactuando con tus clientes
               </p>
             </div>
@@ -1435,14 +1435,14 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                   <div 
                     key={activity.id} 
                     onClick={() => handleActivityClick(activity)}
-                    className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 transition cursor-pointer"
+                    className="flex items-start gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-lg hover:border-purple-300 hover:bg-purple-50 dark:bg-purple-900/30 transition cursor-pointer"
                   >
-                    <div className="p-2 bg-purple-50 rounded-lg">
+                    <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
                       <Icon className="w-4 h-4 text-purple-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">{activity.title}</p>
-                      <p className="text-xs text-gray-500 mt-1">{formatDate(activity.date)}</p>
+                      <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{activity.title}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatDate(activity.date)}</p>
                     </div>
                   </div>
                 );
@@ -1454,23 +1454,23 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
 
       {/* Sección de Vacaciones / Licencias - Solo para usuarios normales */}
       {profile?.role !== 'admin' && profile?.role !== 'support' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <CalendarIcon className="w-5 h-5 text-orange-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Vacaciones / Licencias</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Vacaciones / Licencias</h3>
             </div>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setShowVacationModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-gray-900 dark:text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
               >
                 <Plus className="w-4 h-4" />
                 Solicitar Vacaciones / Licencias
               </button>
               <button
                 onClick={() => setShowVacationCalendarModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-gray-900 dark:text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
                 <CalendarIcon className="w-4 h-4" />
                 Ver Calendario
@@ -1479,14 +1479,14 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           </div>
 
           {/* Mis Vacaciones - Dentro de la misma tarjeta */}
-          <div className="border-t border-gray-200 pt-4 mt-4">
-            <h4 className="text-md font-semibold text-gray-900 mb-4">Mis Vacaciones / Licencias</h4>
+          <div className="border-t border-gray-200 dark:border-slate-700 pt-4 mt-4">
+            <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-4">Mis Vacaciones / Licencias</h4>
 
             {userVacations.length === 0 ? (
               <div className="text-center py-8">
-                <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p className="text-gray-500 mb-2">No tienes vacaciones / licencias registradas</p>
-                <p className="text-sm text-gray-400">Solicita tus vacaciones / licencias haciendo clic en el botón de arriba</p>
+                <CalendarIcon className="w-12 h-12 mx-auto mb-3 text-gray-500 dark:text-gray-400" />
+                <p className="text-gray-500 dark:text-gray-400 mb-2">No tienes vacaciones / licencias registradas</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Solicita tus vacaciones / licencias haciendo clic en el botón de arriba</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1531,17 +1531,17 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                   };
 
                   return (
-                    <div key={vacation.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div key={vacation.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           {getStatusBadge()}
-                          <span className="text-sm font-medium text-gray-900">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
                             {startDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - {endDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
-                          <span className="text-sm text-gray-500">({vacation.days_count} día{vacation.days_count !== 1 ? 's' : ''})</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">({vacation.days_count} día{vacation.days_count !== 1 ? 's' : ''})</span>
                         </div>
                         {vacation.reason && (
-                          <p className="text-sm text-gray-600">{vacation.reason}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">{vacation.reason}</p>
                         )}
                         {vacation.status === 'rejected' && vacation.rejection_reason && (
                           <p className="text-xs text-red-600 mt-1">Razón: {vacation.rejection_reason}</p>
@@ -1557,25 +1557,25 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       )}
 
       {/* Información de Perfil */}
-      <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-200 p-6">
+      <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-indigo-200 dark:border-slate-600 p-6">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-white rounded-lg shadow-sm">
+          <div className="p-3 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
             <Users className="w-6 h-6 text-indigo-600" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Tu Perfil</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Tu Perfil</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Nombre Completo</p>
-                <p className="font-medium text-gray-900">{profile?.full_name}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Nombre Completo</p>
+                <p className="font-medium text-gray-900 dark:text-white">{profile?.full_name}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 mb-1">Email</p>
-                <p className="font-medium text-gray-900">{profile?.email}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Email</p>
+                <p className="font-medium text-gray-900 dark:text-white">{profile?.email}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600 mb-1">Rol</p>
-                <p className="font-medium text-gray-900 capitalize">{profile?.role}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Rol</p>
+                <p className="font-medium text-gray-900 dark:text-white capitalize">{profile?.role}</p>
               </div>
             </div>
           </div>
@@ -1634,18 +1634,18 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       {/* Modal para el calendario de vacaciones */}
       {showVacationCalendarModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="w-5 h-5 text-orange-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Calendario de Vacaciones / Licencias</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Calendario de Vacaciones / Licencias</h2>
               </div>
               <button
                 onClick={() => setShowVacationCalendarModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 aria-label="Cerrar"
               >
-                <XCircle className="w-5 h-5 text-gray-500" />
+                <XCircle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
             <div className="p-6">
@@ -1666,18 +1666,18 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
             setShowCalendarModal(false);
           }
         }}>
-          <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="w-6 h-6 text-blue-600" />
-                <h2 className="text-2xl font-semibold text-gray-900">Calendario</h2>
+                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Calendario</h2>
               </div>
               <button
                 onClick={() => setShowCalendarModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 aria-label="Cerrar"
               >
-                <XCircle className="w-6 h-6 text-gray-500" />
+                <XCircle className="w-6 h-6 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
             <div className="p-6">
@@ -1685,21 +1685,21 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                 {/* Calendario expandido */}
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                       {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                     </h3>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={previousMonth}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-slate-700 rounded-lg transition"
                       >
-                        <ChevronLeft className="w-5 h-5 text-gray-600" />
+                        <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                       </button>
                       <button
                         onClick={nextMonth}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
                       >
-                        <ChevronRight className="w-5 h-5 text-gray-600" />
+                        <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                       </button>
                     </div>
                   </div>
@@ -1707,7 +1707,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                   {/* Días de la semana */}
                   <div className="grid grid-cols-7 gap-2 mb-3">
                     {dayNames.map((day) => (
-                      <div key={day} className="text-center text-sm font-semibold text-gray-700 py-2">
+                      <div key={day} className="text-center text-sm font-semibold text-gray-700 dark:text-gray-300 py-2">
                         {day}
                       </div>
                     ))}
@@ -1734,8 +1734,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                             ${isToday(day) 
                               ? 'bg-blue-600 text-white font-bold border-blue-700' 
                               : isSelected(day)
-                                ? 'bg-blue-100 text-blue-900 font-semibold border-blue-300'
-                                : 'hover:bg-gray-50 text-gray-700 border-gray-200'
+                                ? 'bg-blue-100 dark:bg-blue-600/30 text-blue-900 dark:text-blue-300 font-semibold border-blue-300 dark:border-blue-600'
+                                : 'hover:bg-gray-100 dark:hover:bg-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700'
                             }
                           `}
                         >
@@ -1748,25 +1748,25 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                   className={`text-xs px-1.5 py-0.5 rounded truncate ${
                                     event.isTask 
                                       ? event.taskPriority === 'urgent' 
-                                        ? 'bg-red-200 text-red-900' 
+                                        ? 'bg-red-200 dark:bg-red-900/50 text-red-900 dark:text-red-200 border border-red-300 dark:border-red-700/50' 
                                         : event.taskPriority === 'medium' 
-                                          ? 'bg-blue-200 text-blue-900' 
-                                          : 'bg-green-200 text-green-900'
+                                          ? 'bg-blue-200 dark:bg-blue-800/60 text-blue-900 dark:text-blue-200 border border-blue-300 dark:border-blue-600/50' 
+                                          : 'bg-green-200 dark:bg-green-800/60 text-green-900 dark:text-green-200 border border-green-300 dark:border-green-600/50'
                                       : event.isVacation
                                         ? event.vacationType === 'vacation'
-                                          ? 'bg-yellow-200 text-yellow-900'
-                                          : 'bg-purple-200 text-purple-900'
+                                          ? 'bg-yellow-200 dark:bg-yellow-900/50 text-yellow-900 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-700/50'
+                                          : 'bg-purple-200 dark:bg-purple-800/60 text-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-600/50'
                                       : event.isPersonal 
-                                        ? 'bg-blue-200 text-blue-900' 
-                                        : 'bg-purple-200 text-purple-900'
-                                  } ${isToday(day) ? 'bg-white bg-opacity-30 text-white' : ''}`}
+                                        ? 'bg-blue-200 dark:bg-blue-800/60 text-blue-900 dark:text-blue-200 border border-blue-300 dark:border-blue-600/50' 
+                                        : 'bg-purple-200 dark:bg-purple-800/60 text-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-600/50'
+                                  } ${isToday(day) ? 'bg-white dark:bg-slate-800 bg-opacity-30 dark:bg-opacity-50 text-gray-900 dark:text-white border-white/50 dark:border-slate-700/50' : ''}`}
                                   title={event.title}
                                 >
                                   {event.title.length > 15 ? `${event.title.substring(0, 15)}...` : event.title}
                                 </div>
                               ))}
                               {dayEvents.length > 3 && (
-                                <div className={`text-xs px-1.5 py-0.5 rounded ${isToday(day) ? 'text-white' : 'text-gray-600'}`}>
+                                <div className={`text-xs px-1.5 py-0.5 rounded ${isToday(day) ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
                                   +{dayEvents.length - 3} más
                                 </div>
                               )}
@@ -1780,10 +1780,10 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
 
                 {/* Panel lateral con eventos */}
                 <div className="lg:w-80 flex-shrink-0">
-                  <div className="bg-gray-50 rounded-lg p-4 sticky top-20">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg p-4 sticky top-20">
                     {selectedDayEvents.length > 0 ? (
                       <>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                           Eventos del {selectedDate ? `${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]}` : 'día'}
                         </h4>
                         <div className="space-y-3 max-h-[500px] overflow-y-auto">
@@ -1804,37 +1804,37 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                               className={`w-full text-left p-3 rounded-lg text-sm transition hover:shadow-md ${
                                 event.isTask
                                   ? event.taskPriority === 'urgent'
-                                    ? 'bg-red-50 border border-red-200 hover:bg-red-100'
+                                    ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/40'
                                     : event.taskPriority === 'medium'
-                                      ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
-                                      : 'bg-green-50 border border-green-200 hover:bg-green-100'
+                                      ? 'bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700/50 hover:bg-blue-100 dark:hover:bg-blue-800/50'
+                                      : 'bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700/50 hover:bg-green-100 dark:hover:bg-green-800/50'
                                   : event.isPersonal 
-                                    ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100' 
-                                    : 'bg-purple-50 border border-purple-200 hover:bg-purple-100'
+                                    ? 'bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700/50 hover:bg-blue-100 dark:hover:bg-blue-800/50' 
+                                    : 'bg-purple-50 dark:bg-purple-900/40 border border-purple-200 dark:border-purple-700/50 hover:bg-purple-100 dark:hover:bg-purple-800/50'
                               }`}
                             >
                               <div className="flex items-center gap-2 mb-2">
                                 {event.isTask && (
                                   <CheckSquare className={`w-4 h-4 flex-shrink-0 ${
-                                    event.taskPriority === 'urgent' ? 'text-red-600' :
-                                    event.taskPriority === 'medium' ? 'text-blue-600' : 'text-green-600'
+                                    event.taskPriority === 'urgent' ? 'text-red-600 dark:text-red-400' :
+                                    event.taskPriority === 'medium' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'
                                   }`} />
                                 )}
                                 <p className={`font-semibold flex-1 ${
                                   event.isTask
-                                    ? event.taskPriority === 'urgent' ? 'text-red-900' :
-                                      event.taskPriority === 'medium' ? 'text-blue-900' : 'text-green-900'
-                                    : event.isPersonal ? 'text-blue-900' : 'text-purple-900'
+                                    ? event.taskPriority === 'urgent' ? 'text-red-900 dark:text-red-200' :
+                                      event.taskPriority === 'medium' ? 'text-blue-900 dark:text-blue-200' : 'text-green-900 dark:text-green-200'
+                                    : event.isPersonal ? 'text-blue-900 dark:text-blue-200' : 'text-purple-900 dark:text-purple-200'
                                 }`}>
                                   {event.title}
                                 </p>
                               </div>
                               {event.isTask && (
                                 <>
-                                  <p className="text-xs text-gray-600 mb-1">
+                                  <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">
                                     Cliente: {event.taskClient}
                                   </p>
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
                                     Estado: {event.taskStatus === 'pending' ? 'Pendiente' :
                                              event.taskStatus === 'in_progress' ? 'En Progreso' :
                                              event.taskStatus === 'completed' ? 'Completada' : 'Cancelada'}
@@ -1842,7 +1842,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                 </>
                               )}
                               {!event.isTask && !event.isPersonal && event.created_by_profile && (
-                                <p className="text-xs text-purple-600">
+                                <p className="text-xs text-purple-600 dark:text-purple-400">
                                   Asignado por: {event.created_by_profile.full_name}
                                 </p>
                               )}
@@ -1851,14 +1851,14 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                         </div>
                         <button
                           onClick={() => setShowEventModal(true)}
-                          className="w-full mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                          className="w-full mt-4 px-4 py-2 bg-blue-600 text-gray-900 dark:text-white text-sm rounded-lg hover:bg-blue-700 transition"
                         >
                           + Agregar evento
                         </button>
                       </>
                     ) : (
                       <>
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4">Próximos eventos</h4>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Próximos eventos</h4>
                         <div className="space-y-2 max-h-[500px] overflow-y-auto">
                           {events.length > 0 ? (
                             events
@@ -1882,41 +1882,41 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                       setSelectedEvent(event);
                                     }
                                   }}
-                                  className="w-full text-left p-2 rounded text-sm hover:bg-gray-100 transition flex items-center gap-2"
+                                  className="w-full text-left p-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition flex items-center gap-2"
                                 >
                                   <div className={`w-12 text-center text-xs font-medium flex-shrink-0 ${
                                     event.isTask
-                                      ? event.taskPriority === 'urgent' ? 'text-red-600' :
-                                        event.taskPriority === 'medium' ? 'text-blue-600' : 'text-green-600'
-                                      : event.isPersonal ? 'text-blue-600' : 'text-purple-600'
+                                      ? event.taskPriority === 'urgent' ? 'text-red-600 dark:text-red-400' :
+                                        event.taskPriority === 'medium' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'
+                                      : event.isPersonal ? 'text-blue-600 dark:text-blue-400' : 'text-purple-600 dark:text-purple-400'
                                   }`}>
                                     {new Date(event.start_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-gray-900 truncate">{event.title}</p>
+                                    <p className="font-medium text-gray-900 dark:text-white truncate">{event.title}</p>
                                     {event.isTask && event.taskClient && (
-                                      <p className="text-xs text-gray-500 truncate">{event.taskClient}</p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{event.taskClient}</p>
                                     )}
                                   </div>
                                   {event.isTask ? (
                                     <CheckSquare className={`w-4 h-4 flex-shrink-0 ${
-                                      event.taskPriority === 'urgent' ? 'text-red-500' :
-                                      event.taskPriority === 'medium' ? 'text-blue-500' : 'text-green-500'
+                                      event.taskPriority === 'urgent' ? 'text-red-500 dark:text-red-400' :
+                                      event.taskPriority === 'medium' ? 'text-blue-500 dark:text-blue-400' : 'text-green-500 dark:text-green-400'
                                     }`} />
                                   ) : event.isPersonal ? (
-                                    <CalendarIcon className="w-4 h-4 flex-shrink-0 text-blue-500" />
+                                    <CalendarIcon className="w-4 h-4 flex-shrink-0 text-blue-500 dark:text-blue-400" />
                                   ) : (
-                                    <CalendarIcon className="w-4 h-4 flex-shrink-0 text-purple-500" />
+                                    <CalendarIcon className="w-4 h-4 flex-shrink-0 text-purple-500 dark:text-purple-400" />
                                   )}
                                 </button>
                               ))
                           ) : (
-                            <p className="text-sm text-gray-500 text-center py-4">No hay eventos próximos</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No hay eventos próximos</p>
                           )}
                         </div>
                         <button
                           onClick={() => setShowEventModal(true)}
-                          className="w-full mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                          className="w-full mt-4 px-4 py-2 bg-blue-600 text-gray-900 dark:text-white text-sm rounded-lg hover:bg-blue-700 transition"
                         >
                           + Agregar evento
                         </button>
@@ -1991,12 +1991,12 @@ function CreateVacationModal({ onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Solicitar Vacaciones / Licencias</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Solicitar Vacaciones / Licencias</h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Tipo *
             </label>
             <div className="flex gap-3">
@@ -2005,8 +2005,8 @@ function CreateVacationModal({ onClose, onSuccess }: {
                 onClick={() => setType('vacation')}
                 className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
                   type === 'vacation'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 font-medium'
+                    : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 Vacaciones
@@ -2016,8 +2016,8 @@ function CreateVacationModal({ onClose, onSuccess }: {
                 onClick={() => setType('license')}
                 className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
                   type === 'license'
-                    ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-300 font-medium'
+                    : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 Licencia
@@ -2026,7 +2026,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Fecha de inicio *
             </label>
             <input
@@ -2034,13 +2034,13 @@ function CreateVacationModal({ onClose, onSuccess }: {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               min={new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Fecha de fin *
             </label>
             <input
@@ -2048,20 +2048,20 @@ function CreateVacationModal({ onClose, onSuccess }: {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               min={startDate || new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-200 mb-1">
               Razón (opcional)
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Describe el motivo de tus vacaciones / licencias..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               rows={3}
             />
           </div>
@@ -2076,14 +2076,14 @@ function CreateVacationModal({ onClose, onSuccess }: {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-gray-200 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-gray-900 dark:text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
             >
               {loading ? 'Enviando...' : 'Solicitar'}
             </button>

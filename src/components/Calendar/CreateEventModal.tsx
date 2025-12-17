@@ -242,32 +242,32 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Nuevo Evento
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Mensaje de error */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {/* Título */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Título *
             </label>
             <input
@@ -275,14 +275,14 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ej: Reunión con cliente"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           {/* Descripción */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Descripción
             </label>
             <textarea
@@ -290,18 +290,18 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detalles del evento..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           {/* Fecha */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Fecha
             </label>
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">
+            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg">
+              <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 {selectedDate?.toLocaleDateString('es-ES', {
                   weekday: 'long',
                   year: 'numeric',
@@ -319,9 +319,9 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
               id="allDay"
               checked={allDay}
               onChange={(e) => setAllDay(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-slate-600 rounded focus:ring-blue-500"
             />
-            <label htmlFor="allDay" className="text-sm font-medium text-gray-700">
+            <label htmlFor="allDay" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Todo el día
             </label>
           </div>
@@ -330,30 +330,30 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
           {!allDay && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Hora inicio
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Hora fin
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type="time"
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -362,7 +362,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
 
           {/* Color */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Color
             </label>
             <div className="flex gap-2">
@@ -382,7 +382,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
           </div>
 
           {/* Evento Recurrente */}
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
             <div className="flex items-center gap-2 mb-3">
               <input
                 type="checkbox"
@@ -396,18 +396,18 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                     setRecurrenceWeekPosition(null);
                   }
                 }}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-slate-600 rounded focus:ring-blue-500"
               />
-              <label htmlFor="isRecurring" className="text-sm font-medium text-gray-700">
+              <label htmlFor="isRecurring" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Evento recurrente (se repite mensualmente)
               </label>
             </div>
 
             {isRecurring && (
-              <div className="ml-6 space-y-4 bg-blue-50 p-3 rounded-lg">
+              <div className="ml-6 space-y-4 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800/50">
                 {/* Modo de recurrencia */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Tipo de recurrencia
                   </label>
                   <div className="space-y-2">
@@ -422,9 +422,9 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                           setRecurrenceWeekday(null);
                           setRecurrenceWeekPosition(null);
                         }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-slate-600 focus:ring-blue-500"
                       />
-                      <label htmlFor="recurrenceDayOfMonth" className="text-sm text-gray-700">
+                      <label htmlFor="recurrenceDayOfMonth" className="text-sm text-gray-700 dark:text-gray-300">
                         Mismo día del mes (ej: día 15 de cada mes)
                       </label>
                     </div>
@@ -446,9 +446,9 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                             setRecurrenceWeekPosition(Math.min(weekPosition, 4));
                           }
                         }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-slate-600 focus:ring-blue-500"
                       />
-                      <label htmlFor="recurrenceWeekday" className="text-sm text-gray-700">
+                      <label htmlFor="recurrenceWeekday" className="text-sm text-gray-700 dark:text-gray-300">
                         Día de la semana específico (ej: primer jueves de cada mes)
                       </label>
                     </div>
@@ -457,9 +457,9 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
 
                 {/* Configuración de día de la semana */}
                 {recurrenceMode === 'weekday' && (
-                  <div className="space-y-3 bg-white p-3 rounded border border-blue-200">
+                  <div className="space-y-3 bg-white dark:bg-slate-700 p-3 rounded border border-blue-200 dark:border-blue-800/50">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Día de la semana
                       </label>
                       <div className="grid grid-cols-7 gap-1">
@@ -478,8 +478,8 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                             onClick={() => setRecurrenceWeekday(day.value)}
                             className={`px-2 py-2 text-sm font-medium rounded transition ${
                               recurrenceWeekday === day.value
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                                : 'bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-500'
                             }`}
                             title={day.full}
                           >
@@ -490,7 +490,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Posición en el mes
                       </label>
                       <div className="grid grid-cols-5 gap-2">
@@ -507,8 +507,8 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                             onClick={() => setRecurrenceWeekPosition(pos.value)}
                             className={`px-3 py-2 text-sm font-medium rounded transition ${
                               recurrenceWeekPosition === pos.value
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                                : 'bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-500'
                             }`}
                           >
                             {pos.label}
@@ -516,7 +516,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                         ))}
                       </div>
                       {recurrenceWeekday !== null && recurrenceWeekPosition !== null && (
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                           El evento será el{' '}
                           {recurrenceWeekPosition === -1 ? 'último' : ['', 'primer', 'segundo', 'tercer', 'cuarto'][recurrenceWeekPosition]}{' '}
                           {['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][recurrenceWeekday]} de cada mes
@@ -528,7 +528,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
 
                 {/* Configuración de fin de recurrencia */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     ¿Cuándo termina la recurrencia?
                   </label>
                   <div className="space-y-2">
@@ -546,9 +546,9 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                             setRecurrenceEndDate(endDate.toISOString().split('T')[0]);
                           }
                         }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-slate-600 focus:ring-blue-500"
                       />
-                      <label htmlFor="recurrenceEndDate" className="text-sm text-gray-700">
+                      <label htmlFor="recurrenceEndDate" className="text-sm text-gray-700 dark:text-gray-300">
                         Hasta una fecha específica
                       </label>
                     </div>
@@ -559,7 +559,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                           value={recurrenceEndDate}
                           onChange={(e) => setRecurrenceEndDate(e.target.value)}
                           min={selectedDate?.toISOString().split('T')[0]}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         />
                       </div>
                     )}
@@ -573,9 +573,9 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                         onChange={() => {
                           setRecurrenceEndDate('');
                         }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-slate-600 focus:ring-blue-500"
                       />
-                      <label htmlFor="recurrenceCount" className="text-sm text-gray-700">
+                      <label htmlFor="recurrenceCount" className="text-sm text-gray-700 dark:text-gray-300">
                         Número de ocurrencias
                       </label>
                     </div>
@@ -587,9 +587,9 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                           onChange={(e) => setRecurrenceCount(Math.max(1, parseInt(e.target.value) || 1))}
                           min={1}
                           max={60}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           El evento se repetirá {recurrenceCount} {recurrenceCount === 1 ? 'vez' : 'veces'} (mensualmente)
                         </p>
                       </div>
@@ -603,7 +603,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
           {/* Asignar a usuarios o departamentos (solo admin/support) */}
           {canAssignEvents && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Asignar evento (opcional)
               </label>
               
@@ -617,8 +617,8 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                   }}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition ${
                     assignMode === 'users'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   <UsersIcon className="w-4 h-4" />
@@ -632,8 +632,8 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                   }}
                   className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition ${
                     assignMode === 'departments'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   <Building2 className="w-4 h-4" />
@@ -642,10 +642,10 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
               </div>
 
               {/* Lista de usuarios o departamentos */}
-              <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto bg-gray-50">
+              <div className="border border-gray-300 dark:border-slate-600 rounded-lg p-3 max-h-48 overflow-y-auto bg-gray-50 dark:bg-slate-700">
                 {assignMode === 'users' ? (
                   users.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
                       No hay usuarios disponibles
                     </p>
                   ) : (
@@ -653,22 +653,22 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                       {users.map((user) => (
                         <label
                           key={user.id}
-                          className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition"
+                          className="flex items-center gap-3 p-2 hover:bg-white dark:hover:bg-slate-600 rounded-lg cursor-pointer transition"
                         >
                           <input
                             type="checkbox"
                             checked={assignTo.includes(user.id)}
                             onChange={() => toggleItem(user.id)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-slate-600 rounded focus:ring-blue-500"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                               {user.full_name}
                             </p>
-                            <p className="text-xs text-gray-500 truncate">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                               {user.email}
                               {user.role === 'support' && (
-                                <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                                <span className="ml-2 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs font-medium">
                                   Support
                                 </span>
                               )}
@@ -680,7 +680,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                   )
                 ) : (
                   departments.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
                       No hay departamentos disponibles
                     </p>
                   ) : (
@@ -688,20 +688,20 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
                       {departments.map((dept) => (
                         <label
                           key={dept.id}
-                          className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition"
+                          className="flex items-center gap-3 p-2 hover:bg-white dark:hover:bg-slate-600 rounded-lg cursor-pointer transition"
                         >
                           <input
                             type="checkbox"
                             checked={assignTo.includes(dept.id)}
                             onChange={() => toggleItem(dept.id)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-slate-600 rounded focus:ring-blue-500"
                           />
                           <div className="flex items-center gap-2 flex-1">
                             <div
                               className="w-3 h-3 rounded-full"
                               style={{ backgroundColor: dept.color }}
                             />
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
                               {dept.name}
                             </p>
                           </div>
@@ -713,7 +713,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
               </div>
               
               {assignTo.length > 0 && (
-                <p className="mt-2 text-xs text-purple-600 flex items-center gap-1">
+                <p className="mt-2 text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1">
                   {assignMode === 'users' ? (
                     <>
                       <UsersIcon className="w-3 h-3" />
@@ -735,14 +735,14 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading || !title.trim()}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creando...' : 'Crear Evento'}
             </button>

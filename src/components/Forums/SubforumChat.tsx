@@ -487,7 +487,7 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
       <div className="mb-6">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
         >
           <ArrowLeft className="w-5 h-5" />
           Volver a Foros
@@ -495,16 +495,16 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
 
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">{subforum?.name}</h2>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{subforum?.name}</h2>
             {subforum?.description && (
-              <p className="text-gray-600 mt-1">{subforum.description}</p>
+              <p className="text-gray-600 dark:text-gray-300 mt-1">{subforum.description}</p>
             )}
-            <p className="text-sm text-gray-500 mt-1">Cliente: {subforum?.client_name}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Cliente: {subforum?.client_name}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowFileSearch(!showFileSearch)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition font-medium"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition font-medium text-gray-700 dark:text-gray-300"
             >
               <Search className="w-4 h-4" />
               Buscar Archivos ({getAllAttachments().length})
@@ -523,16 +523,16 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
         </div>
       </div>
 
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden relative">
+      <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 flex flex-col overflow-hidden relative">
         {showFileSearch && (
-          <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 z-10 shadow-md">
+          <div className="absolute top-0 left-0 right-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 z-10 shadow-md">
             <div className="p-4">
               <div className="flex items-center gap-2 mb-4">
-                <Filter className="w-5 h-5 text-gray-500" />
-                <h3 className="font-semibold text-gray-900">Buscador de Archivos</h3>
+                <Filter className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">Buscador de Archivos</h3>
                 <button
                   onClick={() => setShowFileSearch(false)}
-                  className="ml-auto text-gray-400 hover:text-gray-600"
+                  className="ml-auto text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -543,12 +543,12 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
                 placeholder="Buscar por nombre de archivo..."
                 value={fileSearchTerm}
                 onChange={(e) => setFileSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
               />
 
               <div className="max-h-48 overflow-y-auto space-y-2">
                 {filteredAttachments.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4 text-sm">
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-4 text-sm">
                     {fileSearchTerm ? 'No se encontraron archivos' : 'No hay archivos en este foro'}
                   </p>
                 ) : (
@@ -556,17 +556,17 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
                     <button
                       key={idx}
                       onClick={() => downloadFile(attachment)}
-                      className="w-full flex items-center gap-3 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm transition group"
+                      className="w-full flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600 rounded-lg text-sm transition group"
                     >
-                      <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       <div className="flex-1 text-left min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{attachment.name}</p>
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="font-medium text-gray-900 dark:text-white truncate">{attachment.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {attachment.author} • {new Date(attachment.date).toLocaleDateString('es-ES')} •{' '}
                           {formatFileSize(attachment.size)}
                         </p>
                       </div>
-                      <Download className="w-4 h-4 text-gray-400 group-hover:text-blue-600 flex-shrink-0" />
+                      <Download className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 flex-shrink-0" />
                     </button>
                   ))
                 )}
@@ -577,28 +577,28 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">No hay mensajes aún. Sé el primero en escribir!</p>
+              <p className="text-gray-500 dark:text-gray-400">No hay mensajes aún. Sé el primero en escribir!</p>
             </div>
           ) : (
             messages.map((message) => (
               <div key={message.id} className="flex gap-3 group">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-blue-600 font-semibold text-sm">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
                     {message.profiles.full_name.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 dark:text-white">
                       {message.profiles.full_name}
                     </span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ${
                         message.profiles.role === 'admin'
-                          ? 'bg-purple-100 text-purple-700'
+                          ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
                           : message.profiles.role === 'support'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-gray-100 text-gray-700'
+                          ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                       }`}
                     >
                       {message.profiles.role === 'admin'
@@ -607,7 +607,7 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
                         ? 'Soporte'
                         : 'Usuario'}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(message.created_at).toLocaleString('es-ES')}
                     </span>
                     {(canModerate || message.created_by === profile?.id) && (
@@ -621,7 +621,7 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
                       </button>
                     )}
                   </div>
-                  <p className="text-gray-700 whitespace-pre-wrap">
+                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                     {renderMessageWithMentions(message.content)}
                   </p>
                   {message.attachments && message.attachments.length > 0 && (
@@ -630,12 +630,12 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
                         <button
                           key={idx}
                           onClick={() => downloadFile(attachment)}
-                          className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm transition group"
+                          className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600 rounded-lg text-sm transition group"
                         >
-                          <FileText className="w-4 h-4 text-gray-500" />
-                          <span className="text-gray-700 flex-1 text-left">{attachment.name}</span>
-                          <span className="text-gray-500 text-xs">{formatFileSize(attachment.size)}</span>
-                          <Download className="w-4 h-4 text-gray-400 group-hover:text-blue-600" />
+                          <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                          <span className="text-gray-700 dark:text-gray-300 flex-1 text-left">{attachment.name}</span>
+                          <span className="text-gray-500 dark:text-gray-400 text-xs">{formatFileSize(attachment.size)}</span>
+                          <Download className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
                         </button>
                       ))}
                     </div>
@@ -647,21 +647,21 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSendMessage} className="border-t border-gray-200 p-4">
+        <form onSubmit={handleSendMessage} className="border-t border-gray-200 dark:border-slate-700 p-4">
           {selectedFiles.length > 0 && (
             <div className="mb-3 space-y-2">
               {selectedFiles.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg"
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg"
                 >
-                  <Paperclip className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm text-gray-700 flex-1">{file.name}</span>
-                  <span className="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                  <Paperclip className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{file.name}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.size)}</span>
                   <button
                     type="button"
                     onClick={() => removeFile(index)}
-                    className="text-gray-400 hover:text-red-600 transition"
+                    className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -745,7 +745,7 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
                 }}
                 placeholder="Escribe un mensaje... (usa @ para mencionar usuarios)"
                 rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
               {showMentionAutocomplete && (
                 <MentionAutocomplete
@@ -811,7 +811,7 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
             />
             <label
               htmlFor="forum-file-upload"
-              className="px-3 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition cursor-pointer"
+              className="px-3 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition cursor-pointer"
             >
               <Paperclip className="w-5 h-5" />
             </label>
@@ -844,26 +844,26 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
 
       {showDeleteForumConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="w-6 h-6 text-red-600" />
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Eliminar Subforo</h3>
-                <p className="text-sm text-gray-600">Esta acción no se puede deshacer</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Eliminar Subforo</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Esta acción no se puede deshacer</p>
               </div>
             </div>
 
-            <p className="text-gray-700 mb-6">
-              ¿Estás seguro de que deseas eliminar el subforo <strong>{subforum?.name}</strong>?
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              ¿Estás seguro de que deseas eliminar el subforo <strong className="text-gray-900 dark:text-white">{subforum?.name}</strong>?
               Todos los mensajes y archivos se perderán permanentemente.
             </p>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteForumConfirm(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition font-medium"
               >
                 Cancelar
               </button>

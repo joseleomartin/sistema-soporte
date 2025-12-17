@@ -415,41 +415,41 @@ export function CostCalculation() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <Calculator className="w-8 h-8 text-blue-600" />
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+          <Calculator className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           Cálculo de Costos
         </h2>
-        <p className="text-gray-600 mt-2">
+        <p className="text-gray-600 dark:text-gray-300 mt-2">
           Calcula el margen neto por cliente basado en costos de áreas y horas trabajadas
         </p>
       </div>
 
       {/* Filtros */}
-      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+      <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Rango de fechas */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Rango de Fechas
             </label>
             <div className="flex items-center gap-3">
               <div className="flex-1 relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <span className="text-gray-500">a</span>
+              <span className="text-gray-500 dark:text-gray-400">a</span>
               <div className="flex-1 relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -479,21 +479,21 @@ export function CostCalculation() {
       </div>
 
       {/* Configuración de costos por área */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Costos por Área (Carga Manual)
           </h3>
         </div>
         <div className="space-y-3">
           {departments.map((dept) => (
-            <div key={dept.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+            <div key={dept.id} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
               <div className="flex-1">
-                <p className="font-medium text-gray-900">{dept.name}</p>
+                <p className="font-medium text-gray-900 dark:text-white">{dept.name}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">$</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">$</span>
                 <input
                   type="number"
                   step="0.01"
@@ -503,62 +503,62 @@ export function CostCalculation() {
                     const newCost = parseFloat(e.target.value) || 0;
                     updateDepartmentCost(dept.id, newCost);
                   }}
-                  className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-32 px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="0.00"
                 />
-                <span className="text-sm text-gray-600">/hora</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">/hora</span>
               </div>
             </div>
           ))}
           {departments.length === 0 && (
-            <p className="text-gray-500 text-center py-4">No hay áreas configuradas</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No hay áreas configuradas</p>
           )}
         </div>
       </div>
 
       {/* Resultados por cliente */}
       {clientCosts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <FolderOpen className="w-5 h-5 text-blue-600" />
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Costos por Cliente
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Cliente
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Horas
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Costo Total
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Precio a Cobrar
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Margen Neto
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
                 {clientCosts.map((client) => (
-                  <tr key={client.client_id} className="hover:bg-gray-50">
+                  <tr key={client.client_id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{client.client_name}</div>
-                      <div className="text-sm text-gray-500">
+                      <div className="font-medium text-gray-900 dark:text-white">{client.client_name}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
                         {client.entries_count} {client.entries_count === 1 ? 'entrada' : 'entradas'}
                       </div>
                       {/* Desglose por área */}
                       {Object.keys(client.cost_by_area).length > 0 && (
                         <div className="mt-2 space-y-1">
                           {Object.values(client.cost_by_area).map((areaData, idx) => (
-                            <div key={idx} className="text-xs text-gray-400">
+                            <div key={idx} className="text-xs text-gray-400 dark:text-gray-500">
                               {areaData.areaName}: {formatHoursMinutes(areaData.hours)} = {formatCurrency(areaData.cost)}
                             </div>
                           ))}
@@ -566,18 +566,18 @@ export function CostCalculation() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {formatHoursMinutes(client.total_hours)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">
                         {formatCurrency(client.total_cost)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">$</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-300">$</span>
                         <input
                           type="number"
                           step="0.01"
@@ -587,21 +587,21 @@ export function CostCalculation() {
                             : (savedPrices[client.client_id]?.toString() || client.price_to_charge || '')}
                           onChange={(e) => handlePriceChange(client.client_id, e.target.value)}
                           onBlur={(e) => handlePriceBlur(client.client_id, e.target.value)}
-                          className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-32 px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="0.00"
                           disabled={savingCost === client.client_id}
                         />
                         {savingCost === client.client_id && (
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-4 h-4 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                         )}
                         {savedPrices[client.client_id] !== undefined && savingCost !== client.client_id && (
-                          <span className="text-xs text-green-600" title="Precio guardado">✓</span>
+                          <span className="text-xs text-green-600 dark:text-green-400" title="Precio guardado">✓</span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`text-sm font-semibold flex items-center gap-1 ${
-                        client.net_margin >= 0 ? 'text-green-600' : 'text-red-600'
+                        client.net_margin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                       }`}>
                         {client.net_margin >= 0 ? (
                           <TrendingUp className="w-4 h-4" />
@@ -611,7 +611,7 @@ export function CostCalculation() {
                         {formatCurrency(client.net_margin)}
                       </div>
                       {client.price_to_charge > 0 && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {((client.net_margin / client.price_to_charge) * 100).toFixed(1)}% margen
                         </div>
                       )}
@@ -620,22 +620,22 @@ export function CostCalculation() {
                 ))}
               </tbody>
               {/* Totales */}
-              <tfoot className="bg-gray-50">
+              <tfoot className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                  <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
                     Total
                   </td>
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                  <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
                     {formatHoursMinutes(clientCosts.reduce((sum, c) => sum + c.total_hours, 0))}
                   </td>
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                  <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
                     {formatCurrency(clientCosts.reduce((sum, c) => sum + c.total_cost, 0))}
                   </td>
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                  <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">
                     {formatCurrency(clientCosts.reduce((sum, c) => sum + c.price_to_charge, 0))}
                   </td>
                   <td className={`px-6 py-4 font-semibold flex items-center gap-1 ${
-                    clientCosts.reduce((sum, c) => sum + c.net_margin, 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                    clientCosts.reduce((sum, c) => sum + c.net_margin, 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                   }`}>
                     {clientCosts.reduce((sum, c) => sum + c.net_margin, 0) >= 0 ? (
                       <TrendingUp className="w-4 h-4" />
@@ -652,12 +652,12 @@ export function CostCalculation() {
       )}
 
       {!loading && clientCosts.length === 0 && startDate && endDate && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <Calculator className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
+          <Calculator className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-300">
             No hay horas registradas en el rango de fechas seleccionado.
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
             Selecciona un rango de fechas y haz clic en "Calcular" para ver los costos.
           </p>
         </div>

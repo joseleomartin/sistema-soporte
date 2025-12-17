@@ -268,26 +268,26 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
 
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) {
-      return <Image className="w-5 h-5 text-green-600" />;
+      return <Image className="w-5 h-5 text-green-600 dark:text-green-400" />;
     } else if (fileType.includes('pdf')) {
-      return <FileText className="w-5 h-5 text-red-600" />;
+      return <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />;
     } else {
-      return <File className="w-5 h-5 text-gray-600" />;
+      return <File className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             {course 
               ? (type === 'document' ? 'Editar Documento' : 'Editar Curso')
               : (type === 'document' ? 'Nuevo Documento' : 'Nuevo Curso')}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -295,21 +295,21 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4">
+              <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {/* Título */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               {type === 'document' ? 'Título del Documento *' : 'Título del Curso *'}
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               placeholder="Ej: Introducción a React"
               required
             />
@@ -318,13 +318,13 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
           {/* Carpeta */}
           {folders.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Carpeta (opcional)
               </label>
               <select
                 value={selectedFolderId || ''}
                 onChange={(e) => setSelectedFolderId(e.target.value || null)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               >
                 <option value="">Sin carpeta</option>
                 {folders.map((folder) => (
@@ -338,14 +338,14 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
 
           {/* Descripción */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Descripción
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               placeholder="Describe el contenido del curso..."
             />
           </div>
@@ -355,7 +355,7 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
             {type === 'course' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     URL de YouTube
                   </label>
                   <input
@@ -371,16 +371,16 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
                       }
                     }}
                     disabled={selectedFile !== null}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                     Puedes usar URLs de YouTube en formato: youtube.com/watch?v=... o youtu.be/...
                   </p>
                 </div>
 
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     O sube un archivo
                   </label>
                   <input
@@ -395,30 +395,30 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={youtubeUrl.trim() !== '' || uploading}
-                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-white dark:bg-slate-800"
                   >
-                    <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm text-gray-600">
+                    <Upload className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {selectedFile ? selectedFile.name : 'Seleccionar archivo'}
                     </span>
                   </button>
                   {selectedFile && (
-                    <div className="mt-2 flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="mt-2 flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600">
                       {getFileIcon(selectedFile.type)}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-900 truncate">{selectedFile.name}</p>
-                        <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                        <p className="text-sm text-gray-900 dark:text-white truncate">{selectedFile.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(selectedFile.size)}</p>
                       </div>
                       <button
                         type="button"
                         onClick={removeFile}
-                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded transition-colors"
                       >
-                        <XIcon className="w-4 h-4 text-gray-600" />
+                        <XIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                       </button>
                     </div>
                   )}
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 Formatos soportados: PDF, Word, Excel, PowerPoint, imágenes, videos, audio, ZIP, CSV
               </p>
                 </div>
@@ -427,7 +427,7 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
 
             {type === 'document' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Link de Google Drive *
                 </label>
                 <input
@@ -443,14 +443,14 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
                       }
                     }
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                   placeholder="https://drive.google.com/drive/folders/1ABC..."
                   required={type === 'document'}
                 />
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   Ingresa el link completo de la carpeta de Google Drive. Se mostrará todo el contenido de la carpeta.
                 </p>
-                <p className="mt-1 text-xs text-blue-600">
+                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
                   Ejemplo: https://drive.google.com/drive/folders/1ABC123xyz...
                 </p>
               </div>
@@ -458,18 +458,18 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
           </div>
 
           {/* Botones */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
               disabled={saving}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               disabled={saving || uploading}
             >
               {(saving || uploading) ? (

@@ -130,17 +130,17 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
 
   const getFileIcon = () => {
     if (isImage) {
-      return <Image className="w-5 h-5 text-green-600" />;
+      return <Image className="w-5 h-5 text-green-600 dark:text-green-400" />;
     } else if (isPDF) {
-      return <FileText className="w-5 h-5 text-red-600" />;
+      return <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />;
     } else {
-      return <File className="w-5 h-5 text-gray-600" />;
+      return <File className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
     }
   };
 
   return (
     <div 
-      className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
       onClick={onClick}
     >
       <div className="p-6">
@@ -148,18 +148,18 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-2">
                 {course.title}
               </h3>
               {course.parts_count !== undefined && course.parts_count > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
                   <List className="w-3 h-3" />
                   {course.parts_count} {course.parts_count === 1 ? 'parte' : 'partes'}
                 </span>
               )}
             </div>
             {course.created_by_profile && (
-              <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
                 <User className="w-3.5 h-3.5" />
                 <span>Creado por: {course.created_by_profile.full_name}</span>
               </div>
@@ -173,7 +173,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
                     e.stopPropagation();
                     onEdit();
                   }}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                   title="Editar"
                 >
                   <Edit className="w-4 h-4" />
@@ -185,7 +185,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
                     e.stopPropagation();
                     onDelete();
                   }}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                  className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                   title="Eliminar"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -197,7 +197,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
 
         {/* Descripción */}
         {course.description && (
-          <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-3">
             {course.description}
           </p>
         )}
@@ -205,12 +205,12 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
         {/* Indicador de Google Drive (solo para documentos) */}
         {course.google_drive_folder_id && (
           <div className="mb-4">
-            <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50">
+            <div className="border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
               <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-blue-600" />
+                <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-900">Carpeta de Google Drive</p>
-                  <p className="text-xs text-blue-700">Contenido disponible en Google Drive</p>
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Carpeta de Google Drive</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">Contenido disponible en Google Drive</p>
                 </div>
               </div>
             </div>
@@ -220,7 +220,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
         {/* Video o Archivo Preview */}
         {embedUrl && !showVideo && (
           <div className="mb-4">
-            <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+            <div className="relative aspect-video bg-gray-100 dark:bg-slate-700 rounded-lg overflow-hidden">
               <img
                 src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
                 alt={course.title}
@@ -254,7 +254,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
             </div>
             <button
               onClick={() => setShowVideo(false)}
-              className="mt-2 text-sm text-gray-600 hover:text-gray-900"
+              className="mt-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
               Ocultar video
             </button>
@@ -264,7 +264,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
         {hasFile && !showFilePreview && (
           <div className="mb-4">
             {isImage && fileUrl ? (
-              <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+              <div className="relative aspect-video bg-gray-100 dark:bg-slate-700 rounded-lg overflow-hidden">
                 <img
                   src={fileUrl}
                   alt={course.title}
@@ -280,22 +280,22 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
                 </button>
               </div>
             ) : isImage && !fileUrl ? (
-              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+              <div className="aspect-video bg-gray-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-400 dark:text-gray-500" />
               </div>
             ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
+              <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-6 bg-gray-50 dark:bg-slate-700">
                 <div className="flex items-center gap-4">
                   {getFileIcon()}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{course.file_name}</p>
-                    <p className="text-xs text-gray-500">{formatFileSize(course.file_size)}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{course.file_name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(course.file_size)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {isPDF && (
                       <button
                         onClick={handleViewFile}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                         title="Ver archivo"
                       >
                         <Eye className="w-5 h-5" />
@@ -303,7 +303,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
                     )}
                     <button
                       onClick={handleDownloadFile}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
                       title="Descargar"
                     >
                       <Download className="w-5 h-5" />
@@ -361,7 +361,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
             </div>
             <button
               onClick={() => setShowFilePreview(false)}
-              className="mt-2 text-sm text-gray-600 hover:text-gray-900"
+              className="mt-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
               Ocultar vista previa
             </button>
@@ -369,7 +369,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between text-xs text-gray-500">
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <span>
             {new Date(course.created_at).toLocaleDateString('es-ES', {
               year: 'numeric',
@@ -383,7 +383,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
                 href={course.youtube_url || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1"
               >
                 Ver en YouTube
               </a>
@@ -391,7 +391,7 @@ export function CourseCard({ course, onEdit, onDelete, onClick }: CourseCardProp
             {hasFile && !showFilePreview && (
               <button
                 onClick={handleDownloadFile}
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1"
               >
                 <Download className="w-3.5 h-3.5" />
                 Descargar

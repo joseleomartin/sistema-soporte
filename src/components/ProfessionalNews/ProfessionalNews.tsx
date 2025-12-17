@@ -196,8 +196,8 @@ export function ProfessionalNews() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">Novedades Profesionales</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Novedades Profesionales</h1>
+          <p className="text-gray-600 dark:text-gray-300">
             Recursos externos y actualizaciones impositivas, laborales y contables para el equipo.
           </p>
         </div>
@@ -214,14 +214,14 @@ export function ProfessionalNews() {
       </div>
 
       {isAdmin && showForm && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {editingItem ? 'Editar novedad profesional' : 'Agregar novedad profesional'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Link de redirección *
                 </label>
                 <input
@@ -230,11 +230,11 @@ export function ProfessionalNews() {
                   placeholder="https://www.somosemagroup.com/..."
                   value={form.url}
                   onChange={(e) => handleChange('url', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Título *
                 </label>
                 <input
@@ -243,14 +243,14 @@ export function ProfessionalNews() {
                   placeholder="Monotributo Unificado CABA: AGIP actualiza montos a ingresar en 2026"
                   value={form.title}
                   onChange={(e) => handleChange('title', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Descripción (opcional)
                 </label>
                 <textarea
@@ -258,11 +258,11 @@ export function ProfessionalNews() {
                   placeholder="Resumen breve de la novedad para que el equipo sepa de qué se trata."
                   value={form.description}
                   onChange={(e) => handleChange('description', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Imagen (URL opcional)
                 </label>
                 <input
@@ -270,16 +270,16 @@ export function ProfessionalNews() {
                   placeholder="Si la dejás vacía, mostraremos una tarjeta con fondo de color."
                   value={form.image_url}
                   onChange={(e) => handleChange('image_url', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Idealmente podés pegar la URL de la imagen principal de la nota (por ejemplo la de AGIP).
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Hashtags (opcional)
               </label>
               <input
@@ -287,9 +287,9 @@ export function ProfessionalNews() {
                 placeholder="#agip #monotributo o separados por coma: agip, monotributo"
                 value={form.tags}
                 onChange={(e) => handleChange('tags', e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Podés escribir hasta 5 hashtags. Se mostrarán como chips amarillos en la tarjeta.
               </p>
             </div>
@@ -308,14 +308,14 @@ export function ProfessionalNews() {
                     tags: '',
                   });
                 }}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-500 text-white text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {submitting ? (
                   <>
@@ -333,20 +333,20 @@ export function ProfessionalNews() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
         </div>
       ) : items.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-dashed border-gray-300 p-10 text-center">
-          <p className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-dashed border-gray-300 dark:border-slate-600 p-10 text-center">
+          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             Todavía no hay novedades profesionales cargadas
           </p>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
             Usá este espacio para guardar links importantes de AGIP, AFIP, convenios, resoluciones, etc.
           </p>
           {isAdmin && (
             <button
               onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
             >
               <Plus className="w-5 h-5" />
               Agregar primera novedad
@@ -358,14 +358,14 @@ export function ProfessionalNews() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="group text-left bg-blue-50 rounded-2xl p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-transparent hover:border-blue-200 flex flex-col"
+              className="group text-left bg-blue-50 dark:bg-slate-800 rounded-2xl p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border border-transparent dark:border-slate-700 hover:border-blue-200 dark:hover:border-slate-600 flex flex-col"
             >
               <button
                 type="button"
                 onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
                 className="w-full text-left"
               >
-                <div className="mb-4 overflow-hidden rounded-2xl bg-white">
+                <div className="mb-4 overflow-hidden rounded-2xl bg-white dark:bg-slate-800">
                 {item.image_url ? (
                   <img
                     src={item.image_url}
@@ -389,23 +389,23 @@ export function ProfessionalNews() {
                   ).map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center rounded-full bg-yellow-300/90 px-3 py-1 text-xs font-semibold text-gray-900"
+                      className="inline-flex items-center rounded-full bg-yellow-300/90 px-3 py-1 text-xs font-semibold text-gray-900 dark:text-white"
                     >
                       {tag.startsWith('#') ? tag.substring(1) : tag}
                     </span>
                   ))}
                 </div>
 
-                <h3 className="text-lg font-semibold text-blue-900 mb-1 group-hover:text-blue-700 line-clamp-2">
+                <h3 className="text-lg font-semibold text-blue-900 dark:text-white mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 line-clamp-2">
                   {item.title}
                 </h3>
                 {item.description && (
-                  <p className="text-sm text-gray-700 mb-3 line-clamp-3">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-3">
                     {item.description}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between mt-2 text-xs text-blue-700 font-medium">
+                <div className="flex items-center justify-between mt-2 text-xs text-blue-700 dark:text-blue-300 font-medium">
                   <span className="truncate max-w-[75%]">
                     {new URL(item.url).hostname.replace('www.', '')}
                   </span>
@@ -421,14 +421,14 @@ export function ProfessionalNews() {
                   <button
                     type="button"
                     onClick={() => handleEdit(item)}
-                    className="text-xs px-3 py-1 rounded-full border border-blue-500 text-blue-700 hover:bg-blue-50"
+                    className="text-xs px-3 py-1 rounded-full border border-blue-500 dark:border-blue-400 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                   >
                     Editar
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(item)}
-                    className="text-xs px-3 py-1 rounded-full border border-red-500 text-red-600 hover:bg-red-50"
+                    className="text-xs px-3 py-1 rounded-full border border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
                   >
                     Eliminar
                   </button>

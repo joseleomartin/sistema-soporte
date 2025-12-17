@@ -104,8 +104,8 @@ export function MeetingRoomsList() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Salas de Reunión</h2>
-          <p className="text-gray-600 mt-2">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Salas de Reunión</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
             Salas permanentes de videoconferencia - Únete en cualquier momento
           </p>
         </div>
@@ -127,9 +127,9 @@ export function MeetingRoomsList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rooms.length === 0 ? (
-            <div className="col-span-full bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="col-span-full bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
               <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">No hay salas de reunión disponibles</p>
+              <p className="text-gray-500 dark:text-gray-400 text-lg">No hay salas de reunión disponibles</p>
               {profile?.role === 'admin' && (
                 <p className="text-sm text-gray-400 mt-2">Crea la primera sala para comenzar</p>
               )}
@@ -139,24 +139,24 @@ export function MeetingRoomsList() {
               <button
                 key={room.id}
                 onClick={() => setSelectedRoom(room.id)}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-green-300 transition cursor-pointer text-left group relative overflow-hidden"
+                className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 hover:shadow-lg hover:border-green-300 dark:hover:border-green-500 transition cursor-pointer text-left group relative overflow-hidden"
               >
                 <div className="absolute top-0 right-0 w-16 h-16 bg-green-500 rounded-bl-full opacity-10 group-hover:opacity-20 transition" />
 
                 <div className="relative">
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition">
-                      <Video className="w-6 h-6 text-green-600" />
+                    <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition">
+                      <Video className="w-6 h-6 text-green-600 dark:text-green-400" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-lg text-gray-900">{room.name}</h3>
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-white">{room.name}</h3>
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium rounded-full">
                           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                           Activa
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 line-clamp-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
                         {room.description || 'Sala de videollamada permanente disponible 24/7'}
                       </p>
                     </div>
@@ -172,7 +172,7 @@ export function MeetingRoomsList() {
                           </span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                        <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
                           <Users className="w-4 h-4" />
                           <span>Sin usuarios</span>
                         </div>

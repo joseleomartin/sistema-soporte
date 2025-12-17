@@ -11,8 +11,8 @@ const tools = [
     name: 'Extractor de Tablas',
     description: 'Extrae tablas de documentos y archivos',
     icon: Table2,
-    color: 'bg-blue-100 text-blue-600',
-    hoverColor: 'hover:bg-blue-50',
+    color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+    hoverColor: 'hover:bg-blue-50 dark:hover:bg-blue-900/50',
     comingSoon: false,
   },
   {
@@ -20,8 +20,8 @@ const tools = [
     name: 'PDF a OCR',
     description: 'Convierte PDFs escaneados a texto editable',
     icon: FileText,
-    color: 'bg-green-100 text-green-600',
-    hoverColor: 'hover:bg-green-50',
+    color: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400',
+    hoverColor: 'hover:bg-green-50 dark:hover:bg-green-900/50',
     comingSoon: false,
   },
   {
@@ -29,8 +29,8 @@ const tools = [
     name: 'Consiliador',
     description: 'Concilia y compara datos financieros',
     icon: Scale,
-    color: 'bg-purple-100 text-purple-600',
-    hoverColor: 'hover:bg-purple-50',
+    color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+    hoverColor: 'hover:bg-purple-50 dark:hover:bg-purple-900/50',
     comingSoon: false,
   },
   {
@@ -38,8 +38,8 @@ const tools = [
     name: 'Vencimiento',
     description: 'Gestiona y controla vencimientos de clientes',
     icon: Calendar,
-    color: 'bg-orange-100 text-orange-600',
-    hoverColor: 'hover:bg-orange-50',
+    color: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+    hoverColor: 'hover:bg-orange-50 dark:hover:bg-orange-900/50',
     comingSoon: false,
   },
 ];
@@ -65,7 +65,7 @@ export function ToolsPanel() {
       <div className="h-full overflow-auto">
         <button
           onClick={handleBack}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+          className="mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition"
         >
           <ArrowLeft className="w-5 h-5" />
           Volver a Herramientas
@@ -80,7 +80,7 @@ export function ToolsPanel() {
       <div className="h-full overflow-auto">
         <button
           onClick={handleBack}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+          className="mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition"
         >
           <ArrowLeft className="w-5 h-5" />
           Volver a Herramientas
@@ -95,7 +95,7 @@ export function ToolsPanel() {
       <div className="h-full overflow-auto">
         <button
           onClick={handleBack}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+          className="mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition"
         >
           <ArrowLeft className="w-5 h-5" />
           Volver a Herramientas
@@ -110,7 +110,7 @@ export function ToolsPanel() {
       <div className="h-full overflow-auto">
         <button
           onClick={handleBack}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+          className="mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition"
         >
           <ArrowLeft className="w-5 h-5" />
           Volver a Herramientas
@@ -123,8 +123,8 @@ export function ToolsPanel() {
   return (
     <div className="h-full overflow-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Herramientas</h1>
-        <p className="text-gray-600">Utilidades y herramientas útiles para tu trabajo diario</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Herramientas</h1>
+        <p className="text-gray-600 dark:text-gray-300">Utilidades y herramientas útiles para tu trabajo diario</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -136,14 +136,14 @@ export function ToolsPanel() {
             <button
               key={tool.id}
               onClick={() => handleToolClick(tool.id)}
-              className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-left transition relative ${
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 text-left transition relative ${
                 isComingSoon 
                   ? 'opacity-75 cursor-not-allowed' 
                   : `${tool.hoverColor} hover:shadow-md group`
               }`}
             >
               {isExperimental && (
-                <span className="absolute top-3 right-3 bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full border border-yellow-300">
+                <span className="absolute top-3 right-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs font-semibold px-2 py-1 rounded-full border border-yellow-300 dark:border-yellow-700/50">
                   Experimental
                 </span>
               )}
@@ -155,16 +155,16 @@ export function ToolsPanel() {
               <div className={`w-14 h-14 ${tool.color} rounded-xl flex items-center justify-center mb-4 ${!isComingSoon ? 'group-hover:scale-110 transition' : ''}`}>
                 <Icon className="w-7 h-7" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{tool.name}</h3>
-              <p className="text-sm text-gray-600">{tool.description}</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{tool.name}</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{tool.description}</p>
             </button>
           );
         })}
       </div>
 
-      <div className="mt-12 bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-blue-900 mb-2">Próximamente</h3>
-        <p className="text-sm text-blue-700">
+      <div className="mt-12 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-200 mb-2">Próximamente</h3>
+        <p className="text-sm text-blue-700 dark:text-blue-300">
           Estamos trabajando en agregar más herramientas útiles. Si tienes alguna sugerencia,
           por favor contacta con el equipo de soporte.
         </p>

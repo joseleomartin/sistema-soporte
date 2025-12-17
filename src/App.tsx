@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ExtractionProvider } from './contexts/ExtractionContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { Sidebar } from './components/Layout/Sidebar';
 import { UserDashboard } from './components/Dashboard/UserDashboard';
@@ -166,7 +167,7 @@ function MainApp() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex">
       <Sidebar
         currentView={currentView}
         onViewChange={handleViewChange}
@@ -174,7 +175,7 @@ function MainApp() {
         onNavigateToForum={handleNavigateToForum}
         onNavigateToTimeTracking={handleNavigateToTimeTracking}
       />
-      <main className="flex-1 overflow-auto ml-64">
+      <main className="flex-1 overflow-auto ml-64 bg-gray-50 dark:bg-slate-900">
         <div className={`${currentView === 'social' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-8`}>
           {renderContent()}
         </div>
@@ -187,11 +188,13 @@ function MainApp() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ExtractionProvider>
-        <MainApp />
-      </ExtractionProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ExtractionProvider>
+          <MainApp />
+        </ExtractionProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

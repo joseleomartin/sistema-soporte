@@ -82,11 +82,11 @@ export function DepartmentManagement() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
             <Building2 className="w-8 h-8 text-blue-600" />
             Gestión de Areas
           </h2>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
             Organiza usuarios en Areas y grupos de trabajo
           </p>
         </div>
@@ -104,7 +104,7 @@ export function DepartmentManagement() {
       {message && (
         <div className={`mb-6 rounded-lg p-4 flex items-start gap-3 ${
           message.type === 'success' 
-            ? 'bg-green-50 border border-green-200' 
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50' 
             : 'bg-red-50 border border-red-200'
         }`}>
           {message.type === 'success' ? (
@@ -235,7 +235,7 @@ function DepartmentCard({ department, onEdit, onDelete, onAssign, isAdmin }: {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 hover:shadow-md transition">
       <div className="flex items-start justify-between mb-4">
         <div
           className="w-12 h-12 rounded-lg flex items-center justify-center"
@@ -261,11 +261,11 @@ function DepartmentCard({ department, onEdit, onDelete, onAssign, isAdmin }: {
         )}
       </div>
 
-      <h3 className="text-lg font-bold text-gray-900 mb-2">{department.name}</h3>
-      <p className="text-sm text-gray-600 mb-4 line-clamp-2">{department.description}</p>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{department.name}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 line-clamp-2">{department.description}</p>
 
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-700">
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
           <Users className="w-4 h-4" />
           <span>{userCount} {userCount === 1 ? 'usuario' : 'usuarios'}</span>
         </div>
@@ -328,10 +328,10 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Nueva Área</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full">
+        <div className="border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nueva Área</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -345,7 +345,7 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Nombre <span className="text-red-500">*</span>
             </label>
             <input
@@ -359,7 +359,7 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Descripción
             </label>
             <textarea
@@ -372,7 +372,7 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Color
             </label>
             <div className="flex gap-2 flex-wrap">
@@ -394,7 +394,7 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
             >
               Cancelar
             </button>
@@ -460,10 +460,10 @@ function EditDepartmentModal({ department, onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Editar Área</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full">
+        <div className="border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Área</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -477,7 +477,7 @@ function EditDepartmentModal({ department, onClose, onSuccess }: {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Nombre <span className="text-red-500">*</span>
             </label>
             <input
@@ -490,7 +490,7 @@ function EditDepartmentModal({ department, onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Descripción
             </label>
             <textarea
@@ -502,7 +502,7 @@ function EditDepartmentModal({ department, onClose, onSuccess }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Color
             </label>
             <div className="flex gap-2 flex-wrap">
@@ -524,7 +524,7 @@ function EditDepartmentModal({ department, onClose, onSuccess }: {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 transition font-medium"
             >
               Cancelar
             </button>
@@ -642,13 +642,13 @@ function AssignUsersModal({ department, onClose, onUpdate }: {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+        <div className="border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Asignar Usuarios</h2>
-            <p className="text-sm text-gray-600 mt-1">{department.name}</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Asignar Usuarios</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{department.name}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -656,7 +656,7 @@ function AssignUsersModal({ department, onClose, onUpdate }: {
         {message && (
           <div className={`mx-6 mt-4 rounded-lg p-3 flex items-start gap-2 ${
             message.type === 'success' 
-              ? 'bg-green-50 border border-green-200' 
+              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50' 
               : 'bg-red-50 border border-red-200'
           }`}>
             {message.type === 'success' ? (
@@ -680,7 +680,7 @@ function AssignUsersModal({ department, onClose, onUpdate }: {
               {users.map((user) => (
                 <label
                   key={user.id}
-                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition"
+                  className="flex items-center gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 cursor-pointer transition"
                 >
                   <input
                     type="checkbox"
@@ -689,13 +689,13 @@ function AssignUsersModal({ department, onClose, onUpdate }: {
                     className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{user.full_name}</p>
-                    <p className="text-sm text-gray-600">{user.email}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{user.full_name}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{user.email}</p>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full ${
                     user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
                     user.role === 'support' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-700'
+                    'bg-gray-100 text-gray-700 dark:text-gray-300'
                   }`}>
                     {user.role === 'admin' ? 'Admin' : user.role === 'support' ? 'Soporte' : 'Usuario'}
                   </span>
@@ -705,7 +705,7 @@ function AssignUsersModal({ department, onClose, onUpdate }: {
           )}
         </div>
 
-        <div className="border-t border-gray-200 px-6 py-4">
+        <div className="border-t border-gray-200 dark:border-slate-700 px-6 py-4">
           <button
             onClick={onClose}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"

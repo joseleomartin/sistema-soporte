@@ -48,13 +48,13 @@ const formatFileSize = (bytes: number | null | undefined): string => {
 };
 
 const getFileIcon = (fileType: string | null | undefined) => {
-  if (!fileType) return <File className="w-5 h-5 text-gray-600" />;
+  if (!fileType) return <File className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
   if (fileType.startsWith('image/')) {
-    return <Image className="w-5 h-5 text-green-600" />;
+    return <Image className="w-5 h-5 text-green-600 dark:text-green-400" />;
   } else if (fileType.includes('pdf')) {
-    return <FileText className="w-5 h-5 text-red-600" />;
+    return <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />;
   } else {
-    return <File className="w-5 h-5 text-gray-600" />;
+    return <File className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
   }
 };
 
@@ -135,7 +135,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
       </div>
     );
   }
@@ -144,18 +144,18 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
     return (
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Partes del Curso</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Partes del Curso</h3>
           {isAdmin && (
             <button
               onClick={() => setShowAddPart(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-sm"
             >
               <Plus className="w-4 h-4" />
               Agregar Parte
             </button>
           )}
         </div>
-        <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
+        <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-6 text-center text-gray-500 dark:text-gray-400">
           <p>Este curso aún no tiene partes. {isAdmin && 'Agrega la primera parte para comenzar.'}</p>
         </div>
         {isAdmin && showAddPart && (
@@ -175,11 +175,11 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
   return (
     <div className="mt-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Partes del Curso ({parts.length})</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Partes del Curso ({parts.length})</h3>
         {isAdmin && (
           <button
             onClick={() => setShowAddPart(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors text-sm"
           >
             <Plus className="w-4 h-4" />
             Agregar Parte
@@ -191,20 +191,20 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
         {parts.map((part) => (
           <div
             key={part.id}
-            className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+            className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden"
           >
             <div
-              className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+              className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               onClick={() => togglePart(part.id)}
             >
               <div className="flex items-center gap-3 flex-1">
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center font-semibold">
                   {part.part_number}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900">{part.title}</h4>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{part.title}</h4>
                   {part.description && (
-                    <p className="text-sm text-gray-600 line-clamp-1">{part.description}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-1">{part.description}</p>
                   )}
                 </div>
               </div>
@@ -216,7 +216,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                         e.stopPropagation();
                         setEditingPart(part);
                       }}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                       title="Editar"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -226,7 +226,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                         e.stopPropagation();
                         handleDeletePart(part.id);
                       }}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -234,23 +234,23 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                   </>
                 )}
                 {expandedParts[part.id] ? (
-                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                  <ChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                 ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                  <ChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                 )}
               </div>
             </div>
 
             {expandedParts[part.id] && (
-              <div className="px-4 pb-4 border-t border-gray-100">
+              <div className="px-4 pb-4 border-t border-gray-100 dark:border-slate-700">
                 {part.description && (
-                  <p className="text-sm text-gray-700 mt-3 whitespace-pre-wrap">{part.description}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-3 whitespace-pre-wrap">{part.description}</p>
                 )}
 
                 {/* YouTube Videos - Nuevo formato (array) */}
                 {part.youtube_urls && part.youtube_urls.length > 0 && (
                   <div className="mt-4 space-y-4">
-                    <h5 className="text-sm font-semibold text-gray-700">Videos de YouTube:</h5>
+                    <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Videos de YouTube:</h5>
                     {part.youtube_urls.map((url, index) => {
                       const videoId = getYouTubeVideoId(url);
                       if (!videoId) return null;
@@ -269,7 +269,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-700 inline-block"
+                            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-block"
                           >
                             Ver en YouTube
                           </a>
@@ -298,7 +298,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                           href={part.youtube_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 mt-2 inline-block"
+                          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mt-2 inline-block"
                         >
                           Ver en YouTube
                         </a>
@@ -311,14 +311,14 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                 {/* Archivos - Nuevo formato (array) */}
                 {part.files && part.files.length > 0 && (
                   <div className="mt-4 space-y-3">
-                    <h5 className="text-sm font-semibold text-gray-700">Archivos:</h5>
+                    <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Archivos:</h5>
                     {part.files.map((file, index) => (
-                      <div key={index} className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+                      <div key={index} className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-4 bg-gray-50 dark:bg-slate-700">
                         <div className="flex items-center gap-3">
                           {getFileIcon(file.file_type)}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{file.file_name}</p>
-                            <p className="text-xs text-gray-500">{formatFileSize(file.file_size)}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{file.file_name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.file_size)}</p>
                           </div>
                           <div className="flex items-center gap-2">
                             {file.file_type?.includes('pdf') && (
@@ -326,7 +326,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                                 href={getFileUrl(file.file_path)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                                 title="Ver archivo"
                               >
                                 <Eye className="w-5 h-5" />
@@ -335,7 +335,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                             <a
                               href={getFileUrl(file.file_path)}
                               download={file.file_name || 'archivo'}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
                               title="Descargar"
                             >
                               <Download className="w-5 h-5" />
@@ -350,12 +350,12 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                 {/* Archivo - Formato antiguo (compatibilidad) */}
                 {(!part.files || part.files.length === 0) && part.file_path && (
                   <div className="mt-4">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+                    <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-4 bg-gray-50 dark:bg-slate-700">
                       <div className="flex items-center gap-3">
                         {getFileIcon(part.file_type)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{part.file_name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(part.file_size)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{part.file_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(part.file_size)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           {part.file_type?.includes('pdf') && (
@@ -363,7 +363,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                               href={getFileUrl(part.file_path)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="Ver archivo"
                             >
                               <Eye className="w-5 h-5" />
@@ -372,7 +372,7 @@ export function CoursePartsManager({ courseId, isAdmin }: CoursePartsManagerProp
                           <a
                             href={getFileUrl(part.file_path)}
                             download={part.file_name || 'archivo'}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
                             title="Descargar"
                           >
                             <Download className="w-5 h-5" />
@@ -566,10 +566,10 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
   };
 
   return (
-    <div className="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
-      <h4 className="font-semibold text-gray-900 mb-3">Agregar Nueva Parte</h4>
+    <div className="mt-4 bg-gray-50 dark:bg-slate-700 rounded-lg p-4 border border-gray-200 dark:border-slate-600">
+      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Agregar Nueva Parte</h4>
       {error && (
-        <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+        <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded text-red-700 dark:text-red-300 text-sm">
           {error}
         </div>
       )}
@@ -611,7 +611,7 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             URLs de YouTube (opcional) - Puedes agregar múltiples
           </label>
           <div className="space-y-2">
@@ -622,13 +622,13 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
                   value={url}
                   onChange={(e) => updateYouTubeUrl(index, e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                 />
                 {youtubeUrls.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeYouTubeUrlField(index)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="Eliminar URL"
                   >
                     <X className="w-4 h-4" />
@@ -639,7 +639,7 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
             <button
               type="button"
               onClick={addYouTubeUrlField}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1"
             >
               <Plus className="w-4 h-4" />
               Agregar otra URL de YouTube
@@ -647,7 +647,7 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Archivos (opcional) - Puedes subir múltiples
           </label>
           <input
@@ -656,19 +656,19 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
             multiple
             accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,text/csv"
             onChange={handleFileSelect}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
           />
           {selectedFiles.length > 0 && (
             <div className="mt-2 space-y-2">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-700 truncate flex-1">
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-600 rounded-lg">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
                     {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
                   </span>
                   <button
                     type="button"
                     onClick={() => removeFile(index)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                     title="Eliminar archivo"
                   >
                     <X className="w-4 h-4" />
@@ -682,14 +682,14 @@ function AddPartForm({ courseId, onSuccess, onCancel }: { courseId: string; onSu
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Guardando...' : 'Guardar Parte'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors"
           >
             Cancelar
           </button>
@@ -862,16 +862,16 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
   };
 
   return (
-    <div className="mt-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
-      <h4 className="font-semibold text-gray-900 mb-3">Editar Parte</h4>
+    <div className="mt-4 bg-gray-50 dark:bg-slate-700 rounded-lg p-4 border border-gray-200 dark:border-slate-600">
+      <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Editar Parte</h4>
       {error && (
-        <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+        <div className="mb-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded text-red-700 dark:text-red-300 text-sm">
           {error}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Número de Parte
           </label>
           <input
@@ -879,35 +879,35 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
             value={partNumber}
             onChange={(e) => setPartNumber(parseInt(e.target.value) || 1)}
             min={1}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Título de la Parte *
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Descripción
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
             rows={3}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             URLs de YouTube (opcional) - Puedes agregar múltiples
           </label>
           <div className="space-y-2">
@@ -918,13 +918,13 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
                   value={url}
                   onChange={(e) => updateYouTubeUrl(index, e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                 />
                 {youtubeUrls.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeYouTubeUrlField(index)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="Eliminar URL"
                   >
                     <X className="w-4 h-4" />
@@ -935,7 +935,7 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
             <button
               type="button"
               onClick={addYouTubeUrlField}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1"
             >
               <Plus className="w-4 h-4" />
               Agregar otra URL de YouTube
@@ -943,20 +943,20 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Archivos existentes
           </label>
           {existingFiles.length > 0 && (
             <div className="mb-2 space-y-2">
               {existingFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-700 truncate flex-1">
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-600 rounded-lg">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
                     {file.file_name} ({formatFileSize(file.file_size)})
                   </span>
                   <button
                     type="button"
                     onClick={() => removeExistingFile(index)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                     title="Eliminar archivo"
                   >
                     <X className="w-4 h-4" />
@@ -965,7 +965,7 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
               ))}
             </div>
           )}
-          <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 mt-3">
             Agregar nuevos archivos (opcional) - Puedes subir múltiples
           </label>
           <input
@@ -974,19 +974,19 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
             multiple
             accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.csv,text/csv"
             onChange={handleFileSelect}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
           />
           {selectedFiles.length > 0 && (
             <div className="mt-2 space-y-2">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-700 truncate flex-1">
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-600 rounded-lg">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
                     {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
                   </span>
                   <button
                     type="button"
                     onClick={() => removeFile(index)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                     title="Eliminar archivo"
                   >
                     <X className="w-4 h-4" />
@@ -1000,14 +1000,14 @@ function EditPartForm({ part, onSuccess, onCancel }: { part: CoursePart; onSucce
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Guardando...' : 'Guardar Cambios'}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors"
           >
             Cancelar
           </button>

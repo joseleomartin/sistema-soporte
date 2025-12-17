@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare, Cake, Ticket, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -45,6 +46,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [buttonPosition, setButtonPosition] = useState<{ top: number; left: number; bellCenterX?: number; bellCenterY?: number; bellTop?: number; bellLeft?: number; transformOriginX?: number; transformOriginY?: number } | null>(null);
 
   // Actualizar título de la pestaña con el contador de notificaciones
   useEffect(() => {
@@ -330,97 +332,265 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
     }
   };
 
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Calcular posición cuando se abre el dropdown - Superponer las campanitas perfectamente
+  useEffect(() => {
+    if (showDropdown && buttonRef.current) {
+      // Esperar un frame para que el DOM se actualice
+      requestAnimationFrame(() => {
+        if (!buttonRef.current) return;
+        
+        const rect = buttonRef.current.getBoundingClientRect();
+        const headerPadding = 20; // Padding del header (p-5 = 20px)
+        const bellContainerSize = 40; // Tamaño del contenedor de la campanita en el header (w-10 h-10 = 40px)
+        
+        // Calcular la posición exacta del CENTRO del icono Bell en el navbar
+        // El botón tiene p-2 (8px padding en todos los lados)
+        // El icono Bell tiene w-5 h-5 (20px x 20px) y está centrado dentro del botón
+        // El rect del botón incluye el padding, así que el centro del botón = centro del icono
+        const bellNavbarIconCenterX = rect.left + (rect.width / 2);
+        const bellNavbarIconCenterY = rect.top + (rect.height / 2);
+        
+        // Calcular la posición del CENTRO del icono Bell en el header del dropdown
+        // El header tiene p-5 (20px padding en todos los lados)
+        // El contenedor de la campanita tiene w-10 h-10 (40px x 40px)
+        // El icono dentro tiene w-5 h-5 (20px x 20px) y está centrado dentro del contenedor
+        // El contenedor está dentro de un div con gap-3, pero está al inicio
+        // - Centro X del icono = padding-left (20px) + mitad del contenedor (20px) = 40px desde la izquierda del dropdown
+        // - Centro Y del icono = padding-top (20px) + mitad del contenedor (20px) = 40px desde arriba del dropdown
+        const bellHeaderIconCenterX = headerPadding + (bellContainerSize / 2);
+        const bellHeaderIconCenterY = headerPadding + (bellContainerSize / 2);
+        
+        // Guardar estos valores para usar en transformOrigin (la animación debe originarse desde el centro del icono)
+        const transformOriginX = bellHeaderIconCenterX;
+        const transformOriginY = bellHeaderIconCenterY;
+        
+        // Posicionar el dropdown para que el CENTRO del icono del header se superponga EXACTAMENTE con el CENTRO del icono del navbar
+        // left: para que bellNavbarIconCenterX = left + bellHeaderIconCenterX
+        let left = bellNavbarIconCenterX - bellHeaderIconCenterX;
+        // top: para que bellNavbarIconCenterY = top + bellHeaderIconCenterY
+        let top = bellNavbarIconCenterY - bellHeaderIconCenterY;
+        
+        // PRIORIDAD ABSOLUTA: Mantener la alineación perfecta de las campanitas
+        // NO ajustar left/top - las campanitas DEBEN estar superpuestas perfectamente
+        // La campanita del navbar se oculta cuando el dropdown está abierto, así que solo se ve la del header
+        
+        setButtonPosition({
+          top: top,
+          left: left,
+          bellCenterX: bellNavbarIconCenterX,
+          bellCenterY: bellNavbarIconCenterY,
+          bellTop: rect.top,
+          bellLeft: rect.left,
+          transformOriginX: transformOriginX,
+          transformOriginY: transformOriginY,
+        });
+      });
+    } else {
+      setButtonPosition(null);
+    }
+  }, [showDropdown]);
+
+  const handleToggleDropdown = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Campanita clickeada, showDropdown actual:', showDropdown);
+    setShowDropdown(prev => {
+      console.log('Cambiando showDropdown de', prev, 'a', !prev);
+      return !prev;
+    });
+  };
+
   return (
-    <div className="relative">
+    <div className="relative" style={{ zIndex: 1000001 }}>
       <button
-        onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+        ref={buttonRef}
+        type="button"
+        onClick={handleToggleDropdown}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="relative p-2 text-white hover:text-white/80 hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer"
+        style={{ 
+          position: 'relative', 
+          zIndex: 10000002, // Por encima del overlay para que sea clickeable
+          opacity: showDropdown ? 0 : 1, // Ocultar la campanita del navbar cuando el dropdown está abierto
+          pointerEvents: 'auto' // Mantener clickeable incluso cuando está oculto para poder cerrar el dropdown
+        }}
       >
-        <Bell className="w-5 h-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-600 rounded-full shadow-lg animate-pulse">
+        <Bell className="w-5 h-5 pointer-events-none" />
+        {unreadCount > 0 && !showDropdown && (
+          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-lg animate-pulse ring-2 ring-white pointer-events-none">
             {unreadCount > 99 ? '99+' : unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {showDropdown && (
+      {showDropdown ? createPortal(
         <>
-          {/* Overlay para cerrar al hacer clic fuera */}
+          {/* Overlay para cerrar al hacer clic fuera - Solo cubre el área del dropdown */}
           <div 
-            className="fixed inset-0 z-[9998]" 
-            onClick={() => setShowDropdown(false)}
+            className="fixed inset-0 bg-black/20" 
+            style={{ zIndex: 10000000 }}
+            onClick={() => {
+              setShowDropdown(false);
+              setButtonPosition(null);
+            }}
           />
           
-          {/* Dropdown de notificaciones */}
-          <div className="absolute top-full mt-2 right-0 sm:left-1/2 sm:-translate-x-1/2 transform w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] origin-top-right sm:origin-top">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900">Notificaciones</h3>
-              <div className="flex items-center gap-2">
+          {/* Dropdown de notificaciones - Se abre directamente desde la campanita, superponiéndose al navbar */}
+          <div 
+            className="fixed w-[420px] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-700/50 backdrop-blur-xl overflow-hidden"
+            style={{
+              top: buttonPosition ? `${buttonPosition.top}px` : '80px',
+              left: buttonPosition ? `${buttonPosition.left}px` : '280px',
+              maxWidth: 'calc(100vw - 2rem)',
+              boxShadow: '0 20px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.5)',
+              animation: 'openFromBell 0.25s ease-out',
+              transformOrigin: buttonPosition && buttonPosition.transformOriginX !== undefined && buttonPosition.transformOriginY !== undefined ? 
+                `${buttonPosition.transformOriginX}px ${buttonPosition.transformOriginY}px` : 
+                '40px 40px',
+              zIndex: 10000001, // Por encima del overlay y del navbar (z-40)
+            }}
+            onClick={(e) => e.stopPropagation()} // Prevenir que el clic en el dropdown lo cierre
+          >
+            {/* Header con diseño más sutil */}
+            <div className="relative flex items-center justify-between p-5 bg-gradient-to-r from-slate-700 to-slate-600 overflow-hidden border-b border-white/10">
+              {/* Efecto sutil de brillo */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
+              
+              <div className="relative z-10 flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setShowDropdown(false);
+                    setButtonPosition(null);
+                  }}
+                  className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all duration-200 cursor-pointer"
+                  title="Cerrar notificaciones"
+                >
+                  <Bell className="w-5 h-5 text-white" />
+                </button>
+                <div>
+                  <h3 className="font-bold text-lg text-white drop-shadow-lg">Notificaciones</h3>
+                  {unreadCount > 0 && (
+                    <p className="text-xs text-white/80 font-medium">{unreadCount} sin leer</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="relative z-10 flex items-center gap-2">
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className="text-xs text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap"
+                    className="text-xs text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white/90 font-semibold whitespace-nowrap px-3 py-1.5 rounded-lg bg-white/80 dark:bg-white/20 hover:bg-white dark:hover:bg-white/30 backdrop-blur-sm border border-gray-300 dark:border-white/30 transition-all duration-200 hover:scale-105"
                   >
-                    Marcar todas leídas
+                    Marcar todas
                   </button>
                 )}
                 <button
-                  onClick={() => setShowDropdown(false)}
-                  className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                  onClick={() => {
+                    setShowDropdown(false);
+                    setButtonPosition(null);
+                  }}
+                    className="text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white/80 flex-shrink-0 p-2 rounded-lg bg-white/80 dark:bg-white/20 hover:bg-white dark:hover:bg-white/30 backdrop-blur-sm border border-gray-300 dark:border-white/30 transition-all duration-200 hover:scale-110 hover:rotate-90"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Bell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                <p>No hay notificaciones</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100">
-                {notifications.map((notification) => (
-                  <button
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={`w-full text-left p-4 hover:bg-gray-50 transition ${
-                      !notification.read ? 'bg-blue-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
-                          {notification.title}
-                        </p>
-                        <p className={`text-sm mt-0.5 ${!notification.read ? 'text-gray-700' : 'text-gray-600'}`}>
-                          {(notification.type === 'forum_mention' || notification.type === 'task_mention')
-                            ? cleanMentionMessage(notification.message)
-                            : notification.message}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(notification.created_at).toLocaleString('es-ES', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
+            {/* Contenido con scroll - Estilo original */}
+            <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600/50 scrollbar-track-transparent bg-slate-800">
+              {notifications.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="relative inline-block mb-4">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-200 to-purple-200 flex items-center justify-center animate-pulse">
+                      <Bell className="w-10 h-10 text-blue-600" />
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full animate-bounce"></div>
+                  </div>
+                  <p className="text-gray-200 font-semibold text-lg">No hay notificaciones</p>
+                  <p className="text-gray-400 text-sm mt-1">Todo está al día</p>
+                </div>
+              ) : (
+                <div className="p-3 space-y-2">
+                  {notifications.map((notification, index) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`group w-full text-left p-4 rounded-2xl border-2 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] relative overflow-hidden ${
+                        !notification.read 
+                          ? 'bg-slate-700 border-slate-600/50 shadow-lg' 
+                          : 'bg-slate-700/90 backdrop-blur-sm border-slate-600/30 hover:border-slate-500/50 hover:bg-slate-700'
+                      }`}
+                      style={{
+                        animationDelay: `${index * 50}ms`,
+                      }}
+                    >
+                      {/* Efecto de brillo en hover */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -translate-x-full group-hover:translate-x-full"></div>
+                      
+                      {/* Indicador de no leída */}
+                      {!notification.read && (
+                        <div className="absolute top-3 right-3 w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full animate-pulse ring-2 ring-blue-200"></div>
+                      )}
+                      
+                      <div className="relative flex items-start gap-4">
+                        {/* Icono con fondo decorativo */}
+                        <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 ${
+                          !notification.read 
+                            ? 'bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30' 
+                            : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-purple-100'
+                        }`}>
+                          <div className="text-white scale-90">
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className={`text-sm font-bold leading-tight ${
+                              !notification.read 
+                                ? 'text-white' 
+                                : 'text-gray-200 group-hover:text-white'
+                            }`}>
+                              {notification.title}
+                            </p>
+                          </div>
+                          
+                          <p className={`text-sm mt-2 leading-relaxed line-clamp-2 ${
+                            !notification.read 
+                              ? 'text-gray-200' 
+                              : 'text-gray-300 group-hover:text-gray-200'
+                          }`}>
+                            {(notification.type === 'forum_mention' || notification.type === 'task_mention')
+                              ? cleanMentionMessage(notification.message)
+                              : notification.message}
+                          </p>
+                          
+                          <div className="flex items-center gap-2 mt-3">
+                            <div className={`w-1.5 h-1.5 rounded-full ${
+                              !notification.read ? 'bg-blue-500' : 'bg-gray-300'
+                            }`}></div>
+                            <p className="text-xs font-medium text-gray-400">
+                              {new Date(notification.created_at).toLocaleString('es-ES', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          </div>
-        </>
-      )}
+        </>,
+        document.body
+      ) : null}
     </div>
   );
 }

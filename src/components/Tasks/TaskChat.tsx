@@ -585,7 +585,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
       {/* Mensajes */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
             <p>No hay mensajes aún</p>
             <p className="text-sm">Sé el primero en escribir</p>
           </div>
@@ -608,8 +608,8 @@ export function TaskChat({ taskId }: TaskChatProps) {
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                      <span className="text-sm font-medium text-indigo-600">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                      <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
                         {message.profiles.full_name.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -619,10 +619,10 @@ export function TaskChat({ taskId }: TaskChatProps) {
                 {/* Mensaje */}
                 <div className={`flex-1 max-w-md ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
                       {message.profiles.full_name}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {(() => {
                         const messageDate = new Date(message.created_at);
                         const today = new Date();
@@ -660,8 +660,8 @@ export function TaskChat({ taskId }: TaskChatProps) {
                     <div
                       className={`px-4 py-2 rounded-lg ${
                         isOwn
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
+                          ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white'
                       }`}
                     >
                       <p className={`text-sm whitespace-pre-wrap break-words ${isOwn ? 'text-white' : ''}`}>
@@ -676,12 +676,12 @@ export function TaskChat({ taskId }: TaskChatProps) {
                       {message.task_attachments.map((attachment) => (
                         <div
                           key={attachment.id}
-                          className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200"
+                          className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600"
                         >
-                          <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-900 truncate">{attachment.file_name}</p>
-                            <p className="text-xs text-gray-500">{formatFileSize(attachment.file_size)}</p>
+                            <p className="text-sm text-gray-900 dark:text-white truncate">{attachment.file_name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(attachment.file_size)}</p>
                           </div>
                           <button
                             onClick={() => handleDownload(attachment)}
@@ -703,25 +703,25 @@ export function TaskChat({ taskId }: TaskChatProps) {
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-200 p-4 flex-shrink-0 bg-white">
+      <div className="border-t border-gray-200 dark:border-slate-700 p-4 flex-shrink-0 bg-white dark:bg-slate-800">
         {/* Archivos Seleccionados */}
         {selectedFiles.length > 0 && (
           <div className="mb-3 space-y-2 max-h-32 overflow-y-auto">
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200"
+                className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600"
               >
-                <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900 truncate">{file.name}</p>
-                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                  <p className="text-sm text-gray-900 dark:text-white truncate">{file.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.size)}</p>
                 </div>
                 <button
                   onClick={() => removeFile(index)}
-                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded transition-colors"
                 >
-                  <X className="w-4 h-4 text-gray-600" />
+                  <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </button>
               </div>
             ))}
@@ -739,7 +739,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             title="Adjuntar archivo"
             disabled={sending || uploading}
           >
@@ -754,7 +754,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && !showMentions && handleSend()}
               placeholder="Escribe un mensaje... (usa @ para mencionar usuarios)"
             rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none max-h-32 overflow-y-auto"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none max-h-32 overflow-y-auto"
             disabled={sending || uploading}
           />
             {showMentions && (
@@ -787,7 +787,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
           <button
             onClick={handleSend}
             disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploading}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {(sending || uploading) ? (
               <Loader2 className="w-5 h-5 animate-spin" />

@@ -181,7 +181,7 @@ export function ProfileSettings() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold text-gray-900 mb-8">Configuración de Perfil</h2>
+      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Configuración de Perfil</h2>
 
       {message && (
         <div className={`mb-6 rounded-lg p-4 flex items-start gap-3 ${
@@ -200,7 +200,7 @@ export function ProfileSettings() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8">
         <div className="flex flex-col md:flex-row gap-8">
           {/* Avatar Section */}
           <div className="flex flex-col items-center">
@@ -235,47 +235,47 @@ export function ProfileSettings() {
               onChange={handleFileSelect}
               className="hidden"
             />
-            <p className="text-sm text-gray-600 mt-4 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-4 text-center">
               Haz clic en el ícono para cambiar tu foto
               <br />
-              <span className="text-xs text-gray-500">Máximo 2MB</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Máximo 2MB</span>
             </p>
           </div>
 
           {/* Profile Info */}
           <div className="flex-1 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Nombre Completo
               </label>
               <input
                 type="text"
                 value={profile?.full_name || ''}
                 disabled
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email
               </label>
               <input
                 type="email"
                 value={profile?.email || ''}
                 disabled
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Rol
               </label>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                profile?.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                profile?.role === 'support' ? 'bg-blue-100 text-blue-700' :
-                'bg-gray-100 text-gray-700'
+                profile?.role === 'admin' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                profile?.role === 'support' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
               }`}>
                 {profile?.role === 'admin' ? 'Administrador' : 
                  profile?.role === 'support' ? 'Soporte' : 
@@ -285,7 +285,7 @@ export function ProfileSettings() {
 
             {departments.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Departamentos
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -307,7 +307,7 @@ export function ProfileSettings() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   Fecha de Cumpleaños
@@ -321,7 +321,7 @@ export function ProfileSettings() {
                   onBlur={handleBirthdaySave}
                   disabled={savingBirthday}
                   max={new Date().toISOString().split('T')[0]}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {savingBirthday && (
                   <div className="flex items-center px-4">
@@ -329,7 +329,7 @@ export function ProfileSettings() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Tu cumpleaños aparecerá en la sección Social cuando sea tu día especial
               </p>
             </div>
@@ -337,12 +337,12 @@ export function ProfileSettings() {
         </div>
       </div>
 
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+      <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-6">
         <div className="flex items-start gap-3">
-          <Upload className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <Upload className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-medium text-blue-900 mb-1">Consejos para tu foto de perfil</h3>
-            <ul className="text-sm text-blue-700 space-y-1">
+            <h3 className="font-medium text-blue-900 dark:text-blue-300 mb-1">Consejos para tu foto de perfil</h3>
+            <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
               <li>• Usa una imagen clara y profesional</li>
               <li>• Asegúrate de que tu rostro sea visible</li>
               <li>• Formatos aceptados: JPG, PNG, GIF, WEBP</li>

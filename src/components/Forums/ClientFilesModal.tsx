@@ -196,7 +196,7 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
     } else if (fileType.includes('word') || fileType.includes('document')) {
       return <FileText className="w-5 h-5 text-blue-600" />;
     } else {
-      return <File className="w-5 h-5 text-gray-600" />;
+      return <File className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -260,16 +260,16 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <File className="w-6 h-6 text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <File className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 Archivos de {subforumName}
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {activeTab === 'chat' && (
                   <>
                     {files.length} {files.length === 1 ? 'archivo' : 'archivos'} en total
@@ -283,20 +283,20 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
             >
-              <X className="w-6 h-6 text-gray-500" />
+              <X className="w-6 h-6 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 border-b border-gray-200">
+          <div className="flex gap-1 border-b border-gray-200 dark:border-slate-700">
             <button
               onClick={() => setActiveTab('chat')}
               className={`px-4 py-2 font-medium text-sm transition ${
                 activeTab === 'chat'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <FileText className="w-4 h-4 inline mr-2" />
@@ -306,8 +306,8 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
               onClick={() => setActiveTab('drive')}
               className={`px-4 py-2 font-medium text-sm transition ${
                 activeTab === 'drive'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <Folder className="w-4 h-4 inline mr-2" />
@@ -318,18 +318,18 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
           {/* Search Bar - Solo en pestaña de chat */}
           {activeTab === 'chat' && (
             <div className="relative mt-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="Buscar por nombre de archivo o usuario..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -347,31 +347,31 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-              <p className="text-red-700">{error}</p>
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4 text-center">
+              <p className="text-red-700 dark:text-red-300">{error}</p>
             </div>
           ) : files.length === 0 ? (
             <div className="text-center py-12">
-              <File className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <File className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 No hay archivos
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Este cliente aún no tiene archivos adjuntos
               </p>
             </div>
           ) : filteredFiles.length === 0 ? (
             <div className="text-center py-12">
-              <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <Search className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 No se encontraron archivos
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 No hay archivos que coincidan con "{searchTerm}"
               </p>
               <button
                 onClick={() => setSearchTerm('')}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="mt-4 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
               >
                 Limpiar búsqueda
               </button>
@@ -381,21 +381,21 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
               {filteredFiles.map((file) => (
                 <div
                   key={file.id}
-                  className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition group"
+                  className="bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-slate-600 transition group"
                 >
                   <div className="flex items-start gap-4">
                     {/* Icon */}
-                    <div className="flex-shrink-0 w-12 h-12 bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                    <div className="flex-shrink-0 w-12 h-12 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-600">
                       {getFileIcon(file.file_type)}
                     </div>
 
                     {/* File Info */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate mb-1">
+                      <h4 className="font-medium text-gray-900 dark:text-white truncate mb-1">
                         {file.file_name}
                       </h4>
                       
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" />
                           {file.uploader_name}
@@ -418,7 +418,7 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
                     <div className="flex-shrink-0 flex items-center gap-2">
                       <button
                         onClick={() => handleView(file.file_url)}
-                        className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition flex items-center gap-1.5 font-medium text-sm"
+                        className="p-2.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition flex items-center gap-1.5 font-medium text-sm"
                         title="Ver archivo en nueva pestaña"
                       >
                         <ExternalLink className="w-5 h-5" />
@@ -426,7 +426,7 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
                       </button>
                       <button
                         onClick={() => handleDownload(file.file_url, file.file_name)}
-                        className="p-2.5 text-green-600 hover:bg-green-50 rounded-lg transition flex items-center gap-1.5 font-medium text-sm"
+                        className="p-2.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition flex items-center gap-1.5 font-medium text-sm"
                         title="Descargar archivo"
                       >
                         <Download className="w-5 h-5" />
@@ -471,8 +471,8 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
 
         {/* Footer */}
         {files.length > 0 && (
-          <div className="border-t border-gray-200 p-4 bg-gray-50">
-            <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-700">
+            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
               <span>
                 Total: {files.reduce((acc, file) => acc + file.file_size, 0) > 0 
                   ? formatFileSize(files.reduce((acc, file) => acc + file.file_size, 0))
@@ -480,7 +480,7 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
               </span>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+                className="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500 transition font-medium"
               >
                 Cerrar
               </button>

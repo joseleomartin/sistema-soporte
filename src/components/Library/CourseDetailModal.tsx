@@ -132,11 +132,11 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
 
   const getFileIcon = () => {
     if (isImage) {
-      return <Image className="w-5 h-5 text-green-600" />;
+      return <Image className="w-5 h-5 text-green-600 dark:text-green-400" />;
     } else if (isPDF) {
-      return <FileText className="w-5 h-5 text-red-600" />;
+      return <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />;
     } else {
-      return <File className="w-5 h-5 text-gray-600" />;
+      return <File className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -150,15 +150,15 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
       
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="flex items-start justify-between p-6 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
             <div className="flex-1 pr-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 {course.title}
               </h2>
               {course.created_by_profile && (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   <User className="w-4 h-4" />
                   <span>Creado por: {course.created_by_profile.full_name}</span>
                   <span className="mx-2">•</span>
@@ -174,7 +174,7 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors flex-shrink-0"
             >
               <X className="w-6 h-6" />
             </button>
@@ -185,8 +185,8 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
             {/* Descripción completa */}
             {course.description && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Descripción</h3>
-                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Descripción</h3>
+                <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                   {course.description}
                 </p>
               </div>
@@ -195,7 +195,7 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
             {/* Video de YouTube */}
             {embedUrl && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Video</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Video</h3>
                 <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
                   <iframe
                     src={embedUrl}
@@ -210,7 +210,7 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
                     href={course.youtube_url || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm inline-flex items-center gap-1"
                   >
                     Ver en YouTube
                   </a>
@@ -221,8 +221,8 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
             {/* Google Drive (solo para documentos) */}
             {course.google_drive_folder_id && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Contenido de Google Drive</h3>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Contenido de Google Drive</h3>
+                <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
                   <GoogleDriveViewer
                     folderId={course.google_drive_folder_id}
                     folderName={course.title}
@@ -238,11 +238,11 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
             {/* Archivo (solo si no hay Google Drive) */}
             {hasFile && !course.google_drive_folder_id && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Archivo adjunto</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Archivo adjunto</h3>
                 {!showFilePreview ? (
                   <div>
                     {isImage && fileUrl ? (
-                      <div className="relative bg-gray-100 rounded-lg overflow-hidden mb-3">
+                      <div className="relative bg-gray-100 dark:bg-slate-700 rounded-lg overflow-hidden mb-3">
                         <img
                           src={fileUrl}
                           alt={course.title}
@@ -250,23 +250,23 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
                         />
                       </div>
                     ) : isImage && !fileUrl ? (
-                      <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center mb-3">
-                        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                      <div className="aspect-video bg-gray-100 dark:bg-slate-700 rounded-lg flex items-center justify-center mb-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-gray-400 dark:text-gray-500" />
                       </div>
                     ) : null}
                     
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
+                    <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-6 bg-gray-50 dark:bg-slate-700">
                       <div className="flex items-center gap-4">
                         {getFileIcon()}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{course.file_name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(course.file_size)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{course.file_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(course.file_size)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           {isPDF && (
                             <button
                               onClick={handleViewFile}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="Ver archivo"
                             >
                               <Eye className="w-5 h-5" />
@@ -274,7 +274,7 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
                           )}
                           <button
                             onClick={handleDownloadFile}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
                             title="Descargar"
                           >
                             <Download className="w-5 h-5" />
@@ -319,7 +319,7 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
                           <p className="mb-4">Vista previa no disponible para este tipo de archivo</p>
                           <button
                             onClick={handleDownloadFile}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 rounded-lg transition-colors"
                           >
                             <Download className="w-5 h-5" />
                             Descargar archivo
@@ -329,7 +329,7 @@ export function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
                     </div>
                     <button
                       onClick={() => setShowFilePreview(false)}
-                      className="text-sm text-gray-600 hover:text-gray-900"
+                      className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                     >
                       Ocultar vista previa
                     </button>

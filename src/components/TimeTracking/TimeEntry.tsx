@@ -251,11 +251,11 @@ export function TimeEntry() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Clock className="w-8 h-8 text-blue-600" />
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Clock className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             Carga de Horas
           </h2>
-          <p className="text-gray-600 mt-2">Registra las horas trabajadas por cliente</p>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">Registra las horas trabajadas por cliente</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -269,25 +269,25 @@ export function TimeEntry() {
       {message && (
         <div className={`mb-6 rounded-lg p-4 flex items-start gap-3 ${
           message.type === 'success' 
-            ? 'bg-green-50 border border-green-200' 
-            : 'bg-red-50 border border-red-200'
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50' 
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50'
         }`}>
           {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           )}
-          <p className={message.type === 'success' ? 'text-green-700' : 'text-red-700'}>
+          <p className={message.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
             {message.text}
           </p>
         </div>
       )}
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4">
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <div className="flex items-center gap-3 flex-1 sm:flex-initial">
-            <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <div className="flex items-center gap-2">
               <input
                 type="date"
@@ -318,9 +318,9 @@ export function TimeEntry() {
                   }
                 }}
                 max={endDate}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
-              <span className="text-gray-400">-</span>
+              <span className="text-gray-400 dark:text-gray-500">-</span>
               <input
                 type="date"
                 value={tempEndDate}
@@ -350,23 +350,23 @@ export function TimeEntry() {
                   }
                 }}
                 min={startDate}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
           </div>
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Buscar por cliente o descripción..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg">
-            <Clock className="w-5 h-5 text-blue-600" />
-            <span className="font-semibold text-blue-900">
+          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <span className="font-semibold text-blue-900 dark:text-blue-200">
               Total: {formatHoursMinutes(totalHours)}
             </span>
           </div>
@@ -374,64 +374,64 @@ export function TimeEntry() {
       </div>
 
       {/* Lista de entradas */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
         {filteredEntries.length === 0 ? (
           <div className="p-12 text-center">
-            <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-            <p className="text-gray-500">
+            <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-600" />
+            <p className="text-gray-500 dark:text-gray-400">
               {startDate === endDate 
                 ? `No hay horas cargadas para esta fecha`
                 : `No hay horas cargadas en el rango seleccionado`
               }
             </p>
-            <p className="text-sm text-gray-400 mt-1">Haz clic en "Cargar Horas" para agregar una entrada</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Haz clic en "Cargar Horas" para agregar una entrada</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200 dark:divide-slate-700">
             {filteredEntries.map((entry) => (
-              <div key={entry.id} className="p-6 hover:bg-gray-50 transition-colors">
+              <div key={entry.id} className="p-6 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <FolderOpen className="w-5 h-5 text-blue-600" />
-                      <h3 className="font-semibold text-gray-900">{entry.client?.name || 'Cliente desconocido'}</h3>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                      <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{entry.client?.name || 'Cliente desconocido'}</h3>
+                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
                         {formatHoursMinutes(parseFloat(entry.hours_worked.toString()))}
                       </span>
                     </div>
                     {entry.user && (
                       <div className="flex items-center gap-2 ml-8 mb-2">
-                        <User className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-600 font-medium">{entry.user.full_name}</span>
+                        <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">{entry.user.full_name}</span>
                         {profile?.role === 'admin' || profile?.role === 'support' ? (
-                          <span className="text-xs text-gray-400">({entry.user.email})</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">({entry.user.email})</span>
                         ) : null}
                       </div>
                     )}
                     {entry.description && (
-                      <p className="text-sm text-gray-600 ml-8 mb-2">{entry.description}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 ml-8 mb-2">{entry.description}</p>
                     )}
                     {entry.department && (
                       <div className="flex items-center gap-2 ml-8 mb-1">
-                        <Building2 className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs text-gray-500">{entry.department.name}</span>
+                        <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{entry.department.name}</span>
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 ml-8 mt-1">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 ml-8 mt-1">
                       {new Date(entry.created_at).toLocaleString('es-ES')}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setEditingEntry(entry)}
-                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                       title="Editar"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(entry.id)}
-                      className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -639,20 +639,20 @@ function TimeEntryModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
           {entry ? 'Editar Horas' : 'Cargar Horas'}
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Cliente *
             </label>
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
               disabled={!!entry}
             >
@@ -666,20 +666,20 @@ function TimeEntryModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Fecha *
             </label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Horas trabajadas *
             </label>
             <div className="flex gap-3">
@@ -696,9 +696,9 @@ function TimeEntryModal({
                     }
                   }}
                   placeholder="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-500 mt-1">Horas (0-24)</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Horas (0-24)</p>
               </div>
               <div className="flex-1">
                 <input
@@ -713,31 +713,30 @@ function TimeEntryModal({
                     }
                   }}
                   placeholder="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-500 mt-1">Minutos (0-59)</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Minutos (0-59)</p>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
               Ejemplo: 1 hora y 10 minutos, o solo 10 minutos (0 horas y 10 minutos)
             </p>
           </div>
 
           {departments.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Área <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Área <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <select
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500"
-                style={{ color: departmentId ? 'inherit' : '#9CA3AF' }}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="" disabled hidden>Selecciona un área</option>
                 {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id} style={{ color: '#111827' }}>
+                  <option key={dept.id} value={dept.id}>
                     {dept.name}
                   </option>
                 ))}
@@ -746,21 +745,21 @@ function TimeEntryModal({
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Descripción (opcional)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe el trabajo realizado..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
 
@@ -768,7 +767,7 @@ function TimeEntryModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             >
               Cancelar
             </button>

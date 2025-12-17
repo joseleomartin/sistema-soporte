@@ -438,17 +438,17 @@ export function TasksList() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <CheckSquare className="w-6 h-6 text-indigo-600" />
-            <h1 className="text-2xl font-bold text-gray-900">Tareas</h1>
+            <CheckSquare className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tareas</h1>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
           >
             <Plus className="w-5 h-5" />
             {profile?.role === 'admin' ? 'Nueva Tarea' : 'Nueva Tarea Personal'}
@@ -459,13 +459,13 @@ export function TasksList() {
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Búsqueda */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Buscar por título o cliente..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
 
@@ -473,7 +473,7 @@ export function TasksList() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           >
             <option value="all">Todos los estados</option>
             <option value="pending">Pendiente</option>
@@ -486,7 +486,7 @@ export function TasksList() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           >
             <option value="all">Todas las prioridades</option>
             <option value="urgent">Urgente</option>
@@ -495,14 +495,14 @@ export function TasksList() {
           </select>
 
           {/* Checkbox para ocultar completadas */}
-          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer whitespace-nowrap">
+          <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 cursor-pointer whitespace-nowrap">
             <input
               type="checkbox"
               checked={hideCompleted}
               onChange={(e) => setHideCompleted(e.target.checked)}
-              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-slate-600 rounded focus:ring-indigo-500"
             />
-            <span className="text-sm text-gray-700">Ocultar completadas</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Ocultar completadas</span>
           </label>
         </div>
       </div>
@@ -514,7 +514,7 @@ export function TasksList() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
           </div>
         ) : filteredTasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
             <CheckSquare className="w-16 h-16 mb-4 opacity-50" />
             <p className="text-lg font-medium">No hay tareas</p>
             <p className="text-sm">
@@ -534,17 +534,17 @@ export function TasksList() {
                 <div
                   key={task.id}
                   onClick={() => setSelectedTask(task)}
-                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+                  className="bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden border border-gray-200 dark:border-slate-700"
                   style={{ borderLeft: `4px solid ${priority.border}` }}
                 >
                   <div className="p-4">
                     {/* Header */}
                     <div className="flex items-start justify-between mb-3 gap-2">
                       <div className="flex-1 pr-2 min-w-0 overflow-hidden">
-                        <h3 className="font-semibold text-gray-900 text-lg break-all" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
+                        <h3 className="font-semibold text-gray-900 dark:text-white text-lg break-all" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
                           <span className="break-all">{task.title}</span>
                           {task.is_personal && (
-                            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300 inline-block flex-shrink-0">
+                            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700/50 inline-block flex-shrink-0">
                               Personal
                             </span>
                           )}
@@ -564,23 +564,23 @@ export function TasksList() {
 
                     {/* Cliente */}
                     {task.client_name && (
-                      <div className="flex items-center gap-2 mb-2 text-sm text-gray-600">
-                        <User className="w-4 h-4" />
+                      <div className="flex items-center gap-2 mb-2 text-sm text-gray-600 dark:text-gray-300">
+                        <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         <span>{task.client_name}</span>
                       </div>
                     )}
 
                     {/* Creador de la Tarea */}
                     {task.created_by_profile && (
-                      <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
-                        <User className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-2 mb-2 text-xs text-gray-500 dark:text-gray-400">
+                        <User className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                         <span>Creada por: {task.created_by_profile.full_name}</span>
                       </div>
                     )}
 
                     {/* Timer de Tarea */}
-                    <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
-                      <Clock className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-2 mb-2 text-xs text-gray-500 dark:text-gray-400">
+                      <Clock className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                       <span>⏱️ Creada hace {formatDuration(task.created_at)}</span>
                       {task.completed_at && (
                         <span className="ml-2">✅ Completada en {formatDuration(task.created_at, task.completed_at)}</span>
@@ -609,14 +609,14 @@ export function TasksList() {
                         {status.label}
                       </span>
                       {dueDate.color === '#EF4444' && (
-                        <AlertCircle className="w-5 h-5 text-red-500" />
+                        <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
                       )}
                     </div>
 
                     {/* Usuarios Asignados */}
                     {((task.assigned_users && task.assigned_users.length > 0) || (task.assigned_departments && task.assigned_departments.length > 0)) && (
-                      <div className="flex items-start gap-2 mt-3 pt-3 border-t border-gray-200">
-                        <Users className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
+                        <Users className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
                         <div className="flex flex-wrap gap-2 flex-1">
                           {task.assigned_users?.map((user) => {
                             const isCurrentUser = user.id === profile?.id;
@@ -652,7 +652,7 @@ export function TasksList() {
                           {task.assigned_departments?.map((dept) => (
                             <div
                               key={dept.id}
-                              className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 rounded-full text-xs text-purple-700"
+                              className="flex items-center gap-1.5 px-2 py-1 bg-purple-50 dark:bg-purple-900/20 rounded-full text-xs text-purple-700 dark:text-purple-300"
                               title={`Área: ${dept.name}`}
                             >
                               <Users className="w-3.5 h-3.5" />

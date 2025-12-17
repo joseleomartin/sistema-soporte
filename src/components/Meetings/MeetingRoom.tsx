@@ -79,39 +79,39 @@ export function MeetingRoom({ room, onBack }: MeetingRoomProps) {
     <div className="h-full flex flex-col">
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+        className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6"
       >
         <ArrowLeft className="w-5 h-5" />
         Volver a Salas
       </button>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{room.name}</h2>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-4">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{room.name}</h2>
         {room.description && (
-          <p className="text-gray-600 mb-2">{room.description}</p>
+          <p className="text-gray-600 dark:text-gray-300 mb-2">{room.description}</p>
         )}
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Sala permanente - Los participantes pueden unirse y salir en cualquier momento
         </p>
       </div>
 
       {!showIframe ? (
-        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[600px] flex items-center justify-center">
+        <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden min-h-[600px] flex items-center justify-center">
           <div className="text-center max-w-md mx-auto p-8">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Video className="w-10 h-10 text-green-600" />
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Video className="w-10 h-10 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
               Unirse a la Sala
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               Selecciona cómo quieres unirte a la videollamada
             </p>
 
             <div className="space-y-3">
               <button
                 onClick={() => setShowIframe(true)}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold text-lg shadow-md"
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition font-semibold text-lg shadow-md"
               >
                 <Video className="w-5 h-5" />
                 Unirse Aquí
@@ -119,24 +119,24 @@ export function MeetingRoom({ room, onBack }: MeetingRoomProps) {
 
               <button
                 onClick={handleJoinInNewTab}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-lg shadow-md"
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-semibold text-lg shadow-md"
               >
                 <ExternalLink className="w-5 h-5" />
                 Abrir en Nueva Pestaña
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 mt-6">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-6">
               Recuerda permitir el acceso a tu cámara y micrófono cuando te lo solicite el navegador
             </p>
           </div>
         </div>
       ) : (
-        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
+        <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden relative">
           <div className="absolute top-4 right-4 z-10">
             <button
               onClick={handleJoinInNewTab}
-              className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm text-gray-700 rounded-lg hover:bg-white transition shadow-lg text-sm font-medium border border-gray-200"
+              className="flex items-center gap-2 px-3 py-2 bg-white/90 dark:bg-slate-700/90 backdrop-blur-sm text-gray-700 dark:text-gray-300 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition shadow-lg text-sm font-medium border border-gray-200 dark:border-slate-600"
             >
               <ExternalLink className="w-4 h-4" />
               Abrir en Nueva Pestaña

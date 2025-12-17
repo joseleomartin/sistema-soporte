@@ -452,11 +452,11 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
     <div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex-1">
-          <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
             <FolderOpen className="w-8 h-8 text-blue-600" />
             Gestión de Clientes
           </h2>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
             Base de datos completa de clientes con archivos, documentos y comunicación centralizada
           </p>
         </div>
@@ -491,64 +491,64 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       </div>
 
       {/* Banner informativo sobre funcionalidades */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
-        <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 border border-blue-200 dark:border-slate-600 rounded-xl p-6 mb-6">
+        <h3 className="text-lg font-semibold text-blue-900 dark:text-white mb-3 flex items-center gap-2">
           <File className="w-5 h-5" />
           Sistema Completo de Gestión
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-start gap-3">
-            <div className="bg-white rounded-lg p-2">
-              <FileText className="w-5 h-5 text-blue-600" />
+            <div className="bg-white dark:bg-slate-700 rounded-lg p-2">
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="font-medium text-blue-900 text-sm">Documentos</p>
-              <p className="text-xs text-blue-700">PDFs, Excel, Word y más</p>
+              <p className="font-medium text-blue-900 dark:text-blue-200 text-sm">Documentos</p>
+              <p className="text-xs text-blue-700 dark:text-blue-300">PDFs, Excel, Word y más</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="bg-white rounded-lg p-2">
-              <Image className="w-5 h-5 text-green-600" />
+            <div className="bg-white dark:bg-slate-700 rounded-lg p-2">
+              <Image className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="font-medium text-blue-900 text-sm">Multimedia</p>
-              <p className="text-xs text-blue-700">Fotos, videos e imágenes</p>
+              <p className="font-medium text-blue-900 dark:text-blue-200 text-sm">Multimedia</p>
+              <p className="text-xs text-blue-700 dark:text-blue-300">Fotos, videos e imágenes</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="bg-white rounded-lg p-2">
-              <Users className="w-5 h-5 text-purple-600" />
+            <div className="bg-white dark:bg-slate-700 rounded-lg p-2">
+              <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="font-medium text-blue-900 text-sm">Comunicación</p>
-              <p className="text-xs text-blue-700">Chat y mensajería en tiempo real</p>
+              <p className="font-medium text-blue-900 dark:text-blue-200 text-sm">Comunicación</p>
+              <p className="text-xs text-blue-700 dark:text-blue-300">Chat y mensajería en tiempo real</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4 space-y-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4 space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Buscar clientes por nombre..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 
         {/* Panel de Filtros */}
-        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200">
-          <div className="flex items-center gap-2 text-sm text-gray-700">
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200 dark:border-slate-700">
+          <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <Filter className="w-4 h-4" />
             <span className="font-medium">Filtros:</span>
           </div>
 
           {/* Filtro por Orden Alfabético */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Orden:</label>
+            <label className="text-sm text-gray-600 dark:text-gray-300">Orden:</label>
             <select
               value={sortBy}
               onChange={(e) => {
@@ -557,7 +557,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                   setSortOrder('asc');
                 }
               }}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="none">Sin orden</option>
               <option value="alphabetical">Alfabético</option>
@@ -566,13 +566,13 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
             {sortBy !== 'none' && (
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
                 title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
               >
                 {sortOrder === 'asc' ? (
-                  <ArrowUp className="w-4 h-4 text-gray-600" />
+                  <ArrowUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                 ) : (
-                  <ArrowDown className="w-4 h-4 text-gray-600" />
+                  <ArrowDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                 )}
               </button>
             )}
@@ -580,11 +580,11 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
 
           {/* Filtro por Tareas Pendientes */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Tareas:</label>
+            <label className="text-sm text-gray-600 dark:text-gray-300">Tareas:</label>
             <select
               value={filterByTasks}
               onChange={(e) => setFilterByTasks(e.target.value as 'all' | 'with_tasks' | 'without_tasks')}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Todos</option>
               <option value="with_tasks">Con tareas pendientes</option>
@@ -598,8 +598,8 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
               onClick={() => setFilterByFavorites(!filterByFavorites)}
               className={`flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
                 filterByFavorites
-                  ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
-                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700/50 text-yellow-700 dark:text-yellow-300'
+                  : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600'
               }`}
             >
               <Star className={`w-4 h-4 ${filterByFavorites ? 'fill-yellow-500 text-yellow-500' : ''}`} />
@@ -617,7 +617,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                 setFilterByFavorites(false);
                 setSearchTerm('');
               }}
-              className="ml-auto px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="ml-auto px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
             >
               Limpiar filtros
             </button>
@@ -626,12 +626,12 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       </div>
 
       {filteredSubforums.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
           <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             {searchTerm ? 'No se encontraron clientes' : 'No hay clientes disponibles'}
           </h3>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-300">
             {canCreateForum && !searchTerm
               ? 'Crea el primer cliente para comenzar a gestionar archivos y comunicación'
               : 'No tienes acceso a ningún cliente todavía'}
@@ -642,7 +642,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
           {filteredSubforums.map((forum) => (
             <div
               key={forum.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition relative group cursor-pointer"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 hover:shadow-md transition relative group cursor-pointer"
               onClick={() => setSelectedSubforum(forum.id)}
             >
               <div className="absolute top-4 right-4 flex gap-1">
@@ -724,7 +724,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                     e.stopPropagation();
                     setShowFilesFor(forum);
                   }}
-                  className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-600 transition"
+                  className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 transition"
                   title="Ver archivos"
                 >
                   <File className="w-4 h-4" />
@@ -733,16 +733,16 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
               </div>
 
               <div className="w-full text-left">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{forum.name}</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{forum.name}</h3>
 
                 {forum.description && (
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-2">
                     {forum.description}
                   </p>
                 )}
 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100 mb-2">
-                  <span className="text-xs font-medium text-gray-500">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                     Cliente: {forum.client_name}
                   </span>
                   <span className="text-xs text-gray-400">
@@ -823,39 +823,39 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       {/* Modal de Tareas Pendientes */}
       {showPendingTasksModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   Tareas Pendientes - {showPendingTasksModal.clientName}
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {showPendingTasksModal.tasks.length} tarea{showPendingTasksModal.tasks.length !== 1 ? 's' : ''} pendiente{showPendingTasksModal.tasks.length !== 1 ? 's' : ''}
                 </p>
               </div>
               <button
                 onClick={() => setShowPendingTasksModal(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-3">
               {showPendingTasksModal.tasks.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No hay tareas pendientes para este cliente</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No hay tareas pendientes para este cliente</p>
               ) : (
                 showPendingTasksModal.tasks.map((task: any) => (
                   <div
                     key={task.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                    className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 hover:bg-gray-50 dark:bg-slate-700 transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{task.title}</h3>
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{task.title}</h3>
+                        <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             task.status === 'pending' 
-                              ? 'bg-gray-100 text-gray-700'
+                              ? 'bg-gray-100 text-gray-700 dark:text-gray-300'
                               : 'bg-blue-100 text-blue-700'
                           }`}>
                             {task.status === 'pending' ? 'Pendiente' : 'En Progreso'}

@@ -578,26 +578,26 @@ export function Vencimientos() {
     <div className="h-full overflow-auto">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold text-gray-900">Vencimientos</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Vencimientos</h1>
         </div>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-300">
           Gestiona y controla vencimientos de clientes
         </p>
       </div>
 
       {/* Botón Refrescar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">Actualizar Vencimientos</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Actualizar Vencimientos</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               Ejecuta el scraper para obtener los vencimientos más recientes
             </p>
-            <p className="text-xs text-blue-600 mt-1 font-medium">
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
               ℹ️ Los datos son compartidos entre todos los usuarios
             </p>
             {vencimientos && (
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 Última actualización: {vencimientos.fecha_actualizacion_formateada || formatearFecha(vencimientos.fecha_actualizacion)}
               </p>
             )}
@@ -607,8 +607,8 @@ export function Vencimientos() {
             disabled={refreshing}
             className={`px-6 py-3 rounded-lg font-medium transition flex items-center gap-2 ${
               refreshing
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-orange-600 text-white hover:bg-orange-700'
+                ? 'bg-gray-300 dark:bg-slate-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                : 'bg-orange-600 dark:bg-orange-500 text-white hover:bg-orange-700 dark:hover:bg-orange-600'
             }`}
           >
             {refreshing ? (
@@ -631,20 +631,20 @@ export function Vencimientos() {
         <div
           className={`rounded-xl shadow-sm border p-6 mb-6 ${
             localMessage.type === 'success'
-              ? 'bg-blue-50 border-blue-200'
-              : 'bg-red-50 border-red-200'
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'
+              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'
           }`}
         >
           <div className="flex items-start gap-3">
             {localMessage.type === 'success' ? (
-              <CheckCircle2 className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             ) : (
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             )}
             <div className="flex-1">
               <div
                 className={`text-sm ${
-                  localMessage.type === 'success' ? 'text-blue-900' : 'text-red-900'
+                  localMessage.type === 'success' ? 'text-blue-900 dark:text-blue-200' : 'text-red-900 dark:text-red-300'
                 }`}
               >
                 {localMessage.text.split('\n').map((line, idx) => (
@@ -656,7 +656,7 @@ export function Vencimientos() {
             </div>
             <button
               onClick={() => setLocalMessage(null)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
             >
               ✕
             </button>
@@ -666,19 +666,19 @@ export function Vencimientos() {
 
       {/* Visualización de Vencimientos */}
       {loading ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-orange-600 mx-auto mb-4" />
-          <p className="text-gray-600">Cargando vencimientos...</p>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-600 dark:text-orange-400 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-300">Cargando vencimientos...</p>
         </div>
       ) : vencimientos ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Vencimientos Disponibles
           </h3>
           
           {/* Pestañas */}
           {Object.keys(vencimientos.hojas).length > 0 && (
-            <div className="mb-4 border-b border-gray-200">
+            <div className="mb-4 border-b border-gray-200 dark:border-slate-700">
               <nav className="flex space-x-1 overflow-x-auto" aria-label="Tabs">
                 {Object.keys(vencimientos.hojas).map((nombreHoja) => {
                   const datos = vencimientos.hojas[nombreHoja];
@@ -692,13 +692,13 @@ export function Vencimientos() {
                         px-4 py-2 text-sm font-medium rounded-t-lg transition whitespace-nowrap
                         ${
                           isActive
-                            ? 'bg-orange-50 text-orange-700 border-b-2 border-orange-600'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                            ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-b-2 border-orange-600 dark:border-orange-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'
                         }
                       `}
                     >
                       {nombreFormateado}
-                      <span className="ml-2 text-xs text-gray-400">
+                      <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
                         ({datos.total_filas})
                       </span>
                     </button>
@@ -715,32 +715,32 @@ export function Vencimientos() {
                 const datos = vencimientos.hojas[tabActiva];
                 return (
                   <div>
-                    <div className="mb-3 text-sm text-gray-600">
-                      <p className="font-medium text-gray-900 mb-1">{formatearNombrePestaña(tabActiva)}</p>
+                    <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+                      <p className="font-medium text-gray-900 dark:text-white mb-1">{formatearNombrePestaña(tabActiva)}</p>
                       <p>
                         Total de filas: {datos.total_filas} | Columnas: {datos.columnas.join(', ')}
                       </p>
                     </div>
                     {datos.datos.length > 0 ? (
-                      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-200 text-sm">
-                          <thead className="bg-gray-50">
+                      <div className="overflow-x-auto border border-gray-200 dark:border-slate-700 rounded-lg">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700 text-sm">
+                          <thead className="bg-gray-50 dark:bg-slate-700">
                             <tr>
                               {datos.columnas.map((col) => (
                                 <th
                                   key={col}
-                                  className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
+                                  className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider"
                                 >
                                   {col}
                                 </th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
                             {datos.datos.map((fila, idx) => (
-                              <tr key={idx} className="hover:bg-gray-50">
+                              <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                                 {datos.columnas.map((col) => (
-                                  <td key={col} className="px-4 py-3 whitespace-nowrap text-gray-900">
+                                  <td key={col} className="px-4 py-3 whitespace-nowrap text-gray-900 dark:text-white">
                                     {fila[col] !== null && fila[col] !== undefined ? String(fila[col]) : '-'}
                                   </td>
                                 ))}
@@ -749,15 +749,15 @@ export function Vencimientos() {
                           </tbody>
                         </table>
                         {datos.datos.length < datos.total_filas && (
-                          <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-                            <p className="text-xs text-gray-500">
+                          <div className="px-4 py-2 bg-gray-50 dark:bg-slate-700 border-t border-gray-200 dark:border-slate-600">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               Mostrando {datos.datos.length} de {datos.total_filas} filas
                             </p>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                         <p>No hay datos disponibles en esta hoja</p>
                       </div>
                     )}
@@ -768,26 +768,26 @@ export function Vencimientos() {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-          <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 text-center">
+          <AlertCircle className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-300">
             No hay vencimientos disponibles. Ejecuta "Refrescar Vencimientos" para obtener los datos.
           </p>
         </div>
       )}
 
       {/* Carga de Excel con CUITs */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Filtrar Vencimientos por CUITs
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
           Carga un archivo Excel con una columna de CUITs. El sistema buscará vencimientos
           comparando el último dígito del CUIT con los datos disponibles.
         </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-          <p className="text-xs text-blue-800 font-medium mb-1">📋 Formato del archivo:</p>
-          <ul className="text-xs text-blue-700 space-y-1 ml-4 list-disc">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3 mb-4">
+          <p className="text-xs text-blue-800 dark:text-blue-200 font-medium mb-1">📋 Formato del archivo:</p>
+          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 ml-4 list-disc">
             <li>El archivo debe tener una columna con CUITs (puede llamarse "CUIL", "CUIT", "CUIL/CUIT", etc.)</li>
             <li>Si no hay columna con ese nombre, se usará la primera columna con datos</li>
             <li>Los CUITs pueden estar en formato: XX-XXXXXXXX-X o XXXXXXXXXXX</li>
@@ -802,8 +802,8 @@ export function Vencimientos() {
           onDrop={handleDrop}
           className={`border-2 border-dashed rounded-lg p-8 text-center transition mb-4 ${
             dragActive
-              ? 'border-orange-500 bg-orange-50'
-              : 'border-gray-300 hover:border-gray-400'
+              ? 'border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-900/20'
+              : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
           }`}
         >
           <input
@@ -814,11 +814,11 @@ export function Vencimientos() {
             className="hidden"
           />
           <label htmlFor="file-upload-cuits" className="cursor-pointer">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-lg font-medium text-gray-700 mb-2">
+            <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <p className="text-lg font-medium text-gray-700 dark:text-white mb-2">
               {archivoCuits ? archivoCuits.name : 'Arrastra y suelta el archivo Excel con CUITs aquí'}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               o haz clic para seleccionar un archivo
             </p>
           </label>
@@ -829,8 +829,8 @@ export function Vencimientos() {
           disabled={!archivoCuits || filtrando}
           className={`w-full py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
             !archivoCuits || filtrando
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-orange-600 text-white hover:bg-orange-700'
+              ? 'bg-gray-300 dark:bg-slate-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              : 'bg-orange-600 dark:bg-orange-500 text-white hover:bg-orange-700 dark:hover:bg-orange-600'
           }`}
         >
           {filtrando ? (
@@ -849,33 +849,33 @@ export function Vencimientos() {
 
       {/* Resultado del Filtrado */}
       {resultadoFiltrado && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl p-6 mb-6">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-green-900 mb-2">
+              <h3 className="text-lg font-semibold text-green-900 dark:text-green-200 mb-2">
                 Filtrado Completado
               </h3>
-              <p className="text-sm text-green-800 mb-3">
+              <p className="text-sm text-green-800 dark:text-green-300 mb-3">
                 Total CUITs procesados: {resultadoFiltrado.total_cuits}
               </p>
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-white rounded-lg p-3">
-                  <p className="text-xs font-medium text-green-900 mb-1">Con Vencimientos</p>
-                  <p className="text-2xl font-bold text-green-600">
+                <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-green-200 dark:border-green-800/50">
+                  <p className="text-xs font-medium text-green-900 dark:text-green-200 mb-1">Con Vencimientos</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {resultadoFiltrado.cuits_con_vencimientos}
                   </p>
                 </div>
-                <div className="bg-white rounded-lg p-3">
-                  <p className="text-xs font-medium text-green-900 mb-1">Sin Vencimientos</p>
-                  <p className="text-2xl font-bold text-gray-600">
+                <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-green-200 dark:border-green-800/50">
+                  <p className="text-xs font-medium text-green-900 dark:text-green-200 mb-1">Sin Vencimientos</p>
+                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
                     {resultadoFiltrado.cuits_sin_vencimientos}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => handleDescargar(resultadoFiltrado.downloadUrl)}
-                className="w-full py-3 px-6 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition flex items-center justify-center gap-2"
+                className="w-full py-3 px-6 rounded-lg font-medium bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 transition flex items-center justify-center gap-2"
               >
                 <Download className="w-5 h-5" />
                 Descargar Resultado Excel
@@ -886,11 +886,11 @@ export function Vencimientos() {
       )}
 
       {/* Gestión de Clientes */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">Clientes</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Clientes</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               Gestiona tus clientes para enviarles vencimientos por email
             </p>
           </div>
@@ -900,7 +900,7 @@ export function Vencimientos() {
               setFormCliente({ nombre: '', cuit: '', email: '' });
               setShowClienteModal(true);
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center gap-2"
           >
             <UserPlus className="w-4 h-4" />
             Agregar Cliente
@@ -909,28 +909,28 @@ export function Vencimientos() {
 
         {loadingClientes ? (
           <div className="text-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
-            <p className="text-sm text-gray-500 mt-2">Cargando clientes...</p>
+            <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400 dark:text-gray-500" />
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Cargando clientes...</p>
           </div>
         ) : clientes.length === 0 ? (
           <div className="text-center py-8">
-            <Users className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-            <p className="text-gray-500 mb-2">No tienes clientes registrados</p>
-            <p className="text-sm text-gray-400">Agrega un cliente para comenzar</p>
+            <Users className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-3" />
+            <p className="text-gray-500 dark:text-gray-400 mb-2">No tienes clientes registrados</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">Agrega un cliente para comenzar</p>
           </div>
         ) : (
           <div className="space-y-2">
             {clientes.map((cliente) => (
               <div
                 key={cliente.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                className="flex items-center justify-between p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <div>
-                      <p className="font-medium text-gray-900">{cliente.nombre}</p>
-                      <p className="text-sm text-gray-600">CUIT: {cliente.cuit}</p>
-                      <p className="text-sm text-gray-600">Email: {cliente.email}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{cliente.nombre}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">CUIT: {cliente.cuit}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Email: {cliente.email}</p>
                     </div>
                   </div>
                 </div>
@@ -938,7 +938,7 @@ export function Vencimientos() {
                   <button
                     onClick={() => handleEnviarEmail(cliente)}
                     disabled={enviandoEmail || !vencimientos}
-                    className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Enviar vencimientos por email"
                   >
                     <Mail className="w-4 h-4" />
@@ -946,14 +946,14 @@ export function Vencimientos() {
                   </button>
                   <button
                     onClick={() => handleEditarCliente(cliente)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
                     title="Editar cliente"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleEliminarCliente(cliente.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                     title="Eliminar cliente"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -968,9 +968,9 @@ export function Vencimientos() {
       {/* Modal para crear/editar cliente */}
       {showClienteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {clienteEditando ? 'Editar Cliente' : 'Nuevo Cliente'}
               </h3>
               <button
@@ -979,7 +979,7 @@ export function Vencimientos() {
                   setClienteEditando(null);
                   setFormCliente({ nombre: '', cuit: '', email: '' });
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -987,40 +987,40 @@ export function Vencimientos() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nombre del Cliente *
                 </label>
                 <input
                   type="text"
                   value={formCliente.nombre}
                   onChange={(e) => setFormCliente({ ...formCliente, nombre: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Ej: Juan Pérez"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   CUIT *
                 </label>
                 <input
                   type="text"
                   value={formCliente.cuit}
                   onChange={(e) => setFormCliente({ ...formCliente, cuit: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Ej: 20-12345678-9"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email *
                 </label>
                 <input
                   type="email"
                   value={formCliente.email}
                   onChange={(e) => setFormCliente({ ...formCliente, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Ej: cliente@ejemplo.com"
                 />
               </div>
@@ -1028,7 +1028,7 @@ export function Vencimientos() {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={handleGuardarCliente}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
                 >
                   {clienteEditando ? 'Actualizar' : 'Crear'}
                 </button>
@@ -1038,7 +1038,7 @@ export function Vencimientos() {
                     setClienteEditando(null);
                     setFormCliente({ nombre: '', cuit: '', email: '' });
                   }}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                  className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition"
                 >
                   Cancelar
                 </button>
@@ -1049,28 +1049,28 @@ export function Vencimientos() {
       )}
 
       {/* Información sobre Vencimientos */}
-      <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-orange-900 mb-3 flex items-center gap-2">
+      <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-200 dark:border-orange-800/50 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-200 mb-3 flex items-center gap-2">
           <Calendar className="w-5 h-5" />
           ¿Cómo funciona el sistema de Vencimientos?
         </h3>
-        <p className="text-sm text-orange-800 mb-3">
+        <p className="text-sm text-orange-800 dark:text-orange-300 mb-3">
           El sistema extrae tablas de vencimientos desde múltiples URLs,
           incluyendo retenciones SICORE, autónomos, IVA, cargas sociales y más.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-          <div className="bg-white rounded-lg p-3">
-            <p className="text-xs font-medium text-orange-900 mb-1">✅ Funcionalidades</p>
-            <ul className="text-xs text-orange-700 space-y-1 mt-2">
+          <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-orange-200 dark:border-orange-800/50">
+            <p className="text-xs font-medium text-orange-900 dark:text-orange-200 mb-1">✅ Funcionalidades</p>
+            <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1 mt-2">
               <li>• Actualización automática de vencimientos</li>
               <li>• Visualización por tipo de vencimiento</li>
               <li>• Filtrado por CUITs</li>
               <li>• Exportación a Excel</li>
             </ul>
           </div>
-          <div className="bg-white rounded-lg p-3">
-            <p className="text-xs font-medium text-orange-900 mb-1">✅ Filtrado por CUIT</p>
-            <ul className="text-xs text-orange-700 space-y-1 mt-2">
+          <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-orange-200 dark:border-orange-800/50">
+            <p className="text-xs font-medium text-orange-900 dark:text-orange-200 mb-1">✅ Filtrado por CUIT</p>
+            <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1 mt-2">
               <li>• Compara el último dígito del CUIT</li>
               <li>• Busca en todas las tablas disponibles</li>
               <li>• Genera reporte con resultados</li>
@@ -1082,6 +1082,8 @@ export function Vencimientos() {
     </div>
   );
 }
+
+
 
 
 

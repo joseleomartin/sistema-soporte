@@ -274,17 +274,7 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
             created += 1;
           }
 
-          // 3. Guardar mapeo de Google Drive si corresponde
-          if (row.drive_link && subforumId) {
-            const folderId = extractFolderIdFromLink(row.drive_link.trim());
-            if (folderId) {
-              await supabase.rpc('save_client_drive_mapping', {
-                p_subforum_id: subforumId,
-                p_google_drive_folder_id: folderId,
-                p_folder_name: subforumName,
-              } as any);
-            }
-          }
+          // 3. (Intencionalmente omitido) No modificamos la configuración de Google Drive
         } catch (error) {
           console.error('Error importando fila:', row, error);
           errors += 1;

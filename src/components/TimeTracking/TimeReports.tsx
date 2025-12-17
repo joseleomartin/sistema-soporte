@@ -346,8 +346,8 @@ export function TimeReports() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-500" />
-          <p className="text-gray-600">No tienes permisos para ver los reportes</p>
+          <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-500 dark:text-red-400" />
+          <p className="text-gray-600 dark:text-gray-300">No tienes permisos para ver los reportes</p>
         </div>
       </div>
     );
@@ -357,48 +357,48 @@ export function TimeReports() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="w-8 h-8 text-blue-600" />
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <BarChart3 className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             Reportes de Horas
           </h2>
-          <p className="text-gray-600 mt-2">Análisis de horas trabajadas por cliente, empleado y área</p>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">Análisis de horas trabajadas por cliente, empleado y área</p>
         </div>
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-gray-400" />
+            <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500" />
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <span className="text-gray-500">a</span>
+            <span className="text-gray-500 dark:text-gray-400">a</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
+            <Filter className="w-5 h-5 text-gray-400 dark:text-gray-500" />
             <select
               value={reportType}
               onChange={(e) => setReportType(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="client">Por Cliente</option>
               <option value="user">Por Empleado</option>
               <option value="department">Por Área</option>
             </select>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg ml-auto">
-            <Clock className="w-5 h-5 text-blue-600" />
-            <span className="font-semibold text-blue-900">
+          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg ml-auto">
+            <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <span className="font-semibold text-blue-900 dark:text-blue-200">
               Total: {formatHoursMinutes(getTotalHours())}
             </span>
           </div>
@@ -411,18 +411,18 @@ export function TimeReports() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
           {reportType === 'client' && (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 dark:divide-slate-700">
               {clientReports.length === 0 ? (
                 <div className="p-12 text-center">
-                  <FolderOpen className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p className="text-gray-500">No hay datos para el período seleccionado</p>
+                  <FolderOpen className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-600" />
+                  <p className="text-gray-500 dark:text-gray-400">No hay datos para el período seleccionado</p>
                 </div>
               ) : (
                 <>
-                  <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                    <div className="grid grid-cols-3 gap-4 font-semibold text-sm text-gray-700">
+                  <div className="bg-gray-50 dark:bg-slate-700 px-6 py-3 border-b border-gray-200 dark:border-slate-700">
+                    <div className="grid grid-cols-3 gap-4 font-semibold text-sm text-gray-700 dark:text-gray-300">
                       <div>Cliente</div>
                       <div className="text-center">Entradas</div>
                       <div className="text-right">Total Horas</div>
@@ -434,35 +434,35 @@ export function TimeReports() {
                       <div key={report.client_id}>
                         <div 
                           onClick={() => loadClientEntries(report.client_id)}
-                          className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                          className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                         >
                           <div className="grid grid-cols-3 gap-4 items-center">
                             <div className="flex items-center gap-2">
                               {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                               ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                               )}
-                              <FolderOpen className="w-5 h-5 text-blue-600" />
-                              <span className="font-medium text-gray-900">{report.client_name}</span>
+                              <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                              <span className="font-medium text-gray-900 dark:text-white">{report.client_name}</span>
                             </div>
-                            <div className="text-center text-gray-600">{report.entries_count}</div>
-                            <div className="text-right font-semibold text-blue-600">
+                            <div className="text-center text-gray-600 dark:text-gray-300">{report.entries_count}</div>
+                            <div className="text-right font-semibold text-blue-600 dark:text-blue-400">
                               {formatHoursMinutes(report.total_hours)}
                             </div>
                           </div>
                         </div>
                         {isExpanded && (
-                          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
+                          <div className="bg-gray-50 dark:bg-slate-700 border-t border-gray-200 dark:border-slate-600 px-6 py-4">
                             {loadingEntries ? (
                               <div className="flex items-center justify-center py-4">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 dark:border-blue-400"></div>
                               </div>
                             ) : clientEntriesByArea.size === 0 ? (
-                              <p className="text-sm text-gray-500 text-center py-2">No hay entradas para este cliente</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No hay entradas para este cliente</p>
                             ) : (
                               <div className="space-y-3">
-                                <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                                <h4 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
                                   Horas por Área
                                 </h4>
                                 <div className="space-y-2">
@@ -471,24 +471,24 @@ export function TimeReports() {
                                     .map(([areaId, areaData]) => (
                                     <div 
                                       key={areaId} 
-                                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                                      className="bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-600 rounded-lg p-4 hover:shadow-sm transition-shadow"
                                     >
                                       <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-3">
-                                          <Building2 className="w-5 h-5 text-blue-600" />
+                                          <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                           <div>
-                                            <div className="font-medium text-gray-900">{areaData.areaName}</div>
-                                            <div className="text-xs text-gray-500">{areaData.entries} {areaData.entries === 1 ? 'entrada' : 'entradas'}</div>
+                                            <div className="font-medium text-gray-900 dark:text-white">{areaData.areaName}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{areaData.entries} {areaData.entries === 1 ? 'entrada' : 'entradas'}</div>
                                           </div>
                                         </div>
                                         <div className="text-right">
-                                          <div className="font-semibold text-blue-600">
+                                          <div className="font-semibold text-blue-600 dark:text-blue-400">
                                             {formatHoursMinutes(areaData.hours)}
                                           </div>
                                         </div>
                                       </div>
                                       {areaData.entriesList.length > 0 && (
-                                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-500 space-y-2">
                                           {areaData.entriesList.map((entry) => {
                                             // Parsear fecha manualmente para evitar problemas de zona horaria
                                             const dateParts = entry.entry_date.split('-');
@@ -501,18 +501,18 @@ export function TimeReports() {
                                             return (
                                               <div key={entry.id} className="text-sm">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                  <span className="text-gray-500 text-xs">
+                                                  <span className="text-gray-500 dark:text-gray-400 text-xs">
                                                     {entryDate.toLocaleDateString('es-ES', {
                                                       day: 'numeric',
                                                       month: 'short'
                                                     })}
                                                   </span>
-                                                  <span className="text-blue-600 font-medium text-xs">
+                                                  <span className="text-blue-600 dark:text-blue-400 font-medium text-xs">
                                                     {formatHoursMinutes(parseFloat(entry.hours_worked.toString()))}
                                                   </span>
                                                 </div>
                                                 {entry.description && (
-                                                  <p className="text-gray-700 text-xs pl-1">{entry.description}</p>
+                                                  <p className="text-gray-700 dark:text-gray-300 text-xs pl-1">{entry.description}</p>
                                                 )}
                                               </div>
                                             );
@@ -535,16 +535,16 @@ export function TimeReports() {
           )}
 
           {reportType === 'user' && (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 dark:divide-slate-700">
               {userReports.length === 0 ? (
                 <div className="p-12 text-center">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p className="text-gray-500">No hay datos para el período seleccionado</p>
+                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-600" />
+                  <p className="text-gray-500 dark:text-gray-400">No hay datos para el período seleccionado</p>
                 </div>
               ) : (
                 <>
-                  <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                    <div className="grid grid-cols-3 gap-4 font-semibold text-sm text-gray-700">
+                  <div className="bg-gray-50 dark:bg-slate-700 px-6 py-3 border-b border-gray-200 dark:border-slate-700">
+                    <div className="grid grid-cols-3 gap-4 font-semibold text-sm text-gray-700 dark:text-gray-300">
                       <div>Empleado</div>
                       <div className="text-center">Entradas</div>
                       <div className="text-right">Total Horas</div>
@@ -556,38 +556,38 @@ export function TimeReports() {
                       <div key={report.user_id}>
                         <div 
                           onClick={() => loadUserEntries(report.user_id)}
-                          className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                          className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                         >
                           <div className="grid grid-cols-3 gap-4 items-center">
                             <div className="flex items-center gap-2">
                               {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                               ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                               )}
-                              <Users className="w-5 h-5 text-blue-600" />
+                              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                               <div>
-                                <div className="font-medium text-gray-900">{report.user_name}</div>
-                                <div className="text-xs text-gray-500">{report.user_email}</div>
+                                <div className="font-medium text-gray-900 dark:text-white">{report.user_name}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{report.user_email}</div>
                               </div>
                             </div>
-                            <div className="text-center text-gray-600">{report.entries_count}</div>
-                            <div className="text-right font-semibold text-blue-600">
+                            <div className="text-center text-gray-600 dark:text-gray-300">{report.entries_count}</div>
+                            <div className="text-right font-semibold text-blue-600 dark:text-blue-400">
                               {formatHoursMinutes(report.total_hours)}
                             </div>
                           </div>
                         </div>
                         {isExpanded && (
-                          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
+                          <div className="bg-gray-50 dark:bg-slate-700 border-t border-gray-200 dark:border-slate-600 px-6 py-4">
                             {loadingEntries ? (
                               <div className="flex items-center justify-center py-4">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 dark:border-blue-400"></div>
                               </div>
                             ) : userEntriesByClient.size === 0 ? (
-                              <p className="text-sm text-gray-500 text-center py-2">No hay entradas para este empleado</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No hay entradas para este empleado</p>
                             ) : (
                               <div className="space-y-3">
-                                <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                                <h4 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
                                   Horas por Cliente
                                 </h4>
                                 <div className="space-y-2">
@@ -596,24 +596,24 @@ export function TimeReports() {
                                     .map(([clientId, clientData]) => (
                                     <div 
                                       key={clientId} 
-                                      className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                                      className="bg-white dark:bg-slate-600 border border-gray-200 dark:border-slate-600 rounded-lg p-4 hover:shadow-sm transition-shadow"
                                     >
                                       <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-3">
-                                          <FolderOpen className="w-5 h-5 text-blue-600" />
+                                          <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                           <div>
-                                            <div className="font-medium text-gray-900">{clientData.clientName}</div>
-                                            <div className="text-xs text-gray-500">{clientData.entries} {clientData.entries === 1 ? 'entrada' : 'entradas'}</div>
+                                            <div className="font-medium text-gray-900 dark:text-white">{clientData.clientName}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{clientData.entries} {clientData.entries === 1 ? 'entrada' : 'entradas'}</div>
                                           </div>
                                         </div>
                                         <div className="text-right">
-                                          <div className="font-semibold text-blue-600">
+                                          <div className="font-semibold text-blue-600 dark:text-blue-400">
                                             {formatHoursMinutes(clientData.hours)}
                                           </div>
                                         </div>
                                       </div>
                                       {clientData.entriesList.length > 0 && (
-                                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-500 space-y-2">
                                           {clientData.entriesList.map((entry) => {
                                             // Parsear fecha manualmente para evitar problemas de zona horaria
                                             const dateParts = entry.entry_date.split('-');
@@ -626,18 +626,18 @@ export function TimeReports() {
                                             return (
                                               <div key={entry.id} className="text-sm">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                  <span className="text-gray-500 text-xs">
+                                                  <span className="text-gray-500 dark:text-gray-400 text-xs">
                                                     {entryDate.toLocaleDateString('es-ES', {
                                                       day: 'numeric',
                                                       month: 'short'
                                                     })}
                                                   </span>
-                                                  <span className="text-blue-600 font-medium text-xs">
+                                                  <span className="text-blue-600 dark:text-blue-400 font-medium text-xs">
                                                     {formatHoursMinutes(parseFloat(entry.hours_worked.toString()))}
                                                   </span>
                                                 </div>
                                                 {entry.description && (
-                                                  <p className="text-gray-700 text-xs pl-1">{entry.description}</p>
+                                                  <p className="text-gray-700 dark:text-gray-300 text-xs pl-1">{entry.description}</p>
                                                 )}
                                               </div>
                                             );
@@ -660,30 +660,30 @@ export function TimeReports() {
           )}
 
           {reportType === 'department' && (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 dark:divide-slate-700">
               {departmentReports.length === 0 ? (
                 <div className="p-12 text-center">
-                  <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p className="text-gray-500">No hay datos para el período seleccionado</p>
+                  <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-600" />
+                  <p className="text-gray-500 dark:text-gray-400">No hay datos para el período seleccionado</p>
                 </div>
               ) : (
                 <>
-                  <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                    <div className="grid grid-cols-3 gap-4 font-semibold text-sm text-gray-700">
+                  <div className="bg-gray-50 dark:bg-slate-700 px-6 py-3 border-b border-gray-200 dark:border-slate-700">
+                    <div className="grid grid-cols-3 gap-4 font-semibold text-sm text-gray-700 dark:text-gray-300">
                       <div>Área</div>
                       <div className="text-center">Entradas</div>
                       <div className="text-right">Total Horas</div>
                     </div>
                   </div>
                   {departmentReports.map((report) => (
-                    <div key={report.department_id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div key={report.department_id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                       <div className="grid grid-cols-3 gap-4 items-center">
                         <div className="flex items-center gap-2">
-                          <Building2 className="w-5 h-5 text-blue-600" />
-                          <span className="font-medium text-gray-900">{report.department_name}</span>
+                          <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          <span className="font-medium text-gray-900 dark:text-white">{report.department_name}</span>
                         </div>
-                        <div className="text-center text-gray-600">{report.entries_count}</div>
-                        <div className="text-right font-semibold text-blue-600">
+                        <div className="text-center text-gray-600 dark:text-gray-300">{report.entries_count}</div>
+                        <div className="text-right font-semibold text-blue-600 dark:text-blue-400">
                           {formatHoursMinutes(report.total_hours)}
                         </div>
                       </div>

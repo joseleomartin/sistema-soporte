@@ -1,6 +1,7 @@
-import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText, ChevronDown, ChevronRight, Briefcase } from 'lucide-react';
+import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText, ChevronDown, ChevronRight, Briefcase, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { NotificationBell } from '../Notifications/NotificationBell';
 import { useState, useEffect } from 'react';
 
@@ -57,6 +58,7 @@ interface SidebarProps {
 export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask, onNavigateToForum, onNavigateToTimeTracking }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { activeJobsCount } = useExtraction();
+  const { theme, toggleTheme } = useTheme();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -136,21 +138,26 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0">
-      <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3 gap-2">
-          <div className="flex items-center flex-1 min-w-0">
+    <aside className="w-64 bg-[#173548] border-r border-gray-700/30 flex flex-col h-screen fixed left-0 top-0 shadow-xl z-40">
+      {/* Header con logo y notificaciones */}
+      <div className="px-5 py-4 border-b border-gray-700/30 flex-shrink-0 bg-[#173548]">
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <button
+            onClick={() => onViewChange('dashboard')}
+            className="flex items-center flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+            title="Ir al inicio"
+          >
             {logoError ? (
-              <h1 className="text-2xl font-bold text-gray-900">EmaGroup</h1>
+              <h1 className="text-2xl font-bold text-white">EmaGroup</h1>
             ) : (
               <img 
                 src="/logo%20ema.png" 
                 alt="EmaGroup" 
-                className="h-16 w-auto object-contain"
+                className="h-16 w-auto object-contain drop-shadow-sm"
                 onError={() => setLogoError(true)}
               />
             )}
-          </div>
+          </button>
           <NotificationBell 
             onNavigateToTicket={onNavigateToTicket}
             onNavigateToCalendar={handleNavigateToCalendar}
@@ -164,9 +171,9 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
           />
         </div>
         {profile && (
-          <div className="pt-4 border-t border-gray-100">
+          <div className="pt-4 border-t border-gray-700/30 bg-[#173548]">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white/50">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -174,14 +181,14 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{profile.full_name}</p>
-                <p className="text-xs text-gray-500 truncate">{profile.email}</p>
+                <p className="text-sm font-semibold text-white truncate">{profile.full_name}</p>
+                <p className="text-xs text-gray-300 truncate">{profile.email}</p>
               </div>
             </div>
-            <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-              profile.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-              profile.role === 'support' ? 'bg-blue-100 text-blue-700' :
-              'bg-gray-100 text-gray-700'
+            <span className={`inline-block px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm ${
+              profile.role === 'admin' ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white' :
+              profile.role === 'support' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' :
+              'bg-gradient-to-r from-gray-500 to-gray-600 text-white'
             }`}>
               {profile.role === 'admin' ? 'Administrador' :
                profile.role === 'support' ? 'Soporte' : 'Usuario'}
@@ -190,8 +197,9 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         )}
       </div>
 
-      <nav className="flex-1 p-4 overflow-y-auto min-h-0">
-        <ul className="space-y-1">
+      {/* Navegación */}
+      <nav className="flex-1 p-3 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+        <ul className="space-y-1.5">
           {filteredItems.map((item) => {
             const Icon = item.icon;
             const hasChildren = item.children && item.children.length > 0;
@@ -212,29 +220,31 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                       onViewChange(item.view);
                     }
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition relative ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative group ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 font-semibold scale-[1.02]'
+                      : 'text-white/90 hover:bg-white/10 hover:text-white hover:shadow-md hover:scale-[1.01]'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'text-white' : 'text-white/80 group-hover:text-white'}`} />
                   <span className="flex-1 text-left">{item.label}</span>
                   {hasChildren && (
-                    isOpen ? (
-                      <ChevronDown className="w-4 h-4" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4" />
-                    )
+                    <div className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                      {isOpen ? (
+                        <ChevronDown className={`w-4 h-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
+                      ) : (
+                        <ChevronRight className={`w-4 h-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
+                      )}
+                    </div>
                   )}
                   {showBadge && (
-                    <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
+                    <span className="bg-white text-blue-600 text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shadow-md animate-pulse">
                       {activeJobsCount}
                     </span>
                   )}
                 </button>
                 {hasChildren && isOpen && filteredChildren && filteredChildren.length > 0 && (
-                  <ul className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-2">
+                  <ul className="ml-6 mt-1.5 space-y-1 border-l-2 border-white/20 pl-3 animate-in slide-in-from-top-2 duration-200">
                     {filteredChildren.map((child) => {
                       const ChildIcon = child.icon;
                       const isChildActive = currentView === child.view;
@@ -243,16 +253,16 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                         <li key={child.view}>
                           <button
                             onClick={() => onViewChange(child.view)}
-                            className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition relative ${
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 relative group ${
                               isChildActive
-                                ? 'bg-blue-50 text-blue-700 font-medium'
-                                : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/20 font-medium scale-[1.01]'
+                                : 'text-white/80 hover:bg-white/10 hover:text-white hover:shadow-sm'
                             }`}
                           >
-                            <ChildIcon className="w-4 h-4" />
+                            <ChildIcon className={`w-4 h-4 transition-colors ${isChildActive ? 'text-white' : 'text-white/70 group-hover:text-white'}`} />
                             <span className="flex-1 text-left text-sm">{child.label}</span>
                             {showChildBadge && (
-                              <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
+                              <span className="bg-white text-blue-600 text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shadow-sm animate-pulse">
                                 {activeJobsCount}
                               </span>
                             )}
@@ -268,11 +278,27 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-gray-200 flex-shrink-0 mt-auto">
+      {/* Footer con toggle de tema y botón de cerrar sesión */}
+      <div className="p-4 border-t border-gray-700/30 flex-shrink-0 mt-auto bg-[#173548] space-y-2">
+        {/* Toggle de tema */}
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-3 px-4 py-3 text-white/90 hover:bg-white/10 hover:text-white rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+          title={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+        >
+          {theme === 'light' ? (
+            <Moon className="w-5 h-5" />
+          ) : (
+            <Sun className="w-5 h-5" />
+          )}
+          <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
+        </button>
+        
+        {/* Botón de cerrar sesión */}
         <button
           onClick={handleSignOut}
           disabled={isSigningOut}
-          className={`w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition ${
+          className={`w-full flex items-center gap-3 px-4 py-3 text-white/90 hover:bg-white/10 hover:text-white rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md ${
             isSigningOut ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >

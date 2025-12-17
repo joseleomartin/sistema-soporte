@@ -160,22 +160,22 @@ export function TableExtractor() {
   return (
     <div className="h-full overflow-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Extractor de Tablas</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Extractor de Tablas</h1>
+        <p className="text-gray-600 dark:text-gray-300">
           Extrae datos de extractos bancarios en formato PDF y conviértelos a Excel
         </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 mb-6">
         {/* Selector de Banco */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Selecciona el Banco
           </label>
           <select
             value={selectedBanco}
             onChange={(e) => setSelectedBanco(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">-- Selecciona un banco --</option>
             {bancos.map((banco) => (
@@ -188,7 +188,7 @@ export function TableExtractor() {
 
         {/* Área de Carga de Archivo */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Carga tu extracto PDF
           </label>
           <div
@@ -198,8 +198,8 @@ export function TableExtractor() {
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition ${
               dragActive
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-gray-400'
+                ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
             }`}
           >
             <input
@@ -210,11 +210,11 @@ export function TableExtractor() {
               className="hidden"
             />
             <label htmlFor="file-upload" className="cursor-pointer">
-              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-lg font-medium text-gray-700 mb-2">
+              <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-lg font-medium text-gray-700 dark:text-white mb-2">
                 {selectedFile ? selectedFile.name : 'Arrastra y suelta tu PDF aquí'}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 o haz clic para seleccionar un archivo
               </p>
             </label>
@@ -227,8 +227,8 @@ export function TableExtractor() {
           disabled={!selectedBanco || !selectedFile}
           className={`w-full py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
             !selectedBanco || !selectedFile
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
+              ? 'bg-gray-300 dark:bg-slate-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600'
           }`}
         >
           <FileText className="w-5 h-5" />
@@ -241,33 +241,33 @@ export function TableExtractor() {
         <div
           className={`rounded-xl shadow-sm border p-6 mb-6 ${
             localMessage.type === 'success'
-              ? 'bg-blue-50 border-blue-200'
-              : 'bg-red-50 border-red-200'
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'
+              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'
           }`}
         >
           <div className="flex items-start gap-3">
             {localMessage.type === 'success' ? (
-              <CheckCircle2 className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             ) : (
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             )}
             <div className="flex-1">
               <p
                 className={`text-sm ${
-                  localMessage.type === 'success' ? 'text-blue-900' : 'text-red-900'
+                  localMessage.type === 'success' ? 'text-blue-900 dark:text-blue-200' : 'text-red-900 dark:text-red-300'
                 }`}
               >
                 {localMessage.text}
               </p>
               {localMessage.type === 'success' && (
-                <p className="text-xs text-blue-700 mt-2">
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
                   💡 Revisa el panel de notificaciones en la esquina inferior derecha para ver el progreso.
                 </p>
               )}
             </div>
             <button
               onClick={() => setLocalMessage(null)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
             >
               ✕
             </button>
@@ -276,11 +276,11 @@ export function TableExtractor() {
       )}
 
       {/* Información Adicional */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-blue-900 mb-2">
+      <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-200 mb-2">
           Bancos Soportados
         </h3>
-        <p className="text-sm text-blue-700 mb-3">
+        <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
           Actualmente soportamos extractos de {bancos.length} bancos diferentes. Cada
           extractor está optimizado para el formato específico de cada entidad.
         </p>
@@ -288,7 +288,7 @@ export function TableExtractor() {
           {bancos.map((banco) => (
             <div
               key={banco.id}
-              className="text-sm text-blue-800 bg-blue-100 rounded px-3 py-1"
+              className="text-sm text-blue-800 dark:text-blue-200 bg-blue-100 dark:bg-blue-900/30 rounded px-3 py-1 border border-blue-200 dark:border-blue-800/50"
             >
               {banco.name}
             </div>

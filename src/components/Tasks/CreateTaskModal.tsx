@@ -142,7 +142,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
     } else if (fileType === 'application/pdf') {
       return <FileText className="w-5 h-5 text-red-600" />;
     } else {
-      return <File className="w-5 h-5 text-gray-600" />;
+      return <File className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -346,13 +346,13 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">Nueva Tarea</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Nueva Tarea</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -362,22 +362,22 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-600 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {/* Título */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Título <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Título <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="Título de la tarea"
               required
             />
@@ -385,14 +385,14 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
           {/* Descripción */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Descripción <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Descripción <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
               placeholder="Descripción detallada de la tarea"
               required
             />
@@ -400,8 +400,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
           {/* Archivos Adjuntos (Opcional) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Archivos Adjuntos <span className="text-gray-400 text-xs">(Opcional)</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Archivos Adjuntos <span className="text-gray-400 dark:text-gray-500 text-xs">(Opcional)</span>
             </label>
             <input
               ref={fileInputRef}
@@ -414,7 +414,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 text-gray-600"
+              className="w-full px-4 py-2 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-center justify-center gap-2 text-gray-600 dark:text-gray-300"
             >
               <Paperclip className="w-5 h-5" />
               <span>Seleccionar archivos</span>
@@ -424,17 +424,17 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 {selectedFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600"
                   >
                     {getFileIcon(file.type)}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                      <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.size)}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeFile(index)}
-                      className="p-1 hover:bg-red-100 rounded text-red-600 transition-colors"
+                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded text-red-600 dark:text-red-400 transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -446,8 +446,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
           {/* Cliente (Opcional) */}
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Cliente <span className="text-gray-400 text-xs">(Opcional)</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Cliente <span className="text-gray-400 dark:text-gray-500 text-xs">(Opcional)</span>
             </label>
             <div className="relative">
               <input
@@ -465,11 +465,11 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                   // Delay para permitir click en el dropdown
                   setTimeout(() => setShowClientDropdown(false), 200);
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Escribe o selecciona un cliente"
               />
               {showClientDropdown && filteredClients.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   <button
                     type="button"
                     onClick={() => {
@@ -477,7 +477,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                       setClientNameInput('');
                       setShowClientDropdown(false);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-500"
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm text-gray-500 dark:text-gray-400"
                   >
                     Sin cliente
                   </button>
@@ -490,7 +490,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                         setClientNameInput(client.client_name);
                         setShowClientDropdown(false);
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-indigo-50 text-sm text-gray-900"
+                      className="w-full text-left px-4 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-sm text-gray-900 dark:text-white"
                     >
                       {client.client_name}
                     </button>
@@ -502,22 +502,22 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
           {/* Fecha y Hora de Finalización */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Fecha y Hora Límite <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Fecha y Hora Límite <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <input
               type="datetime-local"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               required
             />
           </div>
 
           {/* Prioridad */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Prioridad <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Prioridad <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <div className="grid grid-cols-3 gap-3">
               <button
@@ -525,13 +525,13 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 onClick={() => setPriority('low')}
                 className={`p-3 rounded-lg border-2 transition-all ${
                   priority === 'low'
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-green-500 dark:border-green-400 bg-green-50 dark:bg-green-900/20'
+                    : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
                 }`}
               >
                 <div className="text-center">
                   <div className="w-4 h-4 rounded-full bg-green-500 mx-auto mb-2"></div>
-                  <span className="text-sm font-medium text-gray-900">Baja</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Baja</span>
                 </div>
               </button>
               <button
@@ -539,13 +539,13 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 onClick={() => setPriority('medium')}
                 className={`p-3 rounded-lg border-2 transition-all ${
                   priority === 'medium'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
                 }`}
               >
                 <div className="text-center">
                   <div className="w-4 h-4 rounded-full bg-blue-500 mx-auto mb-2"></div>
-                  <span className="text-sm font-medium text-gray-900">Media</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Media</span>
                 </div>
               </button>
               <button
@@ -553,20 +553,20 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 onClick={() => setPriority('urgent')}
                 className={`p-3 rounded-lg border-2 transition-all ${
                   priority === 'urgent'
-                    ? 'border-red-500 bg-red-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-red-500 dark:border-red-400 bg-red-50 dark:bg-red-900/20'
+                    : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
                 }`}
               >
                 <div className="text-center">
                   <div className="w-4 h-4 rounded-full bg-red-500 mx-auto mb-2"></div>
-                  <span className="text-sm font-medium text-gray-900">Urgente</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Urgente</span>
                 </div>
               </button>
             </div>
           </div>
 
           {/* Tarea Personal */}
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/50 rounded-lg p-4">
             <label className={`flex items-center gap-3 ${profile?.role === 'admin' ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}>
               <input
                 type="checkbox"
@@ -581,11 +581,11 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                   }
                 }}
                 disabled={profile?.role !== 'admin'} // Solo admins pueden deseleccionar
-                className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:cursor-not-allowed"
+                className="w-5 h-5 text-purple-600 dark:text-purple-400 border-gray-300 dark:border-slate-600 rounded focus:ring-purple-500 disabled:cursor-not-allowed"
               />
               <div className="flex-1">
-                <span className="text-sm font-medium text-gray-900">Tarea Personal</span>
-                <p className="text-xs text-gray-600 mt-1">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Tarea Personal</span>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                   {profile?.role === 'admin' 
                     ? 'Esta tarea será solo para ti. No se asignará a otros usuarios ni departamentos.' 
                     : 'Como usuario regular, solo puedes crear tareas personales.'}
@@ -597,8 +597,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
           {/* Tipo de Asignación (solo si NO es personal) */}
           {!isPersonal && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Asignar a <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Asignar a <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <button
@@ -606,39 +606,39 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 onClick={() => setAssignmentType('user')}
                 className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
                   assignmentType === 'user'
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                    : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
                 }`}
               >
                 <User className="w-5 h-5" />
-                <span className="font-medium">Usuario Individual</span>
+                <span className="font-medium text-gray-900 dark:text-white">Usuario Individual</span>
               </button>
               <button
                 type="button"
                 onClick={() => setAssignmentType('department')}
                 className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
                   assignmentType === 'department'
-                    ? 'border-indigo-500 bg-indigo-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                    : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
                 }`}
               >
                 <Users className="w-5 h-5" />
-                <span className="font-medium">Área</span>
+                <span className="font-medium text-gray-900 dark:text-white">Área</span>
               </button>
             </div>
 
             {/* Selector de Usuarios Múltiples */}
             {assignmentType === 'user' && (
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">Selecciona uno o más usuarios:</p>
-                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-white">
+                <p className="text-sm text-gray-600 dark:text-gray-300">Selecciona uno o más usuarios:</p>
+                <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-700">
                   {users.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No hay usuarios disponibles</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">No hay usuarios disponibles</p>
                   ) : (
                     users.map((user) => (
                       <label
                         key={user.id}
-                        className="flex items-center gap-3 p-2 hover:bg-indigo-50 rounded cursor-pointer transition-colors"
+                        className="flex items-center gap-3 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded cursor-pointer transition-colors"
                       >
                         <input
                           type="checkbox"
@@ -650,18 +650,18 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                               setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
                             }
                           }}
-                          className="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+                          className="w-4 h-4 text-indigo-600 dark:text-indigo-400 rounded focus:ring-2 focus:ring-indigo-500"
                         />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{user.full_name}</p>
-                          <p className="text-xs text-gray-500">{user.email}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{user.full_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                         </div>
                       </label>
                     ))
                   )}
                 </div>
                 {selectedUserIds.length > 0 && (
-                  <p className="text-sm text-indigo-600 font-medium">
+                  <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
                     {selectedUserIds.length} usuario(s) seleccionado(s)
                   </p>
                 )}
@@ -673,7 +673,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
               <select
                 value={selectedDepartmentId}
                 onChange={(e) => setSelectedDepartmentId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 required
               >
                 <option value="">Selecciona un área</option>
@@ -690,13 +690,13 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
           {/* Administrador de Tarea (Opcional) - Solo para tareas de equipo */}
           {!isPersonal && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Administrador de Tarea <span className="text-gray-400 text-xs">(Opcional)</span>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Administrador de Tarea <span className="text-gray-400 dark:text-gray-500 text-xs">(Opcional)</span>
             </label>
             <select
               value={taskManagerId}
               onChange={(e) => setTaskManagerId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="">Sin administrador</option>
               {users.map((user) => (
@@ -705,22 +705,22 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               El administrador puede cambiar el estado de la tarea. Puede ser cualquier usuario.
             </p>
           </div>
           )}
 
           {/* Tarea Recurrente */}
-          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+          <div className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 bg-gray-50 dark:bg-slate-700">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isRecurring}
                 onChange={(e) => setIsRecurring(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+                className="w-4 h-4 text-indigo-600 dark:text-indigo-400 rounded focus:ring-2 focus:ring-indigo-500"
               />
-              <span className="text-sm font-medium text-gray-700">Tarea recurrente</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tarea recurrente</span>
             </label>
             {isRecurring && (
               <div className="mt-4 space-y-4 pl-7">
@@ -748,7 +748,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 </div>
                 {recurrenceType === 'monthly' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Tipo de recurrencia mensual
                     </label>
                     <div className="space-y-2">
@@ -763,9 +763,9 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                             setRecurrenceWeekday(null);
                             setRecurrenceWeekPosition(null);
                           }}
-                          className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                          className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-slate-600 focus:ring-indigo-500"
                         />
-                        <label htmlFor="recurrenceDayOfMonth" className="text-sm text-gray-700">
+                        <label htmlFor="recurrenceDayOfMonth" className="text-sm text-gray-700 dark:text-gray-300">
                           Mismo día del mes (ej: día 15 de cada mes)
                         </label>
                       </div>
@@ -788,9 +788,9 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                               setRecurrenceWeekPosition(Math.min(weekPosition, 4));
                             }
                           }}
-                          className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                          className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-slate-600 focus:ring-indigo-500"
                         />
-                        <label htmlFor="recurrenceWeekday" className="text-sm text-gray-700">
+                        <label htmlFor="recurrenceWeekday" className="text-sm text-gray-700 dark:text-gray-300">
                           Día de la semana específico (ej: primer jueves de cada mes)
                         </label>
                       </div>
@@ -799,9 +799,9 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                 )}
 
                 {recurrenceType === 'monthly' && recurrenceMode === 'weekday' && (
-                  <div className="space-y-3 bg-white p-3 rounded border border-indigo-200">
+                  <div className="space-y-3 bg-white dark:bg-slate-600 p-3 rounded border border-indigo-200 dark:border-indigo-700/50">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Día de la semana
                       </label>
                       <div className="grid grid-cols-7 gap-1">
@@ -820,8 +820,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                             onClick={() => setRecurrenceWeekday(day.value)}
                             className={`px-2 py-2 text-sm font-medium rounded transition ${
                               recurrenceWeekday === day.value
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
+                                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                             }`}
                             title={day.full}
                           >
@@ -832,7 +832,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Posición en el mes
                       </label>
                       <div className="grid grid-cols-5 gap-2">
@@ -849,8 +849,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                             onClick={() => setRecurrenceWeekPosition(pos.value)}
                             className={`px-3 py-2 text-sm font-medium rounded transition ${
                               recurrenceWeekPosition === pos.value
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
+                                : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
                             }`}
                           >
                             {pos.label}
@@ -858,7 +858,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                         ))}
                       </div>
                       {recurrenceWeekday !== null && recurrenceWeekPosition !== null && (
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                           La tarea será el{' '}
                           {recurrenceWeekPosition === -1 ? 'último' : ['', 'primer', 'segundo', 'tercer', 'cuarto'][recurrenceWeekPosition]}{' '}
                           {['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][recurrenceWeekday]} de cada mes
@@ -870,7 +870,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
                 {recurrenceType !== 'monthly' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Intervalo
                     </label>
                     <input
@@ -878,26 +878,26 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
                       min="1"
                       value={recurrenceInterval}
                       onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       placeholder="Cada X días/semanas"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Cada {recurrenceInterval} {recurrenceType === 'daily' ? 'día(s)' : 'semana(s)'}
                     </p>
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha de fin <span className="text-gray-400 text-xs">(Opcional)</span>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Fecha de fin <span className="text-gray-400 dark:text-gray-500 text-xs">(Opcional)</span>
                   </label>
                   <input
                     type="date"
                     value={recurrenceEndDate}
                     onChange={(e) => setRecurrenceEndDate(e.target.value)}
                     min={dueDate.split('T')[0]}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Dejar vacío para recurrencia infinita
                   </p>
                 </div>
@@ -906,11 +906,11 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
           </div>
 
           {/* Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-6 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
               disabled={loading}
             >
               Cancelar
@@ -919,7 +919,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
               type="submit"
               disabled={loading || uploading}
               className={`px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
-                isPersonal ? 'bg-purple-600 hover:bg-purple-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                isPersonal ? 'bg-purple-600 dark:bg-purple-500 hover:bg-purple-700 dark:hover:bg-purple-600' : 'bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600'
               }`}
             >
               {(loading || uploading) && (

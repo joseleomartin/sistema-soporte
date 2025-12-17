@@ -195,10 +195,10 @@ const ImagePreview = memo(({
 
   if (loading) {
     return (
-      <div className={`p-3 rounded ${isMine ? 'bg-blue-500' : 'bg-gray-100'}`}>
+      <div className={`p-3 rounded ${isMine ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-100 dark:bg-slate-700'}`}>
         <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 border-2 ${isMine ? 'border-white' : 'border-gray-600'} border-t-transparent rounded-full animate-spin`} />
-          <span className={`text-xs ${isMine ? 'text-white' : 'text-gray-600'}`}>Cargando imagen...</span>
+          <div className={`w-4 h-4 border-2 ${isMine ? 'border-white' : 'border-gray-600 dark:border-gray-300'} border-t-transparent rounded-full animate-spin`} />
+          <span className={`text-xs ${isMine ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>Cargando imagen...</span>
         </div>
       </div>
     );
@@ -206,8 +206,8 @@ const ImagePreview = memo(({
 
   if (error || !imageUrl) {
     return (
-      <div className={`p-3 rounded ${isMine ? 'bg-blue-500' : 'bg-gray-100'}`}>
-        <p className={`text-xs ${isMine ? 'text-white' : 'text-gray-900'}`}>
+      <div className={`p-3 rounded ${isMine ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-100 dark:bg-slate-700'}`}>
+        <p className={`text-xs ${isMine ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
           No se pudo cargar la imagen
         </p>
       </div>
@@ -234,12 +234,12 @@ const ImagePreview = memo(({
           onDownload();
         }}
         className={`absolute top-2 right-2 p-2 rounded-full shadow-lg ${
-          isMine ? 'bg-blue-600' : 'bg-gray-800'
+          isMine ? 'bg-blue-600 dark:bg-blue-700' : 'bg-gray-800 dark:bg-slate-700'
         } text-white opacity-0 group-hover:opacity-100 transition-opacity`}
       >
         <Download className="w-4 h-4" />
       </button>
-      <p className={`text-xs mt-1 ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>
+      <p className={`text-xs mt-1 ${isMine ? 'text-blue-100 dark:text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
         {attachment.file_name} ({formatFileSize(attachment.file_size)})
       </p>
     </div>
@@ -979,11 +979,11 @@ export function MessagesBell() {
 
   const getFileIcon = (fileType: string) => {
     if (fileType.startsWith('image/')) {
-      return <Image className="w-4 h-4 text-green-600" />;
+      return <Image className="w-4 h-4 text-green-600 dark:text-green-400" />;
     } else if (fileType.includes('pdf')) {
-      return <FileText className="w-4 h-4 text-red-600" />;
+      return <FileText className="w-4 h-4 text-red-600 dark:text-red-400" />;
     } else {
-      return <File className="w-4 h-4 text-gray-600" />;
+      return <File className="w-4 h-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -1133,8 +1133,8 @@ export function MessagesBell() {
   // Vista de selección - Usuarios Normales
   if (showUserSelector && isNormalUser) {
     return (
-      <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[550px] sm:max-w-[calc(100vw-1rem)] max-h-[calc(100vh)] sm:max-h-[calc(100vh-2rem)] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(400px, 600px, calc(100vh))', maxWidth: '100vw' }}>
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl flex-shrink-0">
+      <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[550px] sm:max-w-[calc(100vw-1rem)] max-h-[calc(100vh)] sm:max-h-[calc(100vh-2rem)] bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(400px, 600px, calc(100vh))', maxWidth: '100vw' }}>
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl flex-shrink-0">
           <div className="flex items-center justify-between">
             <h3 className="text-white font-semibold">Selecciona un administrador</h3>
             <button
@@ -1148,29 +1148,29 @@ export function MessagesBell() {
 
         <div className="flex-1 overflow-y-auto min-h-0">
           {availableUsers.length === 0 ? (
-            <div className="p-10 text-center text-gray-500">
-              <MessageSquare className="w-16 h-16 mx-auto mb-3 text-gray-300" />
+            <div className="p-10 text-center text-gray-500 dark:text-gray-400">
+              <MessageSquare className="w-16 h-16 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
               <p className="text-base font-medium">No hay administradores disponibles</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-slate-700">
               {availableUsers.map((user) => {
                 const userUnreadCount = unreadByUser.get(user.id) || 0;
                 return (
                   <button
                     key={user.id}
                     onClick={() => selectUserAndOpenChat(user)}
-                    className="w-full flex items-center gap-4 p-5 hover:bg-blue-50 transition-colors text-left group"
+                    className="w-full flex items-center gap-4 p-5 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors text-left group"
                   >
                     <div className="relative flex-shrink-0">
                       {user.avatar_url ? (
                         <img
                           src={user.avatar_url}
                           alt={user.full_name}
-                          className="w-14 h-14 rounded-full object-cover ring-2 ring-blue-100 group-hover:ring-blue-300 transition-all"
+                          className="w-14 h-14 rounded-full object-cover ring-2 ring-blue-100 dark:ring-blue-900/50 group-hover:ring-blue-300 dark:group-hover:ring-blue-700 transition-all"
                         />
                       ) : (
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-blue-100 group-hover:ring-blue-300 transition-all">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-blue-100 dark:ring-blue-900/50 group-hover:ring-blue-300 dark:group-hover:ring-blue-700 transition-all">
                           <span className="text-white font-bold text-xl">
                             {user.full_name.charAt(0).toUpperCase()}
                           </span>
@@ -1183,13 +1183,13 @@ export function MessagesBell() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-base truncate">{user.full_name}</p>
-                      <p className="text-sm text-gray-500 truncate mt-0.5">{user.email}</p>
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 mt-2">
+                      <p className="font-semibold text-gray-900 dark:text-white text-base truncate">{user.full_name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{user.email}</p>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 mt-2">
                         {user.role === 'admin' ? 'Administrador' : '🛠️ Soporte'}
                       </span>
                     </div>
-                    <div className="text-blue-600 flex-shrink-0">
+                    <div className="text-blue-600 dark:text-blue-400 flex-shrink-0">
                       <MessageSquare className="w-6 h-6" />
                     </div>
                   </button>
@@ -1199,8 +1199,8 @@ export function MessagesBell() {
           )}
         </div>
 
-        <div className="p-3 border-t border-gray-100 bg-gray-50 text-center rounded-b-2xl flex-shrink-0">
-          <p className="text-xs text-gray-500">
+        <div className="p-3 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 text-center rounded-b-2xl flex-shrink-0">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Selecciona con quién deseas conversar
           </p>
         </div>
@@ -1218,9 +1218,9 @@ export function MessagesBell() {
       : conversations;
 
     return (
-      <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[500px] sm:max-w-[calc(100vw-1rem)] max-h-[calc(100vh)] sm:max-h-[calc(100vh-2rem)] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(500px, 800px, calc(100vh))', maxWidth: '100vw' }}>
+      <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[500px] sm:max-w-[calc(100vw-1rem)] max-h-[calc(100vh)] sm:max-h-[calc(100vh-2rem)] bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(500px, 800px, calc(100vh))', maxWidth: '100vw' }}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl">
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl">
                 <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-semibold">Mensajes</h3>
                   <button
@@ -1247,7 +1247,7 @@ export function MessagesBell() {
                   searchUsers(searchTerm);
                 }
               }}
-              className="w-full px-4 py-3 text-sm border-0 rounded-lg focus:ring-2 focus:ring-white text-gray-900 placeholder-gray-500"
+              className="w-full px-4 py-3 text-sm border-0 rounded-lg focus:ring-2 focus:ring-white bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
             {searching && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -1257,9 +1257,9 @@ export function MessagesBell() {
             
             {/* Desplegable de resultados de búsqueda */}
             {searchTerm.trim().length > 0 && searchResults.length > 0 && (
-              <div className="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 max-h-80 overflow-y-auto z-50">
-                <div className="p-2 bg-gray-50 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-600 px-2">
+              <div className="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 max-h-80 overflow-y-auto z-50">
+                <div className="p-2 bg-gray-50 dark:bg-slate-700 border-b border-gray-100 dark:border-slate-600">
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 px-2">
                     Usuarios encontrados ({searchResults.length})
                   </p>
                 </div>
@@ -1267,7 +1267,7 @@ export function MessagesBell() {
                   <button
                     key={user.id}
                     onClick={() => selectUserAndOpenChat(user)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-blue-50 transition-colors text-left border-b border-gray-50 last:border-b-0"
+                    className="w-full flex items-center gap-3 p-3 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors text-left border-b border-gray-50 dark:border-slate-700 last:border-b-0"
                   >
                     {user.avatar_url ? (
                       <img
@@ -1283,13 +1283,13 @@ export function MessagesBell() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 text-sm truncate">{user.full_name}</p>
-                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mt-1">
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{user.full_name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 mt-1">
                         {user.role === 'admin' ? 'Admin' : user.role === 'support' ? '🛠️ Soporte' : '👤 Usuario'}
                       </span>
                     </div>
-                    <MessageSquare className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                   </button>
                 ))}
               </div>
@@ -1297,9 +1297,9 @@ export function MessagesBell() {
             
             {/* Mensaje cuando no hay resultados */}
             {searchTerm.trim().length > 0 && !searching && searchResults.length === 0 && (
-              <div className="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 text-center z-50">
-                <p className="text-sm text-gray-500">No se encontraron usuarios</p>
-                <p className="text-xs text-gray-400 mt-1">Intenta con otro nombre o email</p>
+              <div className="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 p-4 text-center z-50">
+                <p className="text-sm text-gray-500 dark:text-gray-400">No se encontraron usuarios</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Intenta con otro nombre o email</p>
               </div>
             )}
           </div>
@@ -1309,22 +1309,22 @@ export function MessagesBell() {
         <div className="flex-1 overflow-y-auto">
           {filteredConversations.length > 0 ? (
             // Conversaciones activas
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-gray-100 dark:divide-slate-700">
               {filteredConversations.map((conv) => (
                 <button
                   key={conv.other_user_id}
                   onClick={() => selectUserAndOpenChat(conv)}
-                  className="w-full flex items-center gap-4 p-5 hover:bg-blue-50 transition-colors text-left group"
+                  className="w-full flex items-center gap-4 p-5 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors text-left group"
                 >
                   <div className="relative flex-shrink-0">
                     {conv.avatar_url ? (
                       <img
                         src={conv.avatar_url}
                         alt={conv.other_user_name}
-                        className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100 group-hover:ring-blue-200 transition-all"
+                        className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100 dark:ring-slate-700 group-hover:ring-blue-200 dark:group-hover:ring-blue-700 transition-all"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-gray-100 group-hover:ring-blue-200 transition-all">
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-2 ring-gray-100 dark:ring-slate-700 group-hover:ring-blue-200 dark:group-hover:ring-blue-700 transition-all">
                         <span className="text-white font-bold text-xl">
                           {conv.other_user_name.charAt(0).toUpperCase()}
                         </span>
@@ -1338,11 +1338,11 @@ export function MessagesBell() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1.5">
-                      <p className="font-semibold text-gray-900 text-base truncate">
+                      <p className="font-semibold text-gray-900 dark:text-white text-base truncate">
                         {conv.other_user_name}
                       </p>
                       {conv.last_message_at && (
-                        <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                        <span className="text-xs text-gray-400 dark:text-gray-500 ml-2 flex-shrink-0">
                           {new Date(conv.last_message_at).toLocaleDateString('es-ES', { 
                             day: '2-digit', 
                             month: '2-digit' 
@@ -1351,7 +1351,7 @@ export function MessagesBell() {
                       )}
                     </div>
                     {conv.last_message && (
-                      <p className="text-sm text-gray-600 truncate font-normal">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 truncate font-normal">
                         {conv.last_message}
                       </p>
                     )}
@@ -1361,12 +1361,12 @@ export function MessagesBell() {
             </div>
           ) : (
             // Sin conversaciones
-            <div className="p-8 text-center text-gray-500">
-              <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
               <p className="text-sm">
                 {searchTerm.trim() ? 'No se encontraron resultados' : 'No hay conversaciones activas'}
               </p>
-              <p className="text-xs mt-1 text-gray-400">
+              <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">
                 Usa el buscador para iniciar una conversación
               </p>
                   </div>
@@ -1374,8 +1374,8 @@ export function MessagesBell() {
               </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-gray-100 bg-gray-50 text-center rounded-b-2xl">
-          <p className="text-xs text-gray-500">
+        <div className="p-3 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 text-center rounded-b-2xl">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {conversations.length} conversacion{conversations.length !== 1 ? 'es' : ''} activa{conversations.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -1384,9 +1384,9 @@ export function MessagesBell() {
   }
 
   return (
-    <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[500px] sm:max-w-[calc(100vw-1rem)] max-h-[100vh] sm:max-h-[calc(100vh-2rem)] bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(400px, 800px, 100vh)', maxWidth: '100vw' }}>
+    <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 w-full sm:w-[500px] sm:max-w-[calc(100vw-1rem)] max-h-[100vh] sm:max-h-[calc(100vh-2rem)] bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 flex flex-col overflow-hidden" style={{ height: 'clamp(400px, 800px, 100vh)', maxWidth: '100vw' }}>
       {/* Header */}
-      <div className="p-2 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl flex-shrink-0">
+      <div className="p-2 sm:p-4 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl flex-shrink-0">
                 <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             {otherUser?.avatar_url ? (
@@ -1396,8 +1396,8 @@ export function MessagesBell() {
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-white flex-shrink-0"
               />
             ) : (
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-600 font-semibold text-base sm:text-lg">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-600 dark:text-blue-400 font-semibold text-base sm:text-lg">
                   {otherUser?.full_name?.charAt(0).toUpperCase() || '?'}
                       </span>
                     </div>
@@ -1433,7 +1433,7 @@ export function MessagesBell() {
       {/* Messages Area */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50 min-h-0" 
+        className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50 dark:bg-slate-900 min-h-0" 
         style={{ 
           minHeight: '200px',
           scrollBehavior: 'auto', // Desactivar smooth scroll para scroll programático
@@ -1443,14 +1443,14 @@ export function MessagesBell() {
         {loading ? (
           <div className="flex items-center justify-center h-full min-h-[200px]">
             <div className="text-center">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-xs sm:text-sm text-gray-500">Cargando mensajes...</p>
+              <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Cargando mensajes...</p>
             </div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full min-h-[200px]">
-            <div className="text-center text-gray-500">
-                    <MessageSquare className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
+            <div className="text-center text-gray-500 dark:text-gray-400">
+                    <MessageSquare className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                     <p className="text-xs sm:text-sm">No hay mensajes aún</p>
               <p className="text-xs mt-1">Envía un mensaje para comenzar</p>
             </div>
@@ -1466,8 +1466,8 @@ export function MessagesBell() {
                         <div
                           className={`max-w-[85%] sm:max-w-xs px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm ${
                             isMine
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white text-gray-900 border border-gray-200'
+                              ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                              : 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-200 dark:border-slate-600'
                           }`}
                         >
                   {msg.message && msg.message !== '📎 Archivo adjunto' && (
@@ -1504,26 +1504,26 @@ export function MessagesBell() {
                             key={attachment.id}
                             onClick={() => handleDownloadFile(attachment)}
                             className={`w-full flex items-center gap-2 p-2 rounded ${
-                              isMine ? 'bg-blue-500 hover:bg-blue-400' : 'bg-gray-100 hover:bg-gray-200'
+                              isMine ? 'bg-blue-500 dark:bg-blue-600 hover:bg-blue-400 dark:hover:bg-blue-500' : 'bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500'
                                     } transition`}
                                   >
                                     {getFileIcon(attachment.file_type)}
                             <div className="flex-1 text-left min-w-0">
-                                      <p className={`text-xs truncate ${isMine ? 'text-white' : 'text-gray-900'}`}>
+                                      <p className={`text-xs truncate ${isMine ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                                         {attachment.file_name}
                                       </p>
-                                      <p className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>
+                                      <p className={`text-xs ${isMine ? 'text-blue-100 dark:text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
                                         {formatFileSize(attachment.file_size)}
                                       </p>
                                     </div>
-                                    <Download className={`w-4 h-4 ${isMine ? 'text-white' : 'text-gray-600'}`} />
+                                    <Download className={`w-4 h-4 ${isMine ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`} />
                           </button>
                                 );
                               })}
                             </div>
                           )}
                           
-                  <p className={`text-xs ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>
+                  <p className={`text-xs ${isMine ? 'text-blue-100 dark:text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
                             {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                               hour: '2-digit',
                               minute: '2-digit'
@@ -1538,24 +1538,24 @@ export function MessagesBell() {
               </div>
 
       {/* Input Area */}
-              <div className="p-2 sm:p-4 border-t border-gray-200 bg-white rounded-b-2xl flex-shrink-0">
+              <div className="p-2 sm:p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-b-2xl flex-shrink-0">
                 {selectedFiles.length > 0 && (
                   <div className="mb-2 sm:mb-3 space-y-2 max-h-24 sm:max-h-32 overflow-y-auto">
                     {selectedFiles.map((file, index) => (
                       <div
                         key={index}
-                        className="flex items-center gap-2 p-1.5 sm:p-2 bg-gray-50 rounded-lg border border-gray-200"
+                        className="flex items-center gap-2 p-1.5 sm:p-2 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600"
                       >
                         {getFileIcon(file.type)}
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm text-gray-900 truncate">{file.name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                          <p className="text-xs sm:text-sm text-gray-900 dark:text-white truncate">{file.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.size)}</p>
                         </div>
                         <button
                           onClick={() => removeFile(index)}
-                  className="p-1 hover:bg-gray-200 rounded flex-shrink-0"
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-slate-600 rounded flex-shrink-0"
                         >
-                          <X className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
+                          <X className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" />
                         </button>
                       </div>
                     ))}
@@ -1572,7 +1572,7 @@ export function MessagesBell() {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-            className="p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
+            className="p-1.5 sm:p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition flex-shrink-0"
                     disabled={sending || uploading}
                   >
                     <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1589,7 +1589,7 @@ export function MessagesBell() {
                     }}
                     placeholder="Escribe un mensaje..."
                     rows={1}
-                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[36px] sm:min-h-[40px] max-h-32 overflow-y-auto"
+                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[36px] sm:min-h-[40px] max-h-32 overflow-y-auto"
                     disabled={sending || uploading}
                   />
                   <EmojiPicker
@@ -1610,7 +1610,7 @@ export function MessagesBell() {
                   <button
                     onClick={sendMessage}
                     disabled={(!newMessage.trim() && selectedFiles.length === 0) || sending || uploading}
-                    className="p-2 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 sm:gap-2 flex-shrink-0 min-w-[36px] sm:min-w-[auto]"
+                    className="p-2 sm:px-4 sm:py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-1 sm:gap-2 flex-shrink-0 min-w-[36px] sm:min-w-[auto]"
                   >
             {sending || uploading ? (
                       <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

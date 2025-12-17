@@ -420,7 +420,7 @@ export function LibraryAndCourses() {
           <div className="mb-4">
             <button
               onClick={() => setSelectedFolder(null)}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition-colors text-sm font-medium"
             >
               <ArrowLeft className="w-4 h-4" />
               Volver
@@ -435,13 +435,13 @@ export function LibraryAndCourses() {
                   <FolderOpen className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl font-bold text-gray-900 truncate">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
                     {selectedFolder.name}
                   </h1>
                 </div>
               </div>
               {selectedFolder.description && (
-                <p className="text-gray-600 text-sm ml-14">{selectedFolder.description}</p>
+                <p className="text-gray-600 dark:text-gray-300 text-sm ml-14">{selectedFolder.description}</p>
               )}
             </div>
             
@@ -470,12 +470,12 @@ export function LibraryAndCourses() {
         </div>
 
         {folderItems.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
             <Folder className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Esta carpeta está vacía
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
               {isAdmin
                 ? `Agrega tu primer ${itemType} a esta carpeta`
                 : `Aún no hay ${itemTypePlural} en esta carpeta`}
@@ -537,8 +537,8 @@ export function LibraryAndCourses() {
     <div className="h-full overflow-auto">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Biblioteca y Cursos</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Biblioteca y Cursos</h1>
+          <p className="text-gray-600 dark:text-gray-300">
             Accede a recursos educativos, cursos y documentación
           </p>
         </div>
@@ -566,20 +566,20 @@ export function LibraryAndCourses() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200">
+      <div className="mb-6 border-b border-gray-200 dark:border-slate-700">
         <div className="flex gap-1">
           <button
             onClick={() => setActiveTab('courses')}
             className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors border-b-2 ${
               activeTab === 'courses'
                 ? 'text-blue-600 border-blue-600'
-                : 'text-gray-500 border-transparent hover:text-gray-700'
+                : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:text-gray-300'
             }`}
           >
             <GraduationCap className="w-5 h-5" />
             Cursos
             {courses.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">
+              <span className="ml-1 px-2 py-0.5 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-full text-xs">
                 {courses.length}
               </span>
             )}
@@ -589,13 +589,13 @@ export function LibraryAndCourses() {
             className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors border-b-2 ${
               activeTab === 'library'
                 ? 'text-blue-600 border-blue-600'
-                : 'text-gray-500 border-transparent hover:text-gray-700'
+                : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:text-gray-300'
             }`}
           >
             <FileText className="w-5 h-5" />
             Biblioteca
             {documents.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">
+              <span className="ml-1 px-2 py-0.5 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-full text-xs">
                 {documents.length}
               </span>
             )}
@@ -606,13 +606,13 @@ export function LibraryAndCourses() {
       {/* Carpetas (solo para cursos, no para biblioteca con Google Drive) */}
       {activeTab === 'courses' && currentFolders.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Carpetas</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Carpetas</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {currentFolders.map((folder) => (
               <div
                 key={folder.id}
                 onClick={() => setSelectedFolder(folder)}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group"
+                className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 hover:shadow-md transition-all cursor-pointer group"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
@@ -630,11 +630,11 @@ export function LibraryAndCourses() {
                     </button>
                   )}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">{folder.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{folder.name}</h3>
                 {folder.description && (
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{folder.description}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">{folder.description}</p>
                 )}
-                <div className="flex items-center justify-between text-sm text-gray-500">
+                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
                   <span>{folder.items_count || 0} {folder.items_count === 1 ? itemType : itemTypePlural}</span>
                   <span className="text-xs">
                     {folder.created_by_profile?.full_name || 'Usuario'}
@@ -650,7 +650,7 @@ export function LibraryAndCourses() {
       {activeTab === 'library' && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Google Drive</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Google Drive</h2>
             {isAdmin && (
               <button
                 onClick={() => {
@@ -678,9 +678,9 @@ export function LibraryAndCourses() {
 
           {/* Formulario para editar link (solo admins) */}
           {isAdmin && editingDriveLink && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 mb-4">
               <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Link de Google Drive
                 </label>
                 <input
@@ -690,7 +690,7 @@ export function LibraryAndCourses() {
                   placeholder="https://drive.google.com/drive/folders/1ABC..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Ingresa el link completo de la carpeta de Google Drive que quieres mostrar
                 </p>
                 {driveError && (
@@ -719,7 +719,7 @@ export function LibraryAndCourses() {
                       setTempDriveLink('');
                       setDriveError(null);
                     }}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                    className="px-4 py-2 bg-gray-200 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 transition-colors"
                   >
                     Cancelar
                   </button>
@@ -732,7 +732,7 @@ export function LibraryAndCourses() {
           {libraryDriveFolderId ? (
             <>
               {!driveAuthenticated ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-6 text-center">
                   <p className="text-sm text-blue-800 mb-4">
                     Conecta tu Google Drive para ver el contenido de la carpeta
                   </p>
@@ -747,7 +747,7 @@ export function LibraryAndCourses() {
                   </button>
                 </div>
               ) : (
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
                   <GoogleDriveViewer
                     folderId={libraryDriveFolderId}
                     folderName="Biblioteca"
@@ -760,12 +760,12 @@ export function LibraryAndCourses() {
               )}
             </>
           ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+            <div className="bg-gray-50 border border-gray-200 dark:border-slate-700 rounded-lg p-8 text-center">
               <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 {isAdmin ? 'No hay link de Google Drive configurado' : 'Biblioteca no configurada'}
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 {isAdmin
                   ? 'Configura un link de Google Drive para mostrar el contenido de la biblioteca'
                   : 'La biblioteca aún no está configurada. Contacta a un administrador.'}
@@ -790,7 +790,7 @@ export function LibraryAndCourses() {
       {/* Items sin carpeta (solo para cursos) */}
       {activeTab === 'courses' && itemsWithoutFolder.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             {currentFolders.length > 0 ? `${itemTypePlural.charAt(0).toUpperCase() + itemTypePlural.slice(1)} sin carpeta` : itemTypePlural.charAt(0).toUpperCase() + itemTypePlural.slice(1)}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -809,12 +809,12 @@ export function LibraryAndCourses() {
 
       {/* Estado vacío (solo para cursos, no para biblioteca con Google Drive) */}
       {activeTab === 'courses' && currentFolders.length === 0 && itemsWithoutFolder.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
           <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No hay {itemTypePlural} disponibles
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
             {isAdmin
               ? `Comienza creando una carpeta o agregando tu primer ${itemType}`
               : `Aún no se han agregado ${itemTypePlural} a la biblioteca`}

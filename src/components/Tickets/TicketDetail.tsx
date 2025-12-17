@@ -355,28 +355,28 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-700/50';
       case 'in_progress':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-700/50';
       case 'resolved':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700/50';
       case 'closed':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-600';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
-        return 'text-red-600 bg-red-50 border-red-200';
+        return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700/50';
       case 'medium':
-        return 'text-orange-600 bg-orange-50 border-orange-200';
+        return 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700/50';
       case 'low':
-        return 'text-green-600 bg-green-50 border-green-200';
+        return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700/50';
       default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+        return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600';
     }
   };
 
@@ -400,7 +400,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -408,11 +408,11 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
   if (!ticket) {
     return (
       <div className="text-center py-12">
-        <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Ticket no encontrado</h3>
+        <AlertCircle className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Ticket no encontrado</h3>
         <button
           onClick={onClose}
-          className="text-blue-600 hover:text-blue-700 font-medium"
+          className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-500 font-medium"
         >
           Volver a la lista
         </button>
@@ -424,25 +424,25 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
     <div>
       <button
         onClick={onClose}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 font-medium"
+        className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 font-medium"
       >
         <ArrowLeft className="w-5 h-5" />
         Volver a Tickets
       </button>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-red-700">{error}</p>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4 mb-6 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <p className="text-red-700 dark:text-red-300">{error}</p>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900 mb-3">{ticket.title}</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{ticket.title}</h1>
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium border ${getStatusColor(ticket.status)}`}>
                     {getStatusLabel(ticket.status)}
@@ -450,7 +450,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium border ${getPriorityColor(ticket.priority)}`}>
                     Prioridad: {ticket.priority === 'high' ? 'Alta' : ticket.priority === 'medium' ? 'Media' : 'Baja'}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600">
                     {ticket.category}
                   </span>
                 </div>
@@ -458,24 +458,24 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
             </div>
 
             <div className="prose max-w-none">
-              <p className="text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
+              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{ticket.description}</p>
             </div>
 
             {/* Archivos Adjuntos del Ticket */}
             {ticket.attachments && ticket.attachments.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <h3 className="text-sm font-medium text-gray-900 mb-3">Archivos Adjuntos</h3>
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Archivos Adjuntos</h3>
                 <div className="space-y-2">
                   {ticket.attachments.map((attachment, idx) => (
                     <button
                       key={idx}
                       onClick={() => downloadFile(attachment)}
-                      className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm transition group w-full text-left"
+                      className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 border border-gray-200 dark:border-slate-600 rounded-lg text-sm transition group w-full text-left"
                     >
-                      <FileText className="w-4 h-4 text-gray-500" />
-                      <span className="text-gray-700 flex-1">{attachment.name}</span>
-                      <span className="text-gray-500 text-xs">{formatFileSize(attachment.size)}</span>
-                      <Download className="w-4 h-4 text-gray-400 group-hover:text-blue-600" />
+                      <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                      <span className="text-gray-700 dark:text-white flex-1">{attachment.name}</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs">{formatFileSize(attachment.size)}</span>
+                      <Download className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
                     </button>
                   ))}
                 </div>
@@ -483,26 +483,26 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />
               Comentarios ({comments.length})
             </h2>
 
             <div className="max-h-[500px] overflow-y-auto space-y-4 mb-6 pr-2">
               {comments.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No hay comentarios aún</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No hay comentarios aún</p>
               ) : (
                 comments.map((comment) => (
-                  <div key={comment.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={comment.id} className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 bg-gray-50 dark:bg-slate-700/50">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-blue-600" />
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{comment.profiles?.full_name ?? 'Usuario'}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="font-medium text-gray-900 dark:text-white">{comment.profiles?.full_name ?? 'Usuario'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {comment.profiles?.role === 'admin'
                               ? 'Administrador'
                               : comment.profiles?.role === 'support'
@@ -511,23 +511,23 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                           </p>
                         </div>
                       </div>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         {new Date(comment.created_at).toLocaleString('es-ES')}
                       </span>
                     </div>
-                    <p className="text-gray-700 whitespace-pre-wrap">{comment.message}</p>
+                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comment.message}</p>
                     {comment.attachments && comment.attachments.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {comment.attachments.map((attachment, idx) => (
                           <button
                             key={idx}
                             onClick={() => downloadFile(attachment)}
-                            className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm transition group"
+                            className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-600 hover:bg-gray-100 dark:hover:bg-slate-500 border border-gray-200 dark:border-slate-600 rounded-lg text-sm transition group"
                           >
-                            <FileText className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-700 flex-1 text-left">{attachment.name}</span>
-                            <span className="text-gray-500 text-xs">{formatFileSize(attachment.size)}</span>
-                            <Download className="w-4 h-4 text-gray-400 group-hover:text-blue-600" />
+                            <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                            <span className="text-gray-700 dark:text-white flex-1 text-left">{attachment.name}</span>
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">{formatFileSize(attachment.size)}</span>
+                            <Download className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
                           </button>
                         ))}
                       </div>
@@ -538,27 +538,27 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
               <div ref={commentsEndRef} />
             </div>
 
-            <form onSubmit={handleAddComment} className="border-t border-gray-200 pt-4">
+            <form onSubmit={handleAddComment} className="border-t border-gray-200 dark:border-slate-700 pt-4">
               <textarea
                 ref={commentTextareaRef}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Escribe un comentario..."
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none mb-3"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none mb-3"
               />
 
               {selectedFiles.length > 0 && (
                 <div className="mb-3 space-y-2">
                   {selectedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-                      <Paperclip className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-700 flex-1">{file.name}</span>
-                      <span className="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                    <div key={index} className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg">
+                      <Paperclip className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                      <span className="text-sm text-gray-700 dark:text-white flex-1">{file.name}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.size)}</span>
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="text-gray-400 hover:text-red-600 transition"
+                        className="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -579,7 +579,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                   />
                   <label
                     htmlFor="file-upload"
-                    className="flex items-center gap-2 px-3 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition cursor-pointer font-medium"
+                    className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition cursor-pointer font-medium"
                   >
                     <Paperclip className="w-4 h-4" />
                     Adjuntar Archivos
@@ -604,7 +604,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                   <button
                     type="submit"
                     disabled={submitting || uploading || (!newComment.trim() && selectedFiles.length === 0)}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Send className="w-4 h-4" />
                     {uploading ? 'Subiendo archivos...' : submitting ? 'Enviando...' : 'Enviar Comentario'}
@@ -616,22 +616,22 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Información</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <User className="w-5 h-5 text-gray-400 mt-0.5" />
+                <User className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                 <div>
-                  <p className="text-sm text-gray-600">Creado por</p>
-                  <p className="font-medium text-gray-900">{ticket.profiles.full_name}</p>
-                  <p className="text-sm text-gray-600">{ticket.profiles.email}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Creado por</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{ticket.profiles.full_name}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{ticket.profiles.email}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+                <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                 <div>
-                  <p className="text-sm text-gray-600">Fecha de creación</p>
-                  <p className="font-medium text-gray-900">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Fecha de creación</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
                     {new Date(ticket.created_at).toLocaleDateString('es-ES', {
                       year: 'numeric',
                       month: 'long',
@@ -646,26 +646,26 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
           </div>
 
           {canManageTicket && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Acciones</h3>
               <div className="space-y-3">
                 {!ticket.assigned_to && (
                   <button
                     onClick={handleAssignToMe}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                    className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium"
                   >
                     Asignarme este ticket
                   </button>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Cambiar Estado
                   </label>
                   <select
                     value={ticket.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="open">Abierto</option>
                     <option value="in_progress">En Progreso</option>
