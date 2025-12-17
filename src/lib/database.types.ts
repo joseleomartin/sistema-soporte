@@ -252,6 +252,8 @@ export interface Database {
           content: string | null
           media_type: 'image' | 'video' | 'gif' | null
           media_url: string | null
+          reel_url: string | null
+          reel_platform: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null
           created_at: string
           updated_at: string
         }
@@ -261,6 +263,8 @@ export interface Database {
           content?: string | null
           media_type?: 'image' | 'video' | 'gif' | null
           media_url?: string | null
+          reel_url?: string | null
+          reel_platform?: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null
           created_at?: string
           updated_at?: string
         }
@@ -270,6 +274,8 @@ export interface Database {
           content?: string | null
           media_type?: 'image' | 'video' | 'gif' | null
           media_url?: string | null
+          reel_url?: string | null
+          reel_platform?: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null
           created_at?: string
           updated_at?: string
         }

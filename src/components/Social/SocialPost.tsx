@@ -4,6 +4,32 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { PostComments } from './PostComments';
 
+// Declaraciones de tipos para scripts de embed
+declare global {
+  interface Window {
+    instgrm?: {
+      Embeds: {
+        process: () => void;
+      };
+    };
+    tiktokEmbed?: {
+      lib: {
+        render: () => void;
+      };
+    };
+    twttr?: {
+      widgets: {
+        load: () => void;
+      };
+    };
+    FB?: {
+      XFBML: {
+        parse: () => void;
+      };
+    };
+  }
+}
+
 interface PostMedia {
   id: string;
   post_id: string;
@@ -18,6 +44,8 @@ interface Post {
   content: string | null;
   media_type?: 'image' | 'video' | 'gif' | null; // Opcional para compatibilidad
   media_url?: string | null; // Opcional para compatibilidad
+  reel_url?: string | null;
+  reel_platform?: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null;
   created_at: string;
   updated_at: string;
   user_profile?: {
@@ -47,6 +75,7 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
   const [postMedia, setPostMedia] = useState<PostMedia[]>([]);
   const [likedUsers, setLikedUsers] = useState<Array<{ id: string; full_name: string; avatar_url?: string | null }>>([]);
   const [showLikedUsers, setShowLikedUsers] = useState(false);
+  const [scriptsLoaded, setScriptsLoaded] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     // Cargar media del post
@@ -55,6 +84,11 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
     // Verificar si el usuario dio like
     if (profile) {
       checkUserLike();
+    }
+
+    // Cargar scripts de embed para reels
+    if (post.reel_url && post.reel_platform) {
+      loadEmbedScript(post.reel_platform);
     }
 
     // Suscripción a cambios de likes en tiempo real
@@ -282,6 +316,52 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
     }
   };
 
+  const loadEmbedScript = (platform: string) => {
+    if (scriptsLoaded[platform]) return;
+
+    const scriptId = `embed-script-${platform}`;
+    if (document.getElementById(scriptId)) {
+      setScriptsLoaded((prev) => ({ ...prev, [platform]: true }));
+      return;
+    }
+
+    let scriptSrc = '';
+    if (platform === 'instagram') {
+      scriptSrc = 'https://www.instagram.com/embed.js';
+    } else if (platform === 'tiktok') {
+      scriptSrc = 'https://www.tiktok.com/embed.js';
+    } else if (platform === 'x' || platform === 'twitter') {
+      scriptSrc = 'https://platform.twitter.com/widgets.js';
+    } else if (platform === 'facebook') {
+      scriptSrc = 'https://connect.facebook.net/es_ES/sdk.js#xfbml=1&version=v18.0';
+    }
+
+    if (scriptSrc) {
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = scriptSrc;
+      script.async = true;
+      script.charset = 'utf-8';
+      script.onload = () => {
+        setScriptsLoaded((prev) => ({ ...prev, [platform]: true }));
+        // Procesar embeds después de un pequeño delay para asegurar que el DOM esté listo
+        setTimeout(() => {
+          if (platform === 'instagram' && window.instgrm) {
+            // Procesar todos los embeds de Instagram en la página
+            window.instgrm.Embeds.process();
+          } else if (platform === 'tiktok' && window.tiktokEmbed) {
+            window.tiktokEmbed.lib.render();
+          } else if ((platform === 'x' || platform === 'twitter') && window.twttr) {
+            window.twttr.widgets.load();
+          } else if (platform === 'facebook' && window.FB) {
+            window.FB.XFBML.parse();
+          }
+        }, 500);
+      };
+      document.body.appendChild(script);
+    }
+  };
+
   const formatTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
@@ -360,6 +440,74 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       {post.content && (
         <div className="px-4 py-2 flex-shrink-0">
           <p className="text-gray-900 dark:text-white text-[15px] leading-[1.33] whitespace-pre-wrap break-words">{post.content}</p>
+        </div>
+      )}
+
+      {/* Reel embed */}
+      {post.reel_url && post.reel_platform && (
+        <div className="w-full flex-shrink-0 bg-gray-100 dark:bg-slate-900 p-4">
+          <div className="max-w-2xl mx-auto">
+            {post.reel_platform === 'instagram' && (
+              <div className="instagram-embed-wrapper" key={`instagram-${post.id}-${post.reel_url}`}>
+                <blockquote
+                  className="instagram-media"
+                  data-instgrm-permalink={post.reel_url}
+                  data-instgrm-version="14"
+                  data-instgrm-captioned
+                >
+                  <a href={post.reel_url} target="_blank" rel="noopener noreferrer">
+                    {post.reel_url}
+                  </a>
+                </blockquote>
+              </div>
+            )}
+            {post.reel_platform === 'tiktok' && (
+              <div className="tiktok-embed-wrapper">
+                <blockquote
+                  className="tiktok-embed"
+                  cite={post.reel_url}
+                  data-video-id={post.reel_url.split('/').pop()?.split('?')[0]}
+                  style={{ maxWidth: '100%', minWidth: '325px', margin: '0 auto' }}
+                >
+                  <section>
+                    <a
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="TikTok"
+                      href={post.reel_url}
+                    >
+                      {post.reel_url}
+                    </a>
+                  </section>
+                </blockquote>
+              </div>
+            )}
+            {(post.reel_platform === 'x' || post.reel_platform === 'twitter') && (
+              <div>
+                <blockquote className="twitter-tweet" data-theme="dark">
+                  <a href={post.reel_url} target="_blank" rel="noopener noreferrer">
+                    {post.reel_url}
+                  </a>
+                </blockquote>
+              </div>
+            )}
+            {post.reel_platform === 'facebook' && (
+              <div>
+                <div
+                  className="fb-post"
+                  data-href={post.reel_url}
+                  data-width="500"
+                  data-show-text="true"
+                >
+                  <blockquote cite={post.reel_url} className="fb-xfbml-parse-ignore">
+                    <a href={post.reel_url} target="_blank" rel="noopener noreferrer">
+                      {post.reel_url}
+                    </a>
+                  </blockquote>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

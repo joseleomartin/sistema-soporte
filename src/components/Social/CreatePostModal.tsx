@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { X, Upload, Loader2, Image, Video, FileImage } from 'lucide-react';
+import { X, Upload, Loader2, Image, Video, FileImage, Link2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -18,6 +18,9 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
   const { profile } = useAuth();
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([]);
+  const [reelUrl, setReelUrl] = useState('');
+  const [reelPlatform, setReelPlatform] = useState<'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null>(null);
+  const [postType, setPostType] = useState<'media' | 'reel'>('media');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +120,53 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
     return 'image'; // default
   };
 
+  const detectReelPlatform = (url: string): 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null => {
+    if (!url || !url.trim()) return null;
+    
+    const lowerUrl = url.toLowerCase().trim();
+    
+    // Instagram: instagram.com/reel/, instagram.com/p/, instagram.com/tv/, instagr.am
+    if (lowerUrl.includes('instagram.com/reel/') || 
+        lowerUrl.includes('instagram.com/p/') ||
+        lowerUrl.includes('instagram.com/tv/') ||
+        lowerUrl.includes('instagram.com/') ||
+        lowerUrl.includes('instagr.am/p/') ||
+        lowerUrl.includes('instagr.am/reel/') ||
+        lowerUrl.includes('instagr.am/')) {
+      return 'instagram';
+    }
+    
+    // TikTok: tiktok.com/@ o vm.tiktok.com
+    if (lowerUrl.includes('tiktok.com/') || lowerUrl.includes('vm.tiktok.com/')) {
+      return 'tiktok';
+    }
+    
+    // X (Twitter): x.com o twitter.com
+    if (lowerUrl.includes('x.com/') || lowerUrl.includes('twitter.com/')) {
+      return 'x';
+    }
+    
+    // Facebook: facebook.com, fb.com, m.facebook.com
+    if (lowerUrl.includes('facebook.com/') || 
+        lowerUrl.includes('fb.com/') ||
+        lowerUrl.includes('m.facebook.com/')) {
+      return 'facebook';
+    }
+    
+    return null;
+  };
+
+  const handleReelUrlChange = (url: string) => {
+    setReelUrl(url);
+    const platform = detectReelPlatform(url);
+    setReelPlatform(platform);
+    if (url && !platform) {
+      setError('URL no reconocida. Por favor, pega un link de Instagram, TikTok, X o Facebook');
+    } else {
+      setError(null);
+    }
+  };
+
   const uploadFiles = async (): Promise<Array<{ url: string; type: 'image' | 'video' | 'gif' }>> => {
     if (selectedFiles.length === 0 || !profile) throw new Error('No hay archivos seleccionados');
 
@@ -155,8 +205,19 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
 
     setError(null);
 
-    if (selectedFiles.length === 0) {
-      setError('Debes subir al menos una imagen, video o GIF');
+    // Validar según el tipo de post
+    if (postType === 'media' && selectedFiles.length === 0) {
+      setError('Debes subir al menos una imagen, video o GIF, o compartir un reel');
+      return;
+    }
+
+    if (postType === 'reel' && !reelUrl.trim()) {
+      setError('Debes pegar un link de Instagram, TikTok, X o Facebook');
+      return;
+    }
+
+    if (postType === 'reel' && !reelPlatform) {
+      setError('URL no reconocida. Por favor, pega un link válido de Instagram, TikTok, X o Facebook');
       return;
     }
 
@@ -174,10 +235,14 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
       isSubmittingRef.current = true;
       setUploading(true);
 
-      // Subir todos los archivos
-      const uploadedMedia = await uploadFiles();
+      let uploadedMedia: Array<{ url: string; type: 'image' | 'video' | 'gif' }> = [];
 
-      // Crear el post (sin media_type y media_url para usar la nueva estructura)
+      // Si es tipo media, subir archivos
+      if (postType === 'media' && selectedFiles.length > 0) {
+        uploadedMedia = await uploadFiles();
+      }
+
+      // Crear el post
       const { data: postData, error: insertError } = await supabase
         .from('social_posts')
         .insert({
@@ -185,13 +250,15 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
           content: content.trim() || null,
           media_type: null, // Ya no es requerido
           media_url: null, // Ya no es requerido
+          reel_url: postType === 'reel' ? reelUrl.trim() : null,
+          reel_platform: postType === 'reel' ? reelPlatform : null,
         })
         .select()
         .single();
 
       if (insertError) throw insertError;
 
-      // Crear registros en social_post_media
+      // Crear registros en social_post_media solo si hay archivos
       if (postData && uploadedMedia.length > 0) {
         const mediaRecords = uploadedMedia.map((media, index) => ({
           post_id: postData.id,
@@ -211,6 +278,9 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
       selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview));
       setContent('');
       setSelectedFiles([]);
+      setReelUrl('');
+      setReelPlatform(null);
+      setPostType('media');
       
       onSuccess();
     } catch (error: any) {
@@ -260,7 +330,76 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
               {content.length}/500
             </div>
 
+            {/* Tipo de post: Media o Reel */}
+            <div className="mb-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPostType('media');
+                  setReelUrl('');
+                  setReelPlatform(null);
+                  setError(null);
+                }}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  postType === 'media'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                    : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-slate-500'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  <span className="font-medium">Subir Media</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPostType('reel');
+                  setSelectedFiles([]);
+                  setError(null);
+                }}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  postType === 'reel'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                    : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-slate-500'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Link2 className="w-4 h-4" />
+                  <span className="font-medium">Compartir Post/Reel</span>
+                </div>
+              </button>
+            </div>
+
+            {/* Reel URL input */}
+            {postType === 'reel' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Pega el link del post o reel (Instagram, TikTok, X o Facebook)
+                </label>
+                <input
+                  type="url"
+                  value={reelUrl}
+                  onChange={(e) => handleReelUrlChange(e.target.value)}
+                  placeholder="https://www.instagram.com/p/... o https://www.tiktok.com/... o https://x.com/... o https://www.facebook.com/..."
+                  className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {reelPlatform && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                    <Link2 className="w-4 h-4" />
+                    <span>
+                      {reelPlatform === 'instagram' && 'Instagram Post/Reel detectado'}
+                      {reelPlatform === 'tiktok' && 'TikTok detectado'}
+                      {(reelPlatform === 'x' || reelPlatform === 'twitter') && 'X (Twitter) detectado'}
+                      {reelPlatform === 'facebook' && 'Facebook detectado'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* File upload area */}
+            {postType === 'media' && (
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -355,6 +494,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
                 </div>
               )}
             </div>
+            )}
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 mt-6">
@@ -368,8 +508,8 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
               </button>
               <button
                 type="submit"
-                disabled={uploading || selectedFiles.length === 0}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                disabled={uploading || (postType === 'media' && selectedFiles.length === 0) || (postType === 'reel' && !reelUrl.trim())}
+                className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {uploading ? (
                   <>

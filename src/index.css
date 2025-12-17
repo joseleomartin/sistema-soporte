@@ -39,3 +39,62 @@
 .animate-shimmer {
   animation: shimmer 3s infinite;
 }
+
+/* Estilos para embeds de redes sociales */
+.instagram-embed-wrapper {
+  overflow: hidden;
+  border-radius: 8px;
+  background: white;
+}
+
+.instagram-embed-wrapper .instagram-media {
+  background: #FFF !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  margin: 0 auto !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.instagram-embed-wrapper .instagram-media iframe {
+  border-radius: 8px !important;
+  max-height: 800px !important;
+}
+
+/* Ocultar elementos de interacción del embed de Instagram que se ven mal */
+.instagram-embed-wrapper .instagram-media iframe {
+  pointer-events: auto;
+}
+
+/* Estilos para dark mode */
+.dark .instagram-embed-wrapper {
+  background: #1e293b;
+}
+
+.dark .instagram-embed-wrapper .instagram-media {
+  background: #1e293b !important;
+}
+
+/* Estilos para TikTok embeds */
+.tiktok-embed-wrapper {
+  overflow: hidden;
+  border-radius: 8px;
+  background: white;
+}
+
+.dark .tiktok-embed-wrapper {
+  background: #1e293b;
+}
+
+/* Estilos para Twitter/X embeds */
+.twitter-tweet {
+  margin: 0 auto !important;
+  max-width: 100% !important;
+}
+
+/* Estilos para Facebook embeds */
+.fb-post {
+  margin: 0 auto !important;
+  max-width: 100% !important;
+}
