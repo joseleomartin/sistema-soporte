@@ -74,3 +74,4 @@ COMMENT ON TABLE birthday_comments IS 'Comentarios de felicitación en los cumpl
 
 
 
+

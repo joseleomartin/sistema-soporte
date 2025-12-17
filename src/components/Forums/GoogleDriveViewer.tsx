@@ -390,15 +390,15 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith('image/')) {
-      return <Image className="w-5 h-5 text-green-600" />;
+      return <Image className="w-5 h-5 text-green-600 dark:text-green-400" />;
     } else if (mimeType.includes('pdf')) {
-      return <FileText className="w-5 h-5 text-red-600" />;
+      return <FileText className="w-5 h-5 text-red-600 dark:text-red-400" />;
     } else if (mimeType.includes('sheet') || mimeType.includes('excel')) {
-      return <FileText className="w-5 h-5 text-green-600" />;
+      return <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />;
     } else if (mimeType.includes('word') || mimeType.includes('document')) {
-      return <FileText className="w-5 h-5 text-blue-600" />;
+      return <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
     } else {
-      return <FileIcon className="w-5 h-5 text-gray-600" />;
+      return <FileIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -425,7 +425,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
   if (loading && !authenticated) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin" />
       </div>
     );
   }
@@ -433,25 +433,25 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
   if (!authenticated) {
     return (
       <div className="space-y-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-          <FolderOpen className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-6 text-center">
+          <FolderOpen className="w-16 h-16 text-blue-600 dark:text-blue-400 mx-auto mb-4" />
           {currentFolderName && (
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{currentFolderName}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{currentFolderName}</h3>
           )}
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
             Para ver los archivos directamente en la aplicación, necesitas autenticarte con Google Drive.
           </p>
           <div className="flex items-center justify-center gap-3">
             <button
               onClick={handleAuthenticate}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center gap-2"
+              className="px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium flex items-center gap-2"
             >
               <FolderOpen className="w-5 h-5" />
               Autenticar con Google
             </button>
             <button
               onClick={openInDrive}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium flex items-center gap-2"
+              className="px-6 py-3 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition font-medium flex items-center gap-2"
             >
               <ExternalLink className="w-5 h-5" />
               Abrir en Drive
@@ -460,9 +460,9 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-700 text-sm">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
           </div>
         )}
       </div>
@@ -485,7 +485,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
   return (
     <div className="space-y-4">
       {/* Breadcrumbs - Siempre mostrar la carpeta raíz del cliente */}
-      <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
+      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
         <div className="flex items-center gap-2">
           <Home className="w-4 h-4" />
           <button
@@ -499,8 +499,8 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
             }}
             className={`font-semibold transition ${
               currentFolderId === rootFolderId 
-                ? 'text-gray-900 cursor-default' 
-                : 'text-blue-600 hover:text-blue-700'
+                ? 'text-gray-900 dark:text-white cursor-default' 
+                : 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300'
             }`}
           >
             {rootFolderName}
@@ -513,8 +513,8 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
               <div key={breadcrumb.id} className="flex items-center gap-2">
                 <button
                   onClick={() => handleBreadcrumbClick(breadcrumb, index)}
-                  className={`hover:text-blue-600 transition ${
-                    index === breadcrumbs.length - 1 ? 'font-semibold text-gray-900' : ''
+                  className={`hover:text-blue-600 dark:hover:text-blue-400 transition ${
+                    index === breadcrumbs.length - 1 ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'
                   }`}
                 >
                   {breadcrumb.name}
@@ -529,8 +529,8 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       {/* Header con acciones */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">{currentFolderName}</h3>
-          <p className="text-xs text-gray-500">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">{currentFolderName}</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {totalItems} {totalItems === 1 ? 'elemento' : 'elementos'} 
             {folders.length > 0 && ` (${folders.length} ${folders.length === 1 ? 'carpeta' : 'carpetas'})`}
             {files.length > 0 && `, ${files.length} ${files.length === 1 ? 'archivo' : 'archivos'}`}
@@ -539,14 +539,14 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreateFolder(true)}
-            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm flex items-center gap-2"
+            className="px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition font-medium text-sm flex items-center gap-2"
           >
             <FolderPlus className="w-4 h-4" />
             Nueva Carpeta
           </button>
           <button
             onClick={() => setShowUpload(!showUpload)}
-            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm flex items-center gap-2"
+            className="px-3 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium text-sm flex items-center gap-2"
           >
             <Upload className="w-4 h-4" />
             Subir Archivos
@@ -554,14 +554,14 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
+            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition disabled:opacity-50"
             title="Actualizar lista"
           >
             <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={openInDrive}
-            className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-sm flex items-center gap-2"
+            className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition font-medium text-sm flex items-center gap-2"
           >
             <FolderOpen className="w-4 h-4" />
             Abrir en Drive
@@ -571,21 +571,21 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
 
       {/* Buscador */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar archivos y carpetas en todas las subcarpetas..."
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
         />
         {searching && (
-          <Loader2 className="absolute right-10 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+          <Loader2 className="absolute right-10 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 animate-spin" />
         )}
         {searchTerm.trim() && !searching && (
           <button
             onClick={() => setSearchTerm('')}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition"
             title="Limpiar búsqueda"
           >
             <X className="w-4 h-4" />
@@ -595,17 +595,17 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       
       {/* Indicador de búsqueda recursiva */}
       {searchTerm.trim() && searchResults && (
-        <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-lg p-2">
+        <div className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-2">
           🔍 Buscando en todas las subcarpetas de "{rootFolderName}"...
         </div>
       )}
 
       {/* Modal para crear carpeta */}
       {showCreateFolder && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
-            <FolderPlus className="w-5 h-5 text-green-600" />
-            <h3 className="font-semibold text-gray-900">Crear Nueva Carpeta</h3>
+            <FolderPlus className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <h3 className="font-semibold text-gray-900 dark:text-white">Crear Nueva Carpeta</h3>
           </div>
           <div className="space-y-3">
             <input
@@ -621,7 +621,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                 }
               }}
               placeholder="Nombre de la carpeta..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
               autoFocus
               disabled={creatingFolder}
             />
@@ -632,14 +632,14 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                   setNewFolderName('');
                 }}
                 disabled={creatingFolder}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCreateFolder}
                 disabled={creatingFolder || !newFolderName.trim()}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition disabled:opacity-50 flex items-center gap-2"
               >
                 {creatingFolder ? (
                   <>
@@ -669,12 +669,12 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-red-700 text-sm font-medium mb-1">{error}</p>
+            <p className="text-red-700 dark:text-red-300 text-sm font-medium mb-1">{error}</p>
             {error.includes('ID de la carpeta') && (
-              <p className="text-red-600 text-xs mb-2">
+              <p className="text-red-600 dark:text-red-400 text-xs mb-2">
                 Puedes seleccionar una nueva carpeta desde el selector de carpetas.
               </p>
             )}
@@ -694,7 +694,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
             })() && (
               <button
                 onClick={handleAuthenticate}
-                className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm flex items-center gap-2"
+                className="mt-2 px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition font-medium text-sm flex items-center gap-2"
               >
                 <FolderOpen className="w-4 h-4" />
                 Re-autenticar con Google
@@ -707,43 +707,43 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       {/* Contenido */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin" />
         </div>
       ) : (searchTerm.trim() && searching) ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Buscando en todas las subcarpetas...</p>
+            <Loader2 className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-300">Buscando en todas las subcarpetas...</p>
           </div>
         </div>
       ) : (searchTerm.trim() && !searching && filteredTotalItems === 0) ? (
         <div className="text-center py-12">
-          <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <Search className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No se encontraron resultados
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
             No hay archivos o carpetas que coincidan con "{searchTerm}"
           </p>
           <button
             onClick={() => setSearchTerm('')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium"
           >
             Limpiar búsqueda
           </button>
         </div>
       ) : totalItems === 0 ? (
         <div className="text-center py-12">
-          <FileIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <FileIcon className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             Carpeta vacía
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
             Esta carpeta está vacía. Sube archivos para comenzar.
           </p>
           <button
             onClick={() => setShowUpload(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium"
           >
             Subir Archivos
           </button>
@@ -753,7 +753,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
           {/* Carpetas primero */}
           {filteredFolders.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
                 Carpetas {searchTerm.trim() && `(${filteredFolders.length} encontradas)`}
               </h4>
               <div className="space-y-2">
@@ -761,16 +761,16 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                   <button
                     key={folder.id}
                     onClick={() => handleFolderClick(folder)}
-                    className="w-full flex items-center gap-4 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition text-left group"
+                    className="w-full flex items-center gap-4 p-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition text-left group"
                   >
-                    <FolderOpen className="w-8 h-8 text-blue-600 flex-shrink-0" />
+                    <FolderOpen className="w-8 h-8 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{folder.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">{folder.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Carpeta • Modificado: {formatDate(folder.modifiedTime)}
                       </p>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
+                    <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400" />
                   </button>
                 ))}
               </div>
@@ -780,17 +780,17 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
           {/* Archivos después */}
           {filteredFiles.length > 0 && (
             <div>
-              {filteredFolders.length > 0 && <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2 mt-4">Archivos</h4>}
-              {filteredFolders.length === 0 && <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Archivos {searchTerm.trim() && `(${filteredFiles.length} encontrados)`}</h4>}
+              {filteredFolders.length > 0 && <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 mt-4">Archivos</h4>}
+              {filteredFolders.length === 0 && <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Archivos {searchTerm.trim() && `(${filteredFiles.length} encontrados)`}</h4>}
               <div className="space-y-2">
                 {filteredFiles.map((file) => (
                   <div
                     key={file.id}
-                    className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 transition group"
+                    className="bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-slate-600 transition group"
                   >
                     <div className="flex items-start gap-4">
                       {/* Icono o miniatura */}
-                      <div className="flex-shrink-0 w-12 h-12 bg-white rounded-lg flex items-center justify-center border border-gray-200">
+                      <div className="flex-shrink-0 w-12 h-12 bg-white dark:bg-slate-800 rounded-lg flex items-center justify-center border border-gray-200 dark:border-slate-600">
                         {file.thumbnailLink ? (
                           <img
                             src={file.thumbnailLink}
@@ -804,8 +804,8 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
 
                       {/* Información del archivo */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 truncate mb-1">{file.name}</h4>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <h4 className="font-medium text-gray-900 dark:text-white truncate mb-1">{file.name}</h4>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                           <span>{formatFileSize(file.size)}</span>
                           <span>•</span>
                           <span>{formatDate(file.modifiedTime)}</span>
@@ -816,21 +816,21 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                       <div className="flex-shrink-0 flex items-center gap-2">
                         <button
                           onClick={() => setViewingFile(file)}
-                          className="p-2.5 text-green-600 hover:bg-green-50 rounded-lg transition"
+                          className="p-2.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition"
                           title="Ver archivo"
                         >
                           <Eye className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDownload(file)}
-                          className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          className="p-2.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
                           title="Descargar archivo"
                         >
                           <Download className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => window.open(file.webViewLink, '_blank', 'noopener,noreferrer')}
-                          className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          className="p-2.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
                           title="Abrir en Google Drive"
                         >
                           <ExternalLink className="w-5 h-5" />
@@ -848,14 +848,14 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       {/* Modal para visualizar archivo */}
       {viewingFile && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col">
             {/* Header del modal */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {getFileIcon(viewingFile.mimeType)}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">{viewingFile.name}</h3>
-                  <p className="text-sm text-gray-500">
+                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">{viewingFile.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {formatFileSize(viewingFile.size)} • {formatDate(viewingFile.modifiedTime)}
                   </p>
                 </div>
@@ -863,21 +863,21 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleDownload(viewingFile)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
                   title="Descargar"
                 >
                   <Download className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => window.open(viewingFile.webViewLink, '_blank', 'noopener,noreferrer')}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
                   title="Abrir en Google Drive"
                 >
                   <ExternalLink className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setViewingFile(null)}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                  className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
                   title="Cerrar"
                 >
                   <X className="w-5 h-5" />
@@ -910,7 +910,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
                 // Para imágenes, mostrar directamente
                 if (viewingFile.mimeType?.startsWith('image/')) {
                   return (
-                    <div className="h-full flex items-center justify-center bg-gray-100 p-4">
+                    <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-slate-900 p-4">
                       <img
                         src={`https://drive.google.com/uc?export=view&id=${viewingFile.id}`}
                         alt={viewingFile.name}

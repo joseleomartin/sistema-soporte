@@ -33,3 +33,4 @@ CREATE INDEX IF NOT EXISTS idx_tickets_attachments ON tickets USING gin(attachme
 
 
 
+

@@ -26,3 +26,4 @@ COMMENT ON COLUMN subforums.contact_full_name IS 'Nombre y apellido del contacto
 COMMENT ON COLUMN subforums.client_type IS 'Tipo de cliente (por ejemplo: Monotributista, Responsable Inscripto, Empresa, etc.)';
 
 
+

@@ -232,7 +232,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                     <div className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
                       {isOpen ? (
                         <ChevronDown className={`w-4 h-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
-                      ) : (
+                    ) : (
                         <ChevronRight className={`w-4 h-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
                       )}
                     </div>

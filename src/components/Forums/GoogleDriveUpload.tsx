@@ -162,16 +162,16 @@ export function GoogleDriveUpload({
           border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition
           ${
             dragging
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+              ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+              : 'border-gray-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-gray-50 dark:hover:bg-slate-700'
           }
         `}
       >
-        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-700 font-medium mb-2">
+        <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+        <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">
           Arrastra archivos aquí o haz click para seleccionar
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Puedes subir múltiples archivos a la vez
         </p>
         <input
@@ -186,29 +186,29 @@ export function GoogleDriveUpload({
       {/* Lista de archivos seleccionados */}
       {files.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-gray-700">
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
             Archivos seleccionados ({files.length})
           </h4>
           {files.map((fileWithProgress, index) => (
             <div
               key={index}
-              className="bg-gray-50 border border-gray-200 rounded-lg p-4"
+              className="bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg p-4"
             >
               <div className="flex items-start gap-3">
-                <File className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                <File className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate mb-1">
+                  <p className="font-medium text-gray-900 dark:text-white truncate mb-1">
                     {fileWithProgress.file.name}
                   </p>
-                  <p className="text-xs text-gray-500 mb-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                     {formatFileSize(fileWithProgress.file.size)}
                   </p>
 
                   {/* Barra de progreso */}
                   {fileWithProgress.status === 'uploading' && (
-                    <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                    <div className="w-full bg-gray-200 dark:bg-slate-600 rounded-full h-2 mb-2">
                       <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${fileWithProgress.progress}%` }}
                       />
                     </div>
@@ -216,14 +216,14 @@ export function GoogleDriveUpload({
 
                   {/* Estado */}
                   {fileWithProgress.status === 'success' && (
-                    <div className="flex items-center gap-2 text-green-600 text-sm">
+                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm">
                       <Check className="w-4 h-4" />
                       <span>Subido exitosamente</span>
                     </div>
                   )}
 
                   {fileWithProgress.status === 'error' && (
-                    <div className="flex items-center gap-2 text-red-600 text-sm">
+                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
                       <AlertCircle className="w-4 h-4" />
                       <span>{fileWithProgress.error || 'Error al subir'}</span>
                     </div>
@@ -237,7 +237,7 @@ export function GoogleDriveUpload({
                       e.stopPropagation();
                       removeFile(index);
                     }}
-                    className="p-1 text-gray-400 hover:text-red-600 transition"
+                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -251,7 +251,7 @@ export function GoogleDriveUpload({
             <button
               onClick={handleUpload}
               disabled={uploading}
-              className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {uploading ? (
                 <>
