@@ -19,7 +19,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
   const [content, setContent] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([]);
   const [reelUrl, setReelUrl] = useState('');
-  const [reelPlatform, setReelPlatform] = useState<'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null>(null);
+  const [reelPlatform, setReelPlatform] = useState<'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | 'youtube' | null>(null);
   const [postType, setPostType] = useState<'media' | 'reel'>('media');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,10 +120,18 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
     return 'image'; // default
   };
 
-  const detectReelPlatform = (url: string): 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null => {
+  const detectReelPlatform = (url: string): 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | 'youtube' | null => {
     if (!url || !url.trim()) return null;
     
     const lowerUrl = url.toLowerCase().trim();
+    
+    // YouTube: youtube.com, youtu.be, m.youtube.com
+    if (lowerUrl.includes('youtube.com/watch') || 
+        lowerUrl.includes('youtube.com/shorts/') ||
+        lowerUrl.includes('youtu.be/') ||
+        lowerUrl.includes('m.youtube.com/')) {
+      return 'youtube';
+    }
     
     // Instagram: instagram.com/reel/, instagram.com/p/, instagram.com/tv/, instagr.am
     if (lowerUrl.includes('instagram.com/reel/') || 
@@ -161,7 +169,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
     const platform = detectReelPlatform(url);
     setReelPlatform(platform);
     if (url && !platform) {
-      setError('URL no reconocida. Por favor, pega un link de Instagram, TikTok, X o Facebook');
+      setError('URL no reconocida. Por favor, pega un link de Instagram, TikTok, X, Facebook o YouTube');
     } else {
       setError(null);
     }
@@ -212,12 +220,12 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
     }
 
     if (postType === 'reel' && !reelUrl.trim()) {
-      setError('Debes pegar un link de Instagram, TikTok, X o Facebook');
+      setError('Debes pegar un link de Instagram, TikTok, X, Facebook o YouTube');
       return;
     }
 
     if (postType === 'reel' && !reelPlatform) {
-      setError('URL no reconocida. Por favor, pega un link válido de Instagram, TikTok, X o Facebook');
+      setError('URL no reconocida. Por favor, pega un link válido de Instagram, TikTok, X, Facebook o YouTube');
       return;
     }
 
@@ -375,19 +383,20 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
             {postType === 'reel' && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Pega el link del post o reel (Instagram, TikTok, X o Facebook)
+                  Pega el link del post o reel (Instagram, TikTok, X, Facebook o YouTube)
                 </label>
                 <input
                   type="url"
                   value={reelUrl}
                   onChange={(e) => handleReelUrlChange(e.target.value)}
-                  placeholder="https://www.instagram.com/p/... o https://www.tiktok.com/... o https://x.com/... o https://www.facebook.com/..."
+                  placeholder="https://www.instagram.com/p/... o https://www.youtube.com/... o https://www.tiktok.com/... o https://x.com/... o https://www.facebook.com/..."
                   className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 {reelPlatform && (
                   <div className="mt-2 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                     <Link2 className="w-4 h-4" />
                     <span>
+                      {reelPlatform === 'youtube' && 'YouTube detectado'}
                       {reelPlatform === 'instagram' && 'Instagram Post/Reel detectado'}
                       {reelPlatform === 'tiktok' && 'TikTok detectado'}
                       {(reelPlatform === 'x' || reelPlatform === 'twitter') && 'X (Twitter) detectado'}

@@ -20,7 +20,7 @@ interface Post {
   media_type?: 'image' | 'video' | 'gif' | null; // Opcional para compatibilidad
   media_url?: string | null; // Opcional para compatibilidad
   reel_url?: string | null;
-  reel_platform?: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null;
+  reel_platform?: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | 'youtube' | null;
   created_at: string;
   updated_at: string;
   user_profile?: {

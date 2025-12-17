@@ -98,3 +98,15 @@
   margin: 0 auto !important;
   max-width: 100% !important;
 }
+
+/* Estilos para YouTube embeds */
+.youtube-embed-wrapper {
+  overflow: hidden;
+  border-radius: 8px;
+  background: white;
+  max-width: 100%;
+}
+
+.dark .youtube-embed-wrapper {
+  background: #1e293b;
+}

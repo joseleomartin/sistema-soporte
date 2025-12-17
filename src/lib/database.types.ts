@@ -253,7 +253,7 @@ export interface Database {
           media_type: 'image' | 'video' | 'gif' | null
           media_url: string | null
           reel_url: string | null
-          reel_platform: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null
+          reel_platform: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | 'youtube' | null
           created_at: string
           updated_at: string
         }

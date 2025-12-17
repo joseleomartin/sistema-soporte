@@ -45,7 +45,7 @@ interface Post {
   media_type?: 'image' | 'video' | 'gif' | null; // Opcional para compatibilidad
   media_url?: string | null; // Opcional para compatibilidad
   reel_url?: string | null;
-  reel_platform?: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | null;
+  reel_platform?: 'instagram' | 'tiktok' | 'x' | 'twitter' | 'facebook' | 'youtube' | null;
   created_at: string;
   updated_at: string;
   user_profile?: {
@@ -377,6 +377,8 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       window.twttr.widgets.load();
     } else if (platform === 'facebook' && window.FB) {
       window.FB.XFBML.parse();
+    } else if (platform === 'youtube') {
+      // YouTube se renderiza directamente con iframe, no necesita procesamiento adicional
     }
   };
 
@@ -527,6 +529,57 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                     </a>
                   </blockquote>
                 </div>
+              </div>
+            )}
+            {post.reel_platform === 'youtube' && (
+              <div className="youtube-embed-wrapper">
+                {(() => {
+                  // Extraer ID del video de YouTube
+                  const getYouTubeVideoId = (url: string): string | null => {
+                    const patterns = [
+                      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([^&\n?#]+)/,
+                      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+                    ];
+                    
+                    for (const pattern of patterns) {
+                      const match = url.match(pattern);
+                      if (match && match[1]) {
+                        return match[1];
+                      }
+                    }
+                    return null;
+                  };
+
+                  const videoId = getYouTubeVideoId(post.reel_url || '');
+                  
+                  if (videoId) {
+                    return (
+                      <div className="relative w-full" style={{ paddingBottom: '56.25%', height: 0 }}>
+                        <iframe
+                          className="absolute top-0 left-0 w-full h-full rounded-lg"
+                          src={`https://www.youtube.com/embed/${videoId}`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                        />
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="p-4 bg-gray-200 dark:bg-slate-700 rounded-lg">
+                      <a 
+                        href={post.reel_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        {post.reel_url}
+                      </a>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
