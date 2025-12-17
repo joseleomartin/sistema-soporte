@@ -53,15 +53,6 @@ export function GoogleDriveFolderSelector({
       const errorMessage = err.message || 'Error al buscar carpetas sugeridas';
       setError(errorMessage);
       onError?.(errorMessage);
-      
-      // Si es un error de autenticación, marcar como no autenticado
-      if (errorMessage.includes('REAUTH_REQUIRED') || 
-          errorMessage.includes('token') || 
-          errorMessage.includes('autentica') ||
-          errorMessage.includes('Unauthorized') ||
-          errorMessage.includes('unauthorized_client')) {
-        setAuthenticated(false);
-      }
     } finally {
       setLoading(false);
     }
@@ -84,15 +75,6 @@ export function GoogleDriveFolderSelector({
       const errorMessage = err.message || 'Error al buscar carpetas';
       setError(errorMessage);
       onError?.(errorMessage);
-      
-      // Si es un error de autenticación, marcar como no autenticado
-      if (errorMessage.includes('REAUTH_REQUIRED') || 
-          errorMessage.includes('token') || 
-          errorMessage.includes('autentica') ||
-          errorMessage.includes('Unauthorized') ||
-          errorMessage.includes('unauthorized_client')) {
-        setAuthenticated(false);
-      }
     } finally {
       setSearching(false);
     }
@@ -198,23 +180,24 @@ export function GoogleDriveFolderSelector({
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-red-700 dark:text-red-300 text-sm">
-              {error.includes('REAUTH_REQUIRED:') 
-                ? error.replace('REAUTH_REQUIRED: ', '')
-                : error}
-            </p>
-            {(error.includes('REAUTH_REQUIRED') || 
-               error.includes('Token expirado') || 
-               error.includes('token') || 
-               error.includes('autentica') ||
-               error.includes('Unauthorized') ||
-               error.includes('unauthorized_client')) && (
+            <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
+            {(() => {
+              const lowerError = error.toLowerCase();
+              const isAuthError = lowerError.includes('token') || 
+                                 lowerError.includes('renovar') || 
+                                 lowerError.includes('autentica') ||
+                                 lowerError.includes('expirado') ||
+                                 lowerError.includes('refrescar') ||
+                                 lowerError.includes('401') ||
+                                 lowerError.includes('unauthorized');
+              return isAuthError;
+            })() && (
               <button
                 onClick={handleAuthenticate}
                 className="mt-3 px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition font-medium text-sm flex items-center gap-2"
               >
                 <FolderOpen className="w-4 h-4" />
-                Autenticar con Google
+                Re-autenticar con Google
               </button>
             )}
           </div>

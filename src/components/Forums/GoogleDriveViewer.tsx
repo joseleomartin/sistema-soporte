@@ -244,42 +244,29 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
       setError(errorMessage);
       
       // Detectar cualquier error relacionado con autenticación
-      const isAuthError = errorMessage.includes('REAUTH_REQUIRED') ||
-                         errorMessage.includes('Token') || 
+      const isAuthError = errorMessage.includes('Token') || 
                          errorMessage.includes('401') || 
                          errorMessage.includes('Unauthorized') || 
-                         errorMessage.includes('unauthorized_client') ||
                          errorMessage.includes('No hay token') ||
                          errorMessage.includes('renovar') || 
                          errorMessage.includes('autentica') ||
                          errorMessage.includes('refrescar token') ||
                          errorMessage.includes('No se pudo') ||
-                         errorMessage.includes('No se puede') ||
-                         errorMessage.includes('revocado') ||
-                         errorMessage.includes('inválido');
+                         errorMessage.includes('No se puede');
       
       if (isAuthError) {
         setAuthenticated(false);
-        // Si el error indica que se requiere re-autenticación, no intentar reconectar automáticamente
-        if (errorMessage.includes('REAUTH_REQUIRED') || 
-            errorMessage.includes('revocado') || 
-            errorMessage.includes('inválido') ||
-            errorMessage.includes('unauthorized_client')) {
-          // Limpiar tokens y mostrar error para que el usuario pueda re-autenticar
-          setError(errorMessage);
+        // Si hay refresh token, intentar reconectar automáticamente una vez
+        const refreshToken = localStorage.getItem('google_drive_refresh_token');
+        if (refreshToken && retryCount === 0) {
+          console.log('🔄 Intentando reconectar automáticamente...');
+          setTimeout(() => {
+            checkAuthAndLoadFiles();
+          }, 2000);
         } else {
-          // Si hay refresh token y no es un error de token inválido, intentar reconectar automáticamente una vez
-          const refreshToken = localStorage.getItem('google_drive_refresh_token');
-          if (refreshToken && retryCount === 0) {
-            console.log('🔄 Intentando reconectar automáticamente...');
-            setTimeout(() => {
-              checkAuthAndLoadFiles();
-            }, 2000);
-          } else {
-            // Si no hay refresh token o ya intentamos, asegurar que el error se muestre
-            // para que el usuario pueda re-autenticar manualmente
-            setError(errorMessage);
-          }
+          // Si no hay refresh token o ya intentamos, asegurar que el error se muestre
+          // para que el usuario pueda re-autenticar manualmente
+          setError(errorMessage);
         }
       }
       
