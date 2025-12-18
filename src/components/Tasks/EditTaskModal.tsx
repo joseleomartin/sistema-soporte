@@ -358,7 +358,7 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden task-modal-scroll">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Editar Tarea</h2>
@@ -483,7 +483,7 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
                 placeholder="Escribe o selecciona un cliente"
               />
               {showClientDropdown && filteredClients.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto task-dropdown-scroll">
                   <button
                     type="button"
                     onClick={() => {
@@ -644,7 +644,7 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
             {assignmentType === 'user' && (
               <div className="space-y-2">
                 <p className="text-sm text-gray-600 dark:text-gray-300">Selecciona uno o más usuarios:</p>
-                <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-700">
+                <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-700 task-dropdown-scroll">
                   {users.length === 0 ? (
                     <p className="text-gray-500 dark:text-gray-400 text-sm">No hay usuarios disponibles</p>
                   ) : (

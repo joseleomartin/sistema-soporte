@@ -1202,7 +1202,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           </div>
 
           {selectedDayEvents.length > 0 && (
-            <div className="mt-4 space-y-2 max-h-32 overflow-y-auto flex-shrink-0">
+            <div className="mt-4 space-y-2 max-h-32 overflow-y-auto flex-shrink-0 dashboard-scroll">
               {selectedDayEvents.map((event) => (
                 <button
                   key={event.id}
@@ -1275,7 +1275,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           {/* Desglose de eventos próximos */}
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
             <h4 className="text-xs font-semibold text-gray-200 mb-2">Próximos eventos</h4>
-            <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-2">
+            <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-2 dashboard-scroll">
               {events.length > 0 ? (
                 events
                   .filter(event => {
@@ -1339,7 +1339,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
             <TrendingUp className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Accesos Rápidos</h3>
           </div>
-          <div className="space-y-3 overflow-y-auto pr-2 max-h-[520px]">
+          <div className="space-y-3 overflow-y-auto pr-2 max-h-[520px] dashboard-scroll">
             <button
               onClick={() => onNavigate?.('forums')}
               className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/40 transition cursor-pointer"
@@ -1428,7 +1428,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
               </p>
             </div>
           ) : (
-            <div className="space-y-3 flex-1 overflow-y-auto pr-2 min-h-0">
+            <div className="space-y-3 flex-1 overflow-y-auto pr-2 min-h-0 dashboard-scroll">
               {recentActivities.map((activity) => {
                 const Icon = activity.icon;
                 return (
@@ -1786,7 +1786,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                         <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                           Eventos del {selectedDate ? `${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]}` : 'día'}
                         </h4>
-                        <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                        <div className="space-y-3 max-h-[500px] overflow-y-auto dashboard-scroll">
                           {selectedDayEvents.map((event) => (
                             <button
                               key={event.id}
@@ -1859,7 +1859,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                     ) : (
                       <>
                         <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Próximos eventos</h4>
-                        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                        <div className="space-y-2 max-h-[500px] overflow-y-auto dashboard-scroll">
                           {events.length > 0 ? (
                             events
                               .filter(event => {

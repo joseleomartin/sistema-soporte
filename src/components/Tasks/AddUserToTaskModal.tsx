@@ -111,7 +111,7 @@ export function AddUserToTaskModal({ taskId, existingUserIds, onClose, onSuccess
             <label className="block text-sm font-medium text-gray-700 mb-3">
               Selecciona uno o más usuarios:
             </label>
-            <div className="max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-white">
+            <div className="max-h-64 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-white task-dropdown-scroll">
               {users.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-4">
                   No hay usuarios disponibles para agregar

@@ -546,7 +546,7 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
               />
 
-              <div className="max-h-48 overflow-y-auto space-y-2">
+              <div className="max-h-48 overflow-y-auto space-y-2 forums-scroll">
                 {filteredAttachments.length === 0 ? (
                   <p className="text-gray-500 dark:text-gray-400 text-center py-4 text-sm">
                     {fileSearchTerm ? 'No se encontraron archivos' : 'No hay archivos en este foro'}
@@ -574,7 +574,7 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
             </div>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 forums-scroll">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-500 dark:text-gray-400">No hay mensajes aún. Sé el primero en escribir!</p>

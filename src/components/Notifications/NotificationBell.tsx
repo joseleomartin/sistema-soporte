@@ -499,7 +499,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
             </div>
 
             {/* Contenido con scroll - Estilo original */}
-            <div className="max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600/50 scrollbar-track-transparent bg-slate-800">
+            <div className="max-h-[500px] overflow-y-auto notifications-scroll bg-slate-800">
               {notifications.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="relative inline-block mb-4">

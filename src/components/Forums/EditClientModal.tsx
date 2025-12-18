@@ -224,7 +224,7 @@ export function EditClientModal({ subforum, onClose, onSuccess }: EditClientModa
           </button>
         </div>
 
-        <form id="edit-client-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3">
+        <form id="edit-client-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3 forums-scroll">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nombre del Espacio de Trabajo

@@ -575,7 +575,7 @@ export function Vencimientos() {
   };
 
   return (
-    <div className="h-full overflow-auto">
+    <div className="h-full overflow-auto vencimientos-scroll">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Vencimientos</h1>
@@ -679,7 +679,7 @@ export function Vencimientos() {
           {/* Pestañas */}
           {Object.keys(vencimientos.hojas).length > 0 && (
             <div className="mb-4 border-b border-gray-200 dark:border-slate-700">
-              <nav className="flex space-x-1 overflow-x-auto" aria-label="Tabs">
+              <nav className="flex space-x-1 overflow-x-auto vencimientos-scroll" aria-label="Tabs">
                 {Object.keys(vencimientos.hojas).map((nombreHoja) => {
                   const datos = vencimientos.hojas[nombreHoja];
                   const isActive = tabActiva === nombreHoja;
@@ -722,7 +722,7 @@ export function Vencimientos() {
                       </p>
                     </div>
                     {datos.datos.length > 0 ? (
-                      <div className="overflow-x-auto border border-gray-200 dark:border-slate-700 rounded-lg">
+                      <div className="overflow-x-auto border border-gray-200 dark:border-slate-700 rounded-lg vencimientos-scroll">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700 text-sm">
                           <thead className="bg-gray-50 dark:bg-slate-700">
                             <tr>
@@ -1082,6 +1082,7 @@ export function Vencimientos() {
     </div>
   );
 }
+
 
 
 

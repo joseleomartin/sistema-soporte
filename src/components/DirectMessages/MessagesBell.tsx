@@ -1146,7 +1146,7 @@ export function MessagesBell() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 messages-scroll">
           {availableUsers.length === 0 ? (
             <div className="p-10 text-center text-gray-500 dark:text-gray-400">
               <MessageSquare className="w-16 h-16 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
@@ -1257,7 +1257,7 @@ export function MessagesBell() {
             
             {/* Desplegable de resultados de búsqueda */}
             {searchTerm.trim().length > 0 && searchResults.length > 0 && (
-              <div className="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 max-h-80 overflow-y-auto z-50">
+              <div className="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 max-h-80 overflow-y-auto z-50 messages-scroll">
                 <div className="p-2 bg-gray-50 dark:bg-slate-700 border-b border-gray-100 dark:border-slate-600">
                   <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 px-2">
                     Usuarios encontrados ({searchResults.length})
@@ -1306,7 +1306,7 @@ export function MessagesBell() {
         </div>
 
         {/* Lista de conversaciones */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto messages-scroll">
           {filteredConversations.length > 0 ? (
             // Conversaciones activas
             <div className="divide-y divide-gray-100 dark:divide-slate-700">
@@ -1433,7 +1433,7 @@ export function MessagesBell() {
       {/* Messages Area */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50 dark:bg-slate-900 min-h-0" 
+        className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50 dark:bg-slate-900 min-h-0 messages-scroll" 
         style={{ 
           minHeight: '200px',
           scrollBehavior: 'auto', // Desactivar smooth scroll para scroll programático
@@ -1540,7 +1540,7 @@ export function MessagesBell() {
       {/* Input Area */}
               <div className="p-2 sm:p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-b-2xl flex-shrink-0">
                 {selectedFiles.length > 0 && (
-                  <div className="mb-2 sm:mb-3 space-y-2 max-h-24 sm:max-h-32 overflow-y-auto">
+                  <div className="mb-2 sm:mb-3 space-y-2 max-h-24 sm:max-h-32 overflow-y-auto messages-scroll">
                     {selectedFiles.map((file, index) => (
                       <div
                         key={index}
@@ -1589,7 +1589,7 @@ export function MessagesBell() {
                     }}
                     placeholder="Escribe un mensaje..."
                     rows={1}
-                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[36px] sm:min-h-[40px] max-h-32 overflow-y-auto"
+                    className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[36px] sm:min-h-[40px] max-h-32 overflow-y-auto messages-scroll"
                     disabled={sending || uploading}
                   />
                   <EmojiPicker

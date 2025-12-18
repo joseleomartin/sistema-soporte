@@ -344,33 +344,33 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Importación masiva de clientes
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Sube un archivo CSV (compatible con Excel) usando la plantilla para crear muchos
               clientes de una vez.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-4 space-y-4 flex-1 overflow-y-auto">
-          <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center">
-            <Upload className="w-8 h-8 text-blue-500 mx-auto mb-3" />
-            <p className="text-sm font-medium text-gray-900 mb-1">
+        <div className="p-4 space-y-4 flex-1 overflow-y-auto forums-scroll">
+          <div className="border border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-6 text-center">
+            <Upload className="w-8 h-8 text-blue-500 dark:text-blue-400 mx-auto mb-3" />
+            <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
               Selecciona un archivo CSV exportado desde Excel
             </p>
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
               Asegúrate de incluir la fila de encabezados según la plantilla.
             </p>
             <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium cursor-pointer hover:bg-blue-700 transition">
@@ -384,13 +384,13 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
               />
             </label>
             {fileName && (
-              <p className="mt-2 text-xs text-gray-600">Archivo seleccionado: {fileName}</p>
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">Archivo seleccionado: {fileName}</p>
             )}
           </div>
 
-          <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-            <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5" />
-            <div className="text-xs text-blue-800 text-left">
+          <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-blue-500 dark:text-blue-400 mt-0.5" />
+            <div className="text-xs text-blue-800 dark:text-blue-200 text-left">
               <p className="font-semibold mb-1">Formato de columnas esperado:</p>
               <p className="mb-1 break-words">
                 workspace_name, client_name, description, cuit, email1, email2, phone1, phone2,
@@ -400,7 +400,7 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
               <button
                 type="button"
                 onClick={handleDownloadTemplate}
-                className="mt-2 inline-flex items-center gap-1 text-xs text-blue-700 hover:text-blue-900"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-200"
               >
                 <FileSpreadsheet className="w-3 h-3" />
                 Descargar plantilla de ejemplo (.csv)
@@ -409,14 +409,14 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
           </div>
 
           {resultMessage && (
-            <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-800">
+            <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-xs text-green-800 dark:text-green-200">
               <CheckCircle2 className="w-4 h-4 mt-0.5" />
               <p>{resultMessage}</p>
             </div>
           )}
 
           {errorMessage && (
-            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+            <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-800 dark:text-red-200">
               <AlertCircle className="w-4 h-4 mt-0.5" />
               <p>{errorMessage}</p>
             </div>
@@ -427,7 +427,7 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
             disabled={loading}
           >
             Cerrar

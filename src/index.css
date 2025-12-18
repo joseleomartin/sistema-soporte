@@ -110,3 +110,435 @@
 .dark .youtube-embed-wrapper {
   background: #1e293b;
 }
+
+/* Estilos personalizados para la barra de desplazamiento del Sidebar */
+/* Webkit (Chrome, Safari, Edge) */
+aside nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+aside nav::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+aside nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+aside nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: padding-box;
+}
+
+/* Firefox */
+aside nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+aside nav:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Estilos personalizados para las barras de desplazamiento en Tasks */
+/* Panel izquierdo de TaskDetail */
+.task-info-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.task-info-panel::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.task-info-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.task-info-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+.task-info-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.task-info-panel:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode para panel de información */
+.dark .task-info-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .task-info-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark .task-info-panel {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .task-info-panel:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Chat de tareas */
+.task-chat-messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.task-chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.task-chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.task-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+.task-chat-messages {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.task-chat-messages:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode para chat */
+.dark .task-chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .task-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark .task-chat-messages {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .task-chat-messages:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Modales y dropdowns de tareas */
+.task-modal-scroll::-webkit-scrollbar,
+.task-dropdown-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.task-modal-scroll::-webkit-scrollbar-track,
+.task-dropdown-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.task-modal-scroll::-webkit-scrollbar-thumb,
+.task-dropdown-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.task-modal-scroll::-webkit-scrollbar-thumb:hover,
+.task-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+.task-modal-scroll,
+.task-dropdown-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.task-modal-scroll:hover,
+.task-dropdown-scroll:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode para modales */
+.dark .task-modal-scroll::-webkit-scrollbar-thumb,
+.dark .task-dropdown-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .task-modal-scroll::-webkit-scrollbar-thumb:hover,
+.dark .task-dropdown-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark .task-modal-scroll,
+.dark .task-dropdown-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .task-modal-scroll:hover,
+.dark .task-dropdown-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Estilos personalizados para las barras de desplazamiento en Dashboard */
+.dashboard-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.dashboard-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+.dashboard-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.dashboard-scroll:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode para dashboard */
+.dark .dashboard-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .dashboard-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark .dashboard-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .dashboard-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Estilos personalizados para las barras de desplazamiento en Vencimientos */
+.vencimientos-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.vencimientos-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.vencimientos-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.vencimientos-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+.vencimientos-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.vencimientos-scroll:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode para vencimientos */
+.dark .vencimientos-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .vencimientos-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark .vencimientos-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .vencimientos-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Estilos personalizados para las barras de desplazamiento en Mensajes */
+.messages-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.messages-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.messages-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.messages-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+.messages-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.messages-scroll:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode para mensajes */
+.dark .messages-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .messages-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark .messages-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .messages-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Estilos personalizados para las barras de desplazamiento en Notificaciones */
+.notifications-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.notifications-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.notifications-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.notifications-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+.notifications-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.notifications-scroll:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode para notificaciones */
+.dark .notifications-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .notifications-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark .notifications-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .notifications-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Estilos personalizados para las barras de desplazamiento en Foros/Clientes */
+.forums-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.forums-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.forums-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.forums-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+.forums-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.forums-scroll:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode para foros */
+.dark .forums-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .forums-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark .forums-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .forums-scroll:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}

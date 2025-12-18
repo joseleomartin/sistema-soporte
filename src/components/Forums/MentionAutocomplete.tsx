@@ -133,7 +133,7 @@ export function MentionAutocomplete({
 
   return (
     <div
-      className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
+      className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto forums-scroll"
       onKeyDown={handleKeyDown}
       tabIndex={-1}
       style={{ outline: 'none' }}

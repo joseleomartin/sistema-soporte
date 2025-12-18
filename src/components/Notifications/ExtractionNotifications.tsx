@@ -56,7 +56,7 @@ export function ExtractionNotifications() {
 
         {/* Jobs List */}
         {!minimized && (
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto notifications-scroll">
             {recentJobs.map((job) => (
               <div
                 key={job.id}

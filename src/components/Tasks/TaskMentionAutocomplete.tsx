@@ -156,7 +156,7 @@ export function TaskMentionAutocomplete({
 
   return (
     <div
-      className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto"
+      className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto task-dropdown-scroll"
       onKeyDown={handleKeyDown}
       tabIndex={-1}
       style={{ outline: 'none' }}

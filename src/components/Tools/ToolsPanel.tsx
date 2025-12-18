@@ -107,7 +107,7 @@ export function ToolsPanel() {
 
   if (activeTool === 'vencimiento') {
     return (
-      <div className="h-full overflow-auto">
+      <div className="h-full overflow-auto vencimientos-scroll">
         <button
           onClick={handleBack}
           className="mb-4 flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white transition"

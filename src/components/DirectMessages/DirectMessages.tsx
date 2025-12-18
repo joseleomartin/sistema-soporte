@@ -341,7 +341,7 @@ export function DirectMessages() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto messages-scroll">
             {showAdminsList && availableAdmins.length > 0 ? (
               <div className="p-4">
                 <p className="text-sm text-gray-600 mb-3">Iniciar conversación con:</p>
@@ -434,7 +434,7 @@ export function DirectMessages() {
               {/* Mensajes */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4"
+                className="flex-1 overflow-y-auto p-4 space-y-4 messages-scroll"
                 style={{ maxHeight: 'calc(100vh - 200px)' }}
               >
                 {messages.length === 0 ? (

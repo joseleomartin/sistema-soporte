@@ -339,7 +339,7 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 forums-scroll">
           {activeTab === 'chat' ? (
             <>
               {loading ? (

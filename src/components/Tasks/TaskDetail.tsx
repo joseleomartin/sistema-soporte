@@ -478,7 +478,7 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
       <div className="flex-1 overflow-hidden min-h-0">
         <div className="h-full flex flex-col lg:flex-row lg:items-start">
           {/* Información de la Tarea - Panel Izquierdo */}
-          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 border-r border-gray-200 dark:border-slate-700 overflow-y-auto bg-gray-50 dark:bg-slate-900/50">
+          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 border-r border-gray-200 dark:border-slate-700 overflow-y-auto bg-gray-50 dark:bg-slate-900/50 task-info-panel">
             <div ref={cardsContainerRef} className="p-4 lg:p-5 space-y-4">
               {/* Información Principal */}
               <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-5 border border-gray-200 dark:border-slate-700">
