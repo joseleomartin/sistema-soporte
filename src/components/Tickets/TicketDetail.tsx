@@ -424,10 +424,11 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
     <div>
       <button
         onClick={onClose}
-        className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 font-medium"
+        className="flex items-center gap-1.5 sm:gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 sm:mb-6 font-medium text-sm sm:text-base"
       >
-        <ArrowLeft className="w-5 h-5" />
-        Volver a Tickets
+        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span className="hidden sm:inline">Volver a Tickets</span>
+        <span className="sm:hidden">Volver</span>
       </button>
 
       {error && (
@@ -437,20 +438,21 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">{ticket.title}</h1>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium border ${getStatusColor(ticket.status)}`}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3">{ticket.title}</h1>
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  <span className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-medium border ${getStatusColor(ticket.status)}`}>
                     {getStatusLabel(ticket.status)}
                   </span>
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium border ${getPriorityColor(ticket.priority)}`}>
-                    Prioridad: {ticket.priority === 'high' ? 'Alta' : ticket.priority === 'medium' ? 'Media' : 'Baja'}
+                  <span className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-medium border ${getPriorityColor(ticket.priority)}`}>
+                    <span className="hidden sm:inline">Prioridad: </span>
+                    {ticket.priority === 'high' ? 'Alta' : ticket.priority === 'medium' ? 'Media' : 'Baja'}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600">
+                  <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-medium bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600">
                     {ticket.category}
                   </span>
                 </div>
@@ -483,26 +485,26 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
             )}
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
               Comentarios ({comments.length})
             </h2>
 
-            <div className="max-h-[500px] overflow-y-auto space-y-4 mb-6 pr-2">
+            <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto space-y-3 sm:space-y-4 mb-4 sm:mb-6 pr-1 sm:pr-2">
               {comments.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No hay comentarios aún</p>
+                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 text-center py-6 sm:py-8">No hay comentarios aún</p>
               ) : (
                 comments.map((comment) => (
-                  <div key={comment.id} className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 bg-gray-50 dark:bg-slate-700/50">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <div key={comment.id} className="border border-gray-200 dark:border-slate-700 rounded-lg p-3 sm:p-4 bg-gray-50 dark:bg-slate-700/50">
+                    <div className="flex items-start justify-between mb-1.5 sm:mb-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">{comment.profiles?.full_name ?? 'Usuario'}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">{comment.profiles?.full_name ?? 'Usuario'}</p>
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                             {comment.profiles?.role === 'admin'
                               ? 'Administrador'
                               : comment.profiles?.role === 'support'
@@ -511,11 +513,16 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                           </p>
                         </div>
                       </div>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(comment.created_at).toLocaleString('es-ES')}
+                      <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
+                        {new Date(comment.created_at).toLocaleString('es-ES', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </span>
                     </div>
-                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comment.message}</p>
+                    <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{comment.message}</p>
                     {comment.attachments && comment.attachments.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {comment.attachments.map((attachment, idx) => (
@@ -538,14 +545,14 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
               <div ref={commentsEndRef} />
             </div>
 
-            <form onSubmit={handleAddComment} className="border-t border-gray-200 dark:border-slate-700 pt-4">
+            <form onSubmit={handleAddComment} className="border-t border-gray-200 dark:border-slate-700 pt-3 sm:pt-4">
               <textarea
                 ref={commentTextareaRef}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Escribe un comentario..."
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none mb-3"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none mb-2 sm:mb-3 text-sm sm:text-base"
               />
 
               {selectedFiles.length > 0 && (
@@ -567,8 +574,8 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -579,13 +586,14 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                   />
                   <label
                     htmlFor="file-upload"
-                    className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition cursor-pointer font-medium"
+                    className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition cursor-pointer font-medium"
                   >
-                    <Paperclip className="w-4 h-4" />
-                    Adjuntar Archivos
+                    <Paperclip className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Adjuntar Archivos</span>
+                    <span className="sm:hidden">Archivos</span>
                   </label>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <EmojiPicker
                     onEmojiSelect={(emoji) => {
                       const textarea = commentTextareaRef.current;
@@ -604,10 +612,11 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
                   <button
                     type="submit"
                     disabled={submitting || uploading || (!newComment.trim() && selectedFiles.length === 0)}
-                    className="flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 dark:bg-blue-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm flex-1 sm:flex-initial"
                   >
-                    <Send className="w-4 h-4" />
-                    {uploading ? 'Subiendo archivos...' : submitting ? 'Enviando...' : 'Enviar Comentario'}
+                    <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">{uploading ? 'Subiendo archivos...' : submitting ? 'Enviando...' : 'Enviar Comentario'}</span>
+                    <span className="sm:hidden">{uploading ? 'Subiendo...' : submitting ? 'Enviando...' : 'Enviar'}</span>
                   </button>
                 </div>
               </div>
@@ -615,10 +624,10 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información</h3>
-            <div className="space-y-4">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Información</h3>
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex items-start gap-3">
                 <User className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                 <div>
@@ -646,26 +655,26 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
           </div>
 
           {canManageTicket && (
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Acciones</h3>
-              <div className="space-y-3">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Acciones</h3>
+              <div className="space-y-2.5 sm:space-y-3">
                 {!ticket.assigned_to && (
                   <button
                     onClick={handleAssignToMe}
-                    className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium"
+                    className="w-full px-3 sm:px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium text-sm sm:text-base"
                   >
                     Asignarme este ticket
                   </button>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                     Cambiar Estado
                   </label>
                   <select
                     value={ticket.status}
                     onChange={(e) => handleStatusChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                   >
                     <option value="open">Abierto</option>
                     <option value="in_progress">En Progreso</option>

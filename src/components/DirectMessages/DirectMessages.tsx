@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Send, MessageSquare, User, Search } from 'lucide-react';
+import { Send, MessageSquare, User, Search, X, ArrowLeft } from 'lucide-react';
 
 interface DirectMessage {
   id: string;
@@ -322,21 +322,51 @@ export function DirectMessages() {
     );
   }
 
+  const [showConversationsList, setShowConversationsList] = useState(false);
+
+  // En desktop, siempre mostrar la lista
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setShowConversationsList(true);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
-    <div className="h-full flex flex-col bg-white rounded-xl shadow-sm border border-gray-200">
-      <div className="flex h-full" style={{ minHeight: '600px' }}>
+    <div className="h-full flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700">
+      <div className="flex h-full relative" style={{ minHeight: '600px' }}>
+        {/* Overlay para móvil */}
+        {showConversationsList && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-10"
+            onClick={() => setShowConversationsList(false)}
+          />
+        )}
+
         {/* Lista de conversaciones */}
-        <div className="w-80 border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Mensajes Directos</h2>
+        <div className={`${showConversationsList ? 'flex' : 'hidden'} lg:flex fixed lg:relative inset-y-0 left-0 lg:inset-auto z-20 lg:z-auto w-full lg:w-80 border-r border-gray-200 dark:border-slate-700 flex-col bg-white dark:bg-slate-800 shadow-lg lg:shadow-none`}>
+          <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Mensajes Directos</h2>
+              <button
+                onClick={() => setShowConversationsList(false)}
+                className="lg:hidden p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="Buscar conversaciones..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               />
             </div>
           </div>
@@ -377,25 +407,26 @@ export function DirectMessages() {
                     onClick={() => {
                       setSelectedConversation(conv.other_user_id);
                       markAsRead(conv.other_user_id);
+                      setShowConversationsList(false);
                     }}
-                    className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition ${
-                      selectedConversation === conv.other_user_id ? 'bg-blue-50 border-l-4 border-blue-600' : ''
+                    className={`w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-slate-700 transition ${
+                      selectedConversation === conv.other_user_id ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-600' : ''
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <User className="w-6 h-6 text-blue-600" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-gray-900 truncate">{conv.other_user_name}</p>
+                      <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                        <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">{conv.other_user_name}</p>
                         {conv.unread_count > 0 && (
-                          <span className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                          <span className="bg-blue-600 text-white text-[10px] sm:text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center flex-shrink-0">
                             {conv.unread_count}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 truncate">{conv.last_message || 'Sin mensajes'}</p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{conv.last_message || 'Sin mensajes'}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 sm:mt-1">
                         {conv.last_message_at ? new Date(conv.last_message_at).toLocaleString('es-ES', {
                           day: '2-digit',
                           month: '2-digit',
@@ -412,18 +443,24 @@ export function DirectMessages() {
         </div>
 
         {/* Área de chat */}
-        <div className="flex-1 flex flex-col">
+        <div className={`${showConversationsList ? 'hidden' : 'flex'} lg:flex flex-1 flex-col min-w-0 w-full`}>
           {selectedConversation ? (
             <>
               {/* Header del chat */}
-              <div className="p-4 border-b border-gray-200 bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <User className="w-5 h-5 text-blue-600" />
+              <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button
+                    onClick={() => setShowConversationsList(true)}
+                    className="lg:hidden p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">{selectedConversationData?.other_user_name}</p>
-                    <p className="text-sm text-gray-500">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate">{selectedConversationData?.other_user_name}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       {selectedConversationData?.other_user_role === 'admin' ? 'Administrador' : 
                        selectedConversationData?.other_user_role === 'support' ? 'Soporte' : 'Usuario'}
                     </p>
@@ -434,14 +471,14 @@ export function DirectMessages() {
               {/* Mensajes */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4 messages-scroll"
+                className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 messages-scroll"
                 style={{ maxHeight: 'calc(100vh - 200px)' }}
               >
                 {messages.length === 0 ? (
-                  <div className="text-center text-gray-500 mt-8">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p>No hay mensajes aún</p>
-                    <p className="text-sm mt-1">Envía el primer mensaje</p>
+                  <div className="text-center text-gray-500 dark:text-gray-400 mt-6 sm:mt-8">
+                    <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                    <p className="text-sm sm:text-base">No hay mensajes aún</p>
+                    <p className="text-xs sm:text-sm mt-1">Envía el primer mensaje</p>
                   </div>
                 ) : (
                   messages.map((msg) => {
@@ -452,16 +489,16 @@ export function DirectMessages() {
                         className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg ${
                             isMine
                               ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-900'
+                              : 'bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white'
                           }`}
                         >
-                          <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                          <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                           <p
-                            className={`text-xs mt-1 ${
-                              isMine ? 'text-blue-100' : 'text-gray-500'
+                            className={`text-[10px] sm:text-xs mt-1 ${
+                              isMine ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                             }`}
                           >
                             {new Date(msg.created_at).toLocaleString('es-ES', {
@@ -483,8 +520,8 @@ export function DirectMessages() {
               </div>
 
               {/* Input de mensaje */}
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
-                <div className="flex gap-2">
+              <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+                <div className="flex gap-1.5 sm:gap-2">
                   <textarea
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
@@ -496,25 +533,31 @@ export function DirectMessages() {
                     }}
                     placeholder="Escribe un mensaje..."
                     rows={2}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm sm:text-base"
                   />
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim() || sending}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+                    className="px-3 sm:px-4 lg:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base"
                   >
-                    <Send className="w-5 h-5" />
-                    Enviar
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="hidden sm:inline">Enviar</span>
                   </button>
                 </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-500">
+            <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400 p-4">
               <div className="text-center">
-                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">Selecciona una conversación</p>
-                <p className="text-sm mt-2">Elige una conversación de la lista para comenzar a chatear</p>
+                <MessageSquare className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300 dark:text-gray-600" />
+                <p className="text-base sm:text-lg font-medium">Selecciona una conversación</p>
+                <p className="text-xs sm:text-sm mt-2">Elige una conversación de la lista para comenzar a chatear</p>
+                <button
+                  onClick={() => setShowConversationsList(true)}
+                  className="lg:hidden mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Ver conversaciones
+                </button>
               </div>
             </div>
           )}
