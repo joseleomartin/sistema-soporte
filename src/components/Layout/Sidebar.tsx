@@ -1,4 +1,4 @@
-import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText, ChevronDown, ChevronRight, Briefcase, Sun, Moon } from 'lucide-react';
+import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText, ChevronDown, ChevronRight, ChevronLeft, Briefcase, Sun, Moon, Menu, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -53,9 +53,11 @@ interface SidebarProps {
   onNavigateToTask?: (taskId: string) => void;
   onNavigateToForum?: (subforumId: string) => void;
   onNavigateToTimeTracking?: () => void;
+  isCollapsed?: boolean;
+  onCollapseChange?: (collapsed: boolean) => void;
 }
 
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask, onNavigateToForum, onNavigateToTimeTracking }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask, onNavigateToForum, onNavigateToTimeTracking, isCollapsed: externalIsCollapsed, onCollapseChange }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { activeJobsCount } = useExtraction();
   const { theme, toggleTheme } = useTheme();
@@ -63,6 +65,19 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   const [logoError, setLogoError] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
+  
+  const isCollapsed = externalIsCollapsed !== undefined ? externalIsCollapsed : internalIsCollapsed;
+  
+  const handleCollapseToggle = () => {
+    const newCollapsed = !isCollapsed;
+    if (onCollapseChange) {
+      onCollapseChange(newCollapsed);
+    } else {
+      setInternalIsCollapsed(newCollapsed);
+    }
+  };
 
   useEffect(() => {
     if (profile?.avatar_url) {
@@ -138,9 +153,27 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   };
 
   return (
-    <aside className="w-64 bg-[#173548] border-r border-gray-700/30 flex flex-col h-screen fixed left-0 top-0 shadow-xl z-40">
+    <>
+      {/* Botón hamburguesa para móvil */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-[#173548] text-white rounded-lg shadow-lg hover:bg-[#1a3d52] transition-colors"
+        aria-label="Toggle menu"
+      >
+        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      {/* Overlay para móvil */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside className={`${isCollapsed ? 'w-0' : 'w-64'} bg-[#173548] border-r border-gray-700/30 flex flex-col h-screen fixed left-0 top-0 shadow-xl z-40 transform transition-all duration-300 ease-in-out overflow-hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
       {/* Header con logo y notificaciones */}
-      <div className="px-5 py-4 border-b border-gray-700/30 flex-shrink-0 bg-[#173548]">
+      <div className={`px-5 py-4 border-b border-gray-700/30 flex-shrink-0 bg-[#173548] ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <div className="flex items-center justify-between mb-4 gap-2">
           <button
             onClick={() => onViewChange('dashboard')}
@@ -158,19 +191,21 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
               />
             )}
           </button>
-          <NotificationBell 
-            onNavigateToTicket={onNavigateToTicket}
-            onNavigateToCalendar={handleNavigateToCalendar}
-            onNavigateToTasks={() => onViewChange('tasks')}
-            onNavigateToForum={onNavigateToForum || ((subforumId) => {
-              onViewChange('forums');
-            })}
-            onNavigateToSocial={() => onViewChange('social')}
-            onNavigateToTimeTracking={onNavigateToTimeTracking || (() => onViewChange('time-tracking'))}
-            onNavigateToProfessionalNews={() => onViewChange('professional-news')}
-          />
+          {!isCollapsed && (
+            <NotificationBell 
+              onNavigateToTicket={onNavigateToTicket}
+              onNavigateToCalendar={handleNavigateToCalendar}
+              onNavigateToTasks={() => onViewChange('tasks')}
+              onNavigateToForum={onNavigateToForum || ((subforumId) => {
+                onViewChange('forums');
+              })}
+              onNavigateToSocial={() => onViewChange('social')}
+              onNavigateToTimeTracking={onNavigateToTimeTracking || (() => onViewChange('time-tracking'))}
+              onNavigateToProfessionalNews={() => onViewChange('professional-news')}
+            />
+          )}
         </div>
-        {profile && (
+        {profile && !isCollapsed && (
           <div className="pt-4 border-t border-gray-700/30 bg-[#173548]">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white/50">
@@ -198,7 +233,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
       </div>
 
       {/* Navegación */}
-      <nav className="flex-1 p-3 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+      <nav className={`flex-1 p-3 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <ul className="space-y-1.5">
           {filteredItems.map((item) => {
             const Icon = item.icon;
@@ -218,6 +253,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                       toggleSubmenu(item.view);
                     } else {
                       onViewChange(item.view);
+                      setIsMobileMenuOpen(false); // Cerrar menú en móvil al seleccionar
                     }
                   }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative group ${
@@ -252,7 +288,10 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                       return (
                         <li key={child.view}>
                           <button
-                            onClick={() => onViewChange(child.view)}
+                            onClick={() => {
+                              onViewChange(child.view);
+                              setIsMobileMenuOpen(false); // Cerrar menú en móvil al seleccionar
+                            }}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 relative group ${
                               isChildActive
                                 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/20 font-medium scale-[1.01]'
@@ -279,10 +318,13 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
       </nav>
 
       {/* Footer con toggle de tema y botón de cerrar sesión */}
-      <div className="p-4 border-t border-gray-700/30 flex-shrink-0 mt-auto bg-[#173548] space-y-2">
+      <div className={`p-4 border-t border-gray-700/30 flex-shrink-0 mt-auto bg-[#173548] space-y-2 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         {/* Toggle de tema */}
         <button
-          onClick={toggleTheme}
+          onClick={() => {
+            toggleTheme();
+            setIsMobileMenuOpen(false); // Cerrar menú en móvil
+          }}
           className="w-full flex items-center gap-3 px-4 py-3 text-white/90 hover:bg-white/10 hover:text-white rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
           title={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
         >
@@ -307,5 +349,21 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         </button>
       </div>
     </aside>
+
+    {/* Botón para colapsar/expandir sidebar (solo desktop) */}
+    <button
+      onClick={handleCollapseToggle}
+      className={`hidden lg:flex fixed top-4 z-50 w-6 h-6 bg-[#173548] border-2 border-gray-700/30 text-white rounded-full items-center justify-center shadow-lg hover:bg-[#1a3d52] transition-all duration-300 ${
+        isCollapsed ? 'left-2' : 'left-[248px]'
+      }`}
+      title={isCollapsed ? 'Mostrar menú' : 'Ocultar menú'}
+    >
+      {isCollapsed ? (
+        <ChevronRight className="w-4 h-4" />
+      ) : (
+        <ChevronLeft className="w-4 h-4" />
+      )}
+    </button>
+    </>
   );
 }
