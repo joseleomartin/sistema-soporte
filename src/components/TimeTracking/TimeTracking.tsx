@@ -82,63 +82,66 @@ export function TimeTracking() {
 
   return (
     <div>
-      <div className="mb-6 border-b border-gray-200 dark:border-slate-700">
-        <nav className="flex gap-4">
+      <div className="mb-4 sm:mb-6 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+        <nav className="flex gap-2 sm:gap-4 min-w-max">
           <button
             onClick={() => setActiveTab('entry')}
-            className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+            className={`px-2 sm:px-4 py-2 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
               activeTab === 'entry'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Cargar Horas
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Cargar Horas</span>
+              <span className="sm:hidden">Cargar</span>
             </div>
           </button>
           {isAdmin && (
             <button
               onClick={() => setActiveTab('timer')}
-              className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-2 sm:px-4 py-2 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === 'timer'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Timer className="w-4 h-4" />
-                Cronómetro
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Cronómetro</span>
+                <span className="sm:hidden">Timer</span>
               </div>
             </button>
           )}
           {isAdmin && (
             <button
               onClick={() => setActiveTab('reports')}
-              className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-2 sm:px-4 py-2 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === 'reports'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Reportes
+              <div className="flex items-center gap-1 sm:gap-2">
+                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Reportes</span>
               </div>
             </button>
           )}
           {profile?.role === 'admin' && (
             <button
               onClick={() => setActiveTab('costs')}
-              className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+              className={`px-2 sm:px-4 py-2 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === 'costs'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Calculator className="w-4 h-4" />
-                Cálculo de Costos
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Cálculo de Costos</span>
+                <span className="sm:hidden">Costos</span>
               </div>
             </button>
           )}

@@ -176,7 +176,7 @@ function MainApp() {
         onNavigateToTimeTracking={handleNavigateToTimeTracking}
       />
       <main className="flex-1 overflow-auto lg:ml-64 bg-gray-50 dark:bg-slate-900">
-        <div className={`${currentView === 'social' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-4 lg:p-8`}>
+        <div className={`${currentView === 'social' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
           {renderContent()}
         </div>
       </main>

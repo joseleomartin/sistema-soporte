@@ -1013,24 +1013,24 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   return (
     <div>
       {/* Header con información del perfil */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-8 mb-8 text-gray-900 dark:text-white">
-        <div className="flex items-center gap-6">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-white dark:bg-slate-800 flex items-center justify-center flex-shrink-0 ring-4 ring-white ring-opacity-50">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8 text-gray-900 dark:text-white">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-white dark:bg-slate-800 flex items-center justify-center flex-shrink-0 ring-2 sm:ring-4 ring-white ring-opacity-50">
             {avatarUrl ? (
               <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              <User className="w-10 h-10 text-blue-600" />
+              <User className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
             )}
           </div>
-          <div className="flex-1">
-            <h2 className="text-3xl font-bold mb-2">¡Hola, {profile?.full_name}!</h2>
-            <p className="text-blue-100 text-lg">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2 truncate">¡Hola, {profile?.full_name}!</h2>
+            <p className="text-blue-100 text-sm sm:text-base md:text-lg">
               Bienvenido a tu panel personal
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-blue-100 mb-1">Miembro desde</p>
-            <p className="text-xl font-semibold">
+          <div className="text-left sm:text-right w-full sm:w-auto">
+            <p className="text-xs sm:text-sm text-blue-100 mb-1">Miembro desde</p>
+            <p className="text-lg sm:text-xl font-semibold">
               {(() => {
                 const accountCreated = new Date(profile?.created_at || new Date());
                 const now = new Date();
@@ -1046,33 +1046,33 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       </div>
 
       {/* Tarjetas de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
             <div 
               key={stat.label} 
-              className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 transition ${
+              className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 md:p-6 transition ${
                 stat.onClick ? 'cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-slate-600' : 'hover:shadow-md'
               }`}
               onClick={stat.onClick}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-lg ${stat.color}`}>
-                  <Icon className="w-6 h-6" />
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className={`p-2 sm:p-3 rounded-lg ${stat.color}`}>
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
               </div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">{stat.label}</p>
-              <p className={`${stat.isText ? 'text-2xl' : 'text-3xl'} font-bold text-gray-900 dark:text-white mb-1`}>
+              <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">{stat.label}</p>
+              <p className={`${stat.isText ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-bold text-gray-900 dark:text-white mb-1`}>
                 {stat.value}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{stat.description}</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">{stat.description}</p>
             </div>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8 items-start">
         {/* Calendario */}
         <div 
           className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-3 sm:p-5 flex flex-col max-h-[600px] overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -1334,115 +1334,115 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         </div>
 
         {/* Accesos Rápidos */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 max-h-[600px] overflow-hidden">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Accesos Rápidos</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-3 sm:p-4 md:p-6 max-h-[600px] overflow-hidden">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Accesos Rápidos</h3>
           </div>
-          <div className="space-y-3 overflow-y-auto pr-2 max-h-[520px] dashboard-scroll">
+          <div className="space-y-2 sm:space-y-3 overflow-y-auto pr-1 sm:pr-2 max-h-[520px] dashboard-scroll">
             <button
               onClick={() => onNavigate?.('forums')}
-              className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/40 transition cursor-pointer"
+              className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/40 transition cursor-pointer"
             >
-              <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-white">Mis Clientes</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Ver archivos y comunicación</p>
+              <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <div className="text-left min-w-0">
+                <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">Mis Clientes</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Ver archivos y comunicación</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('meetings')}
-              className="w-full flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/30 rounded-lg hover:bg-green-100 dark:hover:bg-green-800/40 transition cursor-pointer"
+              className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-green-50 dark:bg-green-900/30 rounded-lg hover:bg-green-100 dark:hover:bg-green-800/40 transition cursor-pointer"
             >
-              <Video className="w-5 h-5 text-green-600 dark:text-green-400" />
-              <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-white">Salas de Reunión</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Únete a videollamadas</p>
+              <Video className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <div className="text-left min-w-0">
+                <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">Salas de Reunión</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Únete a videollamadas</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('tools')}
-              className="w-full flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-800/40 transition cursor-pointer"
+              className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-800/40 transition cursor-pointer"
             >
-              <Wrench className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-white">Herramientas</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Extractor de tablas y OCR</p>
+              <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+              <div className="text-left min-w-0">
+                <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">Herramientas</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Extractor de tablas y OCR</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('time-tracking')}
-              className="w-full flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-800/40 transition cursor-pointer"
+              className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-800/40 transition cursor-pointer"
             >
-              <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-              <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-white">Carga de Horas</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Registra tus horas trabajadas</p>
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+              <div className="text-left min-w-0">
+                <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">Carga de Horas</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Registra tus horas trabajadas</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('social')}
-              className="w-full flex items-center gap-3 p-4 bg-pink-50 dark:bg-pink-900/30 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-800/40 transition cursor-pointer"
+              className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-pink-50 dark:bg-pink-900/30 rounded-lg hover:bg-pink-100 dark:hover:bg-pink-800/40 transition cursor-pointer"
             >
-              <Heart className="w-5 h-5 text-pink-600 dark:text-pink-400" />
-              <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-white">Social</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Comparte y conecta con tu equipo</p>
+              <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600 dark:text-pink-400 flex-shrink-0" />
+              <div className="text-left min-w-0">
+                <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">Social</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Comparte y conecta con tu equipo</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('tasks')}
-              className="w-full flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800/40 transition cursor-pointer"
+              className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800/40 transition cursor-pointer"
             >
-              <CheckSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-white">Tareas</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Gestiona tus tareas asignadas</p>
+              <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+              <div className="text-left min-w-0">
+                <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">Tareas</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Gestiona tus tareas asignadas</p>
               </div>
             </button>
             <button
               onClick={() => onNavigate?.('library')}
-              className="w-full flex items-center gap-3 p-4 bg-teal-50 dark:bg-teal-900/30 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-800/40 transition cursor-pointer"
+              className="w-full flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-teal-50 dark:bg-teal-900/30 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-800/40 transition cursor-pointer"
             >
-              <BookOpen className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-white">Biblioteca</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Recursos y cursos disponibles</p>
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 dark:text-teal-400 flex-shrink-0" />
+              <div className="text-left min-w-0">
+                <p className="font-medium text-sm sm:text-base text-gray-900 dark:text-white truncate">Biblioteca</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">Recursos y cursos disponibles</p>
               </div>
             </button>
           </div>
         </div>
 
         {/* Actividad Reciente */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 max-h-[600px] flex flex-col overflow-hidden">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Actividad Reciente</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-3 sm:p-4 md:p-6 max-h-[600px] flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Actividad Reciente</h3>
           </div>
           {recentActivities.length === 0 ? (
-            <div className="text-center py-12">
-              <Activity className="w-12 h-12 text-gray-600 dark:text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-600 dark:text-gray-300 mb-2">Sin actividad reciente</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 sm:py-12">
+              <Activity className="w-10 h-10 sm:w-12 sm:h-12 text-gray-600 dark:text-gray-300 mx-auto mb-3" />
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-2">Sin actividad reciente</p>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                 Comienza interactuando con tus clientes
               </p>
             </div>
           ) : (
-            <div className="space-y-3 flex-1 overflow-y-auto pr-2 min-h-0 dashboard-scroll">
+            <div className="space-y-2 sm:space-y-3 flex-1 overflow-y-auto pr-1 sm:pr-2 min-h-0 dashboard-scroll">
               {recentActivities.map((activity) => {
                 const Icon = activity.icon;
                 return (
                   <div 
                     key={activity.id} 
                     onClick={() => handleActivityClick(activity)}
-                    className="flex items-start gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-lg hover:border-purple-300 hover:bg-purple-50 dark:bg-purple-900/30 transition cursor-pointer"
+                    className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 border border-gray-200 dark:border-slate-700 rounded-lg hover:border-purple-300 hover:bg-purple-50 dark:bg-purple-900/30 transition cursor-pointer"
                   >
-                    <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
-                      <Icon className="w-4 h-4 text-purple-600" />
+                    <div className="p-1.5 sm:p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg flex-shrink-0">
+                      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{activity.title}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{formatDate(activity.date)}</p>
+                      <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white truncate">{activity.title}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1">{formatDate(activity.date)}</p>
                     </div>
                   </div>
                 );
@@ -1454,26 +1454,26 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
 
       {/* Sección de Vacaciones / Licencias - Solo para usuarios normales */}
       {profile?.role !== 'admin' && profile?.role !== 'support' && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3 sm:gap-0">
             <div className="flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-orange-600" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Vacaciones / Licencias</h3>
+              <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Vacaciones / Licencias</h3>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-1.5 w-full sm:w-auto">
               <button
                 onClick={() => setShowVacationModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-gray-900 dark:text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-xs sm:text-sm"
               >
-                <Plus className="w-4 h-4" />
-                Solicitar Vacaciones / Licencias
+                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="truncate">Solicitar Vacaciones / Licencias</span>
               </button>
               <button
                 onClick={() => setShowVacationCalendarModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-gray-900 dark:text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm"
               >
-                <CalendarIcon className="w-4 h-4" />
-                Ver Calendario
+                <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Ver Calendario</span>
               </button>
             </div>
           </div>
@@ -1661,12 +1661,12 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
 
       {/* Modal expandido del calendario */}
       {showCalendarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{ zIndex: selectedEvent ? 40 : 50 }} onClick={() => {
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50" style={{ zIndex: selectedEvent ? 40 : 50 }} onClick={() => {
           if (!selectedEvent) {
             setShowCalendarModal(false);
           }
         }}>
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-slate-800 rounded-none sm:rounded-xl shadow-xl max-w-6xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
@@ -1680,10 +1680,10 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                 <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
-            <div className="p-3 sm:p-6">
-              <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+            <div className="p-2 sm:p-3 md:p-6">
+              <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 md:gap-6">
                 {/* Calendario expandido */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-x-auto">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
                     <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                       {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
@@ -1705,16 +1705,16 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                   </div>
 
                   {/* Días de la semana */}
-                  <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-3">
+                  <div className="grid grid-cols-7 gap-0.5 sm:gap-1 md:gap-2 mb-2 sm:mb-3 min-w-[280px]">
                     {dayNames.map((day) => (
-                      <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 py-1 sm:py-2">
+                      <div key={day} className="text-center text-[10px] sm:text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300 py-0.5 sm:py-1 md:py-2">
                         {day}
                       </div>
                     ))}
                   </div>
 
                   {/* Días del mes - versión expandida */}
-                  <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                  <div className="grid grid-cols-7 gap-0.5 sm:gap-1 md:gap-2 min-w-[280px]">
                     {/* Espacios vacíos antes del primer día */}
                     {Array.from({ length: startingDayOfWeek }).map((_, index) => (
                       <div key={`empty-${index}`} className="aspect-square" />
@@ -1730,7 +1730,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                           key={day}
                           onClick={() => handleDayClick(day)}
                           className={`
-                            aspect-square flex flex-col items-start justify-start p-1 sm:p-2 text-xs sm:text-sm sm:text-base rounded-lg transition relative min-h-[60px] sm:min-h-[80px] border
+                            aspect-square flex flex-col items-start justify-start p-0.5 sm:p-1 md:p-2 text-[10px] sm:text-xs md:text-sm rounded-md sm:rounded-lg transition relative min-h-[50px] sm:min-h-[60px] md:min-h-[80px] border
                             ${isToday(day) 
                               ? 'bg-blue-600 text-white font-bold border-blue-700' 
                               : isSelected(day)
@@ -1739,13 +1739,13 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                             }
                           `}
                         >
-                          <span className="mb-0.5 sm:mb-1">{day}</span>
+                          <span className="mb-0.5 sm:mb-1 text-[10px] sm:text-xs md:text-sm font-medium">{day}</span>
                           {hasEvents && (
                             <div className="flex flex-col gap-0.5 sm:gap-1 w-full mt-0.5 sm:mt-1">
-                              {dayEvents.slice(0, 3).map((event, idx) => (
+                              {dayEvents.slice(0, 2).map((event, idx) => (
                                 <div
                                   key={idx}
-                                  className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded truncate ${
+                                  className={`text-[9px] sm:text-[10px] md:text-xs px-0.5 sm:px-1 md:px-1.5 py-0.5 rounded truncate ${
                                     event.isTask 
                                       ? event.taskPriority === 'urgent' 
                                         ? 'bg-red-200 dark:bg-red-900/50 text-red-900 dark:text-red-200 border border-red-300 dark:border-red-700/50' 
@@ -1762,13 +1762,14 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                   } ${isToday(day) ? 'bg-white dark:bg-slate-800 bg-opacity-30 dark:bg-opacity-50 text-gray-900 dark:text-white border-white/50 dark:border-slate-700/50' : ''}`}
                                   title={event.title}
                                 >
-                                  <span className="hidden sm:inline">{event.title.length > 15 ? `${event.title.substring(0, 15)}...` : event.title}</span>
-                                  <span className="sm:hidden">{event.title.length > 8 ? `${event.title.substring(0, 8)}...` : event.title}</span>
+                                  <span className="hidden md:inline">{event.title.length > 15 ? `${event.title.substring(0, 15)}...` : event.title}</span>
+                                  <span className="hidden sm:inline md:hidden">{event.title.length > 10 ? `${event.title.substring(0, 10)}...` : event.title}</span>
+                                  <span className="sm:hidden">{event.title.length > 6 ? `${event.title.substring(0, 6)}...` : event.title}</span>
                                 </div>
                               ))}
-                              {dayEvents.length > 3 && (
-                                <div className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded ${isToday(day) ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
-                                  +{dayEvents.length - 3} más
+                              {dayEvents.length > 2 && (
+                                <div className={`text-[9px] sm:text-[10px] md:text-xs px-0.5 sm:px-1 md:px-1.5 py-0.5 rounded ${isToday(day) ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
+                                  +{dayEvents.length - 2} más
                                 </div>
                               )}
                             </div>
@@ -1780,14 +1781,14 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                 </div>
 
                 {/* Panel lateral con eventos */}
-                <div className="w-full lg:w-80 flex-shrink-0">
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 lg:sticky lg:top-20">
+                <div className="w-full lg:w-80 flex-shrink-0 mt-4 lg:mt-0">
+                  <div className="bg-gray-50 dark:bg-slate-900/50 rounded-lg p-3 sm:p-4 lg:sticky lg:top-20">
                     {selectedDayEvents.length > 0 ? (
                       <>
-                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
+                        <h4 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 md:mb-4">
                           Eventos del {selectedDate ? `${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]}` : 'día'}
                         </h4>
-                        <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[500px] overflow-y-auto dashboard-scroll">
+                        <div className="space-y-2 sm:space-y-3 max-h-[250px] sm:max-h-[400px] md:max-h-[500px] overflow-y-auto dashboard-scroll">
                           {selectedDayEvents.map((event) => (
                             <button
                               key={event.id}

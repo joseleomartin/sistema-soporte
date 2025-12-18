@@ -450,141 +450,143 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex-1">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            <FolderOpen className="w-8 h-8 text-blue-600" />
-            Gestión de Clientes
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2 sm:gap-3">
+            <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-blue-600 flex-shrink-0" />
+            <span className="truncate">Gestión de Clientes</span>
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1 sm:mt-2">
             Base de datos completa de clientes con archivos, documentos y comunicación centralizada
           </p>
         </div>
         {canCreateForum && (
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => {
                 setBulkAssignModalKey(prev => prev + 1);
                 setShowBulkAssignModal(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium text-sm sm:text-base"
             >
-              <Users className="w-5 h-5" />
-              Asignación Masiva
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="truncate">Asignación Masiva</span>
             </button>
             <button
               onClick={() => setShowBulkImportModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-medium"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-medium text-sm sm:text-base"
             >
-              <FileSpreadsheet className="w-5 h-5" />
-              Importar Clientes
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="truncate">Importar Clientes</span>
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base"
             >
-              <Plus className="w-5 h-5" />
-              Nuevo Cliente
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Nuevo Cliente</span>
             </button>
           </div>
         )}
       </div>
 
       {/* Banner informativo sobre funcionalidades */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 border border-blue-200 dark:border-slate-600 rounded-xl p-6 mb-6">
-        <h3 className="text-lg font-semibold text-blue-900 dark:text-white mb-3 flex items-center gap-2">
-          <File className="w-5 h-5" />
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 border border-blue-200 dark:border-slate-600 rounded-xl p-4 sm:p-5 md:p-6 mb-4 sm:mb-6">
+        <h3 className="text-base sm:text-lg font-semibold text-blue-900 dark:text-white mb-2 sm:mb-3 flex items-center gap-2">
+          <File className="w-4 h-4 sm:w-5 sm:h-5" />
           Sistema Completo de Gestión
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-start gap-3">
-            <div className="bg-white dark:bg-slate-700 rounded-lg p-2">
-              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <div className="bg-white dark:bg-slate-700 rounded-lg p-1.5 sm:p-2 flex-shrink-0">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <p className="font-medium text-blue-900 dark:text-blue-200 text-sm">Documentos</p>
-              <p className="text-xs text-blue-700 dark:text-blue-300">PDFs, Excel, Word y más</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="bg-white dark:bg-slate-700 rounded-lg p-2">
-              <Image className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="font-medium text-blue-900 dark:text-blue-200 text-sm">Multimedia</p>
-              <p className="text-xs text-blue-700 dark:text-blue-300">Fotos, videos e imágenes</p>
+            <div className="min-w-0">
+              <p className="font-medium text-blue-900 dark:text-blue-200 text-xs sm:text-sm">Documentos</p>
+              <p className="text-[10px] sm:text-xs text-blue-700 dark:text-blue-300">PDFs, Excel, Word y más</p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <div className="bg-white dark:bg-slate-700 rounded-lg p-2">
-              <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <div className="flex items-start gap-2 sm:gap-3">
+            <div className="bg-white dark:bg-slate-700 rounded-lg p-1.5 sm:p-2 flex-shrink-0">
+              <Image className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
             </div>
-            <div>
-              <p className="font-medium text-blue-900 dark:text-blue-200 text-sm">Comunicación</p>
-              <p className="text-xs text-blue-700 dark:text-blue-300">Chat y mensajería en tiempo real</p>
+            <div className="min-w-0">
+              <p className="font-medium text-blue-900 dark:text-blue-200 text-xs sm:text-sm">Multimedia</p>
+              <p className="text-[10px] sm:text-xs text-blue-700 dark:text-blue-300">Fotos, videos e imágenes</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 sm:gap-3 sm:col-span-2 md:col-span-1">
+            <div className="bg-white dark:bg-slate-700 rounded-lg p-1.5 sm:p-2 flex-shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-medium text-blue-900 dark:text-blue-200 text-xs sm:text-sm">Comunicación</p>
+              <p className="text-[10px] sm:text-xs text-blue-700 dark:text-blue-300">Chat y mensajería en tiempo real</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4 space-y-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-4 sm:mb-6 p-3 sm:p-4 space-y-3 sm:space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+          <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Buscar clientes por nombre..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 
         {/* Panel de Filtros */}
-        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200 dark:border-slate-700">
-          <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-            <Filter className="w-4 h-4" />
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-3 pt-3 border-t border-gray-200 dark:border-slate-700">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 w-full sm:w-auto">
+            <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="font-medium">Filtros:</span>
           </div>
 
           {/* Filtro por Orden Alfabético */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-300">Orden:</label>
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value as 'alphabetical' | 'activity' | 'none');
-                if (e.target.value === 'none') {
-                  setSortOrder('asc');
-                }
-              }}
-              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="none">Sin orden</option>
-              <option value="alphabetical">Alfabético</option>
-              <option value="activity">Actividad</option>
-            </select>
-            {sortBy !== 'none' && (
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
-                title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial min-w-0">
+            <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">Orden:</label>
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 sm:flex-initial">
+              <select
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as 'alphabetical' | 'activity' | 'none');
+                  if (e.target.value === 'none') {
+                    setSortOrder('asc');
+                  }
+                }}
+                className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex-1 sm:flex-initial min-w-0"
               >
-                {sortOrder === 'asc' ? (
-                  <ArrowUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                ) : (
-                  <ArrowDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                )}
-              </button>
-            )}
+                <option value="none">Sin orden</option>
+                <option value="alphabetical">Alfabético</option>
+                <option value="activity">Actividad</option>
+              </select>
+              {sortBy !== 'none' && (
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="p-1 sm:p-1.5 hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors flex-shrink-0"
+                  title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+                >
+                  {sortOrder === 'asc' ? (
+                    <ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300" />
+                  ) : (
+                    <ArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300" />
+                  )}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Filtro por Tareas Pendientes */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-300">Tareas:</label>
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial min-w-0">
+            <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">Tareas:</label>
             <select
               value={filterByTasks}
               onChange={(e) => setFilterByTasks(e.target.value as 'all' | 'with_tasks' | 'without_tasks')}
-              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex-1 sm:flex-initial min-w-0"
             >
               <option value="all">Todos</option>
               <option value="with_tasks">Con tareas pendientes</option>
@@ -593,16 +595,16 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
           </div>
 
           {/* Filtro por Favoritos */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setFilterByFavorites(!filterByFavorites)}
-              className={`flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg transition-colors ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm border rounded-lg transition-colors ${
                 filterByFavorites
                   ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700/50 text-yellow-700 dark:text-yellow-300'
                   : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600'
               }`}
             >
-              <Star className={`w-4 h-4 ${filterByFavorites ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+              <Star className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${filterByFavorites ? 'fill-yellow-500 text-yellow-500' : ''}`} />
               <span>Favoritos</span>
             </button>
           </div>
@@ -617,7 +619,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                 setFilterByFavorites(false);
                 setSearchTerm('');
               }}
-              className="ml-auto px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
+              className="w-full sm:w-auto sm:ml-auto px-3 py-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-600 rounded-lg transition-colors"
             >
               Limpiar filtros
             </button>
@@ -626,37 +628,37 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       </div>
 
       {filteredSubforums.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
-          <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 sm:p-8 md:p-12 text-center">
+          <FolderOpen className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2">
             {searchTerm ? 'No se encontraron clientes' : 'No hay clientes disponibles'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
             {canCreateForum && !searchTerm
               ? 'Crea el primer cliente para comenzar a gestionar archivos y comunicación'
               : 'No tienes acceso a ningún cliente todavía'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {filteredSubforums.map((forum) => (
             <div
               key={forum.id}
-              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 hover:shadow-md transition relative group cursor-pointer"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 md:p-6 hover:shadow-md transition relative group cursor-pointer"
               onClick={() => setSelectedSubforum(forum.id)}
             >
-              <div className="absolute top-4 right-4 flex gap-1">
+              <div className="absolute top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 flex gap-0.5 sm:gap-1 flex-wrap">
                 {/* Botón de Favorito */}
                 <button
                   onClick={(e) => toggleFavorite(forum.id, e)}
-                  className={`p-2 rounded-lg transition ${
+                  className={`p-1.5 sm:p-2 rounded-lg transition ${
                     favoriteIds.has(forum.id)
                       ? 'text-yellow-500 bg-yellow-50 hover:bg-yellow-100'
                       : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
                   }`}
                   title={favoriteIds.has(forum.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
                 >
-                  <Star className={`w-5 h-5 ${favoriteIds.has(forum.id) ? 'fill-current' : ''}`} />
+                  <Star className={`w-4 h-4 sm:w-5 sm:h-5 ${favoriteIds.has(forum.id) ? 'fill-current' : ''}`} />
                 </button>
                 {canCreateForum && (
                   <>
@@ -665,87 +667,85 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                         e.stopPropagation();
                         setEditClientFor(forum);
                       }}
-                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                      className="p-1.5 sm:p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
                       title="Editar datos del cliente"
                     >
-                      <Settings className="w-5 h-5" />
+                      <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setManageDeptPermissionsFor({ forumId: forum.forum_id, forumName: forum.name });
                       }}
-                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                      className="p-1.5 sm:p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
                       title="Permisos por departamento"
                     >
-                      <Building2 className="w-5 h-5" />
+                      <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setManagePermissionsFor(forum);
                       }}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       title="Permisos por usuario"
                     >
-                      <Users className="w-5 h-5" />
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   </>
                 )}
               </div>
 
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowFilesFor(forum);
                     }}
-                    className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
+                    className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
                     title="Ver archivos del cliente"
                   >
-                    <FolderOpen className="w-6 h-6 text-blue-600" />
+                    <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                   </button>
-                  {canCreateForum && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowClientInfoFor(forum);
-                      }}
-                      className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
-                      title="Ver ficha del cliente"
-                    >
-                      <FileText className="w-6 h-6 text-blue-600" />
-                    </button>
-                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowClientInfoFor(forum);
+                    }}
+                    className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
+                    title="Ver ficha del cliente"
+                  >
+                    <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                  </button>
                 </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowFilesFor(forum);
                   }}
-                  className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 transition"
+                  className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 transition"
                   title="Ver archivos"
                 >
-                  <File className="w-4 h-4" />
+                  <File className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span>{forum.message_count || 0}</span>
                 </button>
               </div>
 
-              <div className="w-full text-left">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{forum.name}</h3>
+              <div className="w-full text-left pr-8 sm:pr-12 md:pr-16">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-1.5 sm:mb-2 line-clamp-2">{forum.name}</h3>
 
                 {forum.description && (
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 line-clamp-2">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 sm:mb-3 line-clamp-2">
                     {forum.description}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100 mb-2">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0 pt-2 sm:pt-3 border-t border-gray-100 dark:border-slate-700 mb-1.5 sm:mb-2">
+                  <span className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 truncate max-w-full">
                     Cliente: {forum.client_name}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-[10px] sm:text-xs text-gray-400">
                     {new Date(forum.created_at).toLocaleDateString('es-ES')}
                   </span>
                 </div>
@@ -756,10 +756,10 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                       e.stopPropagation();
                       handleShowPendingTasks(forum.client_name);
                     }}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-700 text-sm font-medium transition-colors mt-2"
+                    className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-700 text-xs sm:text-sm font-medium transition-colors mt-2"
                   >
-                    <CheckSquare className="w-4 h-4" />
-                    <span>{pendingTasksCount.get(forum.client_name)} tarea{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''} pendiente{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''}</span>
+                    <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="truncate">{pendingTasksCount.get(forum.client_name)} tarea{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''} pendiente{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''}</span>
                   </button>
                 )}
               </div>

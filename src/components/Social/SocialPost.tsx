@@ -404,33 +404,33 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-300 dark:border-slate-700 overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="px-4 pt-3 pb-2 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="px-3 sm:px-4 pt-2.5 sm:pt-3 pb-2 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
           {post.user_profile?.avatar_url ? (
             <img
               src={post.user_profile.avatar_url}
               alt={post.user_profile.full_name}
-              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover flex-shrink-0"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-              <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 dark:text-gray-400" />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-gray-900 dark:text-white text-[15px] truncate">
+            <p className="font-semibold text-gray-900 dark:text-white text-sm sm:text-[15px] truncate">
               {post.user_profile?.full_name || 'Usuario'}
             </p>
-            <p className="text-[13px] text-gray-500 dark:text-gray-400">{formatTimeAgo(post.created_at)}</p>
+            <p className="text-xs sm:text-[13px] text-gray-500 dark:text-gray-400">{formatTimeAgo(post.created_at)}</p>
           </div>
         </div>
         {canEditOrDelete && (
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+              className="p-1 sm:p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
             >
-              <MoreVertical className="w-5 h-5" />
+              <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             {showMenu && (
               <>
@@ -438,15 +438,15 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-20">
+                <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 z-20">
                   <button
                     onClick={() => {
                       setShowMenu(false);
                       handleDelete();
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
+                    className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Eliminar
                   </button>
                 </div>
@@ -458,14 +458,14 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
 
       {/* Content */}
       {post.content && (
-        <div className="px-4 py-2 flex-shrink-0">
-          <p className="text-gray-900 dark:text-white text-[15px] leading-[1.33] whitespace-pre-wrap break-words">{post.content}</p>
+        <div className="px-3 sm:px-4 py-2 flex-shrink-0">
+          <p className="text-gray-900 dark:text-white text-sm sm:text-[15px] leading-[1.33] whitespace-pre-wrap break-words">{post.content}</p>
         </div>
       )}
 
       {/* Reel embed */}
       {post.reel_url && post.reel_platform && (
-        <div className="w-full flex-shrink-0 bg-gray-100 dark:bg-slate-900 p-4">
+        <div className="w-full flex-shrink-0 bg-gray-100 dark:bg-slate-900 p-2 sm:p-3 md:p-4">
           <div className="max-w-2xl mx-auto">
             {post.reel_platform === 'instagram' && (
               <div 
@@ -669,18 +669,18 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
       )}
 
       {/* Actions */}
-      <div className="px-4 py-2 border-t border-gray-200 dark:border-slate-700 mt-auto flex-shrink-0 relative">
+      <div className="px-3 sm:px-4 py-2 border-t border-gray-200 dark:border-slate-700 mt-auto flex-shrink-0 relative">
         {/* Likes count */}
         {likesCount > 0 && (
-          <div className="pb-2.5 flex items-center gap-2 relative">
+          <div className="pb-2 sm:pb-2.5 flex items-center gap-1.5 sm:gap-2 relative">
             <div className="flex items-center -space-x-1">
-              <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center border-2 border-white shadow-sm">
-                <Heart className="w-3.5 h-3.5 text-white fill-white" />
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500 flex items-center justify-center border-2 border-white shadow-sm">
+                <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white fill-white" />
               </div>
             </div>
             <button
               type="button"
-              className="text-[13px] text-gray-700 dark:text-gray-300 font-medium cursor-pointer hover:underline text-left"
+              className="text-xs sm:text-[13px] text-gray-700 dark:text-gray-300 font-medium cursor-pointer hover:underline text-left"
               onClick={async (e) => {
                 e.stopPropagation();
                 if (likesCount > 0) {
@@ -705,11 +705,11 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                   }}
                 />
                 <div 
-                  className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 p-3 z-50"
+                  className="absolute bottom-full left-0 mb-2 w-56 sm:w-64 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 p-2 sm:p-3 z-50"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                       {likesCount === 1 ? 'A 1 persona le gusta' : `A ${likesCount} personas les gusta`}
                     </p>
                     <button
@@ -720,38 +720,38 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
                       }}
                       className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   </div>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                  <div className="space-y-1.5 sm:space-y-2 max-h-48 sm:max-h-64 overflow-y-auto">
                     {likedUsers.length > 0 ? (
                       <>
                         {likedUsers.map((user) => (
-                          <div key={user.id} className="flex items-center gap-2 py-1">
+                          <div key={user.id} className="flex items-center gap-1.5 sm:gap-2 py-0.5 sm:py-1">
                             {user.avatar_url ? (
                               <img
                                 src={user.avatar_url}
                                 alt={user.full_name}
-                                className="w-8 h-8 rounded-full object-cover"
+                                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover"
                               />
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
-                                <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center">
+                                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500 dark:text-gray-400" />
                               </div>
                             )}
-                            <span className="text-sm text-gray-900 dark:text-white">{user.full_name}</span>
+                            <span className="text-xs sm:text-sm text-gray-900 dark:text-white truncate">{user.full_name}</span>
                           </div>
                         ))}
                         {likesCount > likedUsers.length && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-slate-700">
+                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 pt-1.5 sm:pt-2 border-t border-gray-200 dark:border-slate-700">
                             y {likesCount - likedUsers.length} más...
                           </p>
                         )}
                       </>
                     ) : (
-                      <div className="text-center py-4">
-                        <Loader2 className="w-5 h-5 animate-spin text-gray-400 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Cargando...</p>
+                      <div className="text-center py-3 sm:py-4">
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-gray-400 mx-auto mb-1.5 sm:mb-2" />
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">Cargando...</p>
                       </div>
                     )}
                   </div>
@@ -762,23 +762,23 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
         )}
 
         {/* Action buttons */}
-        <div className="flex items-center border-t border-gray-200 dark:border-slate-700 pt-1 -mx-4 px-4">
+        <div className="flex items-center border-t border-gray-200 dark:border-slate-700 pt-1 -mx-3 sm:-mx-4 px-3 sm:px-4">
           <button
             onClick={(e) => {
               e.stopPropagation();
               handleLike();
             }}
-            className="relative flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group"
+            className="relative flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group"
             disabled={!profile}
           >
             <Heart
-              className={`w-5 h-5 transition-all duration-200 ${
+              className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-200 ${
                 userLiked
                   ? 'fill-red-500 text-red-500'
                   : 'text-gray-500 dark:text-gray-400 group-hover:text-red-500'
               }`}
             />
-            <span className={`text-[15px] font-medium ${
+            <span className={`text-xs sm:text-[15px] font-medium ${
               userLiked ? 'text-red-500' : 'text-gray-600 dark:text-gray-300 group-hover:text-red-500'
             }`}>
               Me gusta
@@ -789,16 +789,16 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
               e.stopPropagation();
               setShowComments(!showComments);
             }}
-            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+            className="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
           >
-            <MessageCircle className="w-5 h-5" />
-            <span className="text-[15px] font-medium">Comentar</span>
+            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-xs sm:text-[15px] font-medium">Comentar</span>
           </button>
         </div>
 
         {/* Comentarios - Expandible */}
         {showComments && (
-          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-slate-700">
+          <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-gray-200 dark:border-slate-700">
             <PostComments postId={post.id} />
           </div>
         )}

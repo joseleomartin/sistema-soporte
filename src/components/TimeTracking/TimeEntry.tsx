@@ -249,124 +249,126 @@ export function TimeEntry() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Clock className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            Carga de Horas
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 md:mb-8 gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Clock className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+            <span>Carga de Horas</span>
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">Registra las horas trabajadas por cliente</p>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1 sm:mt-2">Registra las horas trabajadas por cliente</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
         >
-          <Plus className="w-5 h-5" />
-          Cargar Horas
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span>Cargar Horas</span>
         </button>
       </div>
 
       {message && (
-        <div className={`mb-6 rounded-lg p-4 flex items-start gap-3 ${
+        <div className={`mb-4 sm:mb-6 rounded-lg p-3 sm:p-4 flex items-start gap-2 sm:gap-3 ${
           message.type === 'success' 
             ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50' 
             : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50'
         }`}>
           {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
           )}
-          <p className={message.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
+          <p className={`text-sm sm:text-base ${message.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
             {message.text}
           </p>
         </div>
       )}
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-6 p-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <div className="flex items-center gap-3 flex-1 sm:flex-initial">
-            <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={tempStartDate}
-                onChange={(e) => {
-                  // Solo actualizar el estado temporal mientras se navega
-                  setTempStartDate(e.target.value);
-                }}
-                onBlur={(e) => {
-                  // Solo actualizar el estado real cuando el usuario termine de seleccionar
-                  const newDate = e.target.value;
-                  if (newDate !== startDate && newDate) {
-                    setStartDate(newDate);
-                    setTempStartDate(newDate);
-                  } else if (!newDate) {
-                    // Si se borra, mantener el valor anterior
-                    setTempStartDate(startDate);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // Si presiona Enter, aplicar el cambio
-                  if (e.key === 'Enter') {
-                    const newDate = tempStartDate;
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 mb-4 sm:mb-6 p-3 sm:p-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-initial min-w-0">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-1 sm:flex-initial min-w-0">
+                <input
+                  type="date"
+                  value={tempStartDate}
+                  onChange={(e) => {
+                    // Solo actualizar el estado temporal mientras se navega
+                    setTempStartDate(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    // Solo actualizar el estado real cuando el usuario termine de seleccionar
+                    const newDate = e.target.value;
                     if (newDate !== startDate && newDate) {
                       setStartDate(newDate);
+                      setTempStartDate(newDate);
+                    } else if (!newDate) {
+                      // Si se borra, mantener el valor anterior
+                      setTempStartDate(startDate);
                     }
-                    e.currentTarget.blur();
-                  }
-                }}
-                max={endDate}
-                className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <span className="text-gray-400 dark:text-gray-500">-</span>
-              <input
-                type="date"
-                value={tempEndDate}
-                onChange={(e) => {
-                  // Solo actualizar el estado temporal mientras se navega
-                  setTempEndDate(e.target.value);
-                }}
-                onBlur={(e) => {
-                  // Solo actualizar el estado real cuando el usuario termine de seleccionar
-                  const newDate = e.target.value;
-                  if (newDate !== endDate && newDate) {
-                    setEndDate(newDate);
-                    setTempEndDate(newDate);
-                  } else if (!newDate) {
-                    // Si se borra, mantener el valor anterior
-                    setTempEndDate(endDate);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // Si presiona Enter, aplicar el cambio
-                  if (e.key === 'Enter') {
-                    const newDate = tempEndDate;
+                  }}
+                  onKeyDown={(e) => {
+                    // Si presiona Enter, aplicar el cambio
+                    if (e.key === 'Enter') {
+                      const newDate = tempStartDate;
+                      if (newDate !== startDate && newDate) {
+                        setStartDate(newDate);
+                      }
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  max={endDate}
+                  className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm flex-1 min-w-0"
+                />
+                <span className="text-gray-400 dark:text-gray-500 text-sm">-</span>
+                <input
+                  type="date"
+                  value={tempEndDate}
+                  onChange={(e) => {
+                    // Solo actualizar el estado temporal mientras se navega
+                    setTempEndDate(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    // Solo actualizar el estado real cuando el usuario termine de seleccionar
+                    const newDate = e.target.value;
                     if (newDate !== endDate && newDate) {
                       setEndDate(newDate);
+                      setTempEndDate(newDate);
+                    } else if (!newDate) {
+                      // Si se borra, mantener el valor anterior
+                      setTempEndDate(endDate);
                     }
-                    e.currentTarget.blur();
-                  }
-                }}
-                min={startDate}
-                className="px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  }}
+                  onKeyDown={(e) => {
+                    // Si presiona Enter, aplicar el cambio
+                    if (e.key === 'Enter') {
+                      const newDate = tempEndDate;
+                      if (newDate !== endDate && newDate) {
+                        setEndDate(newDate);
+                      }
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  min={startDate}
+                  className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm flex-1 min-w-0"
+                />
+              </div>
+            </div>
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500" />
+              <input
+                type="text"
+                placeholder="Buscar por cliente o descripción..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               />
             </div>
           </div>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              placeholder="Buscar por cliente o descripción..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <span className="font-semibold text-blue-900 dark:text-blue-200">
+          <div className="flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
+            <span className="font-semibold text-sm sm:text-base text-blue-900 dark:text-blue-200">
               Total: {formatHoursMinutes(totalHours)}
             </span>
           </div>
@@ -376,65 +378,65 @@ export function TimeEntry() {
       {/* Lista de entradas */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
         {filteredEntries.length === 0 ? (
-          <div className="p-12 text-center">
-            <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-gray-600" />
-            <p className="text-gray-500 dark:text-gray-400">
+          <div className="p-6 sm:p-8 md:p-12 text-center">
+            <Clock className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 text-gray-400 dark:text-gray-600" />
+            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
               {startDate === endDate 
                 ? `No hay horas cargadas para esta fecha`
                 : `No hay horas cargadas en el rango seleccionado`
               }
             </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Haz clic en "Cargar Horas" para agregar una entrada</p>
+            <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-1">Haz clic en "Cargar Horas" para agregar una entrada</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-slate-700">
             {filteredEntries.map((entry) => (
-              <div key={entry.id} className="p-6 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{entry.client?.name || 'Cliente desconocido'}</h3>
-                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+              <div key={entry.id} className="p-3 sm:p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-3 sm:gap-4">
+                  <div className="flex-1 min-w-0 w-full sm:w-auto">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                      <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                      <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate flex-1 min-w-0">{entry.client?.name || 'Cliente desconocido'}</h3>
+                      <span className="px-2 sm:px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
                         {formatHoursMinutes(parseFloat(entry.hours_worked.toString()))}
                       </span>
                     </div>
                     {entry.user && (
-                      <div className="flex items-center gap-2 ml-8 mb-2">
-                        <User className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-sm text-gray-600 dark:text-gray-300 font-medium">{entry.user.full_name}</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 ml-6 sm:ml-8 mb-1.5 sm:mb-2">
+                        <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium truncate">{entry.user.full_name}</span>
                         {profile?.role === 'admin' || profile?.role === 'support' ? (
-                          <span className="text-xs text-gray-400 dark:text-gray-500">({entry.user.email})</span>
+                          <span className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 truncate hidden sm:inline">({entry.user.email})</span>
                         ) : null}
                       </div>
                     )}
                     {entry.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300 ml-8 mb-2">{entry.description}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 ml-6 sm:ml-8 mb-1.5 sm:mb-2 line-clamp-2">{entry.description}</p>
                     )}
                     {entry.department && (
-                      <div className="flex items-center gap-2 ml-8 mb-1">
-                        <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-xs text-gray-500 dark:text-gray-400">{entry.department.name}</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 ml-6 sm:ml-8 mb-1">
+                        <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                        <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">{entry.department.name}</span>
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 dark:text-gray-500 ml-8 mt-1">
+                    <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 ml-6 sm:ml-8 mt-1">
                       {new Date(entry.created_at).toLocaleString('es-ES')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 self-start sm:self-center">
                     <button
                       onClick={() => setEditingEntry(entry)}
-                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                      className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                       title="Editar"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(entry.id)}
-                      className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Eliminar"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   </div>
                 </div>

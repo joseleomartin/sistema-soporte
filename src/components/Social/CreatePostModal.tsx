@@ -302,25 +302,25 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-0 sm:p-4">
         <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
         
-        <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full">
+        <div className="relative bg-white dark:bg-slate-800 rounded-none sm:rounded-xl shadow-xl max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Crear Publicación</h2>
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-slate-700">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Crear Publicación</h2>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
           {/* Content */}
-          <form onSubmit={handleSubmit} className="p-6">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6">
             {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg text-red-700 dark:text-red-300 text-sm">
+              <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg text-red-700 dark:text-red-300 text-xs sm:text-sm">
                 {error}
               </div>
             )}
@@ -330,16 +330,16 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="¿Qué quieres compartir?"
-              className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+              className="w-full p-2.5 sm:p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3 sm:mb-4 text-sm sm:text-base"
               rows={4}
               maxLength={500}
             />
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-right">
+            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-3 sm:mb-4 text-right">
               {content.length}/500
             </div>
 
             {/* Tipo de post: Media o Reel */}
-            <div className="mb-4 flex gap-2">
+            <div className="mb-3 sm:mb-4 flex gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -348,15 +348,15 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
                   setReelPlatform(null);
                   setError(null);
                 }}
-                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                className={`flex-1 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg border-2 transition-colors ${
                   postType === 'media'
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                     : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-slate-500'
                 }`}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  <span className="font-medium">Subir Media</span>
+                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                  <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="font-medium text-xs sm:text-sm">Subir Media</span>
                 </div>
               </button>
               <button
@@ -366,36 +366,36 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
                   setSelectedFiles([]);
                   setError(null);
                 }}
-                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                className={`flex-1 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg border-2 transition-colors ${
                   postType === 'reel'
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                     : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-slate-500'
                 }`}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <Link2 className="w-4 h-4" />
-                  <span className="font-medium">Compartir Post/Reel</span>
+                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                  <Link2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="font-medium text-xs sm:text-sm">Compartir Post/Reel</span>
                 </div>
               </button>
             </div>
 
             {/* Reel URL input */}
             {postType === 'reel' && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <div className="mb-3 sm:mb-4">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                   Pega el link del post o reel (Instagram, TikTok, X, Facebook o YouTube)
                 </label>
                 <input
                   type="url"
                   value={reelUrl}
                   onChange={(e) => handleReelUrlChange(e.target.value)}
-                  placeholder="https://www.instagram.com/p/... o https://www.youtube.com/... o https://www.tiktok.com/... o https://x.com/... o https://www.facebook.com/..."
-                  className="w-full p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://www.instagram.com/p/... o https://www.youtube.com/..."
+                  className="w-full p-2.5 sm:p-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 />
                 {reelPlatform && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                    <Link2 className="w-4 h-4" />
-                    <span>
+                  <div className="mt-1.5 sm:mt-2 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400">
+                    <Link2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="truncate">
                       {reelPlatform === 'youtube' && 'YouTube detectado'}
                       {reelPlatform === 'instagram' && 'Instagram Post/Reel detectado'}
                       {reelPlatform === 'tiktok' && 'TikTok detectado'}
@@ -413,19 +413,19 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-lg p-4 transition-colors mb-4 ${
+              className={`border-2 border-dashed rounded-lg p-3 sm:p-4 transition-colors mb-3 sm:mb-4 ${
                 isDragging
                   ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
                   : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
               }`}
             >
               {selectedFiles.length === 0 ? (
-                <div className="text-center py-4">
-                  <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-300 mb-2">
+                <div className="text-center py-3 sm:py-4">
+                  <Upload className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3 sm:mb-4" />
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-1.5 sm:mb-2">
                     Arrastra y suelta imágenes, videos o GIFs aquí
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
                     o haz clic para seleccionar
                   </p>
                   <input
@@ -439,24 +439,24 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                   >
                     Seleccionar archivos
                   </button>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+                  <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-3 sm:mt-4">
                     Máximo 10MB para imágenes/GIFs, 50MB para videos. Puedes seleccionar múltiples archivos.
                   </p>
                 </div>
               ) : (
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                       {selectedFiles.length} archivo{selectedFiles.length !== 1 ? 's' : ''} seleccionado{selectedFiles.length !== 1 ? 's' : ''}
                     </p>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                      className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                     >
                       + Agregar más
                     </button>
@@ -469,7 +469,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
                     multiple
                     className="hidden"
                   />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                     {selectedFiles.map((fileWithPreview) => (
                       <div key={fileWithPreview.id} className="relative group">
                         <div className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700 aspect-square">
@@ -489,12 +489,12 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
                           <button
                             type="button"
                             onClick={() => removeFile(fileWithPreview.id)}
-                            className="absolute top-1 right-1 p-1.5 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors opacity-0 group-hover:opacity-100"
+                            className="absolute top-1 right-1 p-1 sm:p-1.5 bg-black bg-opacity-50 hover:bg-opacity-70 rounded-full text-white transition-colors opacity-0 group-hover:opacity-100"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 truncate">
+                        <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 mt-0.5 sm:mt-1 truncate">
                           {fileWithPreview.file.name}
                         </p>
                       </div>
@@ -506,11 +506,11 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-3 mt-6">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 mt-4 sm:mt-6">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                className="px-3 sm:px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm sm:text-base"
                 disabled={uploading}
               >
                 Cancelar
@@ -518,12 +518,12 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
               <button
                 type="submit"
                 disabled={uploading || (postType === 'media' && selectedFiles.length === 0) || (postType === 'reel' && !reelUrl.trim())}
-                className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-3 sm:px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
               >
                 {uploading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Publicando...
+                    <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                    <span>Publicando...</span>
                   </>
                 ) : (
                   'Publicar'

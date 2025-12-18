@@ -381,49 +381,51 @@ export function SocialFeed() {
   return (
     <div className="h-full overflow-auto w-full max-w-full">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Social</h1>
-          <p className="text-gray-600 dark:text-gray-300">
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">Social</h1>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
             Comparte momentos, ideas y contenido con tu equipo
           </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm sm:text-base w-full sm:w-auto"
         >
-          <Plus className="w-5 h-5" />
-          Nueva Publicación
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden sm:inline">Nueva Publicación</span>
+          <span className="sm:hidden">Nueva Publicación</span>
         </button>
       </div>
 
       {/* Posts Feed */}
       {posts.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-12 text-center">
-          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 sm:p-8 md:p-12 text-center">
+          <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2">
             No hay publicaciones aún
           </p>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
             Sé el primero en compartir algo con tu equipo
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
-            <Plus className="w-5 h-5" />
-            Crear Primera Publicación
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Crear Primera Publicación</span>
+            <span className="sm:hidden">Crear Publicación</span>
           </button>
         </div>
       ) : (
         <>
           {/* Tarjetas de cumpleaños */}
           {birthdayUsers.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <BirthdayCard users={birthdayUsers} />
             </div>
           )}
 
-          <div className="max-w-2xl mx-auto space-y-4">
+          <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4 px-2 sm:px-0">
             {posts.map((post) => (
               <SocialPost
                 key={post.id}
@@ -435,16 +437,16 @@ export function SocialFeed() {
           
           {/* Load More Button */}
           {hasMore && (
-            <div className="text-center py-6 mt-6">
+            <div className="text-center py-4 sm:py-6 mt-4 sm:mt-6">
               <button
                 onClick={handleLoadMore}
                 disabled={loadingRef.current}
-                className="px-6 py-2 bg-gray-100 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto text-sm sm:text-base"
               >
                 {loadingRef.current ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Cargando...
+                    <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                    <span>Cargando...</span>
                   </>
                 ) : (
                   'Cargar más'
@@ -455,13 +457,6 @@ export function SocialFeed() {
         </>
       )}
 
-      {/* Floating Action Button (Mobile) */}
-      <button
-        onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-6 right-6 md:hidden w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center justify-center z-10"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
 
       {/* Create Post Modal */}
       {showCreateModal && (
