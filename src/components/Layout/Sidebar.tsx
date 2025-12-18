@@ -1,4 +1,4 @@
-import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText, ChevronDown, ChevronRight, ChevronLeft, Briefcase, Sun, Moon, Menu, X } from 'lucide-react';
+import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText, ChevronDown, ChevronRight, Briefcase, Sun, Moon, Menu, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -53,11 +53,9 @@ interface SidebarProps {
   onNavigateToTask?: (taskId: string) => void;
   onNavigateToForum?: (subforumId: string) => void;
   onNavigateToTimeTracking?: () => void;
-  isCollapsed?: boolean;
-  onCollapseChange?: (collapsed: boolean) => void;
 }
 
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask, onNavigateToForum, onNavigateToTimeTracking, isCollapsed: externalIsCollapsed, onCollapseChange }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask, onNavigateToForum, onNavigateToTimeTracking }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { activeJobsCount } = useExtraction();
   const { theme, toggleTheme } = useTheme();
@@ -66,18 +64,6 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
-  
-  const isCollapsed = externalIsCollapsed !== undefined ? externalIsCollapsed : internalIsCollapsed;
-  
-  const handleCollapseToggle = () => {
-    const newCollapsed = !isCollapsed;
-    if (onCollapseChange) {
-      onCollapseChange(newCollapsed);
-    } else {
-      setInternalIsCollapsed(newCollapsed);
-    }
-  };
 
   useEffect(() => {
     if (profile?.avatar_url) {
@@ -171,9 +157,11 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         />
       )}
 
-      <aside className={`${isCollapsed ? 'w-0' : 'w-64'} bg-[#173548] border-r border-gray-700/30 flex flex-col h-screen fixed left-0 top-0 shadow-xl z-40 transform transition-all duration-300 ease-in-out overflow-hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`w-64 bg-[#173548] border-r border-gray-700/30 flex flex-col h-screen fixed left-0 top-0 shadow-xl z-40 transform transition-transform duration-300 ease-in-out ${
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
       {/* Header con logo y notificaciones */}
-      <div className={`px-5 py-4 border-b border-gray-700/30 flex-shrink-0 bg-[#173548] ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <div className="px-5 py-4 border-b border-gray-700/30 flex-shrink-0 bg-[#173548]">
         <div className="flex items-center justify-between mb-4 gap-2">
           <button
             onClick={() => onViewChange('dashboard')}
@@ -191,21 +179,19 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
               />
             )}
           </button>
-          {!isCollapsed && (
-            <NotificationBell 
-              onNavigateToTicket={onNavigateToTicket}
-              onNavigateToCalendar={handleNavigateToCalendar}
-              onNavigateToTasks={() => onViewChange('tasks')}
-              onNavigateToForum={onNavigateToForum || ((subforumId) => {
-                onViewChange('forums');
-              })}
-              onNavigateToSocial={() => onViewChange('social')}
-              onNavigateToTimeTracking={onNavigateToTimeTracking || (() => onViewChange('time-tracking'))}
-              onNavigateToProfessionalNews={() => onViewChange('professional-news')}
-            />
-          )}
+          <NotificationBell 
+            onNavigateToTicket={onNavigateToTicket}
+            onNavigateToCalendar={handleNavigateToCalendar}
+            onNavigateToTasks={() => onViewChange('tasks')}
+            onNavigateToForum={onNavigateToForum || ((subforumId) => {
+              onViewChange('forums');
+            })}
+            onNavigateToSocial={() => onViewChange('social')}
+            onNavigateToTimeTracking={onNavigateToTimeTracking || (() => onViewChange('time-tracking'))}
+            onNavigateToProfessionalNews={() => onViewChange('professional-news')}
+          />
         </div>
-        {profile && !isCollapsed && (
+        {profile && (
           <div className="pt-4 border-t border-gray-700/30 bg-[#173548]">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white/50">
@@ -233,7 +219,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
       </div>
 
       {/* Navegación */}
-      <nav className={`flex-1 p-3 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <nav className="flex-1 p-3 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
         <ul className="space-y-1.5">
           {filteredItems.map((item) => {
             const Icon = item.icon;
@@ -268,7 +254,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                     <div className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
                       {isOpen ? (
                         <ChevronDown className={`w-4 h-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
-                    ) : (
+                      ) : (
                         <ChevronRight className={`w-4 h-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
                       )}
                     </div>
@@ -318,7 +304,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
       </nav>
 
       {/* Footer con toggle de tema y botón de cerrar sesión */}
-      <div className={`p-4 border-t border-gray-700/30 flex-shrink-0 mt-auto bg-[#173548] space-y-2 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <div className="p-4 border-t border-gray-700/30 flex-shrink-0 mt-auto bg-[#173548] space-y-2">
         {/* Toggle de tema */}
         <button
           onClick={() => {
@@ -349,21 +335,6 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         </button>
       </div>
     </aside>
-
-    {/* Botón para colapsar/expandir sidebar (solo desktop) */}
-    <button
-      onClick={handleCollapseToggle}
-      className={`hidden lg:flex fixed top-4 z-50 w-6 h-6 bg-[#173548] border-2 border-gray-700/30 text-white rounded-full items-center justify-center shadow-lg hover:bg-[#1a3d52] transition-all duration-300 ${
-        isCollapsed ? 'left-2' : 'left-[248px]'
-      }`}
-      title={isCollapsed ? 'Mostrar menú' : 'Ocultar menú'}
-    >
-      {isCollapsed ? (
-        <ChevronRight className="w-4 h-4" />
-      ) : (
-        <ChevronLeft className="w-4 h-4" />
-      )}
-    </button>
     </>
   );
 }

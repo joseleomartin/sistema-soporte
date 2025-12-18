@@ -1075,16 +1075,16 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
         {/* Calendario */}
         <div 
-          className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-5 flex flex-col max-h-[600px] overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+          className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-3 sm:p-5 flex flex-col max-h-[600px] overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => setShowCalendarModal(true)}
           title="Click para expandir calendario"
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Calendario
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
+              <span className="hidden sm:inline">Calendario</span>
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1092,7 +1092,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                 }}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition"
               >
-                <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
               </button>
               <button
                 onClick={(e) => {
@@ -1101,38 +1101,38 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                 }}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition"
               >
-                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowCalendarModal(true);
                 }}
-                className="p-1.5 hover:bg-blue-50 dark:bg-blue-900/30 rounded transition text-blue-600"
+                className="p-1 sm:p-1.5 hover:bg-blue-50 dark:bg-blue-900/30 rounded transition text-blue-600"
                 title="Expandir calendario"
               >
-                <ChevronUp className="w-4 h-4" />
+                <ChevronUp className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>
           
-          <div className="mb-3">
-            <p className="text-center font-semibold text-gray-900 dark:text-white">
+          <div className="mb-2 sm:mb-3">
+            <p className="text-center text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </p>
           </div>
 
           {/* Días de la semana */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1 sm:mb-2">
             {dayNames.map((day) => (
-              <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1">
+              <div key={day} className="text-center text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 py-0.5 sm:py-1">
                 {day}
               </div>
             ))}
           </div>
 
           {/* Días del mes */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
             {/* Espacios vacíos antes del primer día */}
             {Array.from({ length: startingDayOfWeek }).map((_, index) => (
               <div key={`empty-${index}`} className="aspect-square" />
@@ -1151,7 +1151,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                     handleDayClick(day);
                   }}
                   className={`
-                    aspect-square flex flex-col items-center justify-center text-sm rounded-lg transition relative
+                    aspect-square flex flex-col items-center justify-center text-xs sm:text-sm rounded-lg transition relative
                     ${isToday(day) 
                       ? 'bg-blue-600 text-white font-bold' 
                       : isSelected(day)
@@ -1160,7 +1160,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                     }
                   `}
                 >
-                  <span>{day}</span>
+                  <span className="text-[10px] sm:text-xs">{day}</span>
                   {hasEvents && (
                     <div className="flex gap-0.5 mt-0.5">
                       {dayEvents.slice(0, 3).map((event, idx) => (
@@ -1202,7 +1202,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           </div>
 
           {selectedDayEvents.length > 0 && (
-            <div className="mt-4 space-y-2 max-h-32 overflow-y-auto flex-shrink-0 dashboard-scroll">
+            <div className="mt-3 sm:mt-4 space-y-1.5 sm:space-y-2 max-h-32 overflow-y-auto flex-shrink-0 dashboard-scroll">
               {selectedDayEvents.map((event) => (
                 <button
                   key={event.id}
@@ -1213,7 +1213,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                       setSelectedEvent(event);
                     }
                   }}
-                  className={`w-full text-left p-2 rounded-lg text-xs transition hover:shadow-md ${
+                  className={`w-full text-left p-1.5 sm:p-2 rounded-lg text-[10px] sm:text-xs transition hover:shadow-md ${
                     event.isTask
                       ? event.taskPriority === 'urgent'
                         ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/40'
@@ -1265,7 +1265,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
               ))}
               <button
                 onClick={() => setShowEventModal(true)}
-                className="w-full mt-2 px-3 py-1.5 bg-blue-600 text-gray-900 dark:text-white text-xs rounded-lg hover:bg-blue-700 transition"
+                className="w-full mt-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 text-white text-[10px] sm:text-xs rounded-lg hover:bg-blue-700 transition"
               >
                 + Agregar evento
               </button>
@@ -1273,9 +1273,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           )}
 
           {/* Desglose de eventos próximos */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
-            <h4 className="text-xs font-semibold text-gray-200 mb-2">Próximos eventos</h4>
-            <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-2 dashboard-scroll">
+          <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-slate-700">
+            <h4 className="text-[10px] sm:text-xs font-semibold text-gray-500 dark:text-gray-200 mb-1.5 sm:mb-2">Próximos eventos</h4>
+            <div className="space-y-1 sm:space-y-1.5 max-h-[200px] sm:max-h-[280px] overflow-y-auto pr-1 sm:pr-2 dashboard-scroll">
               {events.length > 0 ? (
                 events
                   .filter(event => {
@@ -1296,9 +1296,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                           setSelectedEvent(event);
                         }
                       }}
-                      className="w-full text-left p-1.5 rounded text-xs hover:bg-gray-100 dark:hover:bg-slate-700 transition flex items-center gap-2"
+                      className="w-full text-left p-1 sm:p-1.5 rounded text-[10px] sm:text-xs hover:bg-gray-100 dark:hover:bg-slate-700 transition flex items-center gap-1.5 sm:gap-2"
                     >
-                      <div className={`w-8 text-center text-[10px] font-medium flex-shrink-0 ${
+                      <div className={`w-7 sm:w-8 text-center text-[9px] sm:text-[10px] font-medium flex-shrink-0 ${
                         event.isTask
                           ? event.taskPriority === 'urgent' ? 'text-red-600' :
                             event.taskPriority === 'medium' ? 'text-blue-600' : 'text-green-600'
@@ -1307,27 +1307,27 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                         {new Date(event.start_date).getDate()} {new Date(event.start_date).toLocaleDateString('es-ES', { month: 'short' })}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 dark:text-white truncate font-medium">{event.title}</p>
+                        <p className="text-gray-900 dark:text-white truncate font-medium text-[10px] sm:text-xs">{event.title}</p>
                         {event.isTask && event.taskClient && (
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{event.taskClient}</p>
+                          <p className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 truncate">{event.taskClient}</p>
                         )}
                       </div>
                       {event.isTask && (
-                        <CheckSquare className={`w-3 h-3 flex-shrink-0 ${
+                        <CheckSquare className={`w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0 ${
                           event.taskPriority === 'urgent' ? 'text-red-500' :
                           event.taskPriority === 'medium' ? 'text-blue-500' : 'text-green-500'
                         }`} />
                       )}
                       {!event.isTask && !event.isPersonal && (
-                        <CalendarIcon className="w-3 h-3 flex-shrink-0 text-purple-500" />
+                        <CalendarIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0 text-purple-500" />
                       )}
                       {event.isPersonal && (
-                        <CalendarIcon className="w-3 h-3 flex-shrink-0 text-blue-500" />
+                        <CalendarIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0 text-blue-500" />
                       )}
                     </button>
                   ))
               ) : (
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-4">No hay eventos próximos</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 text-center py-3 sm:py-4">No hay eventos próximos</p>
               )}
             </div>
           </div>
@@ -1667,31 +1667,31 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           }
         }}>
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-2">
-                <CalendarIcon className="w-6 h-6 text-blue-600" />
-                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Calendario</h2>
+                <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                <h2 className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">Calendario</h2>
               </div>
               <button
                 onClick={() => setShowCalendarModal(false)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 aria-label="Cerrar"
               >
-                <XCircle className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
-            <div className="p-6">
-              <div className="flex flex-col lg:flex-row gap-6">
+            <div className="p-3 sm:p-6">
+              <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
                 {/* Calendario expandido */}
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                       {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                     </h3>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={previousMonth}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-slate-700 rounded-lg transition"
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition"
                       >
                         <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                       </button>
@@ -1705,16 +1705,16 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                   </div>
 
                   {/* Días de la semana */}
-                  <div className="grid grid-cols-7 gap-2 mb-3">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-3">
                     {dayNames.map((day) => (
-                      <div key={day} className="text-center text-sm font-semibold text-gray-700 dark:text-gray-300 py-2">
+                      <div key={day} className="text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 py-1 sm:py-2">
                         {day}
                       </div>
                     ))}
                   </div>
 
                   {/* Días del mes - versión expandida */}
-                  <div className="grid grid-cols-7 gap-2">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2">
                     {/* Espacios vacíos antes del primer día */}
                     {Array.from({ length: startingDayOfWeek }).map((_, index) => (
                       <div key={`empty-${index}`} className="aspect-square" />
@@ -1730,7 +1730,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                           key={day}
                           onClick={() => handleDayClick(day)}
                           className={`
-                            aspect-square flex flex-col items-start justify-start p-2 text-base rounded-lg transition relative min-h-[80px] border
+                            aspect-square flex flex-col items-start justify-start p-1 sm:p-2 text-xs sm:text-sm sm:text-base rounded-lg transition relative min-h-[60px] sm:min-h-[80px] border
                             ${isToday(day) 
                               ? 'bg-blue-600 text-white font-bold border-blue-700' 
                               : isSelected(day)
@@ -1739,13 +1739,13 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                             }
                           `}
                         >
-                          <span className="mb-1">{day}</span>
+                          <span className="mb-0.5 sm:mb-1">{day}</span>
                           {hasEvents && (
-                            <div className="flex flex-col gap-1 w-full mt-1">
+                            <div className="flex flex-col gap-0.5 sm:gap-1 w-full mt-0.5 sm:mt-1">
                               {dayEvents.slice(0, 3).map((event, idx) => (
                                 <div
                                   key={idx}
-                                  className={`text-xs px-1.5 py-0.5 rounded truncate ${
+                                  className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded truncate ${
                                     event.isTask 
                                       ? event.taskPriority === 'urgent' 
                                         ? 'bg-red-200 dark:bg-red-900/50 text-red-900 dark:text-red-200 border border-red-300 dark:border-red-700/50' 
@@ -1762,11 +1762,12 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                   } ${isToday(day) ? 'bg-white dark:bg-slate-800 bg-opacity-30 dark:bg-opacity-50 text-gray-900 dark:text-white border-white/50 dark:border-slate-700/50' : ''}`}
                                   title={event.title}
                                 >
-                                  {event.title.length > 15 ? `${event.title.substring(0, 15)}...` : event.title}
+                                  <span className="hidden sm:inline">{event.title.length > 15 ? `${event.title.substring(0, 15)}...` : event.title}</span>
+                                  <span className="sm:hidden">{event.title.length > 8 ? `${event.title.substring(0, 8)}...` : event.title}</span>
                                 </div>
                               ))}
                               {dayEvents.length > 3 && (
-                                <div className={`text-xs px-1.5 py-0.5 rounded ${isToday(day) ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
+                                <div className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded ${isToday(day) ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
                                   +{dayEvents.length - 3} más
                                 </div>
                               )}
@@ -1779,14 +1780,14 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                 </div>
 
                 {/* Panel lateral con eventos */}
-                <div className="lg:w-80 flex-shrink-0">
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-4 sticky top-20">
+                <div className="w-full lg:w-80 flex-shrink-0">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg p-3 sm:p-4 lg:sticky lg:top-20">
                     {selectedDayEvents.length > 0 ? (
                       <>
-                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
                           Eventos del {selectedDate ? `${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]}` : 'día'}
                         </h4>
-                        <div className="space-y-3 max-h-[500px] overflow-y-auto dashboard-scroll">
+                        <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[500px] overflow-y-auto dashboard-scroll">
                           {selectedDayEvents.map((event) => (
                             <button
                               key={event.id}
@@ -1801,7 +1802,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                   setShowCalendarModal(false);
                                 }
                               }}
-                              className={`w-full text-left p-3 rounded-lg text-sm transition hover:shadow-md ${
+                              className={`w-full text-left p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition hover:shadow-md ${
                                 event.isTask
                                   ? event.taskPriority === 'urgent'
                                     ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/40'
@@ -1851,15 +1852,15 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                         </div>
                         <button
                           onClick={() => setShowEventModal(true)}
-                          className="w-full mt-4 px-4 py-2 bg-blue-600 text-gray-900 dark:text-white text-sm rounded-lg hover:bg-blue-700 transition"
+                          className="w-full mt-3 sm:mt-4 px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm rounded-lg hover:bg-blue-700 transition"
                         >
                           + Agregar evento
                         </button>
                       </>
                     ) : (
                       <>
-                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Próximos eventos</h4>
-                        <div className="space-y-2 max-h-[500px] overflow-y-auto dashboard-scroll">
+                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Próximos eventos</h4>
+                        <div className="space-y-2 max-h-[300px] sm:max-h-[500px] overflow-y-auto dashboard-scroll">
                           {events.length > 0 ? (
                             events
                               .filter(event => {
@@ -1882,9 +1883,9 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                                       setSelectedEvent(event);
                                     }
                                   }}
-                                  className="w-full text-left p-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition flex items-center gap-2"
+                                  className="w-full text-left p-2 rounded text-xs sm:text-sm hover:bg-gray-100 dark:hover:bg-slate-700 transition flex items-center gap-2"
                                 >
-                                  <div className={`w-12 text-center text-xs font-medium flex-shrink-0 ${
+                                  <div className={`w-10 sm:w-12 text-center text-[10px] sm:text-xs font-medium flex-shrink-0 ${
                                     event.isTask
                                       ? event.taskPriority === 'urgent' ? 'text-red-600 dark:text-red-400' :
                                         event.taskPriority === 'medium' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'
