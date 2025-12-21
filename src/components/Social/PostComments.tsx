@@ -133,6 +133,11 @@ export function PostComments({ postId }: PostCommentsProps) {
       return;
     }
 
+    if (!profile?.tenant_id) {
+      console.error('No se pudo identificar la empresa');
+      return;
+    }
+
     try {
       setSubmitting(true);
       const { error } = await supabase
@@ -141,6 +146,7 @@ export function PostComments({ postId }: PostCommentsProps) {
           post_id: postId,
           user_id: profile.id,
           content: newComment.trim(),
+          tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
         });
 
       if (error) throw error;

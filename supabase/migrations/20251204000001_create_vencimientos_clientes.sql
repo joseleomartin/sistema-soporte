@@ -71,3 +71,6 @@ CREATE TRIGGER update_vencimientos_clientes_updated_at
 
 
 
+
+
+

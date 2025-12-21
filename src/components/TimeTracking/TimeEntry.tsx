@@ -141,7 +141,7 @@ export function TimeEntry() {
   };
 
   const loadTimeEntries = async () => {
-    if (!profile?.id) return;
+    if (!profile?.id || !profile?.tenant_id) return;
 
     try {
       setLoading(true);
@@ -162,6 +162,7 @@ export function TimeEntry() {
           department:departments!time_entries_department_id_fkey(id, name),
           user:profiles!time_entries_user_id_fkey(id, full_name, email)
         `)
+        .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id para aislamiento multi-tenant
         .gte('entry_date', startDate)
         .lte('entry_date', endDate)
         .order('entry_date', { ascending: false })
@@ -202,11 +203,17 @@ export function TimeEntry() {
   const handleDelete = async (entryId: string) => {
     if (!confirm('¿Estás seguro de que deseas eliminar esta entrada de horas?')) return;
 
+    if (!profile?.tenant_id) {
+      setMessage({ type: 'error', text: 'No se pudo identificar la empresa' });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('time_entries')
         .delete()
-        .eq('id', entryId);
+        .eq('id', entryId)
+        .eq('tenant_id', profile.tenant_id); // Filtrar por tenant_id para aislamiento multi-tenant
 
       if (error) throw error;
 
@@ -596,8 +603,8 @@ function TimeEntryModal({
       return;
     }
 
-    if (!profile?.id) {
-      setError('No se pudo identificar el usuario');
+    if (!profile?.id || !profile?.tenant_id) {
+      setError('No se pudo identificar el usuario o la empresa');
       return;
     }
 
@@ -610,7 +617,8 @@ function TimeEntryModal({
         entry_date: date,
         hours_worked: totalDecimalHours,
         description: description || null,
-        department_id: departmentId
+        department_id: departmentId,
+        tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
       };
 
       if (entry) {
@@ -618,7 +626,8 @@ function TimeEntryModal({
         const { error: updateError } = await supabase
           .from('time_entries')
           .update(entryData)
-          .eq('id', entry.id);
+          .eq('id', entry.id)
+          .eq('tenant_id', profile.tenant_id); // Filtrar por tenant_id para aislamiento multi-tenant
 
         if (updateError) throw updateError;
       } else {

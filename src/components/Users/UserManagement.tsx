@@ -400,12 +400,18 @@ function AssignAreasModal({ user, onClose, onUpdate }: {
         setMessage({ type: 'success', text: 'Área removida del usuario' });
       } else {
         // Agregar asignación
+        if (!profile?.tenant_id) {
+          setMessage({ type: 'error', text: 'No se pudo identificar la empresa' });
+          return;
+        }
+
         const { error } = await supabase
           .from('user_departments')
           .insert({
             user_id: user.id,
             department_id: departmentId,
-            assigned_by: profile?.id
+            assigned_by: profile?.id,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           });
 
         if (error) throw error;

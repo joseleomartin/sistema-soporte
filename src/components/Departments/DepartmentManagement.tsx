@@ -287,6 +287,7 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { profile } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#3B82F6');
@@ -307,6 +308,11 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
       return;
     }
 
+    if (!profile?.tenant_id) {
+      setError('No se pudo identificar la empresa');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -315,7 +321,8 @@ function CreateDepartmentModal({ onClose, onSuccess }: {
         .insert({
           name: name.trim(),
           description: description.trim(),
-          color
+          color,
+          tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
         });
 
       if (insertError) throw insertError;
@@ -609,12 +616,18 @@ function AssignUsersModal({ department, onClose, onUpdate }: {
         // Agregar asignación
         console.log('➕ Agregando usuario al departamento:', { userId, departmentId: department.id });
         
+        if (!profile?.tenant_id) {
+          setMessage({ type: 'error', text: 'No se pudo identificar la empresa' });
+          return;
+        }
+
         const { error, data } = await supabase
           .from('user_departments')
           .insert({
             user_id: userId,
             department_id: department.id,
-            assigned_by: profile?.id
+            assigned_by: profile?.id,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           })
           .select();
 

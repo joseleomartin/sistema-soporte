@@ -9,3 +9,6 @@ COMMENT ON COLUMN subforums.phone IS 'Teléfono de contacto principal del client
 
 
 
+
+
+

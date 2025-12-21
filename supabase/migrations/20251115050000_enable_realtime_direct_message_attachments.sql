@@ -21,3 +21,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE direct_message_attachments;
 
 
 
+
+
+

@@ -48,15 +48,18 @@ set EXTRACTOR_PORT=5000
 
 REM Configurar Google OAuth
 REM ⚠️ IMPORTANTE:
-REM - NO guardar credenciales reales en este archivo (repositorio público con escaneo de secretos)
-REM - Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en variables de entorno de tu sistema
-REM - Opcionalmente, puedes usar un archivo .env local (no commiteado) y cargarlas desde alli
-REM Ejemplo de valores por defecto seguros (placeholders):
+REM - Las credenciales deben configurarse como variables de entorno del sistema
+REM - Para desarrollo local, configura las variables GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET
+REM - Para producción, usa variables de entorno del sistema o del servidor
+REM - Ejemplo: set GOOGLE_CLIENT_ID=tu_client_id_aqui
+REM - Ejemplo: set GOOGLE_CLIENT_SECRET=tu_client_secret_aqui
 if "%GOOGLE_CLIENT_ID%"=="" (
-    set GOOGLE_CLIENT_ID=TU_GOOGLE_CLIENT_ID_AQUI
+    echo ERROR: GOOGLE_CLIENT_ID no está configurado. Por favor configura la variable de entorno.
+    exit /b 1
 )
 if "%GOOGLE_CLIENT_SECRET%"=="" (
-    set GOOGLE_CLIENT_SECRET=TU_GOOGLE_CLIENT_SECRET_AQUI
+    echo ERROR: GOOGLE_CLIENT_SECRET no está configurado. Por favor configura la variable de entorno.
+    exit /b 1
 )
 
 echo ================================================

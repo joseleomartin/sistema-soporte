@@ -178,6 +178,12 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
   const uploadFiles = async (taskId: string) => {
     if (selectedFiles.length === 0 || !profile?.id) return;
 
+    if (!profile?.tenant_id) {
+      alert('No se pudo identificar la empresa');
+      setUploading(false);
+      return;
+    }
+
     setUploading(true);
     try {
       const { data: messageData, error: messageError } = await supabase
@@ -188,7 +194,8 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
             user_id: profile.id,
             message: selectedFiles.length === 1 
               ? `📎 ${selectedFiles[0].name}` 
-              : `📎 ${selectedFiles.length} archivos adjuntos`
+              : `📎 ${selectedFiles.length} archivos adjuntos`,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           }
         ])
         .select()
@@ -217,7 +224,8 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
               file_path: filePath,
               file_size: file.size,
               file_type: file.type,
-              uploaded_by: profile.id
+              uploaded_by: profile.id,
+              tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
             }
           ]);
 

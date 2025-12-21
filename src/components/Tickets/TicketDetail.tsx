@@ -270,6 +270,11 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
     e.preventDefault();
     if ((!newComment.trim() && selectedFiles.length === 0) || !profile?.id) return;
 
+    if (!profile?.tenant_id) {
+      setError('No se pudo identificar la empresa');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
 
@@ -281,6 +286,7 @@ export function TicketDetail({ ticketId, onClose }: TicketDetailProps) {
         message: newComment.trim(),
         user_id: profile.id,
         attachments,
+        tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
       });
 
       if (insertError) throw insertError;

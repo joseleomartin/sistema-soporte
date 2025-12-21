@@ -197,8 +197,8 @@ export function TimeTracker({ clients, onTimeSaved }: TimeTrackerProps) {
       return;
     }
 
-    if (!profile?.id) {
-      setError('No se pudo identificar el usuario');
+    if (!profile?.id || !profile?.tenant_id) {
+      setError('No se pudo identificar el usuario o la empresa');
       return;
     }
 
@@ -219,7 +219,8 @@ export function TimeTracker({ clients, onTimeSaved }: TimeTrackerProps) {
           entry_date: today,
           hours_worked: totalDecimalHours,
           description: description || null,
-          department_id: departmentId
+          department_id: departmentId,
+          tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
         });
 
       if (insertError) throw insertError;

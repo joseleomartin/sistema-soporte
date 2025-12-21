@@ -196,13 +196,14 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   };
 
   const loadUserVacations = async () => {
-    if (!profile?.id) return;
+    if (!profile?.id || !profile?.tenant_id) return;
 
     try {
       const { data, error } = await supabase
         .from('vacations')
         .select('*')
         .eq('user_id', profile.id)
+        .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id para aislamiento multi-tenant
         .order('start_date', { ascending: false })
         .limit(5);
 
@@ -589,7 +590,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   };
 
   const loadEvents = async () => {
-    if (!profile?.id) return;
+    if (!profile?.id || !profile?.tenant_id) return;
 
     try {
       // Generar eventos recurrentes antes de cargar
@@ -603,6 +604,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         .from('calendar_events')
         .select('*')
         .eq('created_by', profile.id)
+        .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id para aislamiento multi-tenant
         .is('assigned_to', null)
         .gte('start_date', startOfMonth.toISOString())
         .lte('start_date', endOfMonth.toISOString());
@@ -612,6 +614,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         .from('calendar_events')
         .select('*, created_by_profile:profiles!calendar_events_created_by_fkey(full_name)')
         .eq('assigned_to', profile.id)
+        .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id para aislamiento multi-tenant
         .gte('start_date', startOfMonth.toISOString())
         .lte('start_date', endOfMonth.toISOString());
 
@@ -619,10 +622,11 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
       let tasks: any[] = [];
       
       if (profile.role === 'admin') {
-        // Admin ve todas las tareas
+        // Admin ve todas las tareas de su tenant
         const { data: allTasks } = await supabase
           .from('tasks')
           .select('*, created_by_profile:profiles!tasks_created_by_fkey(full_name)')
+          .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id para aislamiento multi-tenant
           .not('due_date', 'is', null)
           .gte('due_date', startOfMonth.toISOString())
           .lte('due_date', endOfMonth.toISOString());
@@ -660,6 +664,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
             .from('tasks')
             .select('*, created_by_profile:profiles!tasks_created_by_fkey(full_name)')
             .in('id', Array.from(allTaskIds))
+            .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id para aislamiento multi-tenant
             .not('due_date', 'is', null)
             .gte('due_date', startOfMonth.toISOString())
             .lte('due_date', endOfMonth.toISOString());
@@ -687,10 +692,16 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         }));
 
       // Obtener vacaciones aprobadas
+      if (!profile?.tenant_id) {
+        setEvents([]);
+        return;
+      }
+
       let vacationsQuery = supabase
         .from('vacations')
         .select('*, user_profile:profiles!vacations_user_id_fkey(full_name)')
         .eq('status', 'approved')
+        .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id para aislamiento multi-tenant
         .lte('start_date', endOfMonth.toISOString().split('T')[0])
         .gte('end_date', startOfMonth.toISOString().split('T')[0]);
 

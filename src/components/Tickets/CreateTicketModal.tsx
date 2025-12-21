@@ -115,6 +115,11 @@ export function CreateTicketModal({ onClose }: CreateTicketModalProps) {
       return;
     }
 
+    if (!profile?.tenant_id) {
+      setError('No se pudo identificar la empresa');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -129,6 +134,7 @@ export function CreateTicketModal({ onClose }: CreateTicketModalProps) {
         category: category.trim(),
         status: 'open',
         created_by: profile.id,
+        tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
         attachments: attachments.length > 0 ? attachments : [],
       };
       

@@ -250,6 +250,13 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
         uploadedMedia = await uploadFiles();
       }
 
+      // Verificar que tenemos tenant_id
+      if (!profile?.tenant_id) {
+        setError('No se pudo identificar la empresa');
+        setLoading(false);
+        return;
+      }
+
       // Crear el post
       const { data: postData, error: insertError } = await supabase
         .from('social_posts')
@@ -260,6 +267,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
           media_url: null, // Ya no es requerido
           reel_url: postType === 'reel' ? reelUrl.trim() : null,
           reel_platform: postType === 'reel' ? reelPlatform : null,
+          tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
         })
         .select()
         .single();
@@ -273,6 +281,7 @@ export function CreatePostModal({ onClose, onSuccess }: CreatePostModalProps) {
           media_type: media.type,
           media_url: media.url,
           display_order: index,
+          tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
         }));
 
         const { error: mediaError } = await supabase

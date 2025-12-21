@@ -51,13 +51,14 @@ export function MeetingRoomsList() {
   }, [profile]);
 
   const loadRooms = async () => {
-    if (!profile) return;
+    if (!profile || !profile.tenant_id) return;
 
     try {
       const { data, error } = await supabase
         .from('meeting_rooms')
         .select('*')
         .eq('is_active', true)
+        .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id para aislamiento multi-tenant
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -151,12 +151,17 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
           if (existingForum) {
             forumId = (existingForum as any).id;
           } else {
+            if (!profile.tenant_id) {
+              throw new Error('No se pudo identificar la empresa');
+            }
+
             const { data: newForum, error: forumError } = await supabase
               .from('forums')
               .insert({
                 name: row.client_name.trim(),
                 description: `Foro del cliente ${row.client_name.trim()}`,
                 created_by: profile.id,
+                tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
               } as any)
               .select('id')
               .single();
@@ -249,6 +254,10 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
             updated += 1;
           } else {
             // Crear nuevo cliente
+            if (!profile.tenant_id) {
+              throw new Error('No se pudo identificar la empresa');
+            }
+
             const { data: newSubforum, error: subforumError } = await supabase
               .from('subforums')
               .insert({
@@ -257,6 +266,7 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
                 client_name: row.client_name.trim(),
                 cuit: row.cuit?.trim() || null,
                 email: combinedEmail,
+                tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
                 access_keys: accessKeys,
                 economic_link: row.economic_link?.trim() || null,
                 contact_full_name: row.contact_name?.trim() || null,

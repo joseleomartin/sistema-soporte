@@ -61,7 +61,7 @@ export function VacationsManagement() {
   }, [vacations, searchTerm, statusFilter]);
 
   const loadVacations = async () => {
-    if (!profile?.id) return;
+    if (!profile?.id || !profile?.tenant_id) return;
 
     try {
       let query = supabase
@@ -71,6 +71,8 @@ export function VacationsManagement() {
           user_profile:profiles!vacations_user_id_fkey(full_name, email),
           approved_by_profile:profiles!vacations_approved_by_fkey(full_name)
         `)
+        // Filtrar por tenant_id para asegurar aislamiento multi-tenant
+        .eq('tenant_id', profile.tenant_id)
         .order('start_date', { ascending: false });
 
       // Si no es admin/support, solo ver sus propias vacaciones
@@ -112,6 +114,8 @@ export function VacationsManagement() {
   };
 
   const handleApprove = async (vacationId: string) => {
+    if (!profile?.tenant_id) return;
+    
     try {
       const { error } = await supabase
         .from('vacations')
@@ -120,7 +124,8 @@ export function VacationsManagement() {
           approved_by: profile?.id,
           approved_at: new Date().toISOString()
         })
-        .eq('id', vacationId);
+        .eq('id', vacationId)
+        .eq('tenant_id', profile.tenant_id); // Filtrar por tenant_id para seguridad
 
       if (error) throw error;
 
@@ -141,6 +146,8 @@ export function VacationsManagement() {
       return;
     }
 
+    if (!profile?.tenant_id) return;
+
     try {
       const { error } = await supabase
         .from('vacations')
@@ -150,7 +157,8 @@ export function VacationsManagement() {
           approved_at: new Date().toISOString(),
           rejection_reason: reason
         })
-        .eq('id', vacationId);
+        .eq('id', vacationId)
+        .eq('tenant_id', profile.tenant_id); // Filtrar por tenant_id para seguridad
 
       if (error) throw error;
 
@@ -167,11 +175,14 @@ export function VacationsManagement() {
   const handleDelete = async (vacationId: string) => {
     if (!confirm('¿Estás seguro de que deseas eliminar esta vacación / licencia?')) return;
 
+    if (!profile?.tenant_id) return;
+
     try {
       const { error } = await supabase
         .from('vacations')
         .delete()
-        .eq('id', vacationId);
+        .eq('id', vacationId)
+        .eq('tenant_id', profile.tenant_id); // Filtrar por tenant_id para seguridad
 
       if (error) throw error;
 
@@ -571,8 +582,8 @@ function CreateVacationModal({ onClose, onSuccess }: {
       return;
     }
 
-    if (!profile?.id) {
-      setError('No se pudo identificar el usuario');
+    if (!profile?.id || !profile?.tenant_id) {
+      setError('No se pudo identificar el usuario o la empresa');
       return;
     }
 
@@ -583,6 +594,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
         .from('vacations')
         .insert({
           user_id: profile.id,
+          tenant_id: profile.tenant_id, // Asegurar aislamiento multi-tenant
           type: type,
           start_date: startDate,
           end_date: endDate,
@@ -726,10 +738,16 @@ function AssignVacationModal({ onClose, onSuccess }: {
   }, []);
 
   const loadUsers = async () => {
+    if (!profile?.tenant_id) {
+      setLoadingUsers(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, email')
+        .eq('tenant_id', profile.tenant_id) // Filtrar solo usuarios del mismo tenant
         .order('full_name');
 
       if (error) throw error;
@@ -761,8 +779,8 @@ function AssignVacationModal({ onClose, onSuccess }: {
       return;
     }
 
-    if (!profile?.id) {
-      setError('No se pudo identificar el administrador');
+    if (!profile?.id || !profile?.tenant_id) {
+      setError('No se pudo identificar el administrador o la empresa');
       return;
     }
 
@@ -774,6 +792,7 @@ function AssignVacationModal({ onClose, onSuccess }: {
         .from('vacations')
         .insert({
           user_id: selectedUserId,
+          tenant_id: profile.tenant_id, // Asegurar aislamiento multi-tenant
           type: type,
           start_date: startDate,
           end_date: endDate,

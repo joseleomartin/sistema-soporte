@@ -105,6 +105,12 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
         endDate.setHours(parseInt(hours), parseInt(minutes));
       }
 
+      if (!profile.tenant_id) {
+        setError('No se pudo identificar la empresa');
+        setLoading(false);
+        return;
+      }
+
       // Preparar datos base del evento
       const baseEventData = {
         title: title.trim(),
@@ -114,6 +120,7 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
         all_day: allDay,
         color,
         created_by: profile.id,
+        tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
         event_type: 'personal' as const,
         is_recurring: isRecurring,
         recurrence_pattern: isRecurring ? 'monthly' : null,

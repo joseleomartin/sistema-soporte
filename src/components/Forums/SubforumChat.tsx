@@ -348,6 +348,11 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
       const formattedMessage = await formatMentions(newMessage.trim());
       console.log('📝 Mensaje formateado:', formattedMessage);
 
+      // Verificar que tenemos tenant_id
+      if (!profile?.tenant_id) {
+        throw new Error('No se pudo identificar la empresa');
+      }
+
       // Insertar mensaje
       const { data: messageData, error } = await supabase
         .from('forum_messages')
@@ -355,6 +360,7 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
           subforum_id: subforumId,
           content: formattedMessage,
           created_by: profile.id,
+          tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
           attachments,
         })
         .select()

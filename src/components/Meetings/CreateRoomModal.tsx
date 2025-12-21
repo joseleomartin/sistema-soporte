@@ -29,6 +29,12 @@ export function CreateRoomModal({ onClose, onSuccess }: CreateRoomModalProps) {
     try {
       const jitsiRoomId = generateRoomId();
 
+      if (!profile.tenant_id) {
+        setError('No se pudo identificar la empresa');
+        setLoading(false);
+        return;
+      }
+
       const { error: insertError } = await supabase
         .from('meeting_rooms')
         .insert({
@@ -36,6 +42,7 @@ export function CreateRoomModal({ onClose, onSuccess }: CreateRoomModalProps) {
           description,
           jitsi_room_id: jitsiRoomId,
           created_by: profile.id,
+          tenant_id: profile.tenant_id, // Asegurar aislamiento multi-tenant
         });
 
       if (insertError) throw insertError;

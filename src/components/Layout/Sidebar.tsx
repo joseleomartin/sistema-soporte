@@ -1,200 +1,249 @@
-import { Home, Ticket, FolderOpen, Video, Users, Settings, LogOut, Wrench, Building2, User, CheckSquare, Calendar, Clock, BookOpen, Heart, FileText, ChevronDown, ChevronRight, Briefcase, Sun, Moon, Menu, X } from 'lucide-react';
+﻿import { useState, useEffect } from 'react';
+import { 
+  Home, 
+  Video, 
+  Users as UsersIcon, 
+  Building2, 
+  Headphones, 
+  Settings, 
+  LogOut, 
+  Sun, 
+  User,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  BookOpen,
+  Briefcase,
+  Calendar,
+  Heart,
+  FolderOpen,
+  Clock,
+  CheckSquare,
+  Wrench,
+  Layers
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTenant } from '../../contexts/TenantContext';
 import { NotificationBell } from '../Notifications/NotificationBell';
-import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+
+interface SidebarProps {
+  currentView: string;
+  onViewChange: (view: string) => void;
+  onNavigateToTicket: (ticketId: string) => void;
+  onNavigateToForum: (subforumId: string) => void;
+  onNavigateToTimeTracking: () => void;
+}
+
+type SubMenuItem = {
+  icon: typeof FileText;
+  label: string;
+  view: string;
+  roles: ('admin' | 'support' | 'user')[];
+};
 
 type MenuItem = {
   icon: typeof Home;
   label: string;
-  view: string;
+  view?: string;
   roles: ('admin' | 'support' | 'user')[];
-  children?: MenuItem[];
+  subItems?: SubMenuItem[];
 };
 
 const menuItems: MenuItem[] = [
   { icon: Home, label: 'Inicio', view: 'dashboard', roles: ['admin', 'support', 'user'] },
   { icon: Video, label: 'Sala de Reuniones', view: 'meetings', roles: ['admin', 'support', 'user'] },
-  {
-    icon: Users,
-    label: 'Personas',
-    view: 'personas',
+  { 
+    icon: UsersIcon, 
+    label: 'Personas', 
     roles: ['admin', 'support', 'user'],
-    children: [
+    subItems: [
+      { icon: Layers, label: 'Áreas', view: 'departments', roles: ['admin', 'support', 'user'] },
       { icon: FileText, label: 'Onboarding y Políticas Internas', view: 'internal-policies', roles: ['admin', 'support', 'user'] },
       { icon: BookOpen, label: 'Bibliotecas y Cursos', view: 'library', roles: ['admin', 'support', 'user'] },
       { icon: Briefcase, label: 'Novedades Profesionales', view: 'professional-news', roles: ['admin', 'support', 'user'] },
-      { icon: Calendar, label: 'Vacaciones y Licencias', view: 'vacations', roles: ['admin', 'support'] },
+      { icon: Calendar, label: 'Vacaciones y Licencias', view: 'vacations', roles: ['admin', 'support', 'user'] },
       { icon: Heart, label: 'Social', view: 'social', roles: ['admin', 'support', 'user'] },
     ]
   },
-  {
-    icon: Building2,
-    label: 'Negocio',
-    view: 'negocio',
+  { 
+    icon: Building2, 
+    label: 'Negocio', 
     roles: ['admin', 'support', 'user'],
-    children: [
+    subItems: [
       { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
       { icon: Clock, label: 'Carga de Horas', view: 'time-tracking', roles: ['admin', 'support', 'user'] },
       { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
       { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
     ]
   },
-  { icon: Ticket, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
-  { icon: Users, label: 'Usuarios', view: 'users', roles: ['admin'] },
+  { icon: Headphones, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
+  { icon: UsersIcon, label: 'Usuarios', view: 'users', roles: ['admin'] },
   { icon: Settings, label: 'Mi Perfil', view: 'settings', roles: ['admin', 'support', 'user'] },
 ];
 
-interface SidebarProps {
-  currentView: string;
-  onViewChange: (view: string) => void;
-  onNavigateToTicket?: (ticketId: string) => void;
-  onNavigateToTask?: (taskId: string) => void;
-  onNavigateToForum?: (subforumId: string) => void;
-  onNavigateToTimeTracking?: () => void;
-}
-
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToTask, onNavigateToForum, onNavigateToTimeTracking }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking }: SidebarProps) {
   const { profile, signOut } = useAuth();
+  const { tenant } = useTenant();
   const { activeJobsCount } = useExtraction();
   const { theme, toggleTheme } = useTheme();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (profile?.avatar_url) {
-      setAvatarUrl(profile.avatar_url);
+      const getAvatarUrl = (avatarPath: string) => {
+        if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+          return avatarPath;
+        }
+        const { data } = supabase.storage.from('avatars').getPublicUrl(avatarPath);
+        return data.publicUrl;
+      };
+      setAvatarUrl(getAvatarUrl(profile.avatar_url));
     }
   }, [profile?.avatar_url]);
 
-  const filteredItems = menuItems.filter(item =>
-    profile && item.roles.includes(profile.role)
-  );
+  // Resetear error del logo cuando cambie el tenant o su logo
+  useEffect(() => {
+    setLogoError(false);
+  }, [tenant?.logo_url, tenant?.id]);
 
-  const toggleSubmenu = (view: string) => {
-    setOpenSubmenus(prev => {
+  // Detectar si la vista actual está en un submenu y expandir automáticamente
+  useEffect(() => {
+    if (!profile) return;
+    
+    setExpandedMenus(prev => {
+      const newExpanded = new Set(prev);
+      menuItems.forEach((item) => {
+        if (item.subItems) {
+          const hasActiveSubItem = item.subItems.some(
+            subItem => subItem.view === currentView && 
+            subItem.roles.includes(profile.role)
+          );
+          if (hasActiveSubItem) {
+            newExpanded.add(item.label);
+          }
+        }
+      });
+      return newExpanded;
+    });
+  }, [currentView, profile]);
+
+  // Obtener módulos visibles del tenant (no del perfil individual)
+  const visibleModules = tenant?.visible_modules as Record<string, boolean> | null | undefined;
+
+  // Filtrar items por rol y módulos visibles del tenant
+  const filteredItems = menuItems.filter(item => {
+    // Verificar rol
+    if (!profile || !item.roles.includes(profile.role)) {
+      return false;
+    }
+
+    // Verificar si el módulo principal está visible (según configuración del tenant)
+    if (item.view) {
+      // Si visible_modules existe y el módulo está explícitamente en false, ocultarlo
+      // Si visible_modules es null/undefined, mostrar todos (comportamiento por defecto)
+      if (visibleModules && visibleModules[item.view] === false) {
+        return false;
+      }
+    }
+
+    // Si tiene subitems, verificar que al menos uno esté visible
+    if (item.subItems && item.subItems.length > 0) {
+      const hasVisibleSubItem = item.subItems.some(subItem => {
+        if (!subItem.roles.includes(profile.role)) return false;
+        // Si visible_modules existe y el módulo está explícitamente en false, ocultarlo
+        if (visibleModules && visibleModules[subItem.view] === false) {
+          return false;
+        }
+        return true;
+      });
+      return hasVisibleSubItem;
+    }
+
+    return true;
+  }).map(item => {
+    // Filtrar subitems por módulos visibles del tenant
+    if (item.subItems) {
+      return {
+        ...item,
+        subItems: item.subItems.filter(subItem => {
+          if (!profile || !subItem.roles.includes(profile.role)) return false;
+          // Si visible_modules existe y el módulo está explícitamente en false, ocultarlo
+          if (visibleModules && visibleModules[subItem.view] === false) {
+            return false;
+          }
+          return true;
+        })
+      };
+    }
+    return item;
+  });
+
+  const handleNavigateToCalendar = () => {
+    onViewChange('dashboard');
+  };
+
+  const toggleMenu = (menuLabel: string) => {
+    setExpandedMenus(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(view)) {
-        newSet.delete(view);
+      if (newSet.has(menuLabel)) {
+        newSet.delete(menuLabel);
       } else {
-        newSet.add(view);
+        newSet.add(menuLabel);
       }
       return newSet;
     });
   };
 
-  const isSubmenuOpen = (view: string) => openSubmenus.has(view);
+  const isDark = theme === 'dark';
 
-  const isItemActive = (item: MenuItem): boolean => {
-    if (item.view === currentView) return true;
-    if (item.children) {
-      return item.children.some(child => child.view === currentView);
-    }
-    return false;
-  };
+  const isViewActive = (view: string) => currentView === view;
 
-  // Auto-abrir submenús si el item activo está dentro
-  useEffect(() => {
-    const itemsToOpen = new Set<string>();
-    filteredItems.forEach(item => {
-      if (item.children) {
-        const hasActiveChild = item.children.some(child => 
-          profile && child.roles.includes(profile.role) && child.view === currentView
-        );
-        if (hasActiveChild) {
-          itemsToOpen.add(item.view);
-        }
-      }
-    });
-    if (itemsToOpen.size > 0) {
-      setOpenSubmenus(prev => {
-        const newSet = new Set(prev);
-        itemsToOpen.forEach(view => newSet.add(view));
-        return newSet;
-      });
-    }
-  }, [currentView, profile?.role]);
-
-  const handleNavigateToCalendar = () => {
-    onViewChange('dashboard'); // El calendario está en el dashboard
-  };
-
-  const handleSignOut = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (isSigningOut) return; // Evitar múltiples clics
-    
-    setIsSigningOut(true);
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-      setIsSigningOut(false);
-    }
+  const isSubItemActive = (subItems?: SubMenuItem[]) => {
+    if (!subItems) return false;
+    return subItems.some(subItem => subItem.view === currentView);
   };
 
   return (
-    <>
-      {/* Botón hamburguesa para móvil */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-[#173548] text-white rounded-lg shadow-lg hover:bg-[#1a3d52] transition-colors"
-        aria-label="Toggle menu"
-      >
-        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </button>
-
-      {/* Overlay para móvil */}
-      {isMobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      <aside className={`w-64 bg-[#173548] border-r border-gray-700/30 flex flex-col h-screen fixed left-0 top-0 shadow-xl z-40 transform transition-transform duration-300 ease-in-out ${
-        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}>
-      {/* Header con logo y notificaciones */}
-      <div className="px-5 py-4 border-b border-gray-700/30 flex-shrink-0 bg-[#173548]">
-        <div className="flex items-center justify-between mb-4 gap-2">
-          <button
-            onClick={() => onViewChange('dashboard')}
-            className="flex items-center flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-            title="Ir al inicio"
-          >
-            {logoError ? (
-              <h1 className="text-2xl font-bold text-white">EmaGroup</h1>
+    <aside className={`w-64 ${isDark ? 'bg-slate-800' : 'bg-white'} ${isDark ? 'border-slate-700' : 'border-gray-200'} border-r flex flex-col h-screen fixed left-0 top-0`}>
+      <div className={`px-4 py-3 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-b flex-shrink-0`}>
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center flex-1 min-w-0">
+            {tenant?.logo_url && !logoError ? (
+              <img 
+                src={tenant.logo_url} 
+                alt={tenant.name || 'Logo de la empresa'} 
+                className="h-16 w-auto object-contain max-w-[140px]"
+                onError={() => setLogoError(true)}
+              />
+            ) : logoError ? (
+              <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {tenant?.name || 'EmaGroup'}
+              </h1>
             ) : (
               <img 
-                src="/logo%20ema.png" 
+                src="/logo ema.png" 
                 alt="EmaGroup" 
-                className="h-16 w-auto object-contain drop-shadow-sm"
+                className="h-16 w-auto object-contain"
                 onError={() => setLogoError(true)}
               />
             )}
-          </button>
+          </div>
           <NotificationBell 
             onNavigateToTicket={onNavigateToTicket}
             onNavigateToCalendar={handleNavigateToCalendar}
             onNavigateToTasks={() => onViewChange('tasks')}
-            onNavigateToForum={onNavigateToForum || ((subforumId) => {
-              onViewChange('forums');
-            })}
-            onNavigateToSocial={() => onViewChange('social')}
-            onNavigateToTimeTracking={onNavigateToTimeTracking || (() => onViewChange('time-tracking'))}
-            onNavigateToProfessionalNews={() => onViewChange('professional-news')}
+            onNavigateToForum={onNavigateToForum}
           />
         </div>
         {profile && (
-          <div className="pt-4 border-t border-gray-700/30 bg-[#173548]">
+          <div className={`pt-4 ${isDark ? 'border-slate-700' : 'border-gray-100'} border-t`}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white/50">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
@@ -202,14 +251,16 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{profile.full_name}</p>
-                <p className="text-xs text-gray-300 truncate">{profile.email}</p>
+                <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>{profile.full_name || profile.email}</p>
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-gray-500'} truncate`}>{profile.email}</p>
               </div>
             </div>
-            <span className={`inline-block px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm ${
-              profile.role === 'admin' ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white' :
-              profile.role === 'support' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' :
-              'bg-gradient-to-r from-gray-500 to-gray-600 text-white'
+            <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+              profile.role === 'admin' 
+                ? isDark ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
+                : profile.role === 'support'
+                ? isDark ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+                : isDark ? 'bg-slate-700 text-white' : 'bg-gray-100 text-gray-700'
             }`}>
               {profile.role === 'admin' ? 'Administrador' :
                profile.role === 'support' ? 'Soporte' : 'Usuario'}
@@ -218,76 +269,81 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         )}
       </div>
 
-      {/* Navegación */}
-      <nav className="flex-1 p-3 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-        <ul className="space-y-1.5">
+      <nav className="flex-1 p-4 overflow-y-auto min-h-0">
+        <ul className="space-y-1">
           {filteredItems.map((item) => {
             const Icon = item.icon;
-            const hasChildren = item.children && item.children.length > 0;
-            const isActive = isItemActive(item);
-            const isOpen = isSubmenuOpen(item.view);
+            const hasSubItems = item.subItems && item.subItems.length > 0;
+            const isExpanded = expandedMenus.has(item.label);
+            const isActive = item.view ? isViewActive(item.view) : false;
+            const hasActiveSubItem = isSubItemActive(item.subItems);
             const showBadge = item.view === 'tools' && activeJobsCount > 0;
-            const filteredChildren = item.children?.filter(child =>
-              profile && child.roles.includes(profile.role)
-            );
+            const isMenuActive = isActive || hasActiveSubItem;
+
+            // Filtrar subitems por rol
+            const filteredSubItems = item.subItems?.filter(subItem =>
+              profile && subItem.roles.includes(profile.role)
+            ) || [];
 
             return (
-              <li key={item.view}>
+              <li key={item.label}>
                 <button
                   onClick={() => {
-                    if (hasChildren) {
-                      toggleSubmenu(item.view);
-                    } else {
+                    if (hasSubItems) {
+                      toggleMenu(item.label);
+                    } else if (item.view) {
                       onViewChange(item.view);
-                      setIsMobileMenuOpen(false); // Cerrar menú en móvil al seleccionar
                     }
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative group ${
-                    isActive
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 font-semibold scale-[1.02]'
-                      : 'text-white/90 hover:bg-white/10 hover:text-white hover:shadow-md hover:scale-[1.01]'
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition relative ${
+                    isMenuActive
+                      ? isDark 
+                        ? 'bg-blue-600 text-white font-medium'
+                        : 'bg-blue-50 text-blue-700 font-medium'
+                      : isDark
+                      ? 'text-white hover:bg-slate-700'
+                      : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'text-white' : 'text-white/80 group-hover:text-white'}`} />
+                  <Icon className="w-5 h-5" />
                   <span className="flex-1 text-left">{item.label}</span>
-                  {hasChildren && (
-                    <div className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
-                      {isOpen ? (
-                        <ChevronDown className={`w-4 h-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
-                      ) : (
-                        <ChevronRight className={`w-4 h-4 ${isActive ? 'text-white' : 'text-white/70'}`} />
-                      )}
-                    </div>
+                  {hasSubItems && (
+                    isExpanded ? (
+                      <ChevronUp className="w-4 h-4 flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                    )
                   )}
                   {showBadge && (
-                    <span className="bg-white text-blue-600 text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shadow-md animate-pulse">
+                    <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
                       {activeJobsCount}
                     </span>
                   )}
                 </button>
-                {hasChildren && isOpen && filteredChildren && filteredChildren.length > 0 && (
-                  <ul className="ml-6 mt-1.5 space-y-1 border-l-2 border-white/20 pl-3 animate-in slide-in-from-top-2 duration-200">
-                    {filteredChildren.map((child) => {
-                      const ChildIcon = child.icon;
-                      const isChildActive = currentView === child.view;
-                      const showChildBadge = child.view === 'tools' && activeJobsCount > 0;
+                {hasSubItems && isExpanded && filteredSubItems.length > 0 && (
+                  <ul className="ml-4 mt-1 space-y-1">
+                    {filteredSubItems.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      const isSubActive = isViewActive(subItem.view);
+                      const showSubBadge = subItem.view === 'tools' && activeJobsCount > 0;
                       return (
-                        <li key={child.view}>
+                        <li key={subItem.view}>
                           <button
-                            onClick={() => {
-                              onViewChange(child.view);
-                              setIsMobileMenuOpen(false); // Cerrar menú en móvil al seleccionar
-                            }}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 relative group ${
-                              isChildActive
-                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/20 font-medium scale-[1.01]'
-                                : 'text-white/80 hover:bg-white/10 hover:text-white hover:shadow-sm'
+                            onClick={() => onViewChange(subItem.view)}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition relative ${
+                              isSubActive
+                                ? isDark 
+                                  ? 'bg-blue-600 text-white font-medium'
+                                  : 'bg-blue-50 text-blue-700 font-medium'
+                                : isDark
+                                ? 'text-white hover:bg-slate-700'
+                                : 'text-gray-700 hover:bg-gray-50'
                             }`}
                           >
-                            <ChildIcon className={`w-4 h-4 transition-colors ${isChildActive ? 'text-white' : 'text-white/70 group-hover:text-white'}`} />
-                            <span className="flex-1 text-left text-sm">{child.label}</span>
-                            {showChildBadge && (
-                              <span className="bg-white text-blue-600 text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center shadow-sm animate-pulse">
+                            <SubIcon className="w-4 h-4" />
+                            <span className="flex-1 text-left text-sm">{subItem.label}</span>
+                            {showSubBadge && (
+                              <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
                                 {activeJobsCount}
                               </span>
                             )}
@@ -303,38 +359,40 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         </ul>
       </nav>
 
-      {/* Footer con toggle de tema y botón de cerrar sesión */}
-      <div className="p-4 border-t border-gray-700/30 flex-shrink-0 mt-auto bg-[#173548] space-y-2">
-        {/* Toggle de tema */}
+      <div className={`p-4 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-t flex-shrink-0 mt-auto space-y-1`}>
         <button
-          onClick={() => {
-            toggleTheme();
-            setIsMobileMenuOpen(false); // Cerrar menú en móvil
-          }}
-          className="w-full flex items-center gap-3 px-4 py-3 text-white/90 hover:bg-white/10 hover:text-white rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md"
-          title={theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
+          onClick={toggleTheme}
+          className={`w-full flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
         >
-          {theme === 'light' ? (
-            <Moon className="w-5 h-5" />
-          ) : (
-            <Sun className="w-5 h-5" />
-          )}
-          <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
+          <Sun className="w-5 h-5" />
+          <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
         </button>
-        
-        {/* Botón de cerrar sesión */}
         <button
-          onClick={handleSignOut}
-          disabled={isSigningOut}
-          className={`w-full flex items-center gap-3 px-4 py-3 text-white/90 hover:bg-white/10 hover:text-white rounded-xl transition-all duration-200 font-medium shadow-sm hover:shadow-md ${
-            isSigningOut ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          onClick={signOut}
+          className={`w-full flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
         >
           <LogOut className="w-5 h-5" />
-          <span>{isSigningOut ? 'Cerrando sesión...' : 'Cerrar Sesión'}</span>
+          <span>Cerrar Sesión</span>
         </button>
       </div>
     </aside>
-    </>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

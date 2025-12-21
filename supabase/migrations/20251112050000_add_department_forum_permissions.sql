@@ -157,3 +157,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE department_forum_permissions;
 
 
 
+
+
+

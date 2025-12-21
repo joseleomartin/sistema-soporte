@@ -276,11 +276,17 @@ export function SocialPost({ post, onDelete }: SocialPostProps) {
         if (error) throw error;
       } else {
         // Agregar like
+        if (!profile?.tenant_id) {
+          console.error('No se pudo identificar la empresa');
+          return;
+        }
+
         const { error } = await supabase
           .from('social_likes')
           .insert({
             post_id: post.id,
             user_id: profile.id,
+            tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
           });
 
         if (error) throw error;

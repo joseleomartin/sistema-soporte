@@ -57,3 +57,6 @@ COMMENT ON COLUMN course_parts.files IS 'Array de objetos con información de ar
 
 
 
+
+
+

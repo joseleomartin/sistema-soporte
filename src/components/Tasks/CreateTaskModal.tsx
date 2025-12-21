@@ -151,6 +151,11 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
 
     setUploading(true);
     try {
+      // Verificar que tenemos tenant_id
+      if (!profile?.tenant_id) {
+        throw new Error('No se pudo identificar la empresa');
+      }
+
       // Crear un mensaje automático para los archivos iniciales
       const { data: messageData, error: messageError } = await supabase
         .from('task_messages')
@@ -160,7 +165,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             user_id: profile.id,
             message: selectedFiles.length === 1 
               ? `📎 ${selectedFiles[0].name}` 
-              : `📎 ${selectedFiles.length} archivos adjuntos`
+              : `📎 ${selectedFiles.length} archivos adjuntos`,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           }
         ])
         .select()
@@ -192,7 +198,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
               file_path: filePath,
               file_size: file.size,
               file_type: file.type,
-              uploaded_by: profile.id
+              uploaded_by: profile.id,
+              tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
             }
           ]);
 
@@ -273,6 +280,11 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
         dueDateISO = localDate.toISOString();
       }
 
+      // Verificar que tenemos tenant_id
+      if (!profile?.tenant_id) {
+        throw new Error('No se pudo identificar la empresa');
+      }
+
       // Crear la tarea
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
@@ -285,6 +297,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             priority,
             status: 'pending',
             created_by: profile.id,
+            tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
             task_manager_id: (!isPersonal && taskManagerId) ? taskManagerId : null,
             is_recurring: isRecurring,
             recurrence_pattern: recurrencePattern,
@@ -309,7 +322,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             assignments.push({
               task_id: taskData.id,
               assigned_to_user: userId,
-              assigned_by: profile.id
+              assigned_by: profile.id,
+              tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
             });
           }
         } else {
@@ -317,7 +331,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
           assignments.push({
             task_id: taskData.id,
             assigned_to_department: selectedDepartmentId,
-            assigned_by: profile.id
+            assigned_by: profile.id,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           });
         }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { CheckSquare, Plus, Search, Filter, Calendar, User, AlertCircle, Users, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import { CreateTaskModal } from './CreateTaskModal';
 import { TaskDetail } from './TaskDetail';
 
@@ -71,6 +72,7 @@ const statusConfig = {
 
 export function TasksList() {
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +101,7 @@ export function TasksList() {
 
   useEffect(() => {
     fetchTasks();
-  }, [profile]);
+  }, [profile, tenantId]);
 
   // Verificar si hay un parámetro task en la URL después de cargar las tareas
   useEffect(() => {
@@ -152,6 +154,7 @@ export function TasksList() {
               )
             `)
             .eq('id', taskIdToOpen)
+            .eq('tenant_id', tenantId || '') // Filtro explícito por tenant
             .single();
 
           if (error) throw error;
@@ -191,7 +194,7 @@ export function TasksList() {
   }, [tasks, loading]);
 
   const fetchTasks = async () => {
-    if (!profile) return;
+    if (!profile || !tenantId) return;
 
     try {
       setLoading(true);
@@ -200,6 +203,8 @@ export function TasksList() {
       let tasksData: Task[] = [];
       
       // Si es admin, obtener tareas (RLS filtrará automáticamente: solo tareas de equipo o sus propias tareas personales)
+      // IMPORTANTE: Agregar filtro explícito por tenant_id
+      // IMPORTANTE: Filtrar tareas personales de otros usuarios en el frontend también
       if (profile.role === 'admin') {
         const { data, error } = await supabase
           .from('tasks')
@@ -211,16 +216,21 @@ export function TasksList() {
               avatar_url
             )
           `)
+          .eq('tenant_id', tenantId) // Filtro explícito por tenant
           .order('due_date', { ascending: true });
 
         if (error) throw error;
-        tasksData = data || [];
+        // Filtrar en el frontend: solo mostrar tareas personales del usuario actual o tareas de equipo
+        tasksData = (data || []).filter(task => 
+          !task.is_personal || task.created_by === profile.id
+        );
       } else {
         // Si es usuario regular, obtener departamentos del usuario
         const { data: userDepts, error: deptsError } = await supabase
           .from('user_departments')
           .select('department_id')
-          .eq('user_id', profile.id);
+          .eq('user_id', profile.id)
+          .eq('tenant_id', tenantId); // Filtro por tenant
 
         if (deptsError) throw deptsError;
 
@@ -230,14 +240,16 @@ export function TasksList() {
         let query = supabase
           .from('task_assignments')
           .select('task_id')
-          .eq('assigned_to_user', profile.id);
+          .eq('assigned_to_user', profile.id)
+          .eq('tenant_id', tenantId); // Filtro por tenant
 
         // Si el usuario tiene departamentos, agregar esas tareas también
         if (departmentIds.length > 0) {
           const { data: deptAssignments, error: deptError } = await supabase
             .from('task_assignments')
             .select('task_id')
-            .in('assigned_to_department', departmentIds);
+            .in('assigned_to_department', departmentIds)
+            .eq('tenant_id', tenantId); // Filtro por tenant
 
           if (deptError) throw deptError;
 
@@ -264,6 +276,7 @@ export function TasksList() {
                 )
               `)
               .in('id', taskIds)
+              .eq('tenant_id', tenantId) // Filtro explícito por tenant
               .order('due_date', { ascending: true });
 
             if (error) throw error;
@@ -288,6 +301,7 @@ export function TasksList() {
                 )
               `)
               .in('id', taskIds)
+              .eq('tenant_id', tenantId) // Filtro explícito por tenant
               .order('due_date', { ascending: true });
 
             if (error) throw error;
@@ -311,7 +325,8 @@ export function TasksList() {
             profiles:assigned_to_user (id, full_name, avatar_url),
             departments:assigned_to_department (id, name)
           `)
-          .in('task_id', taskIds);
+          .in('task_id', taskIds)
+          .eq('tenant_id', tenantId); // Filtro por tenant
 
         if (assignError) {
           console.error('Error fetching assignments:', assignError);

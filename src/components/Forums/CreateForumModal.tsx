@@ -85,7 +85,10 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.id) return;
+    if (!profile?.id || !profile?.tenant_id) {
+      setError('No se pudo identificar la empresa');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -105,12 +108,19 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
         forumId = existingForum.id;
       } else {
         // Crear un nuevo forum para este cliente
+        if (!profile.tenant_id) {
+          setError('No se pudo identificar la empresa');
+          setLoading(false);
+          return;
+        }
+
         const { data: newForum, error: forumError } = await supabase
           .from('forums')
           .insert({
             name: clientName.trim(),
             description: `Foro del cliente ${clientName.trim()}`,
             created_by: profile.id,
+            tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
           })
           .select('id')
           .single();
@@ -151,6 +161,7 @@ export function CreateForumModal({ onClose, onSuccess }: CreateForumModalProps) 
           phone: combinedPhone,
           forum_id: forumId,
           created_by: profile.id,
+          tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
         })
         .select('id')
         .single();

@@ -261,6 +261,10 @@ export function TaskChat({ taskId }: TaskChatProps) {
   };
 
   const uploadFile = async (file: File, messageId: string) => {
+    if (!profile?.tenant_id) {
+      throw new Error('No se pudo identificar la empresa');
+    }
+
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -284,7 +288,8 @@ export function TaskChat({ taskId }: TaskChatProps) {
             file_path: filePath,
             file_size: file.size,
             file_type: file.type,
-            uploaded_by: profile?.id
+            uploaded_by: profile?.id,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           }
         ]);
 
@@ -306,6 +311,13 @@ export function TaskChat({ taskId }: TaskChatProps) {
       const rawMessage = newMessage.trim() || '';
       const messageText = formatMentionsForStorage(rawMessage);
 
+      // Verificar que tenemos tenant_id
+      if (!profile?.tenant_id) {
+        alert('No se pudo identificar la empresa');
+        setSending(false);
+        return;
+      }
+
       // Crear mensaje
       const { data: messageData, error: messageError } = await supabase
         .from('task_messages')
@@ -313,7 +325,8 @@ export function TaskChat({ taskId }: TaskChatProps) {
           {
             task_id: taskId,
             user_id: profile.id,
-            message: messageText
+            message: messageText,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           }
         ])
         .select()

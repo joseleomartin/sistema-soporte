@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { TenantProvider } from './contexts/TenantContext';
 import { ExtractionProvider } from './contexts/ExtractionContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LoginForm } from './components/Auth/LoginForm';
@@ -21,11 +22,13 @@ import { InternalPolicies } from './components/InternalPolicies/InternalPolicies
 import { SocialFeed } from './components/Social/SocialFeed';
 import { ProfessionalNews } from './components/ProfessionalNews/ProfessionalNews';
 import { MessagesBell } from './components/DirectMessages/MessagesBell';
+import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
 
 function MainApp() {
   const { user, profile, loading } = useAuth();
+  const { tenant } = useTenant();
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedSubforumId, setSelectedSubforumId] = useState<string | null>(null);
@@ -181,7 +184,10 @@ function MainApp() {
         </div>
       </main>
       <ExtractionNotifications />
-      <MessagesBell />
+      {/* Mostrar MessagesBell solo si el módulo está activado */}
+      {(!tenant?.visible_modules || tenant.visible_modules['direct-messages'] !== false) && (
+        <MessagesBell />
+      )}
     </div>
   );
 }
@@ -190,9 +196,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ExtractionProvider>
-          <MainApp />
-        </ExtractionProvider>
+        <TenantProvider>
+          <ExtractionProvider>
+            <MainApp />
+          </ExtractionProvider>
+        </TenantProvider>
       </AuthProvider>
     </ThemeProvider>
   );

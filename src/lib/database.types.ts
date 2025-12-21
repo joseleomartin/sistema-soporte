@@ -17,6 +17,7 @@ export interface Database {
           role: 'admin' | 'support' | 'user'
           avatar_url: string | null
           birthday: string | null
+          visible_modules: Json | null
           created_at: string
           updated_at: string
         }
@@ -27,6 +28,7 @@ export interface Database {
           role?: 'admin' | 'support' | 'user'
           avatar_url?: string | null
           birthday?: string | null
+          visible_modules?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -37,6 +39,7 @@ export interface Database {
           role?: 'admin' | 'support' | 'user'
           avatar_url?: string | null
           birthday?: string | null
+          visible_modules?: Json | null
           created_at?: string
           updated_at?: string
         }
