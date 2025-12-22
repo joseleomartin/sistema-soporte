@@ -246,6 +246,11 @@ export function DirectMessages() {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !profile?.id || sending) return;
 
+    if (!profile?.tenant_id) {
+      alert('No se pudo identificar la empresa');
+      return;
+    }
+
     setSending(true);
     try {
       const { error } = await supabase
@@ -253,7 +258,8 @@ export function DirectMessages() {
         .insert({
           sender_id: profile.id,
           receiver_id: selectedConversation,
-          message: newMessage.trim()
+          message: newMessage.trim(),
+          tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
         });
 
       if (error) throw error;

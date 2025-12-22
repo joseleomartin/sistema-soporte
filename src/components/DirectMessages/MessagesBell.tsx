@@ -882,6 +882,15 @@ export function MessagesBell() {
     // Agregar mensaje temporal - useLayoutEffect manejará el scroll
     setMessages(prev => [...prev, tempMessage]);
 
+    if (!profile?.tenant_id) {
+      alert('No se pudo identificar la empresa');
+      setSending(false);
+      addingTempMessageRef.current = false;
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setNewMessage(messageText);
+      return;
+    }
+
     try {
       // Crear mensaje
       const { data, error } = await (supabase as any)
@@ -889,7 +898,8 @@ export function MessagesBell() {
         .insert({
           sender_id: profile!.id,
           receiver_id: otherUser.id,
-          message: messageText || (selectedFiles.length > 0 ? '📎 Archivo adjunto' : '')
+          message: messageText || (selectedFiles.length > 0 ? '📎 Archivo adjunto' : ''),
+          tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
         })
         .select('id')
         .single();
@@ -940,6 +950,10 @@ export function MessagesBell() {
         if (uploadError) throw uploadError;
 
         // Guardar en BD
+        if (!profile?.tenant_id) {
+          throw new Error('No se pudo identificar la empresa');
+        }
+
         const { error: dbError } = await (supabase as any)
           .from('direct_message_attachments')
           .insert({
@@ -948,7 +962,8 @@ export function MessagesBell() {
             file_path: filePath,
             file_size: file.size,
             file_type: file.type,
-            uploaded_by: profile.id
+            uploaded_by: profile.id,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           });
 
         if (dbError) throw dbError;

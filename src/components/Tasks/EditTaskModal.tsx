@@ -312,6 +312,11 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
 
       if (taskError) throw taskError;
 
+      // Verificar que tenemos tenant_id
+      if (!profile?.tenant_id) {
+        throw new Error('No se pudo identificar la empresa');
+      }
+
       // Actualizar asignaciones solo si NO es personal
       if (!isPersonal) {
         // Eliminar asignaciones existentes
@@ -330,14 +335,16 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
             assignments.push({
               task_id: task.id,
               assigned_to_user: userId,
-              assigned_by: profile.id
+              assigned_by: profile.id,
+              tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
             });
           }
         } else {
           assignments.push({
             task_id: task.id,
             assigned_to_department: selectedDepartmentId,
-            assigned_by: profile.id
+            assigned_by: profile.id,
+            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
           });
         }
 
