@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star, FileSpreadsheet } from 'lucide-react';
+import { useTenant } from '../../contexts/TenantContext';
+import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star, FileSpreadsheet, Grid3x3, List } from 'lucide-react';
 import { CreateForumModal } from './CreateForumModal';
 import { SubforumChat } from './SubforumChat';
 import { ManagePermissionsModal } from './ManagePermissionsModal';
@@ -37,6 +38,7 @@ interface ForumsListProps {
 
 export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListProps = {}) {
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
   const [subforums, setSubforums] = useState<Subforum[]>([]);
   const [filteredSubforums, setFilteredSubforums] = useState<Subforum[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,8 +62,18 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   const [filterByTasks, setFilterByTasks] = useState<'all' | 'with_tasks' | 'without_tasks'>('all');
   const [filterByFavorites, setFilterByFavorites] = useState<boolean>(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    const saved = localStorage.getItem('clientsViewMode');
+    return (saved === 'grid' || saved === 'list') ? saved : 'grid';
+  });
 
   const canCreateForum = profile?.role === 'admin' || profile?.role === 'support';
+
+  const toggleViewMode = () => {
+    const newMode = viewMode === 'grid' ? 'list' : 'grid';
+    setViewMode(newMode);
+    localStorage.setItem('clientsViewMode', newMode);
+  };
 
   useEffect(() => {
     loadSubforums();
@@ -70,13 +82,14 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   }, [profile?.id]);
 
   const loadFavorites = async () => {
-    if (!profile?.id) return;
+    if (!profile?.id || !tenantId) return;
 
     try {
       const { data, error } = await supabase
         .from('client_favorites')
         .select('subforum_id')
-        .eq('user_id', profile.id);
+        .eq('user_id', profile.id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 
@@ -92,7 +105,10 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
 
   const toggleFavorite = async (subforumId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!profile?.id) return;
+    if (!profile?.id || !tenantId) {
+      alert('Error: No se pudo identificar el usuario o la empresa');
+      return;
+    }
 
     try {
       const isFavorite = favoriteIds.has(subforumId);
@@ -103,7 +119,8 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
           .from('client_favorites')
           .delete()
           .eq('user_id', profile.id)
-          .eq('subforum_id', subforumId);
+          .eq('subforum_id', subforumId)
+          .eq('tenant_id', tenantId);
 
         if (error) throw error;
 
@@ -119,7 +136,8 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
           .insert({
             user_id: profile.id,
             subforum_id: subforumId,
-          });
+            tenant_id: tenantId,
+          } as any);
 
         if (error) throw error;
 
@@ -138,9 +156,9 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
             : forum
         )
       );
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      alert('Error al actualizar el favorito');
+    } catch (error: any) {
+      console.error('Error al actualizar el favorito:', error);
+      alert(`Error al actualizar el favorito: ${error?.message || 'Error desconocido'}`);
     }
   };
 
@@ -276,14 +294,15 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       if (data) {
         // Cargar favoritos si no están cargados
         let currentFavoriteIds = favoriteIds;
-        if (currentFavoriteIds.size === 0 && profile?.id) {
+        if (currentFavoriteIds.size === 0 && profile?.id && tenantId) {
           const { data: favData } = await supabase
             .from('client_favorites')
             .select('subforum_id')
-            .eq('user_id', profile.id);
+            .eq('user_id', profile.id)
+            .eq('tenant_id', tenantId);
 
           if (favData) {
-            currentFavoriteIds = new Set(favData.map((fav) => fav.subforum_id));
+            currentFavoriteIds = new Set(favData.map((fav: any) => fav.subforum_id));
             setFavoriteIds(currentFavoriteIds);
           }
         }
@@ -607,6 +626,22 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
               <Star className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${filterByFavorites ? 'fill-yellow-500 text-yellow-500' : ''}`} />
               <span>Favoritos</span>
             </button>
+            <button
+              onClick={toggleViewMode}
+              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm border rounded-lg transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700/50 text-blue-700 dark:text-blue-300'
+                  : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600'
+              }`}
+              title={viewMode === 'grid' ? 'Cambiar a vista de lista' : 'Cambiar a vista de tarjetas'}
+            >
+              {viewMode === 'grid' ? (
+                <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              ) : (
+                <Grid3x3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              )}
+              <span className="hidden sm:inline">{viewMode === 'grid' ? 'Lista' : 'Tarjetas'}</span>
+            </button>
           </div>
 
           {/* Botón para limpiar filtros */}
@@ -640,13 +675,14 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-          {filteredSubforums.map((forum) => (
-            <div
-              key={forum.id}
-              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 md:p-6 hover:shadow-md transition relative group cursor-pointer"
-              onClick={() => setSelectedSubforum(forum.id)}
-            >
+        viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+            {filteredSubforums.map((forum) => (
+              <div
+                key={forum.id}
+                className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-5 md:p-6 hover:shadow-md transition relative group cursor-pointer"
+                onClick={() => setSelectedSubforum(forum.id)}
+              >
               <div className="absolute top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 flex gap-0.5 sm:gap-1 flex-wrap">
                 {/* Botón de Favorito */}
                 <button
@@ -766,6 +802,179 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
             </div>
           ))}
         </div>
+        ) : (
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Espacio de Trabajo</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Archivos</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tareas</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+                  {filteredSubforums.map((forum) => (
+                    <tr
+                      key={forum.id}
+                      className="hover:bg-gray-50 dark:hover:bg-slate-700 transition cursor-pointer"
+                      onClick={() => setSelectedSubforum(forum.id)}
+                    >
+                      <td className="px-4 py-4">
+                        <div className="flex items-center">
+                          <div className="flex items-center gap-1.5 flex-shrink-0 mr-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowFilesFor(forum);
+                              }}
+                              className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30"
+                              title="Ver archivos del cliente"
+                            >
+                              <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowClientInfoFor(forum);
+                              }}
+                              className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30"
+                              title="Ver ficha del cliente"
+                            >
+                              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            </button>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{forum.name}</div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleFavorite(forum.id, e);
+                                }}
+                                className={`flex-shrink-0 p-1 rounded transition ${
+                                  favoriteIds.has(forum.id)
+                                    ? 'text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                                    : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-50 dark:hover:bg-slate-700'
+                                }`}
+                                title={favoriteIds.has(forum.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                              >
+                                <Star className={`w-4 h-4 ${favoriteIds.has(forum.id) ? 'fill-current' : ''}`} />
+                              </button>
+                            </div>
+                            {forum.description && (
+                              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
+                                {forum.description}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 dark:text-white">{forum.client_name}</div>
+                        {forum.cuit && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400">CUIT: {forum.cuit}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {new Date(forum.created_at).toLocaleDateString('es-ES')}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
+                          <File className="w-4 h-4" />
+                          <span>{forum.message_count || 0}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {pendingTasksCount.get(forum.client_name) && pendingTasksCount.get(forum.client_name)! > 0 ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowPendingTasks(forum.client_name);
+                            }}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-xs font-medium transition-colors"
+                          >
+                            <CheckSquare className="w-3.5 h-3.5" />
+                            <span>{pendingTasksCount.get(forum.client_name)} pendiente{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''}</span>
+                          </button>
+                        ) : (
+                          <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(forum.id, e);
+                            }}
+                            className={`p-2 rounded-lg transition ${
+                              favoriteIds.has(forum.id)
+                                ? 'text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                                : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-50 dark:hover:bg-slate-700'
+                            }`}
+                            title={favoriteIds.has(forum.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                          >
+                            <Star className={`w-4 h-4 ${favoriteIds.has(forum.id) ? 'fill-current' : ''}`} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowFilesFor(forum);
+                            }}
+                            className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                            title="Ver archivos"
+                          >
+                            <FolderOpen className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowClientInfoFor(forum);
+                            }}
+                            className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                            title="Ver ficha del cliente"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          {canCreateForum && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditClientFor(forum);
+                                }}
+                                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                                title="Editar cliente"
+                              >
+                                <Settings className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setManagePermissionsFor(forum);
+                                }}
+                                className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                                title="Permisos"
+                              >
+                                <Users className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
       )}
 
       {showCreateModal && (

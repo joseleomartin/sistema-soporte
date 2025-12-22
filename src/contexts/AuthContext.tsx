@@ -10,7 +10,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string, fullName: string, invitationCode: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   refreshProfile: () => Promise<void>;
@@ -107,7 +107,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, invitationCode: string) => {
+    // Validar el código de invitación y obtener el tenant_id
+    const { data: tenantId, error: codeError } = await supabase.rpc(
+      'validate_and_use_invitation_code',
+      { p_code: invitationCode }
+    );
+
+    if (codeError || !tenantId) {
+      return { 
+        error: codeError || new Error('Código de invitación no válido. Por favor, verifica el código e intenta nuevamente.') as AuthError 
+      };
+    }
+
     // Determinar la URL de redirección
     // Si la URL no está permitida en Supabase, no enviará el email
     // Por eso, solo usamos emailRedirectTo si estamos seguros de que la URL está permitida
@@ -128,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: {
         full_name: fullName,
         role: 'user',
+        tenant_id: String(tenantId), // Asignar tenant_id desde el código de invitación
       },
     };
     
@@ -155,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             full_name: fullName,
             role: 'user',
+            tenant_id: String(tenantId), // Mantener tenant_id en el retry
           },
         },
       });

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { Camera, User, Upload, CheckCircle, AlertCircle, Building2, Calendar, Eye, EyeOff, Home, Video, Users as UsersIcon, FolderOpen, Clock, CheckSquare, Wrench, Headphones, Settings, Layers, FileText, BookOpen, Briefcase, Heart, MessageSquare } from 'lucide-react';
+import { Camera, User, Upload, CheckCircle, AlertCircle, Building2, Calendar, Eye, EyeOff, Home, Video, Users as UsersIcon, FolderOpen, Clock, CheckSquare, Wrench, Headphones, Settings, Layers, FileText, BookOpen, Briefcase, Heart, MessageSquare, Copy, Plus, Trash2, RefreshCw, Factory, Package, ShoppingCart, TrendingUp, BarChart3, DollarSign, Truck, Sparkles } from 'lucide-react';
 
 export function ProfileSettings() {
   const { profile, user, refreshProfile } = useAuth();
@@ -18,6 +18,12 @@ export function ProfileSettings() {
   const [birthdayInitialized, setBirthdayInitialized] = useState(false);
   const [visibleModules, setVisibleModules] = useState<Record<string, boolean>>({});
   const [savingModules, setSavingModules] = useState(false);
+  const [invitationCodes, setInvitationCodes] = useState<any[]>([]);
+  const [loadingCodes, setLoadingCodes] = useState(false);
+  const [newCodeExpiresAt, setNewCodeExpiresAt] = useState<string>('');
+  const [newCodeMaxUses, setNewCodeMaxUses] = useState<string>('');
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [applyingLoadout, setApplyingLoadout] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,6 +37,14 @@ export function ProfileSettings() {
     { key: 'professional-news', label: 'Novedades Profesionales', icon: Briefcase, category: 'personas' },
     { key: 'vacations', label: 'Vacaciones y Licencias', icon: Calendar, category: 'personas' },
     { key: 'social', label: 'Social', icon: Heart, category: 'personas' },
+    { key: 'fabinsa-production', label: 'Producción', icon: Factory, category: 'negocio' },
+    { key: 'fabinsa-employees', label: 'Empleados', icon: UsersIcon, category: 'negocio' },
+    { key: 'fabinsa-stock', label: 'Stock', icon: Package, category: 'negocio' },
+    { key: 'fabinsa-sales', label: 'Ventas', icon: ShoppingCart, category: 'negocio' },
+    { key: 'fabinsa-purchases', label: 'Compras', icon: TrendingUp, category: 'negocio' },
+    { key: 'fabinsa-metrics', label: 'Métricas', icon: BarChart3, category: 'negocio' },
+    { key: 'fabinsa-costs', label: 'Costos', icon: DollarSign, category: 'negocio' },
+    { key: 'fabinsa-suppliers', label: 'Proveedores', icon: Truck, category: 'negocio' },
     { key: 'forums', label: 'Clientes', icon: FolderOpen, category: 'negocio' },
     { key: 'time-tracking', label: 'Carga de Horas', icon: Clock, category: 'negocio' },
     { key: 'tasks', label: 'Tareas', icon: CheckSquare, category: 'negocio' },
@@ -77,8 +91,106 @@ export function ProfileSettings() {
     loadDepartments();
     if (profile?.role === 'admin') {
       loadVisibleModules();
+      loadInvitationCodes();
     }
   }, [profile?.id, profile?.birthday, profile?.role, birthdayInitialized, tenant?.logo_url, tenant?.id]);
+
+  const loadInvitationCodes = async () => {
+    if (!profile?.id || !tenant?.id || profile.role !== 'admin') return;
+
+    setLoadingCodes(true);
+    try {
+      const { data, error } = await supabase
+        .from('invitation_codes')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setInvitationCodes(data || []);
+    } catch (error) {
+      console.error('Error loading invitation codes:', error);
+    } finally {
+      setLoadingCodes(false);
+    }
+  };
+
+  const generateInvitationCode = async () => {
+    if (!profile?.id || !tenant?.id || profile.role !== 'admin') return;
+
+    setGeneratingCode(true);
+    setMessage(null);
+
+    try {
+      const expiresAt = newCodeExpiresAt ? new Date(newCodeExpiresAt).toISOString() : null;
+      const maxUses = newCodeMaxUses ? parseInt(newCodeMaxUses) : null;
+
+      const { data, error } = await supabase.rpc('generate_invitation_code', {
+        p_tenant_id: tenant.id,
+        p_created_by: profile.id,
+        p_expires_at: expiresAt,
+        p_max_uses: maxUses
+      });
+
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: `Código generado: ${data}. Cópialo y compártelo con los usuarios.` });
+      setTimeout(() => setMessage(null), 5000);
+      setNewCodeExpiresAt('');
+      setNewCodeMaxUses('');
+      await loadInvitationCodes();
+    } catch (error: any) {
+      console.error('Error generating invitation code:', error);
+      setMessage({ type: 'error', text: error.message || 'Error al generar el código' });
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const toggleCodeStatus = async (codeId: string, currentStatus: boolean) => {
+    if (!profile?.id || !tenant?.id || profile.role !== 'admin') return;
+
+    try {
+      const { error } = await supabase
+        .from('invitation_codes')
+        .update({ is_active: !currentStatus })
+        .eq('id', codeId)
+        .eq('tenant_id', tenant.id);
+
+      if (error) throw error;
+      await loadInvitationCodes();
+    } catch (error: any) {
+      console.error('Error updating code status:', error);
+      setMessage({ type: 'error', text: 'Error al actualizar el código' });
+    }
+  };
+
+  const deleteCode = async (codeId: string) => {
+    if (!profile?.id || !tenant?.id || profile.role !== 'admin') return;
+    if (!confirm('¿Estás seguro de que deseas eliminar este código?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('invitation_codes')
+        .delete()
+        .eq('id', codeId)
+        .eq('tenant_id', tenant.id);
+
+      if (error) throw error;
+      await loadInvitationCodes();
+      setMessage({ type: 'success', text: 'Código eliminado correctamente' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error: any) {
+      console.error('Error deleting code:', error);
+      setMessage({ type: 'error', text: 'Error al eliminar el código' });
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setMessage({ type: 'success', text: 'Código copiado al portapapeles' });
+    setTimeout(() => setMessage(null), 2000);
+  };
 
   const loadVisibleModules = async () => {
     if (!profile?.id || !tenant?.id) return;
@@ -119,6 +231,119 @@ export function ProfileSettings() {
         defaultModules[module.key] = true;
       });
       setVisibleModules(defaultModules);
+    }
+  };
+
+  // Definir plantillas (loadouts) predeterminadas
+  const loadouts = {
+    'servicios': {
+      name: 'Empresa de Servicios',
+      description: 'Ideal para empresas que ofrecen servicios profesionales',
+      modules: {
+        // Módulos principales
+        'dashboard': true,
+        'meetings': true,
+        'tickets': true,
+        'direct-messages': true,
+        // Personas
+        'departments': true,
+        'internal-policies': true,
+        'library': true,
+        'professional-news': true,
+        'vacations': true,
+        'social': true,
+        // Negocio - Sin módulos de producción
+        'forums': true,
+        'time-tracking': true,
+        'tasks': true,
+        'tools': true,
+        // Módulos de producción desactivados
+        'fabinsa-production': false,
+        'fabinsa-employees': false,
+        'fabinsa-stock': false,
+        'fabinsa-sales': false,
+        'fabinsa-purchases': false,
+        'fabinsa-metrics': false,
+        'fabinsa-costs': false,
+        'fabinsa-suppliers': false,
+      }
+    },
+    'produccion': {
+      name: 'Empresa de Producción',
+      description: 'Incluye todos los módulos de producción, inventario, ventas y compras',
+      modules: {
+        // Módulos principales
+        'dashboard': true,
+        'meetings': true,
+        'tickets': true,
+        'direct-messages': true,
+        // Personas
+        'departments': true,
+        'internal-policies': true,
+        'library': true,
+        'professional-news': true,
+        'vacations': true,
+        'social': true,
+        // Negocio - Módulos de producción
+        'fabinsa-production': true,
+        'fabinsa-employees': true,
+        'fabinsa-stock': true,
+        'fabinsa-sales': true,
+        'fabinsa-purchases': true,
+        'fabinsa-metrics': true,
+        'fabinsa-costs': true,
+        'fabinsa-suppliers': true,
+        'forums': true,
+        // Módulos desactivados para producción
+        'time-tracking': false,
+        'tasks': false,
+        'tools': false,
+      }
+    },
+    'personalizado': {
+      name: 'Personalizado',
+      description: 'Configuración actual de la empresa',
+      modules: null // Se usa la configuración actual
+    }
+  };
+
+  const applyLoadout = async (loadoutKey: keyof typeof loadouts) => {
+    if (!profile?.id || !tenant?.id) return;
+    if (loadoutKey === 'personalizado') return; // No hacer nada si es personalizado
+
+    const loadout = loadouts[loadoutKey];
+    if (!loadout.modules) return;
+
+    setApplyingLoadout(true);
+    setSavingModules(true);
+    setMessage(null);
+
+    try {
+      // Aplicar la plantilla
+      setVisibleModules(loadout.modules);
+
+      // Guardar en tenants
+      const { error } = await supabase
+        .from('tenants')
+        .update({ visible_modules: loadout.modules })
+        .eq('id', tenant.id);
+
+      if (error) throw error;
+
+      // Recargar el tenant para actualizar el contexto
+      await refreshTenant();
+
+      setMessage({ 
+        type: 'success', 
+        text: `Plantilla "${loadout.name}" aplicada correctamente. Los cambios se aplicarán a todos los usuarios de la empresa.` 
+      });
+      setTimeout(() => setMessage(null), 4000);
+    } catch (error: any) {
+      console.error('Error applying loadout:', error);
+      setMessage({ type: 'error', text: 'Error al aplicar la plantilla' });
+    } finally {
+      setApplyingLoadout(false);
+      setSavingModules(false);
     }
   };
 
@@ -627,6 +852,40 @@ export function ProfileSettings() {
             Selecciona qué módulos estarán visibles para <strong>todos los usuarios</strong> de la empresa. Los módulos desactivados no aparecerán en la navegación de ningún usuario.
           </p>
 
+          {/* Selector de Plantillas */}
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Plantillas Predeterminadas</h4>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+              Aplica una configuración predeterminada según el tipo de empresa. Esto sobrescribirá la configuración actual.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {Object.entries(loadouts).map(([key, loadout]) => (
+                <button
+                  key={key}
+                  onClick={() => applyLoadout(key as keyof typeof loadouts)}
+                  disabled={applyingLoadout || savingModules || key === 'personalizado'}
+                  className={`p-4 rounded-lg border-2 text-left transition ${
+                    key === 'personalizado'
+                      ? 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 cursor-not-allowed opacity-60'
+                      : applyingLoadout || savingModules
+                      ? 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 cursor-not-allowed opacity-60'
+                      : 'border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-800 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md cursor-pointer'
+                  }`}
+                >
+                  <div className="font-semibold text-sm text-gray-900 dark:text-white mb-1">
+                    {loadout.name}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    {loadout.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
         <div className="space-y-6">
           {/* Módulos Principales */}
           <div>
@@ -741,6 +1000,173 @@ export function ProfileSettings() {
               })}
             </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Códigos de Invitación - Solo para administradores */}
+      {profile?.role === 'admin' && (
+        <div className="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Códigos de Invitación</h3>
+            </div>
+            <button
+              onClick={loadInvitationCodes}
+              disabled={loadingCodes}
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+            >
+              <RefreshCw className={`w-5 h-5 ${loadingCodes ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            Genera códigos de invitación para que nuevos usuarios se registren en tu empresa. Los usuarios necesitarán este código al crear su cuenta.
+          </p>
+
+          {/* Formulario para generar nuevo código */}
+          <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-6 mb-6">
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Generar Nuevo Código</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Fecha de Expiración (Opcional)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={newCodeExpiresAt}
+                  onChange={(e) => setNewCodeExpiresAt(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Usos Máximos (Opcional)
+                </label>
+                <input
+                  type="number"
+                  value={newCodeMaxUses}
+                  onChange={(e) => setNewCodeMaxUses(e.target.value)}
+                  min="1"
+                  placeholder="Ilimitado"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={generateInvitationCode}
+                  disabled={generatingCode}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                >
+                  {generatingCode ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Generar Código
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de códigos */}
+          <div>
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Códigos Activos</h4>
+            {loadingCodes ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              </div>
+            ) : invitationCodes.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                No hay códigos de invitación. Genera uno para comenzar.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {invitationCodes.map((code) => (
+                  <div
+                    key={code.id}
+                    className={`p-4 rounded-lg border-2 ${
+                      code.is_active
+                        ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <code className="text-2xl font-bold text-gray-900 dark:text-white font-mono">
+                            {code.code}
+                          </code>
+                          <button
+                            onClick={() => copyToClipboard(code.code)}
+                            className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                            title="Copiar código"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              code.is_active
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                            }`}
+                          >
+                            {code.is_active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                          <p>Usos: {code.current_uses} {code.max_uses ? `/ ${code.max_uses}` : '(Ilimitado)'}</p>
+                          {code.expires_at && (
+                            <p>
+                              Expira: {new Date(code.expires_at).toLocaleString('es-ES', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          )}
+                          <p>
+                            Creado: {new Date(code.created_at).toLocaleString('es-ES', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleCodeStatus(code.id, code.is_active)}
+                          className={`px-3 py-1 text-sm rounded-lg transition ${
+                            code.is_active
+                              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
+                          }`}
+                        >
+                          {code.is_active ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button
+                          onClick={() => deleteCode(code.id)}
+                          className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition"
+                          title="Eliminar código"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

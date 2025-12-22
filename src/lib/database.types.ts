@@ -471,18 +471,21 @@ export interface Database {
           id: string
           user_id: string
           subforum_id: string
+          tenant_id: string
           created_at: string
         }
         Insert: {
           id?: string
           user_id: string
           subforum_id: string
+          tenant_id: string
           created_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           subforum_id?: string
+          tenant_id?: string
           created_at?: string
         }
       }
@@ -516,6 +519,598 @@ export interface Database {
           tags?: string[] | null
           created_by?: string | null
           created_at?: string
+        }
+      }
+      // ============================================
+      // SISTEMA FABINSA - PRODUCCIÓN Y GESTIÓN
+      // ============================================
+      products: {
+        Row: {
+          id: string
+          tenant_id: string
+          nombre: string
+          familia: string | null
+          medida: string | null
+          caracteristica: string | null
+          peso_unidad: number
+          precio_venta: number | null
+          cantidad_fabricar: number
+          cantidad_por_hora: number
+          iibb_porcentaje: number
+          moneda_precio: 'ARS' | 'USD'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          nombre: string
+          familia?: string | null
+          medida?: string | null
+          caracteristica?: string | null
+          peso_unidad: number
+          precio_venta?: number | null
+          cantidad_fabricar?: number
+          cantidad_por_hora?: number
+          iibb_porcentaje?: number
+          moneda_precio?: 'ARS' | 'USD'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          nombre?: string
+          familia?: string | null
+          medida?: string | null
+          caracteristica?: string | null
+          peso_unidad?: number
+          precio_venta?: number | null
+          cantidad_fabricar?: number
+          cantidad_por_hora?: number
+          iibb_porcentaje?: number
+          moneda_precio?: 'ARS' | 'USD'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      product_materials: {
+        Row: {
+          id: string
+          product_id: string
+          material_name: string
+          kg_por_unidad: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          material_name: string
+          kg_por_unidad: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          material_name?: string
+          kg_por_unidad?: number
+          created_at?: string
+        }
+      }
+      employees: {
+        Row: {
+          id: string
+          tenant_id: string
+          nombre: string
+          valor_hora: number
+          dias_trabajados: number
+          horas_dia: number
+          ausencias: number
+          vacaciones: number
+          feriados: number
+          lic_enfermedad: number
+          otras_licencias: number
+          horas_descanso: number
+          carga_social: number
+          horas_extras: number
+          feriados_trabajados: number
+          valor_hora_ajustado: number | null
+          horas_productivas: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          nombre: string
+          valor_hora: number
+          dias_trabajados?: number
+          horas_dia?: number
+          ausencias?: number
+          vacaciones?: number
+          feriados?: number
+          lic_enfermedad?: number
+          otras_licencias?: number
+          horas_descanso?: number
+          carga_social?: number
+          horas_extras?: number
+          feriados_trabajados?: number
+          valor_hora_ajustado?: number | null
+          horas_productivas?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          nombre?: string
+          valor_hora?: number
+          dias_trabajados?: number
+          horas_dia?: number
+          ausencias?: number
+          vacaciones?: number
+          feriados?: number
+          lic_enfermedad?: number
+          otras_licencias?: number
+          horas_descanso?: number
+          carga_social?: number
+          horas_extras?: number
+          feriados_trabajados?: number
+          valor_hora_ajustado?: number | null
+          horas_productivas?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      stock_materials: {
+        Row: {
+          id: string
+          tenant_id: string
+          nombre: string
+          material: string
+          kg: number
+          costo_kilo_usd: number
+          valor_dolar: number
+          moneda: 'ARS' | 'USD'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          nombre: string
+          material: string
+          kg?: number
+          costo_kilo_usd: number
+          valor_dolar?: number
+          moneda?: 'ARS' | 'USD'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          nombre?: string
+          material?: string
+          kg?: number
+          costo_kilo_usd?: number
+          valor_dolar?: number
+          moneda?: 'ARS' | 'USD'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      stock_products: {
+        Row: {
+          id: string
+          tenant_id: string
+          nombre: string
+          cantidad: number
+          peso_unidad: number
+          costo_unit_total: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          nombre: string
+          cantidad?: number
+          peso_unidad: number
+          costo_unit_total?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          nombre?: string
+          cantidad?: number
+          peso_unidad?: number
+          costo_unit_total?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      resale_products: {
+        Row: {
+          id: string
+          tenant_id: string
+          nombre: string
+          cantidad: number
+          costo_unitario: number
+          otros_costos: number
+          costo_unitario_final: number
+          moneda: 'ARS' | 'USD'
+          valor_dolar: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          nombre: string
+          cantidad?: number
+          costo_unitario: number
+          otros_costos?: number
+          costo_unitario_final: number
+          moneda?: 'ARS' | 'USD'
+          valor_dolar?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          nombre?: string
+          cantidad?: number
+          costo_unitario?: number
+          otros_costos?: number
+          costo_unitario_final?: number
+          moneda?: 'ARS' | 'USD'
+          valor_dolar?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      sales: {
+        Row: {
+          id: string
+          tenant_id: string
+          fecha: string
+          producto: string
+          tipo_producto: 'fabricado' | 'reventa'
+          cantidad: number
+          precio_unitario: number
+          descuento_pct: number
+          iib_pct: number
+          precio_final: number
+          costo_unitario: number
+          ingreso_bruto: number
+          ingreso_neto: number
+          ganancia_un: number
+          ganancia_total: number
+          stock_antes: number
+          stock_despues: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          fecha?: string
+          producto: string
+          tipo_producto: 'fabricado' | 'reventa'
+          cantidad: number
+          precio_unitario: number
+          descuento_pct?: number
+          iib_pct?: number
+          precio_final: number
+          costo_unitario: number
+          ingreso_bruto: number
+          ingreso_neto: number
+          ganancia_un: number
+          ganancia_total: number
+          stock_antes: number
+          stock_despues: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          fecha?: string
+          producto?: string
+          tipo_producto?: 'fabricado' | 'reventa'
+          cantidad?: number
+          precio_unitario?: number
+          descuento_pct?: number
+          iib_pct?: number
+          precio_final?: number
+          costo_unitario?: number
+          ingreso_bruto?: number
+          ingreso_neto?: number
+          ganancia_un?: number
+          ganancia_total?: number
+          stock_antes?: number
+          stock_despues?: number
+          created_at?: string
+        }
+      }
+      purchases_materials: {
+        Row: {
+          id: string
+          tenant_id: string
+          fecha: string
+          material: string
+          cantidad: number
+          precio: number
+          proveedor: string
+          moneda: 'ARS' | 'USD'
+          valor_dolar: number | null
+          total: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          fecha: string
+          material: string
+          cantidad: number
+          precio: number
+          proveedor: string
+          moneda?: 'ARS' | 'USD'
+          valor_dolar?: number | null
+          total: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          fecha?: string
+          material?: string
+          cantidad?: number
+          precio?: number
+          proveedor?: string
+          moneda?: 'ARS' | 'USD'
+          valor_dolar?: number | null
+          total?: number
+          created_at?: string
+        }
+      }
+      purchases_products: {
+        Row: {
+          id: string
+          tenant_id: string
+          fecha: string
+          producto: string
+          cantidad: number
+          precio: number
+          proveedor: string
+          moneda: 'ARS' | 'USD'
+          valor_dolar: number | null
+          total: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          fecha: string
+          producto: string
+          cantidad: number
+          precio: number
+          proveedor: string
+          moneda?: 'ARS' | 'USD'
+          valor_dolar?: number | null
+          total: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          fecha?: string
+          producto?: string
+          cantidad?: number
+          precio?: number
+          proveedor?: string
+          moneda?: 'ARS' | 'USD'
+          valor_dolar?: number | null
+          total?: number
+          created_at?: string
+        }
+      }
+      production_metrics: {
+        Row: {
+          id: string
+          tenant_id: string
+          fecha: string
+          producto: string
+          cantidad: number
+          peso_unidad: number
+          kg_consumidos: number
+          costo_mp: number
+          costo_mo: number
+          costo_prod_unit: number
+          costo_total_mp: number
+          precio_venta: number | null
+          rentabilidad_neta: number | null
+          rentabilidad_total: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          fecha: string
+          producto: string
+          cantidad: number
+          peso_unidad: number
+          kg_consumidos: number
+          costo_mp: number
+          costo_mo: number
+          costo_prod_unit: number
+          costo_total_mp: number
+          precio_venta?: number | null
+          rentabilidad_neta?: number | null
+          rentabilidad_total?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          fecha?: string
+          producto?: string
+          cantidad?: number
+          peso_unidad?: number
+          kg_consumidos?: number
+          costo_mp?: number
+          costo_mo?: number
+          costo_prod_unit?: number
+          costo_total_mp?: number
+          precio_venta?: number | null
+          rentabilidad_neta?: number | null
+          rentabilidad_total?: number | null
+          created_at?: string
+        }
+      }
+      inventory_movements: {
+        Row: {
+          id: string
+          tenant_id: string
+          tipo: 'ingreso_mp' | 'egreso_mp' | 'ingreso_pr' | 'egreso_pr' | 'ingreso_fab' | 'egreso_fab'
+          item_nombre: string
+          cantidad: number
+          motivo: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          tipo: 'ingreso_mp' | 'egreso_mp' | 'ingreso_pr' | 'egreso_pr' | 'ingreso_fab' | 'egreso_fab'
+          item_nombre: string
+          cantidad: number
+          motivo?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          tipo?: 'ingreso_mp' | 'egreso_mp' | 'ingreso_pr' | 'egreso_pr' | 'ingreso_fab' | 'egreso_fab'
+          item_nombre?: string
+          cantidad?: number
+          motivo?: string | null
+          created_at?: string
+        }
+      }
+      suppliers: {
+        Row: {
+          id: string
+          tenant_id: string
+          nombre: string
+          razon_social: string | null
+          cuit: string | null
+          telefono: string | null
+          email: string | null
+          provincia: string | null
+          direccion: string | null
+          observaciones: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          nombre: string
+          razon_social?: string | null
+          cuit?: string | null
+          telefono?: string | null
+          email?: string | null
+          provincia?: string | null
+          direccion?: string | null
+          observaciones?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          nombre?: string
+          razon_social?: string | null
+          cuit?: string | null
+          telefono?: string | null
+          email?: string | null
+          provincia?: string | null
+          direccion?: string | null
+          observaciones?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      supplier_documents: {
+        Row: {
+          id: string
+          supplier_id: string
+          tenant_id: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          uploaded_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          supplier_id: string
+          tenant_id: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          uploaded_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          supplier_id?: string
+          tenant_id?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          uploaded_by?: string
+          created_at?: string
+        }
+      }
+      supplier_drive_mapping: {
+        Row: {
+          id: string
+          supplier_id: string
+          tenant_id: string
+          google_drive_folder_id: string
+          folder_name: string
+          folder_link: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          supplier_id: string
+          tenant_id: string
+          google_drive_folder_id: string
+          folder_name: string
+          folder_link?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          supplier_id?: string
+          tenant_id?: string
+          google_drive_folder_id?: string
+          folder_name?: string
+          folder_link?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
         }
       }
     }

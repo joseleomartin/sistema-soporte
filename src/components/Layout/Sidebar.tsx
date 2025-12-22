@@ -20,7 +20,16 @@ import {
   Clock,
   CheckSquare,
   Wrench,
-  Layers
+  Layers,
+  Factory,
+  Package,
+  ShoppingCart,
+  TrendingUp,
+  BarChart3,
+  DollarSign,
+  Truck,
+  Menu,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
@@ -35,6 +44,8 @@ interface SidebarProps {
   onNavigateToTicket: (ticketId: string) => void;
   onNavigateToForum: (subforumId: string) => void;
   onNavigateToTimeTracking: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 type SubMenuItem = {
@@ -73,6 +84,14 @@ const menuItems: MenuItem[] = [
     label: 'Negocio', 
     roles: ['admin', 'support', 'user'],
     subItems: [
+      { icon: Factory, label: 'Producción', view: 'fabinsa-production', roles: ['admin', 'support', 'user'] },
+      { icon: UsersIcon, label: 'Empleados', view: 'fabinsa-employees', roles: ['admin', 'support', 'user'] },
+      { icon: Package, label: 'Stock', view: 'fabinsa-stock', roles: ['admin', 'support', 'user'] },
+      { icon: ShoppingCart, label: 'Ventas', view: 'fabinsa-sales', roles: ['admin', 'support', 'user'] },
+      { icon: TrendingUp, label: 'Compras', view: 'fabinsa-purchases', roles: ['admin', 'support', 'user'] },
+      { icon: BarChart3, label: 'Métricas', view: 'fabinsa-metrics', roles: ['admin', 'support', 'user'] },
+      { icon: DollarSign, label: 'Costos', view: 'fabinsa-costs', roles: ['admin', 'support', 'user'] },
+      { icon: Truck, label: 'Proveedores', view: 'fabinsa-suppliers', roles: ['admin', 'support', 'user'] },
       { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
       { icon: Clock, label: 'Carga de Horas', view: 'time-tracking', roles: ['admin', 'support', 'user'] },
       { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
@@ -84,7 +103,7 @@ const menuItems: MenuItem[] = [
   { icon: Settings, label: 'Mi Perfil', view: 'settings', roles: ['admin', 'support', 'user'] },
 ];
 
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { tenant } = useTenant();
   const { activeJobsCount } = useExtraction();
@@ -92,6 +111,24 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
+  const handleToggleCollapse = () => {
+    const newState = !sidebarCollapsed;
+    setSidebarCollapsed(newState);
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    }
+  };
+
+  const isSidebarCollapsed = isCollapsed !== undefined ? isCollapsed : sidebarCollapsed;
 
   useEffect(() => {
     if (profile?.avatar_url) {
@@ -209,38 +246,65 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   };
 
   return (
-    <aside className={`w-64 ${isDark ? 'bg-slate-800' : 'bg-white'} ${isDark ? 'border-slate-700' : 'border-gray-200'} border-r flex flex-col h-screen fixed left-0 top-0`}>
-      <div className={`px-4 py-3 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-b flex-shrink-0`}>
-        <div className="flex items-center justify-between mb-3 gap-2">
-          <div className="flex items-center flex-1 min-w-0">
-            {tenant?.logo_url && !logoError ? (
-              <img 
-                src={tenant.logo_url} 
-                alt={tenant.name || 'Logo de la empresa'} 
-                className="h-16 w-auto object-contain max-w-[140px]"
-                onError={() => setLogoError(true)}
-              />
-            ) : logoError ? (
-              <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {tenant?.name || 'EmaGroup'}
-              </h1>
-            ) : (
-              <img 
-                src="/logo ema.png" 
-                alt="EmaGroup" 
-                className="h-16 w-auto object-contain"
-                onError={() => setLogoError(true)}
-              />
+    <>
+      {/* Botón flotante para mostrar/ocultar sidebar cuando está colapsado */}
+      {isSidebarCollapsed && (
+        <button
+          onClick={handleToggleCollapse}
+          className={`fixed left-4 top-4 z-50 p-2 rounded-lg ${isDark ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-white text-gray-700 hover:bg-gray-50'} shadow-lg border ${isDark ? 'border-slate-700' : 'border-gray-200'}`}
+          title="Mostrar menú"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      )}
+
+      <aside className={`${isSidebarCollapsed ? '-translate-x-full' : 'translate-x-0'} transition-transform duration-300 ease-in-out w-64 ${isDark ? 'bg-slate-800' : 'bg-white'} ${isDark ? 'border-slate-700' : 'border-gray-200'} border-r flex flex-col h-screen fixed left-0 top-0 z-40`}>
+        <div className={`px-4 py-3 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-b flex-shrink-0`}>
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="flex items-center flex-1 min-w-0">
+              {!isSidebarCollapsed && (
+                <>
+                  {tenant?.logo_url && !logoError ? (
+                    <img 
+                      src={tenant.logo_url} 
+                      alt={tenant.name || 'Logo de la empresa'} 
+                      className="h-16 w-auto object-contain max-w-[140px]"
+                      onError={() => setLogoError(true)}
+                    />
+                  ) : logoError ? (
+                    <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {tenant?.name || 'EmaGroup'}
+                    </h1>
+                  ) : (
+                    <img 
+                      src="/logo ema.png" 
+                      alt="EmaGroup" 
+                      className="h-16 w-auto object-contain"
+                      onError={() => setLogoError(true)}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex items-center gap-2">
+                <NotificationBell 
+                  onNavigateToTicket={onNavigateToTicket}
+                  onNavigateToCalendar={handleNavigateToCalendar}
+                  onNavigateToTasks={() => onViewChange('tasks')}
+                  onNavigateToForum={onNavigateToForum}
+                />
+                <button
+                  onClick={handleToggleCollapse}
+                  className={`p-1.5 rounded-lg ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                  title="Ocultar menú"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             )}
           </div>
-          <NotificationBell 
-            onNavigateToTicket={onNavigateToTicket}
-            onNavigateToCalendar={handleNavigateToCalendar}
-            onNavigateToTasks={() => onViewChange('tasks')}
-            onNavigateToForum={onNavigateToForum}
-          />
-        </div>
-        {profile && (
+        {profile && !isSidebarCollapsed && (
           <div className={`pt-4 ${isDark ? 'border-slate-700' : 'border-gray-100'} border-t`}>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
@@ -269,9 +333,10 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         )}
       </div>
 
-      <nav className="flex-1 p-4 overflow-y-auto min-h-0">
-        <ul className="space-y-1">
-          {filteredItems.map((item) => {
+      {!isSidebarCollapsed && (
+        <nav className="flex-1 p-4 overflow-y-auto min-h-0">
+          <ul className="space-y-1">
+            {filteredItems.map((item) => {
             const Icon = item.icon;
             const hasSubItems = item.subItems && item.subItems.length > 0;
             const isExpanded = expandedMenus.has(item.label);
@@ -355,29 +420,52 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                 )}
               </li>
             );
-          })}
-        </ul>
-      </nav>
+            })}
+          </ul>
+        </nav>
+      )}
 
-      <div className={`p-4 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-t flex-shrink-0 mt-auto space-y-1`}>
-        <button
-          onClick={toggleTheme}
-          className={`w-full flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
-        >
-          <Sun className="w-5 h-5" />
-          <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
-        </button>
-        <button
-          onClick={signOut}
-          className={`w-full flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
-        >
-          <LogOut className="w-5 h-5" />
-          <span>Cerrar Sesión</span>
-        </button>
-      </div>
+      {!isSidebarCollapsed && (
+        <div className={`p-4 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-t flex-shrink-0 mt-auto space-y-1`}>
+          <button
+            onClick={toggleTheme}
+            className={`w-full flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
+          >
+            <Sun className="w-5 h-5" />
+            <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
+          </button>
+          <button
+            onClick={signOut}
+            className={`w-full flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      )}
     </aside>
+    </>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

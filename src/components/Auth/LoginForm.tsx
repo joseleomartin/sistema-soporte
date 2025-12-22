@@ -11,6 +11,7 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [invitationCode, setInvitationCode] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +48,10 @@ export function LoginForm() {
         if (!fullName.trim()) {
           throw new Error('El nombre completo es requerido');
         }
-        const { error } = await signUp(email, password, fullName);
+        if (!invitationCode.trim()) {
+          throw new Error('El código de invitación es requerido');
+        }
+        const { error } = await signUp(email, password, fullName, invitationCode.trim().toUpperCase());
         if (error) throw error;
         // Mostrar mensaje de éxito indicando que se envió el email
         setSuccess(`Se ha enviado un correo de verificación a ${email}. Por favor, revisa tu bandeja de entrada y haz clic en el enlace para confirmar tu cuenta.`);
@@ -55,6 +59,7 @@ export function LoginForm() {
         setEmail('');
         setPassword('');
         setFullName('');
+        setInvitationCode('');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al autenticar');
@@ -184,19 +189,39 @@ export function LoginForm() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isLogin && !isForgotPassword && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre Completo
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Juan Pérez"
-                required={!isLogin}
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Código de Invitación <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={invitationCode}
+                  onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition uppercase"
+                  placeholder="ABC12345"
+                  required={!isLogin}
+                  maxLength={8}
+                  style={{ textTransform: 'uppercase' }}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Solicita el código de invitación al administrador de tu empresa
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre Completo
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="Juan Pérez"
+                  required={!isLogin}
+                />
+              </div>
+            </>
           )}
 
           <div>

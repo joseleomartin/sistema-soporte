@@ -22,6 +22,14 @@ import { InternalPolicies } from './components/InternalPolicies/InternalPolicies
 import { SocialFeed } from './components/Social/SocialFeed';
 import { ProfessionalNews } from './components/ProfessionalNews/ProfessionalNews';
 import { MessagesBell } from './components/DirectMessages/MessagesBell';
+import { ProductionModule } from './components/Fabinsa/Production/ProductionModule';
+import { EmployeesModule } from './components/Fabinsa/Employees/EmployeesModule';
+import { StockModule } from './components/Fabinsa/Stock/StockModule';
+import { SalesModule } from './components/Fabinsa/Sales/SalesModule';
+import { PurchasesModule } from './components/Fabinsa/Purchases/PurchasesModule';
+import { MetricsModule } from './components/Fabinsa/Metrics/MetricsModule';
+import { CostsModule } from './components/Fabinsa/Costs/CostsModule';
+import { SuppliersModule } from './components/Fabinsa/Suppliers/SuppliersModule';
 import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
@@ -33,6 +41,10 @@ function MainApp() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedSubforumId, setSelectedSubforumId] = useState<string | null>(null);
   const [viewKey, setViewKey] = useState(0); // Key para forzar recarga
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   // Definir handlers antes de los hooks usando useCallback para evitar recreaciones
   const handleViewChange = useCallback((view: string) => {
@@ -162,6 +174,22 @@ function MainApp() {
         return <SocialFeed key={`social-${viewKey}`} />;
       case 'professional-news':
         return <ProfessionalNews key={`professional-news-${viewKey}`} />;
+      case 'fabinsa-production':
+        return <ProductionModule key={`fabinsa-production-${viewKey}`} />;
+      case 'fabinsa-employees':
+        return <EmployeesModule key={`fabinsa-employees-${viewKey}`} />;
+      case 'fabinsa-stock':
+        return <StockModule key={`fabinsa-stock-${viewKey}`} />;
+      case 'fabinsa-sales':
+        return <SalesModule key={`fabinsa-sales-${viewKey}`} />;
+      case 'fabinsa-purchases':
+        return <PurchasesModule key={`fabinsa-purchases-${viewKey}`} />;
+      case 'fabinsa-metrics':
+        return <MetricsModule key={`fabinsa-metrics-${viewKey}`} />;
+      case 'fabinsa-costs':
+        return <CostsModule key={`fabinsa-costs-${viewKey}`} />;
+      case 'fabinsa-suppliers':
+        return <SuppliersModule key={`fabinsa-suppliers-${viewKey}`} />;
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
       default:
@@ -177,8 +205,10 @@ function MainApp() {
         onNavigateToTicket={handleNavigateToTicket}
         onNavigateToForum={handleNavigateToForum}
         onNavigateToTimeTracking={handleNavigateToTimeTracking}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      <main className="flex-1 overflow-auto lg:ml-64 bg-gray-50 dark:bg-slate-900">
+      <main className={`flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 transition-all duration-300 ${!sidebarCollapsed ? 'lg:ml-64' : ''}`}>
         <div className={`${currentView === 'social' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
           {renderContent()}
         </div>

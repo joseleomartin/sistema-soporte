@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare, Cake, Ticket, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface Notification {
   id: string;
@@ -43,6 +44,8 @@ interface NotificationBellProps {
 
 export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial, onNavigateToTimeTracking, onNavigateToProfessionalNews }: NotificationBellProps) {
   const { profile } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -409,7 +412,11 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         type="button"
         onClick={handleToggleDropdown}
         onMouseDown={(e) => e.stopPropagation()}
-        className="relative p-2 text-white hover:text-white/80 hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer"
+        className={`relative p-2 rounded-lg transition-all duration-200 cursor-pointer ${
+          isDark 
+            ? 'text-white hover:text-white/80 hover:bg-white/10' 
+            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+        }`}
         style={{ 
           position: 'relative', 
           zIndex: 10000002, // Por encima del overlay para que sea clickeable
