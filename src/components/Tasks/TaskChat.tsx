@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, Download, X, FileText, Loader2 } from 'lucide-react';
+import { Send, Paperclip, Download, X, FileText, Loader2, Edit2, Trash2, Check, X as XIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { TaskMentionAutocomplete } from './TaskMentionAutocomplete';
@@ -49,6 +49,12 @@ export function TaskChat({ taskId }: TaskChatProps) {
   const [mentionPosition, setMentionPosition] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [mentionedUsers, setMentionedUsers] = useState<Map<string, { id: string; full_name: string }>>(new Map());
+  
+  // Estados para editar y borrar mensajes
+  const [editingMessage, setEditingMessage] = useState<string | null>(null);
+  const [editMessageContent, setEditMessageContent] = useState('');
+  const [updatingMessage, setUpdatingMessage] = useState(false);
+  const [deletingMessage, setDeletingMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMessages();
@@ -228,6 +234,76 @@ export function TaskChat({ taskId }: TaskChatProps) {
             }
           } catch (error) {
             console.error('❌ Error updating message with attachment:', error);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'task_messages',
+          filter: `task_id=eq.${taskId}`
+        },
+        async (payload: any) => {
+          console.log('✏️ Message updated via Realtime:', payload);
+          // Actualizar el contenido del mensaje editado
+          if (payload.new && payload.new.id) {
+            try {
+              // Obtener el mensaje completo actualizado con relaciones
+              const { data, error } = await supabase
+                .from('task_messages')
+                .select(`
+                  *,
+                  profiles!task_messages_user_id_fkey (
+                    full_name,
+                    avatar_url
+                  ),
+                  task_attachments (
+                    id,
+                    file_name,
+                    file_path,
+                    file_size,
+                    file_type
+                  )
+                `)
+                .eq('id', payload.new.id)
+                .single();
+
+              if (error) {
+                console.error('Error fetching updated message:', error);
+                // Fallback: actualizar solo el contenido
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === payload.new.id ? { ...msg, message: payload.new.message } : msg
+                  )
+                );
+              } else if (data) {
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === payload.new.id ? data : msg
+                  )
+                );
+              }
+            } catch (error) {
+              console.error('Error updating message:', error);
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'task_messages',
+          filter: `task_id=eq.${taskId}`
+        },
+        (payload: any) => {
+          console.log('🗑️ Message deleted via Realtime:', payload);
+          // Eliminar el mensaje de la lista
+          if (payload.old && payload.old.id) {
+            setMessages((prev) => prev.filter((msg) => msg.id !== payload.old.id));
           }
         }
       )
@@ -585,6 +661,136 @@ export function TaskChat({ taskId }: TaskChatProps) {
     return data.publicUrl;
   };
 
+  const handleStartEdit = (messageId: string, currentContent: string) => {
+    setEditingMessage(messageId);
+    setEditMessageContent(currentContent);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setEditMessageContent('');
+  };
+
+  const handleUpdateMessage = async (messageId: string) => {
+    if (!editMessageContent.trim()) {
+      alert('El mensaje no puede estar vacío');
+      return;
+    }
+
+    setUpdatingMessage(true);
+    try {
+      console.log('Updating message:', messageId);
+      
+      const { data: updateData, error, count } = await supabase
+        .from('task_messages')
+        .update({ message: editMessageContent.trim() })
+        .eq('id', messageId)
+        .select('id')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error updating message:', error);
+        alert(`Error al actualizar el mensaje: ${error.message}`);
+        setUpdatingMessage(false);
+        return;
+      }
+
+      if (!updateData || count === 0) {
+        console.error('No rows updated - possible RLS issue');
+        alert('No se pudo actualizar el mensaje. Verifica que tengas permisos para editar este mensaje.');
+        setUpdatingMessage(false);
+        return;
+      }
+
+      console.log('Message updated successfully:', updateData);
+
+      // Obtener el mensaje actualizado con sus relaciones
+      const { data, error: selectError } = await supabase
+        .from('task_messages')
+        .select(`
+          *,
+          profiles!task_messages_user_id_fkey (
+            full_name,
+            avatar_url
+          ),
+          task_attachments (
+            id,
+            file_name,
+            file_path,
+            file_size,
+            file_type
+          )
+        `)
+        .eq('id', messageId)
+        .single();
+
+      if (selectError) {
+        console.error('Error fetching updated message:', selectError);
+        // Fallback: actualizar el estado local con el contenido editado
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, message: editMessageContent.trim() } : msg
+          )
+        );
+      } else if (data) {
+        console.log('Fetched updated message:', data);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? data : msg
+          )
+        );
+      }
+
+      setEditingMessage(null);
+      setEditMessageContent('');
+    } catch (error: any) {
+      console.error('Error updating message:', error);
+      alert(`Error al actualizar el mensaje: ${error?.message || 'Error desconocido'}`);
+    } finally {
+      setUpdatingMessage(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este mensaje?')) return;
+
+    setDeletingMessage(messageId);
+    try {
+      console.log('Deleting message:', messageId);
+      
+      const { data, error, count } = await supabase
+        .from('task_messages')
+        .delete()
+        .eq('id', messageId)
+        .select('id')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error deleting message:', error);
+        alert(`Error al eliminar el mensaje: ${error.message}`);
+        setDeletingMessage(null);
+        return;
+      }
+
+      if (!data || count === 0) {
+        console.error('No rows deleted - possible RLS issue');
+        alert('No se pudo eliminar el mensaje. Verifica que tengas permisos para eliminar este mensaje.');
+        setDeletingMessage(null);
+        return;
+      }
+
+      console.log('Message deleted successfully:', data);
+
+      // Actualizar el estado local inmediatamente
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    } catch (error: any) {
+      console.error('Error deleting message:', error);
+      alert(`Error al eliminar el mensaje: ${error?.message || 'Error desconocido'}`);
+    } finally {
+      setDeletingMessage(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -610,7 +816,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
             return (
               <div
                 key={message.id}
-                className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                className={`group flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
               >
                 {/* Avatar */}
                 <div className="flex-shrink-0">
@@ -669,18 +875,73 @@ export function TaskChat({ taskId }: TaskChatProps) {
                     </span>
                   </div>
                   
-                  {message.message && message.message.trim() !== '' && message.message !== '(archivo adjunto)' && (
-                    <div
-                      className={`px-4 py-2 rounded-lg ${
-                        isOwn
-                          ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
-                          : 'bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white'
-                      }`}
-                    >
-                      <p className={`text-sm whitespace-pre-wrap break-words ${isOwn ? 'text-white' : ''}`}>
-                        {renderMessageWithMentions(message.message, isOwn)}
-                      </p>
+                  {editingMessage === message.id ? (
+                    <div className="flex gap-2 items-start">
+                      {/* Botones de guardar y cancelar a la izquierda */}
+                      {isOwn && (
+                        <div className="flex flex-col gap-1 pt-1">
+                          <button
+                            onClick={() => handleUpdateMessage(message.id)}
+                            disabled={updatingMessage}
+                            className="bg-green-600/80 dark:bg-green-500/80 hover:bg-green-700/90 dark:hover:bg-green-600/90 text-white rounded transition p-1 disabled:opacity-50 backdrop-blur-sm"
+                            title="Guardar cambios"
+                          >
+                            <Check className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            disabled={updatingMessage}
+                            className="bg-gray-600/80 dark:bg-gray-500/80 hover:bg-gray-700/90 dark:hover:bg-gray-600/90 text-white rounded transition p-1 disabled:opacity-50 backdrop-blur-sm"
+                            title="Cancelar edición"
+                          >
+                            <XIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                      <textarea
+                        value={editMessageContent}
+                        onChange={(e) => setEditMessageContent(e.target.value)}
+                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                        rows={3}
+                        autoFocus
+                      />
                     </div>
+                  ) : (
+                    message.message && message.message.trim() !== '' && message.message !== '(archivo adjunto)' && (
+                      <div className="flex gap-2 items-start">
+                        {/* Botones de editar y borrar a la izquierda (solo para mensajes propios) */}
+                        {isOwn && (
+                          <div className="flex flex-col gap-1 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleStartEdit(message.id, message.message)}
+                              className="bg-blue-600/80 dark:bg-blue-500/80 hover:bg-blue-700/90 dark:hover:bg-blue-600/90 text-white rounded transition p-1 backdrop-blur-sm"
+                              title="Editar mensaje"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMessage(message.id)}
+                              disabled={deletingMessage === message.id}
+                              className="bg-red-600/80 dark:bg-red-500/80 hover:bg-red-700/90 dark:hover:bg-red-600/90 text-white rounded transition p-1 disabled:opacity-50 backdrop-blur-sm"
+                              title="Eliminar mensaje"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                        <div
+                          className={`flex-1 px-4 py-2 rounded-lg ${
+                            isOwn
+                              ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
+                              : 'bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white'
+                          }`}
+                        >
+                          <p className={`text-sm whitespace-pre-wrap break-words ${isOwn ? 'text-white' : ''}`}>
+                            {renderMessageWithMentions(message.message, isOwn)}
+                          </p>
+                        </div>
+                      </div>
+                    )
                   )}
 
                   {/* Archivos Adjuntos */}

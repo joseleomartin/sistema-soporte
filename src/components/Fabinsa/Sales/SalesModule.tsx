@@ -9,6 +9,7 @@ import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { calculateSaleValues } from '../../../lib/fabinsaCalculations';
+import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 
 type Sale = Database['public']['Tables']['sales']['Row'];
 type SaleInsert = Database['public']['Tables']['sales']['Insert'];
@@ -17,6 +18,7 @@ type ResaleProduct = Database['public']['Tables']['resale_products']['Row'];
 
 export function SalesModule() {
   const { tenantId } = useTenant();
+  const { canCreate, canDelete } = useDepartmentPermissions();
   const [sales, setSales] = useState<Sale[]>([]);
   const [fabricatedProducts, setFabricatedProducts] = useState<StockProduct[]>([]);
   const [resaleProducts, setResaleProducts] = useState<ResaleProduct[]>([]);
@@ -240,13 +242,15 @@ export function SalesModule() {
       {/* Header with Add Button */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Registro de Ventas</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nueva Venta</span>
-        </button>
+        {canCreate('fabinsa-sales') && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nueva Venta</span>
+          </button>
+        )}
       </div>
 
       {/* Sales Form */}
@@ -414,9 +418,9 @@ export function SalesModule() {
       )}
 
       {/* Sales Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Fecha</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Producto</th>
@@ -426,7 +430,7 @@ export function SalesModule() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo Unit.</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ingreso Neto</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ganancia</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -462,45 +466,47 @@ export function SalesModule() {
                     ${sale.ganancia_total.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                    <button
-                      onClick={async () => {
-                        if (confirm('¿Eliminar esta venta? Esto restaurará el stock.')) {
-                          // Restaurar stock
-                          if (sale.tipo_producto === 'fabricado') {
-                            const { data: prod } = await supabase
-                              .from('stock_products')
-                              .select('*')
-                              .eq('tenant_id', tenantId)
-                              .ilike('nombre', sale.producto)
-                              .limit(1);
-                            if (prod && prod[0]) {
-                              await supabase
+                    {canDelete('fabinsa-sales') && (
+                      <button
+                        onClick={async () => {
+                          if (confirm('¿Eliminar esta venta? Esto restaurará el stock.')) {
+                            // Restaurar stock
+                            if (sale.tipo_producto === 'fabricado') {
+                              const { data: prod } = await supabase
                                 .from('stock_products')
-                                .update({ cantidad: prod[0].cantidad + sale.cantidad })
-                                .eq('id', prod[0].id);
-                            }
-                          } else {
-                            const { data: prod } = await supabase
-                              .from('resale_products')
-                              .select('*')
-                              .eq('tenant_id', tenantId)
-                              .ilike('nombre', sale.producto)
-                              .limit(1);
-                            if (prod && prod[0]) {
-                              await supabase
+                                .select('*')
+                                .eq('tenant_id', tenantId)
+                                .ilike('nombre', sale.producto)
+                                .limit(1);
+                              if (prod && prod[0]) {
+                                await supabase
+                                  .from('stock_products')
+                                  .update({ cantidad: prod[0].cantidad + sale.cantidad })
+                                  .eq('id', prod[0].id);
+                              }
+                            } else {
+                              const { data: prod } = await supabase
                                 .from('resale_products')
-                                .update({ cantidad: prod[0].cantidad + sale.cantidad })
-                                .eq('id', prod[0].id);
+                                .select('*')
+                                .eq('tenant_id', tenantId)
+                                .ilike('nombre', sale.producto)
+                                .limit(1);
+                              if (prod && prod[0]) {
+                                await supabase
+                                  .from('resale_products')
+                                  .update({ cantidad: prod[0].cantidad + sale.cantidad })
+                                  .eq('id', prod[0].id);
+                              }
                             }
+                            await supabase.from('sales').delete().eq('id', sale.id);
+                            loadData();
                           }
-                          await supabase.from('sales').delete().eq('id', sale.id);
-                          loadData();
-                        }
-                      }}
-                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                        }}
+                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

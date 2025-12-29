@@ -179,8 +179,6 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
         return;
       }
 
-      console.log('Vacaciones cargadas:', data?.length || 0);
-      console.log('Datos de vacaciones:', data);
 
       // Formatear los datos para el calendario
       const formattedVacations = (data || []).map((vacation: any) => ({
@@ -593,8 +591,13 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     if (!profile?.id || !profile?.tenant_id) return;
 
     try {
-      // Generar eventos recurrentes antes de cargar
-      await supabase.rpc('generate_recurring_events');
+      // Generar eventos recurrentes antes de cargar (silenciar errores para no bloquear la carga)
+      try {
+        await supabase.rpc('generate_recurring_events');
+      } catch (rpcError) {
+        console.warn('Error al generar eventos recurrentes (no crítico):', rpcError);
+        // Continuar con la carga aunque falle la generación de eventos recurrentes
+      }
 
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
@@ -802,6 +805,22 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const handleTaskClick = (taskId: string) => {
     if (onNavigate) {
       onNavigate('tasks');
+      // Establecer el parámetro task en la URL para que TasksList lo detecte y abra la tarea directamente
+      window.history.replaceState(null, '', window.location.pathname + '#tasks?task=' + taskId);
+      // Disparar evento como respaldo por si acaso
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('openTask', {
+          detail: { taskId }
+        }));
+      }, 50);
+    } else {
+      // Fallback: usar window.location con el parámetro task
+      window.location.hash = 'tasks?task=' + taskId;
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('openTask', {
+          detail: { taskId }
+        }));
+      }, 50);
     }
   };
 

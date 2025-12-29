@@ -4,11 +4,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { DollarSign, Plus, Trash2, X, Send, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { DollarSign, Plus, Trash2, X, Send, Package, ChevronDown, ChevronUp, Upload, Edit, BarChart3, TrendingUp } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { calculateProductCosts, calculateAverageEmployeeHourValue, formatProductName } from '../../../lib/fabinsaCalculations';
+import { getAllFIFOPrices } from '../../../lib/fifoCalculations';
+import { BulkImportCostsModal } from './BulkImportCostsModal';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductMaterial = Database['public']['Tables']['product_materials']['Row'];
@@ -30,6 +32,7 @@ interface CostSimulationItem {
   peso_unidad?: number;
   cantidad_por_hora?: number;
   iibb_porcentaje?: number;
+  otros_costos?: number;
   moneda_precio?: 'ARS' | 'USD';
   isManual?: boolean;
 }
@@ -40,10 +43,21 @@ export function CostsModule() {
   const [productMaterials, setProductMaterials] = useState<Record<string, ProductMaterial[]>>({});
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [stockMaterials, setStockMaterials] = useState<StockMaterial[]>([]);
+  const [fifoMaterialPrices, setFifoMaterialPrices] = useState<Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }>>({});
   const [simulationItems, setSimulationItems] = useState<CostSimulationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [currentSimulationId, setCurrentSimulationId] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<CostSimulationItem | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    precio_venta: 0,
+    descuento_pct: 0,
+    cantidad_fabricar: 0,
+    iibb_porcentaje: 0,
+    cantidad_por_hora: 0,
+  });
+  const [editMaterials, setEditMaterials] = useState<Array<{ material_name: string; kg_por_unidad: number }>>([]);
   // Form data for manual product
   const [manualFormData, setManualFormData] = useState({
     familia: '',
@@ -53,6 +67,7 @@ export function CostsModule() {
     cantidad_fabricar: '',
     cantidad_por_hora: '',
     iibb_porcentaje: '0',
+    otros_costos: '0',
     moneda_precio: 'ARS' as 'ARS' | 'USD',
     descuento_pct: '0',
   });
@@ -68,40 +83,62 @@ export function CostsModule() {
     if (!tenantId) return;
     setLoading(true);
     try {
-      // Load products
+      // Cargar productos primero
       const { data: prods } = await supabase
         .from('products')
         .select('*')
         .eq('tenant_id', tenantId);
+      
       setProducts(prods || []);
 
-      // Load materials for each product
-      const materialsMap: Record<string, ProductMaterial[]> = {};
-      for (const product of prods || []) {
-        const { data: mats } = await supabase
-          .from('product_materials')
+      // Cargar todos los demás datos en paralelo
+      const productIds = (prods || []).map(p => p.id);
+      const [materialsResult, employeesResult, stockResult] = await Promise.all([
+        // Load all product materials at once (solo si hay productos)
+        productIds.length > 0
+          ? supabase
+              .from('product_materials')
+              .select('*')
+              .in('product_id', productIds)
+          : Promise.resolve({ data: [], error: null }),
+        // Load employees
+        supabase
+          .from('employees')
           .select('*')
-          .eq('product_id', product.id);
-        materialsMap[product.id] = mats || [];
+          .eq('tenant_id', tenantId),
+        // Load stock materials
+        supabase
+          .from('stock_materials')
+          .select('*')
+          .eq('tenant_id', tenantId),
+      ]);
+
+      const allMaterials = materialsResult.data || [];
+
+      // Agrupar materiales por product_id
+      const materialsMap: Record<string, ProductMaterial[]> = {};
+      for (const mat of allMaterials) {
+        if (!materialsMap[mat.product_id]) {
+          materialsMap[mat.product_id] = [];
+        }
+        materialsMap[mat.product_id].push(mat);
       }
       setProductMaterials(materialsMap);
 
-      // Load employees
-      const { data: emps } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('tenant_id', tenantId);
-      setEmployees(emps || []);
+      setEmployees(employeesResult.data || []);
+      setStockMaterials(stockResult.data || []);
 
-      // Load stock materials
-      const { data: stock } = await supabase
-        .from('stock_materials')
-        .select('*')
-        .eq('tenant_id', tenantId);
-      setStockMaterials(stock || []);
+      // Cargar precios FIFO para todos los materiales disponibles
+      const stockMats = stockResult.data || [];
+      const fifoPrices = await getAllFIFOPrices(
+        supabase,
+        tenantId,
+        stockMats.map(m => ({ material: m.material, moneda: m.moneda, valor_dolar: m.valor_dolar }))
+      );
+      setFifoMaterialPrices(fifoPrices);
 
       // Cargar o crear simulación activa
-      await loadOrCreateSimulation();
+      await loadOrCreateSimulation(prods, allMaterials);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -109,7 +146,7 @@ export function CostsModule() {
     }
   };
 
-  const loadOrCreateSimulation = async () => {
+  const loadOrCreateSimulation = async (allProducts: Product[], allMaterials: ProductMaterial[]) => {
     if (!tenantId) return;
 
     try {
@@ -120,7 +157,7 @@ export function CostsModule() {
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       let simulationId: string;
 
@@ -152,21 +189,25 @@ export function CostsModule() {
 
       if (itemsError) throw itemsError;
 
-      // Convertir items a CostSimulationItem
+      // Crear un mapa de materiales por product_id para acceso rápido
+      const materialsMap: Record<string, ProductMaterial[]> = {};
+      for (const mat of allMaterials) {
+        if (!materialsMap[mat.product_id]) {
+          materialsMap[mat.product_id] = [];
+        }
+        materialsMap[mat.product_id].push(mat);
+      }
+
+      // Convertir items a CostSimulationItem (sin consultas adicionales)
       const loadedItems: CostSimulationItem[] = [];
       for (const item of items || []) {
         const product = item.product as Product | null;
         if (product) {
-          // Cargar materiales del producto
-          const { data: mats } = await supabase
-            .from('product_materials')
-            .select('*')
-            .eq('product_id', product.id);
-          
+          // Usar materiales del mapa en lugar de hacer consulta
           loadedItems.push({
             id: item.id,
             product,
-            materials: mats || [],
+            materials: materialsMap[product.id] || [],
             precio_venta: item.precio_venta,
             descuento_pct: item.descuento_pct,
             cantidad_fabricar: item.cantidad_fabricar,
@@ -228,6 +269,7 @@ export function CostsModule() {
           peso_unidad: pesoUnidad, // Calculado automáticamente
           cantidad_por_hora: parseFloat(manualFormData.cantidad_por_hora),
           iibb_porcentaje: parseFloat(manualFormData.iibb_porcentaje) || 0,
+          otros_costos: parseFloat(manualFormData.otros_costos) || 0,
           precio_venta: parseFloat(manualFormData.precio_venta) || null,
           cantidad_fabricar: parseInt(manualFormData.cantidad_fabricar) || 0,
           moneda_precio: manualFormData.moneda_precio,
@@ -299,6 +341,7 @@ export function CostsModule() {
           peso_unidad: pesoUnidad, // Usar el peso calculado
           cantidad_por_hora: parseFloat(manualFormData.cantidad_por_hora),
           iibb_porcentaje: parseFloat(manualFormData.iibb_porcentaje) || 0,
+          otros_costos: parseFloat(manualFormData.otros_costos) || 0,
           moneda_precio: manualFormData.moneda_precio,
           isManual: false,
         };
@@ -320,6 +363,7 @@ export function CostsModule() {
           cantidad_fabricar: '',
           cantidad_por_hora: '',
           iibb_porcentaje: '0',
+          otros_costos: '0',
           moneda_precio: 'ARS',
           descuento_pct: '0',
         });
@@ -342,6 +386,85 @@ export function CostsModule() {
     const updated = [...manualMaterials];
     updated[index] = { ...updated[index], [field]: value };
     setManualMaterials(updated);
+  };
+
+  const handleItemClick = (item: CostSimulationItem) => {
+    setSelectedItem(item);
+    setEditFormData({
+      precio_venta: item.precio_venta,
+      descuento_pct: item.descuento_pct,
+      cantidad_fabricar: item.cantidad_fabricar,
+      iibb_porcentaje: item.product?.iibb_porcentaje || item.iibb_porcentaje || 0,
+      cantidad_por_hora: item.product?.cantidad_por_hora || item.cantidad_por_hora || 0,
+    });
+    // Cargar materiales editables
+    setEditMaterials(item.materials.map(m => ({
+      material_name: m.material_name,
+      kg_por_unidad: m.kg_por_unidad,
+    })));
+  };
+
+  const handleSaveItem = async () => {
+    if (!selectedItem || !tenantId) return;
+
+    try {
+      // Si el producto existe en la base de datos, actualizarlo
+      if (selectedItem.product?.id) {
+        await supabase
+          .from('products')
+          .update({
+            precio_venta: editFormData.precio_venta || null,
+            cantidad_fabricar: editFormData.cantidad_fabricar,
+            cantidad_por_hora: editFormData.cantidad_por_hora || null,
+            iibb_porcentaje: editFormData.iibb_porcentaje || null,
+          })
+          .eq('id', selectedItem.product.id);
+
+        // Actualizar materiales del producto
+        if (editMaterials.length > 0) {
+          // Eliminar materiales existentes
+          await supabase
+            .from('product_materials')
+            .delete()
+            .eq('product_id', selectedItem.product.id);
+
+          // Insertar nuevos materiales
+          const materialsToInsert = editMaterials.map(m => ({
+            product_id: selectedItem.product!.id,
+            material_name: m.material_name,
+            kg_por_unidad: m.kg_por_unidad,
+          }));
+
+          if (materialsToInsert.length > 0) {
+            await supabase
+              .from('product_materials')
+              .insert(materialsToInsert);
+          }
+        }
+      }
+
+      // Actualizar item de simulación
+      if (currentSimulationId) {
+        const { error } = await supabase
+          .from('cost_simulation_items')
+          .update({
+            precio_venta: editFormData.precio_venta,
+            descuento_pct: editFormData.descuento_pct,
+            cantidad_fabricar: editFormData.cantidad_fabricar,
+          })
+          .eq('id', selectedItem.id);
+
+        if (error) throw error;
+      }
+
+      // Recargar datos para obtener materiales actualizados
+      await loadData();
+      
+      setSelectedItem(null);
+    } catch (error: any) {
+      console.error('Error al guardar:', error);
+      alert('Error al guardar los cambios: ' + error.message);
+    }
   };
 
   const removeFromSimulation = async (id: string) => {
@@ -477,10 +600,18 @@ export function CostsModule() {
         rentabilidad_total: itemCosts.rentabilidad_neta * item.cantidad_fabricar,
       });
 
+      // Eliminar el item de la simulación de costos para que aparezca en Producción
+      await supabase
+        .from('cost_simulation_items')
+        .delete()
+        .eq('id', item.id);
+
+      // Remover el item de la lista local
+      setSimulationItems(simulationItems.filter(i => i.id !== item.id));
+
       alert('Producto enviado a producción exitosamente');
 
-      // Recargar solo stock y materiales, pero mantener los items de simulación
-      // Los items permanecen en la simulación hasta que el usuario los elimine manualmente
+      // Recargar stock y materiales
       const { data: updatedStock } = await supabase
         .from('stock_materials')
         .select('*')
@@ -492,17 +623,28 @@ export function CostsModule() {
     }
   };
 
-  // Calculate costs for each item in simulation
+  // Calculate costs for each item in simulation using FIFO
   const calculateItemCosts = (item: CostSimulationItem) => {
     const avgHourValue = calculateAverageEmployeeHourValue(employees);
+    
+    // Usar precios FIFO (más antiguos primero) en lugar de precios del stock actual
     const materialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
-
-    stockMaterials.forEach(mat => {
-      materialPrices[mat.material] = {
-        costo_kilo_usd: mat.costo_kilo_usd,
-        valor_dolar: mat.valor_dolar,
-        moneda: mat.moneda,
-      };
+    
+    // Para cada material del item, usar precio FIFO si está disponible, sino usar stock
+    item.materials.forEach(mat => {
+      if (fifoMaterialPrices[mat.material_name]) {
+        materialPrices[mat.material_name] = fifoMaterialPrices[mat.material_name];
+      } else {
+        // Fallback: usar precio del stock si no hay FIFO disponible
+        const stockMat = stockMaterials.find(m => m.material === mat.material_name);
+        if (stockMat) {
+          materialPrices[mat.material_name] = {
+            costo_kilo_usd: stockMat.costo_kilo_usd,
+            valor_dolar: stockMat.valor_dolar,
+            moneda: stockMat.moneda,
+          };
+        }
+      }
     });
 
     // Create a product object with the simulation values
@@ -511,6 +653,7 @@ export function CostsModule() {
       cantidad_fabricar: item.cantidad_fabricar,
       precio_venta: item.precio_venta,
       iibb_porcentaje: item.product.iibb_porcentaje || 0,
+      otros_costos: (item.product as any).otros_costos || item.otros_costos || 0,
     } : {
       id: item.id,
       tenant_id: tenantId || '',
@@ -520,6 +663,7 @@ export function CostsModule() {
       cantidad_fabricar: item.cantidad_fabricar,
       precio_venta: item.precio_venta,
       iibb_porcentaje: item.iibb_porcentaje || 0,
+      otros_costos: item.otros_costos || 0,
       moneda_precio: 'ARS' as const,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -537,33 +681,55 @@ export function CostsModule() {
     const iibbPorcentaje = item.product?.iibb_porcentaje || item.iibb_porcentaje || 0;
     const descuento = item.descuento_pct / 100;
     
-    // Calcular IIBB sobre precio de venta
+    // Calcular valores UNITARIOS (por 1 unidad)
+    // IIBB unitario sobre precio de venta
     const iibbUnitario = precioVenta * iibbPorcentaje / 100;
-    const iibbTotal = iibbUnitario * cantidad;
     
     // Precio después de descontar IIBB
     const precioNetoIIBB = precioVenta - iibbUnitario;
     
-    // Precio final después de aplicar descuento sobre el precio neto de IIBB
-    const precioFinal = precioNetoIIBB * (1 - descuento);
+    // Precio final unitario después de aplicar descuento sobre el precio neto de IIBB
+    const precioFinalUnitario = precioNetoIIBB * (1 - descuento);
     
+    // Costos unitarios (ya están calculados en costs)
+    const costoMPUnitario = costs.costo_unitario_mp;
+    const costoMOUnitario = costs.costo_unitario_mano_obra;
+    const otrosCostosUnitario = costs.otros_costos_unitario || 0;
+    const costoTotalUnitario = costs.costo_base_unitario; // MP + MO + Otros Costos
+    
+    // Rentabilidad unitaria
+    const rentabilidadNetaUnitaria = precioFinalUnitario - costoTotalUnitario - iibbUnitario;
+    
+    // Margen unitario
+    const margen = precioFinalUnitario > 0 ? (rentabilidadNetaUnitaria / precioFinalUnitario) * 100 : 0;
+
+    // Valores totales (para el resumen general)
+    const iibbTotal = iibbUnitario * cantidad;
     const ingresoBruto = precioVenta * cantidad;
-    const ingresoNeto = precioFinal * cantidad;
-    const costoTotal = costs.costo_total_mp + costs.incidencia_mano_obra;
-    const gananciaTotal = ingresoNeto - (costs.costo_total_mp + costs.incidencia_mano_obra);
-    const rentabilidadNeta = ingresoNeto - costoTotal;
-    const margen = ingresoNeto > 0 ? (rentabilidadNeta / ingresoNeto) * 100 : 0;
+    const ingresoNeto = precioFinalUnitario * cantidad;
+    const costoTotal = costoTotalUnitario * cantidad;
+    const gananciaTotal = rentabilidadNetaUnitaria * cantidad;
+    const rentabilidadNetaTotal = rentabilidadNetaUnitaria * cantidad;
 
     return {
       ...costs,
-      precio_final: precioFinal,
+      // Valores unitarios (para mostrar en tabla)
+      precio_final_unitario: precioFinalUnitario,
+      costo_mp_unitario: costoMPUnitario,
+      costo_mo_unitario: costoMOUnitario,
+      otros_costos_unitario: otrosCostosUnitario,
+      costo_total_unitario: costoTotalUnitario,
+      iibb_unitario: iibbUnitario,
+      rentabilidad_neta_unitaria: rentabilidadNetaUnitaria,
+      margen,
+      // Valores totales (para resumen)
+      precio_final: precioFinalUnitario,
       ingreso_bruto: ingresoBruto,
       ingreso_neto: ingresoNeto,
       iibb_total: iibbTotal,
       costo_total: costoTotal,
       ganancia_total: gananciaTotal,
-      rentabilidad_neta: rentabilidadNeta,
-      margen,
+      rentabilidad_neta: rentabilidadNetaTotal,
     };
   };
 
@@ -573,6 +739,7 @@ export function CostsModule() {
 
     let totalMP = 0;
     let totalMO = 0;
+    let totalOtrosCostos = 0;
     let totalIIBB = 0;
     let totalProduction = 0;
     let totalRevenue = 0;
@@ -584,6 +751,7 @@ export function CostsModule() {
       const itemCosts = calculateItemCosts(item);
       totalMP += itemCosts.costo_total_mp;
       totalMO += itemCosts.incidencia_mano_obra;
+      totalOtrosCostos += (itemCosts.otros_costos_unitario || 0) * item.cantidad_fabricar;
       totalIIBB += itemCosts.iibb_total;
       totalProduction += itemCosts.costo_total;
       totalIngresoBruto += itemCosts.ingreso_bruto;
@@ -595,6 +763,7 @@ export function CostsModule() {
     return {
       totalMP,
       totalMO,
+      totalOtrosCostos,
       totalIIBB,
       totalProduction,
       totalIngresoBruto,
@@ -616,12 +785,21 @@ export function CostsModule() {
   }
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-2 md:p-4 w-full">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 -mx-4 md:-mx-6 -mt-4 md:-mt-6 mb-4 md:mb-6">
-        <div className="flex items-center space-x-3 mb-2">
-          <DollarSign className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Costos</h1>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 -mx-2 md:-mx-4 -mt-2 md:-mt-4 mb-4 md:mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-3">
+            <DollarSign className="w-6 h-6 text-blue-600" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Costos</h1>
+          </div>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Importar Masivamente</span>
+          </button>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-300">Simulación de costos y análisis de rentabilidad</p>
       </div>
@@ -731,6 +909,17 @@ export function CostsModule() {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Otros Costos (ARS)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={manualFormData.otros_costos}
+                  onChange={(e) => setManualFormData({ ...manualFormData, otros_costos: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="0.00"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -828,24 +1017,24 @@ export function CostsModule() {
             <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos en Simulación</h2>
             </div>
-            <div className="overflow-x-auto -mx-6 md:mx-0">
-              <div className="inline-block min-w-full align-middle px-6 md:px-0">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="overflow-x-auto w-full">
+              <div className="w-full">
+                <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Producto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cantidad</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Precio Venta</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Descuento</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Precio Final</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo MP</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo MO</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">IIBB</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo Total</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ingreso Neto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Rentabilidad</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Margen %</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Acciones</th>
+                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Producto</th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Cant.</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">P. Venta</th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Desc.</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">P. Final</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">MP</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">MO</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Otros</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">IIBB</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">C. Total</th>
+                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Rent.</th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">M%</th>
+                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Acc.</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -853,40 +1042,51 @@ export function CostsModule() {
                     const itemCosts = calculateItemCosts(item);
                     const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
                     return (
-                      <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                      <tr 
+                        key={item.id} 
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => handleItemClick(item)}
+                      >
+                        <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-white max-w-xs truncate" title={productName}>
                           {productName}
                           {item.isManual && (
-                            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded">Manual</span>
+                            <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/30 px-1 py-0.5 rounded">M</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.cantidad_fabricar}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${item.precio_venta.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{item.descuento_pct}%</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">${itemCosts.precio_final.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${itemCosts.costo_total_mp.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${itemCosts.incidencia_mano_obra.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${itemCosts.iibb_total.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">${itemCosts.costo_total.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 dark:text-green-400 font-semibold">${itemCosts.ingreso_neto.toFixed(2)}</td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${itemCosts.rentabilidad_neta >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          ${itemCosts.rentabilidad_neta.toFixed(2)}
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-center text-gray-900 dark:text-white">{item.cantidad_fabricar}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${item.precio_venta.toFixed(2)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-center text-gray-900 dark:text-white">{item.descuento_pct}%</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs font-semibold text-right text-gray-900 dark:text-white">${itemCosts.precio_final_unitario.toFixed(2)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${itemCosts.costo_mp_unitario.toFixed(2)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${itemCosts.costo_mo_unitario.toFixed(2)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${(itemCosts.otros_costos_unitario || 0).toFixed(2)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${itemCosts.iibb_unitario.toFixed(2)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs font-semibold text-right text-gray-900 dark:text-white">${itemCosts.costo_total_unitario.toFixed(2)}</td>
+                        <td className={`px-2 py-2 whitespace-nowrap text-xs font-semibold text-right ${itemCosts.rentabilidad_neta_unitaria >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          ${itemCosts.rentabilidad_neta_unitaria.toFixed(2)}
                         </td>
-                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${itemCosts.margen >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {itemCosts.margen.toFixed(2)}%
+                        <td className={`px-2 py-2 whitespace-nowrap text-xs font-semibold text-center ${itemCosts.margen >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {itemCosts.margen.toFixed(1)}%
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <div className="flex justify-end items-center space-x-2">
+                        <td className="px-2 py-2 whitespace-nowrap text-center text-xs" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-center items-center space-x-1">
                             <button
-                              onClick={() => sendToProduction(item)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                sendToProduction(item);
+                              }}
                               className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
                               title="Enviar a producción"
                             >
                               <Send className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => removeFromSimulation(item.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeFromSimulation(item.id);
+                              }}
                               className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                              title="Eliminar"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -905,7 +1105,7 @@ export function CostsModule() {
           {costs && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
               <h2 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white">Resumen General de Costos</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-6">
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Materia Prima</p>
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${costs.totalMP.toFixed(2)}</p>
@@ -913,6 +1113,10 @@ export function CostsModule() {
                 <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Mano de Obra</p>
                   <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">${costs.totalMO.toFixed(2)}</p>
+                </div>
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Otros Costos</p>
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">${(costs.totalOtrosCostos || 0).toFixed(2)}</p>
                 </div>
                 <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total IIBB</p>
@@ -979,6 +1183,18 @@ export function CostsModule() {
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600 dark:text-gray-300">Otros Costos</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">${(costs.totalOtrosCostos || 0).toFixed(2)} ({((costs.totalOtrosCostos || 0) / costs.totalProduction * 100).toFixed(1)}%)</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div 
+                      className="bg-indigo-600 h-3 rounded-full" 
+                      style={{ width: `${((costs.totalOtrosCostos || 0) / costs.totalProduction * 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600 dark:text-gray-300">IIBB</span>
                     <span className="font-semibold text-gray-900 dark:text-white">${costs.totalIIBB.toFixed(2)} ({(costs.totalIIBB / costs.totalProduction * 100).toFixed(1)}%)</span>
                   </div>
@@ -995,11 +1211,354 @@ export function CostsModule() {
         </>
       )}
 
+      {/* Import Modal */}
+      {showImportModal && (
+        <BulkImportCostsModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            loadData();
+            setShowImportModal(false);
+          }}
+        />
+      )}
+
       {simulationItems.length === 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
           <p className="text-gray-500 dark:text-gray-400">Agregue productos para simular costos</p>
         </div>
       )}
+
+      {/* Item Detail Modal */}
+      {selectedItem && (() => {
+        // Crear materiales actualizados para el cálculo
+        const updatedMaterials: ProductMaterial[] = editMaterials.map((mat, idx) => ({
+          id: `edit-${idx}`,
+          product_id: selectedItem.product?.id || '',
+          material_name: mat.material_name,
+          kg_por_unidad: mat.kg_por_unidad,
+          created_at: new Date().toISOString(),
+        }));
+
+        const itemCosts = calculateItemCosts({
+          ...selectedItem,
+          precio_venta: editFormData.precio_venta,
+          descuento_pct: editFormData.descuento_pct,
+          cantidad_fabricar: editFormData.cantidad_fabricar,
+          iibb_porcentaje: editFormData.iibb_porcentaje,
+          cantidad_por_hora: editFormData.cantidad_por_hora,
+          materials: updatedMaterials,
+        });
+        const productName = selectedItem.product?.nombre || selectedItem.nombre_manual || 'Producto sin nombre';
+        const cantidad = editFormData.cantidad_fabricar;
+        const precioVenta = editFormData.precio_venta;
+        const descuento = editFormData.descuento_pct / 100;
+        const iibbPorcentaje = editFormData.iibb_porcentaje || selectedItem.product?.iibb_porcentaje || selectedItem.iibb_porcentaje || 0;
+        const iibbUnitario = precioVenta * iibbPorcentaje / 100;
+        const precioNetoIIBB = precioVenta - iibbUnitario;
+        const precioFinalUnitario = precioNetoIIBB * (1 - descuento);
+        const rentabilidadNetaUnitaria = precioFinalUnitario - itemCosts.costo_total_unitario - iibbUnitario;
+        const ingresoNeto = precioFinalUnitario * cantidad;
+        const costoTotal = itemCosts.costo_total_unitario * cantidad;
+        const rentabilidadTotal = rentabilidadNetaUnitaria * cantidad;
+        const margen = precioFinalUnitario > 0 ? (rentabilidadNetaUnitaria / precioFinalUnitario) * 100 : 0;
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{productName}</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Editar y ver métricas avanzadas</p>
+                </div>
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Formulario de Edición */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                      <Edit className="w-5 h-5 mr-2" />
+                      Editar Valores
+                    </h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        Precio de Venta (Unit.)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editFormData.precio_venta}
+                        onChange={(e) => setEditFormData({ ...editFormData, precio_venta: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        Descuento (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={editFormData.descuento_pct}
+                        onChange={(e) => setEditFormData({ ...editFormData, descuento_pct: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        Cantidad a Fabricar
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        value={editFormData.cantidad_fabricar}
+                        onChange={(e) => setEditFormData({ ...editFormData, cantidad_fabricar: parseInt(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        IIBB (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={editFormData.iibb_porcentaje}
+                        onChange={(e) => setEditFormData({ ...editFormData, iibb_porcentaje: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    {selectedItem.product && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                          Cantidad por Hora
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editFormData.cantidad_por_hora}
+                          onChange={(e) => setEditFormData({ ...editFormData, cantidad_por_hora: parseFloat(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    )}
+
+                    {/* Editar Materiales */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                        Materiales
+                      </label>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {editMaterials.map((mat, idx) => (
+                          <div key={idx} className="flex items-center space-x-2">
+                            <select
+                              value={mat.material_name}
+                              onChange={(e) => {
+                                const updated = [...editMaterials];
+                                updated[idx].material_name = e.target.value;
+                                setEditMaterials(updated);
+                              }}
+                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                            >
+                              <option value="">Seleccione un material</option>
+                              {stockMaterials.map((stockMat) => (
+                                <option key={stockMat.id} value={stockMat.material}>
+                                  {stockMat.material}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="number"
+                              step="0.00001"
+                              value={mat.kg_por_unidad}
+                              onChange={(e) => {
+                                const updated = [...editMaterials];
+                                updated[idx].kg_por_unidad = parseFloat(e.target.value) || 0;
+                                setEditMaterials(updated);
+                              }}
+                              className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                              placeholder="Kg/unidad"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditMaterials(editMaterials.filter((_, i) => i !== idx));
+                              }}
+                              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditMaterials([...editMaterials, { material_name: '', kg_por_unidad: 0 }]);
+                          }}
+                          className="w-full text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center justify-center py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md"
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Agregar Material
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleSaveItem}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                    >
+                      Guardar Cambios
+                    </button>
+                  </div>
+
+                  {/* Métricas Avanzadas */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                      <BarChart3 className="w-5 h-5 mr-2" />
+                      Métricas Avanzadas
+                    </h3>
+
+                    {/* Métricas Unitarias */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Por Unidad</h4>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Precio Final:</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${precioFinalUnitario.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Costo MP:</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${itemCosts.costo_mp_unitario.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Costo MO:</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${itemCosts.costo_mo_unitario.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">IIBB:</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${iibbUnitario.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Costo Total:</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${itemCosts.costo_total_unitario.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Rentabilidad:</span>
+                          <span className={`ml-2 font-semibold ${rentabilidadNetaUnitaria >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            ${rentabilidadNetaUnitaria.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-600 dark:text-gray-400">Margen:</span>
+                          <span className={`ml-2 font-semibold ${margen >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {margen.toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Métricas Totales */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Totales (Cantidad: {cantidad})</h4>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Ingreso Neto:</span>
+                          <span className="ml-2 font-semibold text-green-600 dark:text-green-400">${ingresoNeto.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 dark:text-gray-400">Costo Total:</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${costoTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-600 dark:text-gray-400">Rentabilidad Total:</span>
+                          <span className={`ml-2 font-semibold text-lg ${rentabilidadTotal >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            ${rentabilidadTotal.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Distribución de Costos */}
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Distribución de Costos</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">Materia Prima</span>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              ${itemCosts.costo_mp_unitario.toFixed(2)} ({itemCosts.costo_total_unitario > 0 ? ((itemCosts.costo_mp_unitario / itemCosts.costo_total_unitario) * 100).toFixed(1) : 0}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div 
+                              className="bg-blue-600 h-2 rounded-full" 
+                              style={{ width: `${itemCosts.costo_total_unitario > 0 ? (itemCosts.costo_mp_unitario / itemCosts.costo_total_unitario) * 100 : 0}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">Mano de Obra</span>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              ${itemCosts.costo_mo_unitario.toFixed(2)} ({itemCosts.costo_total_unitario > 0 ? ((itemCosts.costo_mo_unitario / itemCosts.costo_total_unitario) * 100).toFixed(1) : 0}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div 
+                              className="bg-purple-600 h-2 rounded-full" 
+                              style={{ width: `${itemCosts.costo_total_unitario > 0 ? (itemCosts.costo_mo_unitario / itemCosts.costo_total_unitario) * 100 : 0}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">IIBB</span>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              ${iibbUnitario.toFixed(2)} ({precioFinalUnitario > 0 ? ((iibbUnitario / precioFinalUnitario) * 100).toFixed(1) : 0}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div 
+                              className="bg-orange-600 h-2 rounded-full" 
+                              style={{ width: `${precioFinalUnitario > 0 ? (iibbUnitario / precioFinalUnitario) * 100 : 0}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Materiales Configurados */}
+                    {editMaterials.length > 0 && (
+                      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Materiales Configurados</h4>
+                        <div className="space-y-1">
+                          {editMaterials.map((mat, idx) => (
+                            <div key={idx} className="text-xs text-gray-600 dark:text-gray-400">
+                              • {mat.material_name || '(Sin material)'}: {mat.kg_por_unidad} kg/unidad
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

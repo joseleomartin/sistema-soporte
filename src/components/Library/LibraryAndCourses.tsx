@@ -8,6 +8,7 @@ import { CourseDetailModal } from './CourseDetailModal';
 import { CreateFolderModal } from './CreateFolderModal';
 import { GoogleDriveViewer } from '../Forums/GoogleDriveViewer';
 import { isAuthenticated, startGoogleAuth } from '../../lib/googleAuthRedirect';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 
 interface Course {
   id: string;
@@ -49,6 +50,7 @@ interface Folder {
 
 export function LibraryAndCourses() {
   const { profile } = useAuth();
+  const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
   const [activeTab, setActiveTab] = useState<'courses' | 'library'>('courses');
   const [courses, setCourses] = useState<Course[]>([]);
   const [documents, setDocuments] = useState<Course[]>([]);
@@ -445,25 +447,29 @@ export function LibraryAndCourses() {
               )}
             </div>
             
-            {isAdmin && (
+            {(canCreate('library') || canDelete('library')) && (
               <div className="flex gap-2 flex-shrink-0">
-                <button
-                  onClick={() => {
-                    setEditingCourse(null);
-                    setShowCreateModal(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                  <Plus className="w-5 h-5" />
-                  {activeTab === 'courses' ? 'Nuevo Curso' : 'Nuevo Documento'}
-                </button>
-                <button
-                  onClick={() => handleDeleteFolder(selectedFolder.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  Eliminar Carpeta
-                </button>
+                {canCreate('library') && (
+                  <button
+                    onClick={() => {
+                      setEditingCourse(null);
+                      setShowCreateModal(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                    {activeTab === 'courses' ? 'Nuevo Curso' : 'Nuevo Documento'}
+                  </button>
+                )}
+                {canDelete('library') && (
+                  <button
+                    onClick={() => handleDeleteFolder(selectedFolder.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    Eliminar Carpeta
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -480,7 +486,7 @@ export function LibraryAndCourses() {
                 ? `Agrega tu primer ${itemType} a esta carpeta`
                 : `Aún no hay ${itemTypePlural} en esta carpeta`}
             </p>
-            {isAdmin && (
+            {canCreate('library') && (
               <button
                 onClick={() => {
                   setEditingCourse(null);
@@ -499,8 +505,8 @@ export function LibraryAndCourses() {
               <CourseCard
                 key={item.id}
                 course={item}
-                onEdit={isAdmin ? () => handleEdit(item) : undefined}
-                onDelete={isAdmin ? () => handleDelete(item.id) : undefined}
+                onEdit={canEdit('library') ? () => handleEdit(item) : undefined}
+                onDelete={canDelete('library') ? () => handleDelete(item.id) : undefined}
                 onClick={() => setSelectedCourse(item)}
               />
             ))}
@@ -542,7 +548,7 @@ export function LibraryAndCourses() {
             Accede a recursos educativos, cursos y documentación
           </p>
         </div>
-        {isAdmin && (
+        {canCreate('library') && (
           <div className="flex gap-2">
             <button
               onClick={() => setShowCreateFolderModal(true)}
@@ -618,7 +624,7 @@ export function LibraryAndCourses() {
                   <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
                     <Folder className="w-8 h-8 text-blue-600" />
                   </div>
-                  {isAdmin && (
+                  {canDelete('library') && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -651,7 +657,7 @@ export function LibraryAndCourses() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Google Drive</h2>
-            {isAdmin && (
+            {canEdit('library') && (
               <button
                 onClick={() => {
                   setEditingDriveLink(true);
@@ -677,7 +683,7 @@ export function LibraryAndCourses() {
           </div>
 
           {/* Formulario para editar link (solo admins) */}
-          {isAdmin && editingDriveLink && (
+          {canEdit('library') && editingDriveLink && (
             <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-4 mb-4">
               <div className="space-y-3">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -798,8 +804,8 @@ export function LibraryAndCourses() {
               <CourseCard
                 key={item.id}
                 course={item}
-                onEdit={isAdmin ? () => handleEdit(item) : undefined}
-                onDelete={isAdmin ? () => handleDelete(item.id) : undefined}
+                onEdit={canEdit('library') ? () => handleEdit(item) : undefined}
+                onDelete={canDelete('library') ? () => handleDelete(item.id) : undefined}
                 onClick={() => setSelectedCourse(item)}
               />
             ))}
@@ -819,7 +825,7 @@ export function LibraryAndCourses() {
               ? `Comienza creando una carpeta o agregando tu primer ${itemType}`
               : `Aún no se han agregado ${itemTypePlural} a la biblioteca`}
           </p>
-          {isAdmin && (
+          {canCreate('library') && (
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => setShowCreateFolderModal(true)}

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Video, Plus, Users } from 'lucide-react';
 import { MeetingRoom } from './MeetingRoom';
 import { CreateRoomModal } from './CreateRoomModal';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 
 interface Room {
   id: string;
@@ -20,6 +21,7 @@ interface RoomWithPresence extends Room {
 
 export function MeetingRoomsList() {
   const { profile } = useAuth();
+  const { canCreate } = useDepartmentPermissions();
   const [rooms, setRooms] = useState<RoomWithPresence[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -110,7 +112,7 @@ export function MeetingRoomsList() {
             Salas permanentes de videoconferencia - Únete en cualquier momento
           </p>
         </div>
-        {profile?.role === 'admin' && (
+        {canCreate('meetings') && (
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"

@@ -9,6 +9,7 @@ import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { parseProductName } from '../../../lib/fabinsaCalculations';
+import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 
 type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
 type PurchaseProduct = Database['public']['Tables']['purchases_products']['Row'];
@@ -25,6 +26,7 @@ type TabType = 'materials' | 'products' | 'resale';
 
 export function StockModule() {
   const { tenantId } = useTenant();
+  const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
   const [activeTab, setActiveTab] = useState<TabType>('materials');
   
   // Materia Prima
@@ -34,10 +36,7 @@ export function StockModule() {
   const [materialForm, setMaterialForm] = useState({
     nombre: '',
     material: '',
-    kg: '',
-    costo_kilo_usd: '',
-    valor_dolar: '1',
-    moneda: 'ARS' as 'ARS' | 'USD',
+    stock_minimo: '',
   });
 
   // Productos Fabricados
@@ -49,6 +48,7 @@ export function StockModule() {
     cantidad: '',
     peso_unidad: '',
     costo_unit_total: '',
+    stock_minimo: '',
   });
 
   // Productos de Reventa
@@ -62,6 +62,7 @@ export function StockModule() {
     otros_costos: '0',
     moneda: 'ARS' as 'ARS' | 'USD',
     valor_dolar: '',
+    stock_minimo: '',
   });
 
   const [loading, setLoading] = useState(true);
@@ -208,10 +209,11 @@ export function StockModule() {
         tenant_id: tenantId,
         nombre: materialForm.nombre,
         material: materialForm.material,
-        kg: parseFloat(materialForm.kg),
-        costo_kilo_usd: parseFloat(materialForm.costo_kilo_usd),
-        valor_dolar: parseFloat(materialForm.valor_dolar),
-        moneda: materialForm.moneda,
+        kg: 0, // Se actualiza automáticamente con las compras
+        costo_kilo_usd: 0, // Se actualiza automáticamente con las compras
+        valor_dolar: 1,
+        moneda: 'ARS',
+        stock_minimo: materialForm.stock_minimo ? parseFloat(materialForm.stock_minimo) : 0,
       };
 
       if (editingMaterial) {
@@ -232,10 +234,7 @@ export function StockModule() {
     setMaterialForm({
       nombre: '',
       material: '',
-      kg: '',
-      costo_kilo_usd: '',
-      valor_dolar: '1',
-      moneda: 'ARS',
+      stock_minimo: '',
     });
     setEditingMaterial(null);
     setShowMaterialForm(false);
@@ -253,6 +252,7 @@ export function StockModule() {
         cantidad: parseInt(productForm.cantidad),
         peso_unidad: parseFloat(productForm.peso_unidad),
         costo_unit_total: productForm.costo_unit_total ? parseFloat(productForm.costo_unit_total) : null,
+        stock_minimo: productForm.stock_minimo ? parseInt(productForm.stock_minimo) : 0,
       };
 
       if (editingProduct) {
@@ -275,6 +275,7 @@ export function StockModule() {
       cantidad: '',
       peso_unidad: '',
       costo_unit_total: '',
+      stock_minimo: '',
     });
     setEditingProduct(null);
     setShowProductForm(false);
@@ -299,6 +300,7 @@ export function StockModule() {
         costo_unitario_final,
         moneda: resaleForm.moneda,
         valor_dolar: resaleForm.valor_dolar ? parseFloat(resaleForm.valor_dolar) : null,
+        stock_minimo: resaleForm.stock_minimo ? parseInt(resaleForm.stock_minimo) : 0,
       };
 
       if (editingResale) {
@@ -323,6 +325,7 @@ export function StockModule() {
       otros_costos: '0',
       moneda: 'ARS',
       valor_dolar: '',
+      stock_minimo: '',
     });
     setEditingResale(null);
     setShowResaleForm(false);
@@ -375,13 +378,15 @@ export function StockModule() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Materia Prima</h2>
-            <button
-              onClick={() => setShowMaterialForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Agregar</span>
-            </button>
+            {canCreate('fabinsa-stock') && (
+              <button
+                onClick={() => setShowMaterialForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Agregar</span>
+              </button>
+            )}
           </div>
 
           {/* Material Form */}
@@ -419,54 +424,17 @@ export function StockModule() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Cantidad (kg) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required
-                        value={materialForm.kg}
-                        onChange={(e) => setMaterialForm({ ...materialForm, kg: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Costo por kg *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required
-                        value={materialForm.costo_kilo_usd}
-                        onChange={(e) => setMaterialForm({ ...materialForm, costo_kilo_usd: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Moneda</label>
-                      <select
-                        value={materialForm.moneda}
-                        onChange={(e) => setMaterialForm({ ...materialForm, moneda: e.target.value as 'ARS' | 'USD' })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      >
-                        <option value="ARS">ARS</option>
-                        <option value="USD">USD</option>
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Stock Mínimo (kg)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={materialForm.stock_minimo}
+                      onChange={(e) => setMaterialForm({ ...materialForm, stock_minimo: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="Cantidad mínima de stock en kilos"
+                    />
                   </div>
-                  {materialForm.moneda === 'USD' && (
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Valor del Dólar *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required
-                        value={materialForm.valor_dolar}
-                        onChange={(e) => setMaterialForm({ ...materialForm, valor_dolar: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                  )}
                   <div className="flex justify-end space-x-3">
                     <button type="button" onClick={resetMaterialForm} className="px-4 py-2 border rounded-md">
                       Cancelar
@@ -488,6 +456,7 @@ export function StockModule() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Material</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cantidad (kg)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock Mínimo (kg)</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo/kg</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Moneda</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Acciones</th>
@@ -496,59 +465,81 @@ export function StockModule() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {materials.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       No hay materia prima registrada
                     </td>
                   </tr>
                 ) : (
-                  materials.map((mat) => (
-                    <tr key={mat.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => openMovementsModal(mat)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline font-medium"
-                        >
-                          {mat.nombre}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{mat.material}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{mat.kg.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${mat.costo_kilo_usd.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{mat.moneda}</td>
+                  materials.map((mat) => {
+                    const stockMinimo = mat.stock_minimo || 0;
+                    const stockBajo = mat.kg < stockMinimo;
+                    return (
+                      <tr 
+                        key={mat.id} 
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                          stockBajo ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500' : ''
+                        }`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => openMovementsModal(mat)}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline font-medium"
+                          >
+                            {mat.nombre}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{mat.material}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                          stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {mat.kg.toFixed(2)}
+                          {stockBajo && (
+                            <span className="ml-2 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">
+                              ⚠ Bajo
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {stockMinimo.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${mat.costo_kilo_usd.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{mat.moneda}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex justify-end space-x-2">
-                          <button
-                            onClick={() => {
-                              setEditingMaterial(mat);
-                              setMaterialForm({
-                                nombre: mat.nombre,
-                                material: mat.material,
-                                kg: mat.kg.toString(),
-                                costo_kilo_usd: mat.costo_kilo_usd.toString(),
-                                valor_dolar: mat.valor_dolar.toString(),
-                                moneda: mat.moneda,
-                              });
-                              setShowMaterialForm(true);
-                            }}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (confirm('¿Eliminar?')) {
-                                await supabase.from('stock_materials').delete().eq('id', mat.id);
-                                loadAllStock();
-                              }
-                            }}
-                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {canEdit('fabinsa-stock') && (
+                            <button
+                              onClick={() => {
+                                setEditingMaterial(mat);
+                                setMaterialForm({
+                                  nombre: mat.nombre,
+                                  material: mat.material,
+                                  stock_minimo: (mat.stock_minimo || 0).toString(),
+                                });
+                                setShowMaterialForm(true);
+                              }}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canDelete('fabinsa-stock') && (
+                            <button
+                              onClick={async () => {
+                                if (confirm('¿Eliminar?')) {
+                                  await supabase.from('stock_materials').delete().eq('id', mat.id);
+                                  loadAllStock();
+                                }
+                              }}
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -722,13 +713,15 @@ export function StockModule() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos Fabricados</h2>
-            <button
-              onClick={() => setShowProductForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Agregar</span>
-            </button>
+            {canCreate('fabinsa-stock') && (
+              <button
+                onClick={() => setShowProductForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Agregar</span>
+              </button>
+            )}
           </div>
 
           {/* Product Form */}
@@ -787,6 +780,17 @@ export function StockModule() {
                       />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Stock Mínimo (unidades)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      value={productForm.stock_minimo}
+                      onChange={(e) => setProductForm({ ...productForm, stock_minimo: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="Cantidad mínima de stock en unidades"
+                    />
+                  </div>
                   <div className="flex justify-end space-x-3">
                     <button type="button" onClick={resetProductForm} className="px-4 py-2 border rounded-md">
                       Cancelar
@@ -807,6 +811,7 @@ export function StockModule() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cantidad</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock Mínimo</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Peso/unidad (kg)</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo unitario</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Acciones</th>
@@ -815,51 +820,77 @@ export function StockModule() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       No hay productos fabricados registrados
                     </td>
                   </tr>
                 ) : (
-                  products.map((prod) => (
-                    <tr key={prod.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.nombre}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.cantidad}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.peso_unidad.toFixed(5)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {prod.costo_unit_total ? `$${prod.costo_unit_total.toFixed(2)}` : '-'}
-                      </td>
+                  products.map((prod) => {
+                    const stockMinimo = prod.stock_minimo || 0;
+                    const stockBajo = prod.cantidad < stockMinimo;
+                    return (
+                      <tr 
+                        key={prod.id} 
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                          stockBajo ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500' : ''
+                        }`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.nombre}</td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                          stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {prod.cantidad}
+                          {stockBajo && (
+                            <span className="ml-2 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">
+                              ⚠ Bajo
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {stockMinimo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.peso_unidad.toFixed(5)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {prod.costo_unit_total ? `$${prod.costo_unit_total.toFixed(2)}` : '-'}
+                        </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex justify-end space-x-2">
-                          <button
-                            onClick={() => {
-                              setEditingProduct(prod);
-                              setProductForm({
-                                nombre: prod.nombre,
-                                cantidad: prod.cantidad.toString(),
-                                peso_unidad: prod.peso_unidad.toString(),
-                                costo_unit_total: prod.costo_unit_total?.toString() || '',
-                              });
-                              setShowProductForm(true);
-                            }}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (confirm('¿Eliminar?')) {
-                                await supabase.from('stock_products').delete().eq('id', prod.id);
-                                loadAllStock();
-                              }
-                            }}
-                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {canEdit('fabinsa-stock') && (
+                            <button
+                              onClick={() => {
+                                setEditingProduct(prod);
+                                setProductForm({
+                                  nombre: prod.nombre,
+                                  cantidad: prod.cantidad.toString(),
+                                  peso_unidad: prod.peso_unidad.toString(),
+                                  costo_unit_total: prod.costo_unit_total?.toString() || '',
+                                  stock_minimo: (prod.stock_minimo || 0).toString(),
+                                });
+                                setShowProductForm(true);
+                              }}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canDelete('fabinsa-stock') && (
+                            <button
+                              onClick={async () => {
+                                if (confirm('¿Eliminar?')) {
+                                  await supabase.from('stock_products').delete().eq('id', prod.id);
+                                  loadAllStock();
+                                }
+                              }}
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -872,13 +903,15 @@ export function StockModule() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos de Reventa</h2>
-            <button
-              onClick={() => setShowResaleForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Agregar</span>
-            </button>
+            {canCreate('fabinsa-stock') && (
+              <button
+                onClick={() => setShowResaleForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Agregar</span>
+              </button>
+            )}
           </div>
 
           {/* Resale Form */}
@@ -962,6 +995,17 @@ export function StockModule() {
                       </div>
                     )}
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Stock Mínimo (unidades)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      value={resaleForm.stock_minimo}
+                      onChange={(e) => setResaleForm({ ...resaleForm, stock_minimo: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="Cantidad mínima de stock en unidades"
+                    />
+                  </div>
                   <div className="flex justify-end space-x-3">
                     <button type="button" onClick={resetResaleForm} className="px-4 py-2 border rounded-md">
                       Cancelar
@@ -982,6 +1026,7 @@ export function StockModule() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cantidad</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock Mínimo</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo unitario</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo final</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Moneda</th>
@@ -991,59 +1036,85 @@ export function StockModule() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {resaleProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       No hay productos de reventa registrados
                     </td>
                   </tr>
                 ) : (
-                  resaleProducts.map((prod) => (
-                    <tr key={prod.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => openResaleMovementsModal(prod)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline font-medium"
-                        >
-                          {prod.nombre}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.cantidad}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${prod.costo_unitario.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${prod.costo_unitario_final.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.moneda}</td>
+                  resaleProducts.map((prod) => {
+                    const stockMinimo = prod.stock_minimo || 0;
+                    const stockBajo = prod.cantidad < stockMinimo;
+                    return (
+                      <tr 
+                        key={prod.id} 
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                          stockBajo ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500' : ''
+                        }`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => openResaleMovementsModal(prod)}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline font-medium"
+                          >
+                            {prod.nombre}
+                          </button>
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                          stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {prod.cantidad}
+                          {stockBajo && (
+                            <span className="ml-2 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">
+                              ⚠ Bajo
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {stockMinimo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${prod.costo_unitario.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${prod.costo_unitario_final.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.moneda}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex justify-end space-x-2">
-                          <button
-                            onClick={() => {
-                              setEditingResale(prod);
-                              setResaleForm({
-                                nombre: prod.nombre,
-                                cantidad: prod.cantidad.toString(),
-                                costo_unitario: prod.costo_unitario.toString(),
-                                otros_costos: prod.otros_costos.toString(),
-                                moneda: prod.moneda,
-                                valor_dolar: prod.valor_dolar?.toString() || '',
-                              });
-                              setShowResaleForm(true);
-                            }}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (confirm('¿Eliminar?')) {
-                                await supabase.from('resale_products').delete().eq('id', prod.id);
-                                loadAllStock();
-                              }
-                            }}
-                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {canEdit('fabinsa-stock') && (
+                            <button
+                              onClick={() => {
+                                setEditingResale(prod);
+                                setResaleForm({
+                                  nombre: prod.nombre,
+                                  cantidad: prod.cantidad.toString(),
+                                  costo_unitario: prod.costo_unitario.toString(),
+                                  otros_costos: prod.otros_costos.toString(),
+                                  moneda: prod.moneda,
+                                  valor_dolar: prod.valor_dolar?.toString() || '',
+                                  stock_minimo: (prod.stock_minimo || 0).toString(),
+                                });
+                                setShowResaleForm(true);
+                              }}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canDelete('fabinsa-stock') && (
+                            <button
+                              onClick={async () => {
+                                if (confirm('¿Eliminar?')) {
+                                  await supabase.from('resale_products').delete().eq('id', prod.id);
+                                  loadAllStock();
+                                }
+                              }}
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

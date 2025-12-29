@@ -20,6 +20,7 @@ export interface ProductCosts {
   horas_necesarias: number;
   incidencia_mano_obra: number;
   costo_unitario_mano_obra: number;
+  otros_costos_unitario: number;
   costo_base_unitario: number;
   iibb_unitario: number;
   total_iibb: number;
@@ -128,8 +129,11 @@ export function calculateProductCosts(
   // Costo unitario de mano de obra
   const costo_unitario_mano_obra = cantidad_fabricar > 0 ? incidencia_mano_obra / cantidad_fabricar : 0;
 
-  // Costo base unitario (MP + MO)
-  const costo_base_unitario = costo_unitario_mp + costo_unitario_mano_obra;
+  // Otros costos unitarios
+  const otros_costos_unitario = (product as any).otros_costos || 0;
+
+  // Costo base unitario (MP + MO + Otros Costos)
+  const costo_base_unitario = costo_unitario_mp + costo_unitario_mano_obra + otros_costos_unitario;
 
   // IIBB unitario (sobre precio de venta)
   const precio_venta = product.precio_venta || 0;
@@ -156,6 +160,7 @@ export function calculateProductCosts(
     horas_necesarias,
     incidencia_mano_obra,
     costo_unitario_mano_obra,
+    otros_costos_unitario,
     costo_base_unitario,
     iibb_unitario,
     total_iibb,
@@ -445,7 +450,7 @@ export function convertARSToUSD(arsPrice: number, dollarValue: number): number {
 export function validateDecimal(value: string): boolean {
   if (value === '' || value === '-') return true;
   try {
-    if ('.' in value) {
+    if (value.includes('.')) {
       const parts = value.split('.');
       if (parts.length === 2 && parts[1].length <= 5) {
         parseFloat(value);

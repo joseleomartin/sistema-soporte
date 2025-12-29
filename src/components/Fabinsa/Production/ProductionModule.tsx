@@ -9,6 +9,10 @@ import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { formatProductName, parseProductName, calculateProductCosts, calculateAverageEmployeeHourValue } from '../../../lib/fabinsaCalculations';
+import { calculateFIFOPricesForMaterials } from '../../../lib/fifoCalculations';
+import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { ConfirmModal } from '../../Common/ConfirmModal';
+import { AlertModal } from '../../Common/AlertModal';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductInsert = Database['public']['Tables']['products']['Insert'];
@@ -19,6 +23,7 @@ type Employee = Database['public']['Tables']['employees']['Row'];
 
 export function ProductionModule() {
   const { tenantId } = useTenant();
+  const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
   const [products, setProducts] = useState<Product[]>([]);
   const [materials, setMaterials] = useState<Record<string, ProductMaterial[]>>({});
   const [stockMaterials, setStockMaterials] = useState<StockMaterial[]>([]);
@@ -28,6 +33,37 @@ export function ProductionModule() {
   const [showForm, setShowForm] = useState(false);
   const [formMaterials, setFormMaterials] = useState<Array<{ material_name: string; kg_por_unidad: string }>>([]);
   const [newMaterial, setNewMaterial] = useState({ material_name: '', kg_por_unidad: '' });
+  const [showMultiSelectModal, setShowMultiSelectModal] = useState(false);
+  const [selectedMaterials, setSelectedMaterials] = useState<Set<string>>(new Set());
+  const [materialQuantities, setMaterialQuantities] = useState<Record<string, string>>({});
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  
+  // Estados para modales
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    onConfirm: () => {},
+  });
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -36,86 +72,120 @@ export function ProductionModule() {
     medida: '',
     caracteristica: '',
     peso_unidad: '',
-    precio_venta: '',
     cantidad_fabricar: '',
     cantidad_por_hora: '',
-    iibb_porcentaje: '',
-    moneda_precio: 'ARS' as 'ARS' | 'USD',
+    otros_costos: '',
   });
 
   useEffect(() => {
     if (tenantId) {
-      loadProducts();
-      loadStockMaterials();
-      loadEmployees();
+      loadAllData();
     }
   }, [tenantId]);
 
-  const loadProducts = async () => {
+  const loadAllData = async () => {
     if (!tenantId) return;
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
+      
+      // Cargar todos los datos en paralelo
+      const [productsResult, stockResult, employeesResult] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('stock_materials')
+          .select('*')
+          .eq('tenant_id', tenantId),
+        supabase
+          .from('employees')
+          .select('*')
+          .eq('tenant_id', tenantId),
+      ]);
+
+      if (productsResult.error) throw productsResult.error;
+      if (stockResult.error) throw stockResult.error;
+      if (employeesResult.error) throw employeesResult.error;
+
+      const allProducts = productsResult.data || [];
+      
+      // Obtener IDs de productos que están en simulación de costos activa
+      // Primero obtener la simulación activa
+      const { data: activeSimulation } = await supabase
+        .from('cost_simulations')
+        .select('id')
         .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      let productsInSimulation: string[] = [];
+      if (activeSimulation) {
+        const { data: simulationItems } = await supabase
+          .from('cost_simulation_items')
+          .select('product_id')
+          .eq('simulation_id', activeSimulation.id);
+        
+        productsInSimulation = (simulationItems || [])
+          .map(item => item.product_id)
+          .filter((id): id is string => id !== null);
+      }
+      
+      // Filtrar productos: solo mostrar los que NO están en simulación activa
+      // Los productos en simulación solo aparecerán cuando se envíen explícitamente a producción
+      const productsData = allProducts.filter(p => !productsInSimulation.includes(p.id));
+      setProducts(productsData);
+      setStockMaterials(stockResult.data || []);
+      setEmployees(employeesResult.data || []);
 
-      if (error) throw error;
-
-      setProducts(data || []);
-
-      // Load materials for each product
-      const materialsMap: Record<string, ProductMaterial[]> = {};
-      for (const product of data || []) {
-        const { data: mats } = await supabase
+      // Cargar todos los materiales de una vez usando los IDs de productos
+      if (productsData.length > 0) {
+        const productIds = productsData.map((p: Product) => p.id);
+        const { data: allMaterials, error: materialsError } = await supabase
           .from('product_materials')
           .select('*')
-          .eq('product_id', product.id);
-        materialsMap[product.id] = mats || [];
+          .in('product_id', productIds);
+
+        if (materialsError) throw materialsError;
+
+        // Agrupar materiales por product_id
+        const materialsMap: Record<string, ProductMaterial[]> = {};
+        (allMaterials || []).forEach((mat: ProductMaterial) => {
+          if (!materialsMap[mat.product_id]) {
+            materialsMap[mat.product_id] = [];
+          }
+          materialsMap[mat.product_id].push(mat);
+        });
+        setMaterials(materialsMap);
+      } else {
+        setMaterials({});
       }
-      setMaterials(materialsMap);
     } catch (error) {
-      console.error('Error loading products:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const loadProducts = async () => {
+    if (!tenantId) return;
+    await loadAllData();
+  };
+
   const loadStockMaterials = async () => {
     if (!tenantId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('stock_materials')
-        .select('*')
-        .eq('tenant_id', tenantId);
-
-      if (error) throw error;
-      setStockMaterials(data || []);
-    } catch (error) {
-      console.error('Error loading stock materials:', error);
-    }
+    await loadAllData();
   };
 
   const loadEmployees = async () => {
     if (!tenantId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('tenant_id', tenantId);
-
-      if (error) throw error;
-      setEmployees(data || []);
-    } catch (error) {
-      console.error('Error loading employees:', error);
-    }
+    await loadAllData();
   };
 
-  const calculateProductCost = (product: Product): { costoMP: number; costoMO: number; costoTotal: number } => {
+  const calculateProductCost = (product: Product): { costoMP: number; costoMO: number; otrosCostos: number; costoTotal: number } => {
     try {
       const productMaterials = materials[product.id] || [];
       const avgHourValue = calculateAverageEmployeeHourValue(employees);
@@ -137,14 +207,18 @@ export function ProductionModule() {
         avgHourValue
       );
 
+      // Obtener otros costos del producto
+      const otrosCostos = (product as any).otros_costos || 0;
+
       return {
         costoMP: costs.costo_unitario_mp,
         costoMO: costs.costo_unitario_mano_obra,
-        costoTotal: costs.costo_base_unitario,
+        otrosCostos: otrosCostos,
+        costoTotal: costs.costo_base_unitario + otrosCostos,
       };
     } catch (error) {
       console.error('Error calculating product cost:', error);
-      return { costoMP: 0, costoMO: 0, costoTotal: 0 };
+      return { costoMP: 0, costoMO: 0, otrosCostos: 0, costoTotal: 0 };
     }
   };
 
@@ -161,7 +235,12 @@ export function ProductionModule() {
 
     // Validar que haya al menos un material
     if (formMaterials.length === 0) {
-      alert('Debe agregar al menos un material al producto');
+      setAlertModal({
+        isOpen: true,
+        title: 'Materiales requeridos',
+        message: 'Debe agregar al menos un material al producto',
+        type: 'warning',
+      });
       return;
     }
 
@@ -176,11 +255,11 @@ export function ProductionModule() {
         medida: formData.medida || null,
         caracteristica: formData.caracteristica || null,
         peso_unidad: pesoUnidad,
-        precio_venta: formData.precio_venta ? parseFloat(formData.precio_venta) : null,
+        precio_venta: null,
         cantidad_fabricar: parseInt(formData.cantidad_fabricar) || 0,
         cantidad_por_hora: parseFloat(formData.cantidad_por_hora) || 0,
-        iibb_porcentaje: parseFloat(formData.iibb_porcentaje) || 0,
-        moneda_precio: formData.moneda_precio,
+        otros_costos: parseFloat(formData.otros_costos) || 0,
+        moneda_precio: 'ARS',
       };
 
       let productId: string;
@@ -229,7 +308,12 @@ export function ProductionModule() {
       loadProducts();
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Error al guardar el producto');
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: 'Error al guardar el producto',
+        type: 'error',
+      });
     }
   };
 
@@ -241,11 +325,10 @@ export function ProductionModule() {
       medida: parsed.medida,
       caracteristica: parsed.caracteristica,
       peso_unidad: '', // Ya no se usa, se calcula automáticamente
-      precio_venta: product.precio_venta?.toString() || '',
       cantidad_fabricar: product.cantidad_fabricar.toString(),
       cantidad_por_hora: product.cantidad_por_hora.toString(),
-      iibb_porcentaje: product.iibb_porcentaje.toString(),
-      moneda_precio: product.moneda_precio,
+      otros_costos: (product as any).otros_costos?.toString() || '0',
+      moneda_precio: 'ARS',
     });
     
     // Cargar materiales del producto
@@ -267,67 +350,146 @@ export function ProductionModule() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este producto?')) return;
+  const handleDelete = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar producto',
+      message: '¿Está seguro de eliminar este producto? Esta acción no se puede deshacer.',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          setIsProcessing(true);
+          const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', id);
 
-    try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      loadProducts();
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      alert('Error al eliminar el producto');
-    }
+          if (error) throw error;
+          loadProducts();
+          setConfirmModal({ ...confirmModal, isOpen: false });
+          setAlertModal({
+            isOpen: true,
+            title: 'Éxito',
+            message: 'Producto eliminado correctamente',
+            type: 'success',
+          });
+        } catch (error) {
+          console.error('Error deleting product:', error);
+          setAlertModal({
+            isOpen: true,
+            title: 'Error',
+            message: 'Error al eliminar el producto',
+            type: 'error',
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+    });
   };
 
   const completeProduction = async (product: Product) => {
     if (!tenantId) {
-      alert('Error: No se pudo identificar la empresa');
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: 'No se pudo identificar la empresa',
+        type: 'error',
+      });
       return;
     }
 
-    if (!confirm(`¿Desea completar la producción de "${product.nombre}" y enviarla al stock?`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Completar producción',
+      message: `¿Desea completar la producción de "${product.nombre}" y enviarla al stock?`,
+      type: 'info',
+      onConfirm: async () => {
+        await executeCompleteProduction(product);
+      },
+    });
+  };
+
+  const executeCompleteProduction = async (product: Product) => {
+    if (!tenantId) return;
 
     try {
       const productMaterials = materials[product.id] || [];
       const cantidad = product.cantidad_fabricar || 0;
 
       if (cantidad <= 0) {
-        alert('La cantidad a fabricar debe ser mayor a 0');
+        setAlertModal({
+          isOpen: true,
+          title: 'Error de validación',
+          message: 'La cantidad a fabricar debe ser mayor a 0',
+          type: 'error',
+        });
+        setIsProcessing(false);
         return;
       }
 
-      // Validar stock de materiales
+      // Validar stock de materiales y recopilar advertencias
+      const materialWarnings: string[] = [];
       for (const mat of productMaterials) {
         const stockMat = stockMaterials.find(m => m.material === mat.material_name);
         if (!stockMat) {
-          alert(`No se encontró el material "${mat.material_name}" en el stock`);
-          return;
-        }
-        const kgNecesarios = mat.kg_por_unidad * cantidad;
-        if (stockMat.kg < kgNecesarios) {
-          alert(`Stock insuficiente de "${mat.material_name}". Disponible: ${stockMat.kg.toFixed(2)} kg, Necesario: ${kgNecesarios.toFixed(2)} kg`);
-          return;
+          materialWarnings.push(`Material "${mat.material_name}" no encontrado en el stock`);
+        } else {
+          const kgNecesarios = mat.kg_por_unidad * cantidad;
+          if (stockMat.kg < kgNecesarios) {
+            materialWarnings.push(`Stock insuficiente de "${mat.material_name}". Disponible: ${stockMat.kg.toFixed(2)} kg, Necesario: ${kgNecesarios.toFixed(2)} kg`);
+          }
         }
       }
 
-      // Calcular costos
+      // Si hay advertencias, mostrar modal para continuar de todos modos
+      if (materialWarnings.length > 0) {
+        setConfirmModal({
+          isOpen: true,
+          title: 'Advertencias de Materiales',
+          message: `Se encontraron los siguientes problemas:\n\n${materialWarnings.join('\n')}\n\n¿Desea continuar de todos modos?`,
+          type: 'warning',
+          onConfirm: async () => {
+            await proceedWithProduction(product, materialWarnings);
+          },
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      // Si no hay advertencias, proceder directamente
+      await proceedWithProduction(product, []);
+    } catch (error: any) {
+      console.error('Error completing production:', error);
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: `Error al completar la producción: ${error?.message || 'Error desconocido'}`,
+        type: 'error',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const proceedWithProduction = async (product: Product, warnings: string[]) => {
+    if (!tenantId) return;
+
+    try {
+      setIsProcessing(true);
+      const productMaterials = materials[product.id] || [];
+      const cantidad = product.cantidad_fabricar || 0;
+
+      // Calcular costos usando FIFO (material más viejo primero)
       const costs = calculateProductCost(product);
       const avgHourValue = calculateAverageEmployeeHourValue(employees);
-      const materialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
-      stockMaterials.forEach(mat => {
-        materialPrices[mat.material] = {
-          costo_kilo_usd: mat.costo_kilo_usd,
-          valor_dolar: mat.valor_dolar,
-          moneda: mat.moneda,
-        };
-      });
+      
+      // Obtener precios FIFO (más antiguos primero)
+      const materialPrices = await calculateFIFOPricesForMaterials(
+        supabase,
+        tenantId,
+        productMaterials.map(m => ({ material_name: m.material_name, kg_por_unidad: m.kg_por_unidad }))
+      );
 
       const fullCosts = calculateProductCosts(
         product,
@@ -336,12 +498,14 @@ export function ProductionModule() {
         avgHourValue
       );
 
-      // Descontar materiales del stock
+      // Descontar materiales del stock (solo si hay stock disponible)
       for (const mat of productMaterials) {
         const stockMat = stockMaterials.find(m => m.material === mat.material_name);
         if (stockMat) {
           const kgNecesarios = mat.kg_por_unidad * cantidad;
-          const nuevoStock = stockMat.kg - kgNecesarios;
+          // Solo descontar si hay stock suficiente, sino usar lo disponible o 0
+          const kgADescontar = Math.min(kgNecesarios, Math.max(0, stockMat.kg));
+          const nuevoStock = Math.max(0, stockMat.kg - kgADescontar);
           
           await supabase
             .from('stock_materials')
@@ -353,8 +517,17 @@ export function ProductionModule() {
             tenant_id: tenantId,
             tipo: 'egreso_mp',
             item_nombre: mat.material_name,
-            cantidad: kgNecesarios,
-            motivo: `Producción: ${product.nombre}`,
+            cantidad: kgADescontar,
+            motivo: `Producción: ${product.nombre}${warnings.length > 0 ? ' (con advertencias)' : ''}`,
+          });
+        } else {
+          // Si no hay material en stock, registrar movimiento con cantidad 0
+          await supabase.from('inventory_movements').insert({
+            tenant_id: tenantId,
+            tipo: 'egreso_mp',
+            item_nombre: mat.material_name,
+            cantidad: 0,
+            motivo: `Producción: ${product.nombre} (material no encontrado en stock)`,
           });
         }
       }
@@ -423,12 +596,25 @@ export function ProductionModule() {
         .delete()
         .eq('id', product.id);
 
-      alert(`Producción de "${product.nombre}" completada y enviada al stock`);
+      setConfirmModal({ ...confirmModal, isOpen: false });
+      setAlertModal({
+        isOpen: true,
+        title: 'Producción completada',
+        message: `La producción de "${product.nombre}" ha sido completada y enviada al stock${warnings.length > 0 ? ' (con advertencias de materiales)' : ''}`,
+        type: 'success',
+      });
       loadProducts();
       loadStockMaterials(); // Recargar stock para actualizar los valores
     } catch (error: any) {
       console.error('Error completing production:', error);
-      alert(`Error al completar la producción: ${error?.message || 'Error desconocido'}`);
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: `Error al completar la producción: ${error?.message || 'Error desconocido'}`,
+        type: 'error',
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -439,10 +625,9 @@ export function ProductionModule() {
       medida: '',
       caracteristica: '',
       peso_unidad: '',
-      precio_venta: '',
       cantidad_fabricar: '',
       cantidad_por_hora: '',
-      iibb_porcentaje: '',
+      otros_costos: '',
       moneda_precio: 'ARS',
     });
     setFormMaterials([]);
@@ -453,11 +638,21 @@ export function ProductionModule() {
 
   const addMaterial = () => {
     if (!newMaterial.material_name || !newMaterial.kg_por_unidad) {
-      alert('Por favor complete todos los campos del material');
+      setAlertModal({
+        isOpen: true,
+        title: 'Campos incompletos',
+        message: 'Por favor complete todos los campos del material',
+        type: 'warning',
+      });
       return;
     }
     if (parseFloat(newMaterial.kg_por_unidad) <= 0) {
-      alert('El kg por unidad debe ser mayor a 0');
+      setAlertModal({
+        isOpen: true,
+        title: 'Valor inválido',
+        message: 'El kg por unidad debe ser mayor a 0',
+        type: 'warning',
+      });
       return;
     }
     setFormMaterials([...formMaterials, { ...newMaterial }]);
@@ -466,6 +661,155 @@ export function ProductionModule() {
 
   const removeMaterial = (index: number) => {
     setFormMaterials(formMaterials.filter((_, i) => i !== index));
+  };
+
+  const handleMaterialToggle = (materialName: string) => {
+    const newSelected = new Set(selectedMaterials);
+    if (newSelected.has(materialName)) {
+      newSelected.delete(materialName);
+      const newQuantities = { ...materialQuantities };
+      delete newQuantities[materialName];
+      setMaterialQuantities(newQuantities);
+    } else {
+      newSelected.add(materialName);
+      setMaterialQuantities({ ...materialQuantities, [materialName]: '' });
+    }
+    setSelectedMaterials(newSelected);
+  };
+
+  const handleAddMultipleMaterials = () => {
+    const materialsToAdd: Array<{ material_name: string; kg_por_unidad: string }> = [];
+    
+    for (const materialName of selectedMaterials) {
+      const quantity = materialQuantities[materialName] || '0';
+      if (quantity && parseFloat(quantity) > 0) {
+        // Verificar si el material ya está en la lista
+        if (!formMaterials.some(m => m.material_name === materialName)) {
+          materialsToAdd.push({ material_name: materialName, kg_por_unidad: quantity });
+        }
+      }
+    }
+
+    if (materialsToAdd.length === 0) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Sin materiales válidos',
+        message: 'Por favor seleccione al menos un material y especifique un kg por unidad mayor a 0',
+        type: 'warning',
+      });
+      return;
+    }
+
+    setFormMaterials([...formMaterials, ...materialsToAdd]);
+    setSelectedMaterials(new Set());
+    setMaterialQuantities({});
+    setShowMultiSelectModal(false);
+  };
+
+  const openMultiSelectModal = () => {
+    setShowMultiSelectModal(true);
+    setSelectedMaterials(new Set());
+    setMaterialQuantities({});
+  };
+
+  const handleProductToggle = (productId: string) => {
+    const newSelected = new Set(selectedProducts);
+    if (newSelected.has(productId)) {
+      newSelected.delete(productId);
+    } else {
+      newSelected.add(productId);
+    }
+    setSelectedProducts(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProducts.size === products.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(products.map(p => p.id)));
+    }
+  };
+
+  const handleCompleteSelected = async () => {
+    if (selectedProducts.size === 0) return;
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'Completar producciones',
+      message: `¿Desea completar ${selectedProducts.size} producción(es) seleccionada(s) y enviarlas al stock?`,
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          setIsProcessing(true);
+          const productsToComplete = products.filter(p => selectedProducts.has(p.id));
+          
+          for (const product of productsToComplete) {
+            await executeCompleteProduction(product);
+          }
+
+          setSelectedProducts(new Set());
+          setConfirmModal({ ...confirmModal, isOpen: false });
+          setAlertModal({
+            isOpen: true,
+            title: 'Producciones completadas',
+            message: `${productsToComplete.length} producción(es) completada(s) y enviada(s) al stock`,
+            type: 'success',
+          });
+        } catch (error: any) {
+          console.error('Error completing productions:', error);
+          setAlertModal({
+            isOpen: true,
+            title: 'Error',
+            message: `Error al completar las producciones: ${error?.message || 'Error desconocido'}`,
+            type: 'error',
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedProducts.size === 0) return;
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar producciones',
+      message: `¿Está seguro de eliminar ${selectedProducts.size} producción(es) seleccionada(s)? Esta acción no se puede deshacer.`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          setIsProcessing(true);
+          const { error } = await supabase
+            .from('products')
+            .delete()
+            .in('id', Array.from(selectedProducts));
+
+          if (error) throw error;
+          
+          loadProducts();
+          setSelectedProducts(new Set());
+          setConfirmModal({ ...confirmModal, isOpen: false });
+          setAlertModal({
+            isOpen: true,
+            title: 'Éxito',
+            message: `${selectedProducts.size} producción(es) eliminada(s) correctamente`,
+            type: 'success',
+          });
+        } catch (error) {
+          console.error('Error deleting products:', error);
+          setAlertModal({
+            isOpen: true,
+            title: 'Error',
+            message: 'Error al eliminar las producciones',
+            type: 'error',
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -490,13 +834,45 @@ export function ProductionModule() {
       {/* Header with Add Button */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Órdenes de Producción</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nuevo Producto</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedProducts.size > 0 && (
+            <>
+              {canEdit('fabinsa-production') && (
+                <button
+                  onClick={handleCompleteSelected}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Completar ({selectedProducts.size})</span>
+                </button>
+              )}
+              {canDelete('fabinsa-production') && (
+                <button
+                  onClick={handleDeleteSelected}
+                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Eliminar ({selectedProducts.size})</span>
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedProducts(new Set())}
+                className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+              >
+                Cancelar selección
+              </button>
+            </>
+          )}
+          {canCreate('fabinsa-production') && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Producto</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Form Modal */}
@@ -550,31 +926,6 @@ export function ProductionModule() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Precio de venta
-                  </label>
-                  <div className="flex">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.precio_venta}
-                      onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                    <select
-                      value={formData.moneda_precio}
-                      onChange={(e) => setFormData({ ...formData, moneda_precio: e.target.value as 'ARS' | 'USD' })}
-                      className="px-3 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    >
-                      <option value="ARS">ARS</option>
-                      <option value="USD">USD</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -601,14 +952,15 @@ export function ProductionModule() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    IIBB (%)
+                    Otros Costos (ARS)
                   </label>
                   <input
                     type="number"
                     step="0.01"
-                    value={formData.iibb_porcentaje}
-                    onChange={(e) => setFormData({ ...formData, iibb_porcentaje: e.target.value })}
+                    value={formData.otros_costos}
+                    onChange={(e) => setFormData({ ...formData, otros_costos: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="0.00"
                   />
                 </div>
               </div>
@@ -617,11 +969,22 @@ export function ProductionModule() {
               <div className="border-t pt-4 mt-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Materiales</h4>
-                  {formMaterials.length > 0 && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      Peso total: <strong>{calculatePesoUnidad().toFixed(5)} kg/unidad</strong>
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {formMaterials.length > 0 && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Peso total: <strong>{calculatePesoUnidad().toFixed(5)} kg/unidad</strong>
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={openMultiSelectModal}
+                      className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-1"
+                      title="Seleccionar múltiples materiales"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Selección múltiple
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Lista de materiales agregados */}
@@ -722,37 +1085,45 @@ export function ProductionModule() {
       {/* Products Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-[3%] px-2 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={products.length > 0 && selectedProducts.size === products.length}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                </th>
+                <th className="w-[17%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Nombre
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-[10%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Peso (kg)
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Precio Venta
+                <th className="w-[10%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Cant. Fab.
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Cant. Fabricar
+                <th className="w-[10%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Product.
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Productividad
+                <th className="w-[12%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Costo MP
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Costo MP (ARS)
+                <th className="w-[10%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Costo MO
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Costo MO (ARS)
+                <th className="w-[10%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Otros Costos
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Costo Unitario (ARS)
+                <th className="w-[10%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Costo Unit.
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-[10%] px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-[10%] px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -760,69 +1131,87 @@ export function ProductionModule() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={11} className="px-2 py-4 text-center text-gray-500 dark:text-gray-400">
                     No hay órdenes de producción registradas
                   </td>
                 </tr>
               ) : (
                 products.map((product) => {
                   const costs = calculateProductCost(product);
+                  const isSelected = selectedProducts.has(product.id);
                   return (
-                    <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{product.nombre}</div>
+                    <tr 
+                      key={product.id} 
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                    >
+                      <td className="px-2 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleProductToggle(product.id)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {product.peso_unidad.toFixed(5)}
+                      <td className="px-2 py-3">
+                        <div className="text-xs font-medium text-gray-900 dark:text-white truncate" title={product.nombre}>
+                          {product.nombre}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {product.precio_venta
-                          ? `$${product.precio_venta.toFixed(2)} (${product.moneda_precio})`
-                          : '-'}
+                      <td className="px-2 py-3 text-xs text-gray-500 dark:text-gray-400">
+                        {product.peso_unidad.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-2 py-3 text-xs text-gray-500 dark:text-gray-400">
                         {product.cantidad_fabricar}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {product.cantidad_por_hora.toFixed(5)} u/h
+                      <td className="px-2 py-3 text-xs text-gray-500 dark:text-gray-400">
+                        {product.cantidad_por_hora.toFixed(2)} u/h
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
+                      <td className="px-2 py-3 text-xs text-gray-700 dark:text-gray-300 font-medium">
                         ${costs.costoMP.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
+                      <td className="px-2 py-3 text-xs text-gray-700 dark:text-gray-300 font-medium">
                         ${costs.costoMO.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 dark:text-blue-400 font-semibold">
+                      <td className="px-2 py-3 text-xs text-gray-700 dark:text-gray-300 font-medium">
+                        ${costs.otrosCostos.toFixed(2)}
+                      </td>
+                      <td className="px-2 py-3 text-xs text-blue-600 dark:text-blue-400 font-semibold">
                         ${costs.costoTotal.toFixed(2)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
+                      <td className="px-2 py-3 text-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
                           Pendiente
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end space-x-2">
-                          <button
-                            onClick={() => completeProduction(product)}
-                            className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
-                            title="Completar producción y enviar al stock"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleEdit(product)}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                            title="Editar orden"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(product.id)}
-                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                            title="Eliminar orden"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                      <td className="px-2 py-3 text-right text-xs font-medium">
+                        <div className="flex justify-end space-x-1">
+                          {canEdit('fabinsa-production') && (
+                            <button
+                              onClick={() => completeProduction(product)}
+                              className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
+                              title="Completar producción y enviar al stock"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canEdit('fabinsa-production') && (
+                            <button
+                              onClick={() => handleEdit(product)}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                              title="Editar orden"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canDelete('fabinsa-production') && (
+                            <button
+                              onClick={() => handleDelete(product.id)}
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                              title="Eliminar orden"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -833,6 +1222,136 @@ export function ProductionModule() {
           </table>
         </div>
       </div>
+
+      {/* Modales */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        isLoading={isProcessing}
+      />
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+
+      {/* Modal de Selección Múltiple de Materiales */}
+      {showMultiSelectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Seleccionar Múltiples Materiales
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowMultiSelectModal(false);
+                    setSelectedMaterials(new Set());
+                    setMaterialQuantities({});
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                Seleccione los materiales que desea agregar y especifique el kg por unidad para cada uno.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {stockMaterials.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No hay materiales disponibles en el stock
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stockMaterials.map((mat) => {
+                    const isSelected = selectedMaterials.has(mat.material);
+                    return (
+                      <div
+                        key={mat.id}
+                        className={`p-3 border rounded-lg transition ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleMaterialToggle(mat.material)}
+                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer">
+                                {mat.material}
+                              </label>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                Stock: {mat.kg.toFixed(2)} kg
+                              </span>
+                            </div>
+                            {isSelected && (
+                              <div className="mt-2">
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Kg por unidad
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.00001"
+                                  value={materialQuantities[mat.material] || ''}
+                                  onChange={(e) =>
+                                    setMaterialQuantities({
+                                      ...materialQuantities,
+                                      [mat.material]: e.target.value,
+                                    })
+                                  }
+                                  className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                  placeholder="0.00000"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowMultiSelectModal(false);
+                  setSelectedMaterials(new Set());
+                  setMaterialQuantities({});
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddMultipleMaterials}
+                disabled={selectedMaterials.size === 0}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Agregar {selectedMaterials.size > 0 ? `(${selectedMaterials.size})` : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

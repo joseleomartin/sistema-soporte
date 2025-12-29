@@ -537,6 +537,7 @@ export interface Database {
           cantidad_fabricar: number
           cantidad_por_hora: number
           iibb_porcentaje: number
+          otros_costos: number
           moneda_precio: 'ARS' | 'USD'
           created_at: string
           updated_at: string
@@ -553,6 +554,7 @@ export interface Database {
           cantidad_fabricar?: number
           cantidad_por_hora?: number
           iibb_porcentaje?: number
+          otros_costos?: number
           moneda_precio?: 'ARS' | 'USD'
           created_at?: string
           updated_at?: string
@@ -569,6 +571,7 @@ export interface Database {
           cantidad_fabricar?: number
           cantidad_por_hora?: number
           iibb_porcentaje?: number
+          otros_costos?: number
           moneda_precio?: 'ARS' | 'USD'
           created_at?: string
           updated_at?: string
@@ -672,6 +675,7 @@ export interface Database {
           costo_kilo_usd: number
           valor_dolar: number
           moneda: 'ARS' | 'USD'
+          stock_minimo: number | null
           created_at: string
           updated_at: string
         }
@@ -684,6 +688,7 @@ export interface Database {
           costo_kilo_usd: number
           valor_dolar?: number
           moneda?: 'ARS' | 'USD'
+          stock_minimo?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -696,6 +701,7 @@ export interface Database {
           costo_kilo_usd?: number
           valor_dolar?: number
           moneda?: 'ARS' | 'USD'
+          stock_minimo?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -708,6 +714,7 @@ export interface Database {
           cantidad: number
           peso_unidad: number
           costo_unit_total: number | null
+          stock_minimo: number | null
           created_at: string
           updated_at: string
         }
@@ -718,6 +725,7 @@ export interface Database {
           cantidad?: number
           peso_unidad: number
           costo_unit_total?: number | null
+          stock_minimo?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -728,6 +736,7 @@ export interface Database {
           cantidad?: number
           peso_unidad?: number
           costo_unit_total?: number | null
+          stock_minimo?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -743,6 +752,7 @@ export interface Database {
           costo_unitario_final: number
           moneda: 'ARS' | 'USD'
           valor_dolar: number | null
+          stock_minimo: number | null
           created_at: string
           updated_at: string
         }
@@ -756,6 +766,7 @@ export interface Database {
           costo_unitario_final: number
           moneda?: 'ARS' | 'USD'
           valor_dolar?: number | null
+          stock_minimo?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -769,6 +780,7 @@ export interface Database {
           costo_unitario_final?: number
           moneda?: 'ARS' | 'USD'
           valor_dolar?: number | null
+          stock_minimo?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -1109,6 +1121,216 @@ export interface Database {
           folder_name?: string
           folder_link?: string | null
           created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      clients: {
+        Row: {
+          id: string
+          tenant_id: string
+          nombre: string
+          razon_social: string | null
+          cuit: string | null
+          telefono: string | null
+          email: string | null
+          provincia: string | null
+          direccion: string | null
+          observaciones: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          nombre: string
+          razon_social?: string | null
+          cuit?: string | null
+          telefono?: string | null
+          email?: string | null
+          provincia?: string | null
+          direccion?: string | null
+          observaciones?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          nombre?: string
+          razon_social?: string | null
+          cuit?: string | null
+          telefono?: string | null
+          email?: string | null
+          provincia?: string | null
+          direccion?: string | null
+          observaciones?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      client_documents: {
+        Row: {
+          id: string
+          client_id: string
+          tenant_id: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          uploaded_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          tenant_id: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          uploaded_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          tenant_id?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          uploaded_by?: string
+          created_at?: string
+        }
+      }
+      client_drive_mapping: {
+        Row: {
+          id: string
+          client_id: string
+          tenant_id: string
+          google_drive_folder_id: string
+          folder_name: string
+          folder_link: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          tenant_id: string
+          google_drive_folder_id: string
+          folder_name: string
+          folder_link?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          tenant_id?: string
+          google_drive_folder_id?: string
+          folder_name?: string
+          folder_link?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      departments: {
+        Row: {
+          id: string
+          name: string
+          description: string
+          color: string
+          tenant_id: string | null
+          hourly_cost: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string
+          color?: string
+          tenant_id?: string | null
+          hourly_cost?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string
+          color?: string
+          tenant_id?: string | null
+          hourly_cost?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_departments: {
+        Row: {
+          id: string
+          user_id: string
+          department_id: string
+          assigned_by: string
+          tenant_id: string | null
+          assigned_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          department_id: string
+          assigned_by: string
+          tenant_id?: string | null
+          assigned_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          department_id?: string
+          assigned_by?: string
+          tenant_id?: string | null
+          assigned_at?: string
+        }
+      }
+      department_permissions: {
+        Row: {
+          id: string
+          department_id: string
+          tenant_id: string
+          module_view: string
+          can_view: boolean
+          can_create: boolean
+          can_edit: boolean
+          can_delete: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          department_id: string
+          tenant_id: string
+          module_view: string
+          can_view?: boolean
+          can_create?: boolean
+          can_edit?: boolean
+          can_delete?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          department_id?: string
+          tenant_id?: string
+          module_view?: string
+          can_view?: boolean
+          can_create?: boolean
+          can_edit?: boolean
+          can_delete?: boolean
           created_at?: string
           updated_at?: string
         }

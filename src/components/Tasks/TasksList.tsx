@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { CreateTaskModal } from './CreateTaskModal';
 import { TaskDetail } from './TaskDetail';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 
 interface Task {
   id: string;
@@ -73,6 +74,7 @@ const statusConfig = {
 export function TasksList() {
   const { profile } = useAuth();
   const { tenantId } = useTenant();
+  const { canCreate } = useDepartmentPermissions();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,20 +107,55 @@ export function TasksList() {
 
   // Verificar si hay un parámetro task en la URL después de cargar las tareas
   useEffect(() => {
-    if (loading || tasks.length === 0) return;
+    if (loading) return;
     
     const hash = window.location.hash;
     const taskMatch = hash.match(/[?&]task=([^&]+)/);
     if (taskMatch) {
       const taskId = taskMatch[1];
-      const task = tasks.find(t => t.id === taskId);
-      if (task) {
-        setSelectedTask(task);
-        // Limpiar el parámetro de la URL
-        window.history.replaceState(null, '', window.location.pathname + '#tasks');
+      
+      // Si las tareas ya están cargadas, buscar la tarea
+      if (tasks.length > 0) {
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+          setSelectedTask(task);
+          // Limpiar el parámetro de la URL
+          window.history.replaceState(null, '', window.location.pathname + '#tasks');
+          return;
+        }
       }
+      
+      // Si no está en la lista, cargarla directamente desde la base de datos
+      const loadTaskById = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('tasks')
+            .select(`
+              *,
+              created_by_profile:profiles!tasks_created_by_fkey (
+                id,
+                full_name,
+                avatar_url
+              )
+            `)
+            .eq('id', taskId)
+            .eq('tenant_id', tenantId || '')
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            setSelectedTask(data as Task);
+            // Limpiar el parámetro de la URL
+            window.history.replaceState(null, '', window.location.pathname + '#tasks');
+          }
+        } catch (error) {
+          console.error('Error al cargar la tarea:', error);
+        }
+      };
+      
+      loadTaskById();
     }
-  }, [loading, tasks]);
+  }, [loading, tasks, tenantId]);
 
   useEffect(() => {
     filterTasks();
@@ -333,8 +370,6 @@ export function TasksList() {
           throw assignError;
         }
 
-        console.log('📋 Assignments data for tasks:', assignmentsData);
-        console.log('📋 Total assignments found:', assignmentsData?.length);
 
         // Agrupar asignaciones por task_id
         const taskAssignments = new Map();
@@ -461,13 +496,15 @@ export function TasksList() {
             <CheckSquare className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tareas</h1>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            {profile?.role === 'admin' ? 'Nueva Tarea' : 'Nueva Tarea Personal'}
-          </button>
+          {canCreate('tasks') && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              {profile?.role === 'admin' ? 'Nueva Tarea' : 'Nueva Tarea Personal'}
+            </button>
+          )}
         </div>
 
         {/* Filtros */}

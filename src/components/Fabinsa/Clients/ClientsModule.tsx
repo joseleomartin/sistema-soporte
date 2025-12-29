@@ -1,10 +1,11 @@
 /**
- * Módulo de Proveedores
- * Gestión de proveedores con documentos
+ * Módulo de Clientes (para Empresas de Producción)
+ * Gestión de clientes con documentos
+ * Similar al módulo de Proveedores
  */
 
 import { useState, useEffect } from 'react';
-import { Truck, Plus, Edit, Trash2, Save, X, FileText, Upload, Download, Folder, ExternalLink } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Save, X, FileText, Upload, Download, Folder, ExternalLink } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -14,9 +15,9 @@ import { GoogleDriveViewer } from '../../Forums/GoogleDriveViewer';
 import { DriveFolder } from '../../../lib/googleDriveAPI';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 
-type Supplier = Database['public']['Tables']['suppliers']['Row'];
-type SupplierInsert = Database['public']['Tables']['suppliers']['Insert'];
-type SupplierDocument = Database['public']['Tables']['supplier_documents']['Row'];
+type Client = Database['public']['Tables']['clients']['Row'];
+type ClientInsert = Database['public']['Tables']['clients']['Insert'];
+type ClientDocument = Database['public']['Tables']['client_documents']['Row'];
 
 interface FileAttachment {
   id: string;
@@ -29,15 +30,15 @@ interface FileAttachment {
   file_path?: string;
 }
 
-export function SuppliersModule() {
+export function ClientsModule() {
   const { tenantId } = useTenant();
   const { profile } = useAuth();
   const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const [documents, setDocuments] = useState<FileAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -64,25 +65,25 @@ export function SuppliersModule() {
 
   useEffect(() => {
     if (tenantId) {
-      loadSuppliers();
+      loadClients();
     }
   }, [tenantId]);
 
-  const loadSuppliers = async () => {
+  const loadClients = async () => {
     if (!tenantId) return;
 
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('suppliers')
+        .from('clients')
         .select('*')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSuppliers(data || []);
+      setClients(data || []);
     } catch (error) {
-      console.error('Error loading suppliers:', error);
+      console.error('Error loading clients:', error);
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,7 @@ export function SuppliersModule() {
     if (!tenantId) return;
 
     try {
-      const supplierData: SupplierInsert = {
+      const clientData: ClientInsert = {
         tenant_id: tenantId,
         nombre: formData.nombre.trim(),
         razon_social: formData.razon_social.trim() || null,
@@ -105,58 +106,58 @@ export function SuppliersModule() {
         observaciones: formData.observaciones.trim() || null,
       };
 
-      if (editingSupplier) {
+      if (editingClient) {
         const { error } = await supabase
-          .from('suppliers')
-          .update(supplierData)
-          .eq('id', editingSupplier.id);
+          .from('clients')
+          .update(clientData)
+          .eq('id', editingClient.id);
 
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('suppliers')
-          .insert(supplierData);
+          .from('clients')
+          .insert(clientData);
 
         if (error) throw error;
       }
 
       resetForm();
-      loadSuppliers();
+      loadClients();
     } catch (error: any) {
-      console.error('Error saving supplier:', error);
-      alert(`Error al guardar el proveedor: ${error?.message || 'Error desconocido'}`);
+      console.error('Error saving client:', error);
+      alert(`Error al guardar el cliente: ${error?.message || 'Error desconocido'}`);
     }
   };
 
-  const handleEdit = (supplier: Supplier) => {
+  const handleEdit = (client: Client) => {
     setFormData({
-      nombre: supplier.nombre,
-      razon_social: supplier.razon_social || '',
-      cuit: supplier.cuit || '',
-      telefono: supplier.telefono || '',
-      email: supplier.email || '',
-      provincia: supplier.provincia || '',
-      direccion: supplier.direccion || '',
-      observaciones: supplier.observaciones || '',
+      nombre: client.nombre,
+      razon_social: client.razon_social || '',
+      cuit: client.cuit || '',
+      telefono: client.telefono || '',
+      email: client.email || '',
+      provincia: client.provincia || '',
+      direccion: client.direccion || '',
+      observaciones: client.observaciones || '',
     });
-    setEditingSupplier(supplier);
+    setEditingClient(client);
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este proveedor?')) return;
+    if (!confirm('¿Está seguro de eliminar este cliente?')) return;
 
     try {
       const { error } = await supabase
-        .from('suppliers')
+        .from('clients')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-      loadSuppliers();
+      loadClients();
     } catch (error) {
-      console.error('Error deleting supplier:', error);
-      alert('Error al eliminar el proveedor');
+      console.error('Error deleting client:', error);
+      alert('Error al eliminar el cliente');
     }
   };
 
@@ -171,33 +172,33 @@ export function SuppliersModule() {
       direccion: '',
       observaciones: '',
     });
-    setEditingSupplier(null);
+    setEditingClient(null);
     setShowForm(false);
   };
 
-  const openDocumentsModal = async (supplier: Supplier) => {
-    setSelectedSupplier(supplier);
+  const openDocumentsModal = async (client: Client) => {
+    setSelectedClient(client);
     setShowDocumentsModal(true);
-    await loadDocuments(supplier.id);
-    await loadDriveMapping(supplier.id);
+    await loadDocuments(client.id);
+    await loadDriveMapping(client.id);
   };
 
-  const loadDocuments = async (supplierId: string) => {
+  const loadDocuments = async (clientId: string) => {
     try {
       const { data, error } = await supabase
-        .from('supplier_documents')
+        .from('client_documents')
         .select(`
           *,
           profiles:uploaded_by(full_name)
         `)
-        .eq('supplier_id', supplierId)
+        .eq('client_id', clientId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       const files: FileAttachment[] = (data || []).map((doc: any) => {
         const { data: urlData } = supabase.storage
-          .from('supplier-documents')
+          .from('client-documents')
           .getPublicUrl(doc.file_path);
 
         return {
@@ -218,13 +219,13 @@ export function SuppliersModule() {
     }
   };
 
-  const loadDriveMapping = async (supplierId: string) => {
+  const loadDriveMapping = async (clientId: string) => {
     try {
       setLoadingDriveMapping(true);
       const { data, error } = await supabase
-        .from('supplier_drive_mapping')
+        .from('client_drive_mapping')
         .select('google_drive_folder_id, folder_name, folder_link')
-        .eq('supplier_id', supplierId)
+        .eq('client_id', clientId)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -251,7 +252,7 @@ export function SuppliersModule() {
   };
 
   const handleUploadFiles = async () => {
-    if (!selectedSupplier || !profile || selectedFiles.length === 0) return;
+    if (!selectedClient || !profile || selectedFiles.length === 0) return;
 
     setUploading(true);
     try {
@@ -261,16 +262,16 @@ export function SuppliersModule() {
 
         // Subir archivo a storage
         const { error: uploadError } = await supabase.storage
-          .from('supplier-documents')
+          .from('client-documents')
           .upload(fileName, file);
 
         if (uploadError) throw uploadError;
 
         // Registrar en base de datos
         const { error: dbError } = await supabase
-          .from('supplier_documents')
+          .from('client_documents')
           .insert({
-            supplier_id: selectedSupplier.id,
+            client_id: selectedClient.id,
             tenant_id: tenantId!,
             file_name: file.name,
             file_path: fileName,
@@ -283,7 +284,7 @@ export function SuppliersModule() {
       }
 
       setSelectedFiles([]);
-      await loadDocuments(selectedSupplier.id);
+      await loadDocuments(selectedClient.id);
     } catch (error: any) {
       console.error('Error uploading files:', error);
       alert(`Error al subir archivos: ${error?.message || 'Error desconocido'}`);
@@ -298,21 +299,21 @@ export function SuppliersModule() {
     try {
       // Eliminar de storage
       const { error: storageError } = await supabase.storage
-        .from('supplier-documents')
+        .from('client-documents')
         .remove([filePath]);
 
       if (storageError) console.error('Error deleting from storage:', storageError);
 
       // Eliminar de base de datos
       const { error: dbError } = await supabase
-        .from('supplier_documents')
+        .from('client_documents')
         .delete()
         .eq('id', documentId);
 
       if (dbError) throw dbError;
 
-      if (selectedSupplier) {
-        await loadDocuments(selectedSupplier.id);
+      if (selectedClient) {
+        await loadDocuments(selectedClient.id);
       }
     } catch (error: any) {
       console.error('Error deleting document:', error);
@@ -321,18 +322,19 @@ export function SuppliersModule() {
   };
 
   const handleSelectDriveFolder = async (folder: DriveFolder) => {
-    if (!selectedSupplier || !tenantId) return;
+    if (!selectedClient || !tenantId) return;
 
     try {
-      const { error } = await supabase.rpc('save_supplier_drive_mapping', {
-        p_supplier_id: selectedSupplier.id,
+      const { error } = await supabase.rpc('save_client_drive_mapping', {
+        p_client_id: selectedClient.id,
         p_google_drive_folder_id: folder.id,
         p_folder_name: folder.name,
+        p_folder_link: folder.webViewLink || null,
       });
 
       if (error) {
         if (error.code === '42883') {
-          throw new Error('La función save_supplier_drive_mapping no existe. Ejecuta la migración SQL.');
+          throw new Error('La función save_client_drive_mapping no existe. Ejecuta la migración SQL.');
         }
         throw error;
       }
@@ -367,7 +369,7 @@ export function SuppliersModule() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500 dark:text-gray-400">Cargando proveedores...</div>
+        <div className="text-gray-500 dark:text-gray-400">Cargando clientes...</div>
       </div>
     );
   }
@@ -377,22 +379,22 @@ export function SuppliersModule() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
         <div className="flex items-center space-x-3 mb-2">
-          <Truck className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Proveedores</h1>
+          <Users className="w-6 h-6 text-blue-600" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clientes</h1>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de proveedores y documentos</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de clientes y documentos</p>
       </div>
 
       {/* Header with Add Button */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Proveedores</h2>
-        {canCreate('fabinsa-suppliers') && (
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Clientes</h2>
+        {canCreate('forums') && (
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
-            <span>Nuevo Proveedor</span>
+            <span>Nuevo Cliente</span>
           </button>
         )}
       </div>
@@ -403,7 +405,7 @@ export function SuppliersModule() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+                {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
               </h3>
               <button onClick={resetForm} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                 <X className="w-5 h-5" />
@@ -533,18 +535,18 @@ export function SuppliersModule() {
       )}
 
       {/* Documents Modal */}
-      {showDocumentsModal && selectedSupplier && (
+      {showDocumentsModal && selectedClient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Documentos de {selectedSupplier.nombre}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Documentos de {selectedClient.nombre}</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de archivos y documentos</p>
               </div>
               <button
                 onClick={() => {
                   setShowDocumentsModal(false);
-                  setSelectedSupplier(null);
+                  setSelectedClient(null);
                   setDocuments([]);
                   setDriveFolderId(null);
                   setDriveFolderName(null);
@@ -730,7 +732,7 @@ export function SuppliersModule() {
         </div>
       )}
 
-      {/* Suppliers Table */}
+      {/* Clients Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
@@ -759,53 +761,53 @@ export function SuppliersModule() {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {suppliers.length === 0 ? (
+            {clients.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                  No hay proveedores registrados
+                  No hay clientes registrados
                 </td>
               </tr>
             ) : (
-              suppliers.map((supplier) => (
-                <tr key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+              clients.map((client) => (
+                <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{supplier.nombre}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{client.nombre}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.razon_social || '-'}
+                    {client.razon_social || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.cuit || '-'}
+                    {client.cuit || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.telefono || '-'}
+                    {client.telefono || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.email || '-'}
+                    {client.email || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.provincia || '-'}
+                    {client.provincia || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
                       <button
-                        onClick={() => openDocumentsModal(supplier)}
+                        onClick={() => openDocumentsModal(client)}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                         title="Ver documentos"
                       >
                         <FileText className="w-4 h-4" />
                       </button>
-                      {canEdit('fabinsa-suppliers') && (
+                      {canEdit('forums') && (
                         <button
-                          onClick={() => handleEdit(supplier)}
+                          onClick={() => handleEdit(client)}
                           className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                       )}
-                      {canDelete('fabinsa-suppliers') && (
+                      {canDelete('forums') && (
                         <button
-                          onClick={() => handleDelete(supplier.id)}
+                          onClick={() => handleDelete(client.id)}
                           className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                         >
                           <Trash2 className="w-4 h-4" />

@@ -322,10 +322,15 @@ export function ProfileSettings() {
       // Aplicar la plantilla
       setVisibleModules(loadout.modules);
 
-      // Guardar en tenants
+      // Guardar en tenants (incluyendo el tipo de loadout)
+      const updateData: any = { visible_modules: loadout.modules };
+      if (loadoutKey !== 'personalizado') {
+        updateData.loadout_type = loadoutKey;
+      }
+      
       const { error } = await supabase
         .from('tenants')
-        .update({ visible_modules: loadout.modules })
+        .update(updateData)
         .eq('id', tenant.id);
 
       if (error) throw error;

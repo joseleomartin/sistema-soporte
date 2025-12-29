@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 
 interface Vacation {
   id: string;
@@ -41,6 +42,7 @@ interface Vacation {
 
 export function VacationsManagement() {
   const { profile } = useAuth();
+  const { canCreate } = useDepartmentPermissions();
   const [vacations, setVacations] = useState<Vacation[]>([]);
   const [filteredVacations, setFilteredVacations] = useState<Vacation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,22 +212,26 @@ export function VacationsManagement() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Vacaciones / Licencias</h2>
-        {isAdmin ? (
-          <button
-            onClick={() => setShowAssignModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Asignar Vacaciones / Licencias
-          </button>
-        ) : (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Solicitar Vacaciones / Licencias
-          </button>
+        {canCreate('vacations') && (
+          <>
+            {isAdmin ? (
+              <button
+                onClick={() => setShowAssignModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                Asignar Vacaciones / Licencias
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                Solicitar Vacaciones / Licencias
+              </button>
+            )}
+          </>
         )}
       </div>
 

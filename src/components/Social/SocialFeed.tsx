@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 import { SocialPost } from './SocialPost';
 import { CreatePostModal } from './CreatePostModal';
 import { BirthdayCard } from './BirthdayCard';
@@ -41,6 +42,7 @@ interface BirthdayUser {
 }
 
 export function SocialFeed() {
+  const { canCreate } = useDepartmentPermissions();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -388,14 +390,16 @@ export function SocialFeed() {
             Comparte momentos, ideas y contenido con tu equipo
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm sm:text-base w-full sm:w-auto"
-        >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="hidden sm:inline">Nueva Publicación</span>
-          <span className="sm:hidden">Nueva Publicación</span>
-        </button>
+        {canCreate('social') && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm sm:text-base w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Nueva Publicación</span>
+            <span className="sm:hidden">Nueva Publicación</span>
+          </button>
+        )}
       </div>
 
       {/* Posts Feed */}
@@ -407,14 +411,16 @@ export function SocialFeed() {
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
             Sé el primero en compartir algo con tu equipo
           </p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
-          >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline">Crear Primera Publicación</span>
-            <span className="sm:hidden">Crear Publicación</span>
-          </button>
+          {canCreate('social') && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Crear Primera Publicación</span>
+              <span className="sm:hidden">Crear Publicación</span>
+            </button>
+          )}
         </div>
       ) : (
         <>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 import { 
   FileText, 
   Video, 
@@ -33,6 +34,7 @@ interface InternalPolicy {
 
 export function InternalPolicies() {
   const { profile } = useAuth();
+  const { canCreate, canDelete } = useDepartmentPermissions();
   const [policies, setPolicies] = useState<InternalPolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -146,7 +148,7 @@ export function InternalPolicies() {
             Documentos y videos de onboarding y políticas internas de la empresa
           </p>
         </div>
-        {isAdmin && (
+        {canCreate('internal-policies') && (
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -230,7 +232,7 @@ export function InternalPolicies() {
         </div>
       )}
 
-      {showCreateModal && isAdmin && (
+      {showCreateModal && (
         <CreatePolicyModal
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
@@ -272,7 +274,7 @@ function PolicyCard({
     <>
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow flex flex-col relative">
         {/* Botón eliminar en la esquina superior derecha */}
-        {isAdmin && (
+        {canDelete('internal-policies') && (
           <button
             onClick={() => onDelete(policy.id)}
             className="absolute top-3 right-3 p-1.5 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors z-10 shadow-lg"

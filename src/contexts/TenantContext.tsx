@@ -9,6 +9,7 @@ interface Tenant {
   logo_url: string | null;
   settings: Record<string, any>;
   visible_modules: Record<string, boolean> | null;
+  loadout_type: string | null;
 }
 
 interface TenantContextType {

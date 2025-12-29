@@ -30,6 +30,7 @@ import { PurchasesModule } from './components/Fabinsa/Purchases/PurchasesModule'
 import { MetricsModule } from './components/Fabinsa/Metrics/MetricsModule';
 import { CostsModule } from './components/Fabinsa/Costs/CostsModule';
 import { SuppliersModule } from './components/Fabinsa/Suppliers/SuppliersModule';
+import { ClientsModule } from './components/Fabinsa/Clients/ClientsModule';
 import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
@@ -66,6 +67,16 @@ function MainApp() {
 
   const handleNavigateToTimeTracking = useCallback(() => {
     setCurrentView('time-tracking');
+    setViewKey(prev => prev + 1);
+  }, []);
+
+  const handleNavigateToSocial = useCallback(() => {
+    setCurrentView('social');
+    setViewKey(prev => prev + 1);
+  }, []);
+
+  const handleNavigateToProfessionalNews = useCallback(() => {
+    setCurrentView('professional-news');
     setViewKey(prev => prev + 1);
   }, []);
 
@@ -144,13 +155,27 @@ function MainApp() {
   }
 
   const renderContent = () => {
+    // Verificar si es empresa de producción (reutilizable)
+    const isProductionCompany = tenant?.loadout_type === 'produccion' || 
+      (tenant?.visible_modules && 
+       tenant.visible_modules['fabinsa-production'] === true &&
+       tenant.visible_modules['fabinsa-stock'] === true);
+
     switch (currentView) {
       case 'dashboard':
+        // Si es empresa de producción, mostrar Métricas en lugar del dashboard normal
+        if (isProductionCompany) {
+          return <MetricsModule key={`dashboard-metrics-${viewKey}`} />;
+        }
         // Todos los roles usan el mismo dashboard personalizado
         return <UserDashboard key={`dashboard-${viewKey}`} onNavigate={handleViewChange} />;
       case 'tickets':
         return <TicketsList key={`tickets-${viewKey}`} selectedTicketId={selectedTicketId} onClearSelection={() => setSelectedTicketId(null)} />;
       case 'forums':
+        // Si es empresa de producción, mostrar ClientsModule en lugar de ForumsList
+        if (isProductionCompany) {
+          return <ClientsModule key={`clients-${viewKey}`} />;
+        }
         return <ForumsList key={`forums-${viewKey}`} initialSubforumId={selectedSubforumId} onSubforumChange={setSelectedSubforumId} />;
       case 'meetings':
         return <MeetingRoomsList key={`meetings-${viewKey}`} />;
@@ -205,11 +230,13 @@ function MainApp() {
         onNavigateToTicket={handleNavigateToTicket}
         onNavigateToForum={handleNavigateToForum}
         onNavigateToTimeTracking={handleNavigateToTimeTracking}
+        onNavigateToSocial={handleNavigateToSocial}
+        onNavigateToProfessionalNews={handleNavigateToProfessionalNews}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <main className={`flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 transition-all duration-300 ${!sidebarCollapsed ? 'lg:ml-64' : ''}`}>
-        <div className={`${currentView === 'social' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
+        <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
           {renderContent()}
         </div>
       </main>

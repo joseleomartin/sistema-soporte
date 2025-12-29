@@ -25,7 +25,6 @@ import {
   Package,
   ShoppingCart,
   TrendingUp,
-  BarChart3,
   DollarSign,
   Truck,
   Menu,
@@ -35,6 +34,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTenant } from '../../contexts/TenantContext';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 import { NotificationBell } from '../Notifications/NotificationBell';
 import { supabase } from '../../lib/supabase';
 
@@ -44,6 +44,8 @@ interface SidebarProps {
   onNavigateToTicket: (ticketId: string) => void;
   onNavigateToForum: (subforumId: string) => void;
   onNavigateToTimeTracking: () => void;
+  onNavigateToSocial?: () => void;
+  onNavigateToProfessionalNews?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -89,7 +91,6 @@ const menuItems: MenuItem[] = [
       { icon: Package, label: 'Stock', view: 'fabinsa-stock', roles: ['admin', 'support', 'user'] },
       { icon: ShoppingCart, label: 'Ventas', view: 'fabinsa-sales', roles: ['admin', 'support', 'user'] },
       { icon: TrendingUp, label: 'Compras', view: 'fabinsa-purchases', roles: ['admin', 'support', 'user'] },
-      { icon: BarChart3, label: 'Métricas', view: 'fabinsa-metrics', roles: ['admin', 'support', 'user'] },
       { icon: DollarSign, label: 'Costos', view: 'fabinsa-costs', roles: ['admin', 'support', 'user'] },
       { icon: Truck, label: 'Proveedores', view: 'fabinsa-suppliers', roles: ['admin', 'support', 'user'] },
       { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
@@ -100,14 +101,15 @@ const menuItems: MenuItem[] = [
   },
   { icon: Headphones, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
   { icon: UsersIcon, label: 'Usuarios', view: 'users', roles: ['admin'] },
-  { icon: Settings, label: 'Mi Perfil', view: 'settings', roles: ['admin', 'support', 'user'] },
+  { icon: Settings, label: 'Configuración', view: 'settings', roles: ['admin', 'support', 'user'] },
 ];
 
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking, isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking, onNavigateToSocial, onNavigateToProfessionalNews, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { tenant } = useTenant();
   const { activeJobsCount } = useExtraction();
   const { theme, toggleTheme } = useTheme();
+  const { canView } = useDepartmentPermissions();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
@@ -172,10 +174,15 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
   // Obtener módulos visibles del tenant (no del perfil individual)
   const visibleModules = tenant?.visible_modules as Record<string, boolean> | null | undefined;
 
-  // Filtrar items por rol y módulos visibles del tenant
+  // Filtrar items por rol, módulos visibles del tenant y permisos de área
   const filteredItems = menuItems.filter(item => {
     // Verificar rol
     if (!profile || !item.roles.includes(profile.role)) {
+      return false;
+    }
+
+    // Verificar permisos de área (si el usuario tiene áreas asignadas)
+    if (item.view && !canView(item.view)) {
       return false;
     }
 
@@ -192,6 +199,8 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
     if (item.subItems && item.subItems.length > 0) {
       const hasVisibleSubItem = item.subItems.some(subItem => {
         if (!subItem.roles.includes(profile.role)) return false;
+        // Verificar permisos de área
+        if (!canView(subItem.view)) return false;
         // Si visible_modules existe y el módulo está explícitamente en false, ocultarlo
         if (visibleModules && visibleModules[subItem.view] === false) {
           return false;
@@ -203,12 +212,14 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
 
     return true;
   }).map(item => {
-    // Filtrar subitems por módulos visibles del tenant
+    // Filtrar subitems por módulos visibles del tenant y permisos de área
     if (item.subItems) {
       return {
         ...item,
         subItems: item.subItems.filter(subItem => {
           if (!profile || !subItem.roles.includes(profile.role)) return false;
+          // Verificar permisos de área
+          if (!canView(subItem.view)) return false;
           // Si visible_modules existe y el módulo está explícitamente en false, ocultarlo
           if (visibleModules && visibleModules[subItem.view] === false) {
             return false;
@@ -293,6 +304,9 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                   onNavigateToCalendar={handleNavigateToCalendar}
                   onNavigateToTasks={() => onViewChange('tasks')}
                   onNavigateToForum={onNavigateToForum}
+                  onNavigateToSocial={onNavigateToSocial}
+                  onNavigateToTimeTracking={onNavigateToTimeTracking}
+                  onNavigateToProfessionalNews={onNavigateToProfessionalNews}
                 />
                 <button
                   onClick={handleToggleCollapse}
@@ -447,6 +461,13 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
     </>
   );
 }
+
+
+
+
+
+
+
 
 
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, memo, useLayoutEffect, useCallback } from 'react';
-import { MessageSquare, X, Send, Paperclip, Download, Image, FileText, File } from 'lucide-react';
+import { MessageSquare, X, Send, Paperclip, Download, Image, FileText, File, Edit2, Check, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -266,6 +266,10 @@ export function MessagesBell() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [searching, setSearching] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<string | null>(null);
+  const [editMessageContent, setEditMessageContent] = useState('');
+  const [updatingMessage, setUpdatingMessage] = useState(false);
+  const [deletingMessage, setDeletingMessage] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -618,7 +622,7 @@ export function MessagesBell() {
     }
   };
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     if (!profile?.id || !otherUser?.id) return;
 
     setLoading(true);
@@ -658,9 +662,9 @@ export function MessagesBell() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.id, otherUser?.id]);
 
-  const subscribeToMessages = () => {
+  const subscribeToMessages = useCallback(() => {
     if (!profile?.id || !otherUser?.id) return;
 
     cleanupSubscription();
@@ -708,10 +712,121 @@ export function MessagesBell() {
           }
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `sender_id=eq.${profile.id}`
+        },
+        (payload: any) => {
+          // Actualizar mensaje editado enviado por el usuario actual
+          if (payload.new.receiver_id === otherUser?.id) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === payload.new.id ? { ...msg, message: payload.new.message } : msg
+              )
+            );
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `sender_id=eq.${otherUser.id}`
+        },
+        (payload: any) => {
+          // Actualizar mensaje editado recibido del otro usuario
+          if (payload.new.receiver_id === profile.id) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === payload.new.id ? { ...msg, message: payload.new.message } : msg
+              )
+            );
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'direct_messages'
+        },
+        async (payload: any) => {
+          console.log('🗑️ DELETE event received for direct_messages:', payload);
+          console.log('Payload old:', payload.old);
+          console.log('Current profile.id:', profile.id);
+          console.log('Current otherUser.id:', otherUser?.id);
+          
+          // Verificar si el mensaje eliminado pertenece a esta conversación
+          if (payload.old && payload.old.id) {
+            const isRelevant = 
+              (payload.old.sender_id === profile.id && payload.old.receiver_id === otherUser?.id) ||
+              (payload.old.sender_id === otherUser?.id && payload.old.receiver_id === profile.id);
+            
+            console.log('Is message relevant to this conversation?', isRelevant);
+            
+            if (isRelevant) {
+              console.log('✅ Removing deleted message from list:', payload.old.id);
+              
+              // Actualizar el estado inmediatamente
+              setMessages((prev) => {
+                const messageExists = prev.some(msg => msg.id === payload.old.id);
+                if (!messageExists) {
+                  console.log('⚠️ Message not found in current state, may have been already removed');
+                  // Si el mensaje no está en el estado, recargar los mensajes para asegurar sincronización
+                  setTimeout(() => {
+                    console.log('🔄 Reloading messages to sync after DELETE event');
+                    loadMessages();
+                  }, 100);
+                  return prev;
+                }
+                const filtered = prev.filter((msg) => msg.id !== payload.old.id);
+                console.log('Messages after deletion:', filtered.length, 'removed:', prev.length - filtered.length);
+                
+                // Forzar re-render si es necesario
+                if (filtered.length === prev.length) {
+                  console.warn('⚠️ No messages were removed, forcing reload');
+                  setTimeout(() => {
+                    loadMessages();
+                  }, 100);
+                }
+                
+                return filtered;
+              });
+            } else {
+              console.log('❌ Message not relevant, ignoring DELETE event');
+            }
+          } else {
+            console.warn('⚠️ DELETE event received but payload.old is missing or invalid:', payload);
+            // Si payload.old no tiene la información necesaria, recargar mensajes
+            console.log('🔄 Reloading messages due to incomplete DELETE payload');
+            setTimeout(() => {
+              loadMessages();
+            }, 100);
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('📡 Realtime subscription status for all events:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to all events (INSERT, UPDATE, DELETE) for direct_messages');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to events for direct_messages:', err);
+        } else if (status === 'TIMED_OUT') {
+          console.warn('⚠️ Subscription timed out, retrying...');
+        } else if (status === 'CLOSED') {
+          console.warn('⚠️ Subscription closed');
+        }
+      });
 
     channelRef.current = channel;
-  };
+  }, [profile?.id, otherUser?.id, loadMessages]);
 
   const handleNewMessage = async (messageId: string) => {
     if (!profile?.id) return;
@@ -848,6 +963,140 @@ export function MessagesBell() {
       setUnreadCount(0);
     } catch (error) {
       console.error('Error marking messages as read:', error);
+    }
+  };
+
+  const handleStartEdit = (message: Message) => {
+    setEditingMessage(message.id);
+    setEditMessageContent(message.message || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setEditMessageContent('');
+  };
+
+  const handleUpdateMessage = async (messageId: string) => {
+    if (!editMessageContent.trim()) return;
+
+    setUpdatingMessage(true);
+    try {
+      console.log('Updating message:', { messageId, content: editMessageContent.trim() });
+      
+      // Primero actualizar el mensaje
+      const { data: updateData, error: updateError } = await supabase
+        .from('direct_messages')
+        .update({ message: editMessageContent.trim() })
+        .eq('id', messageId)
+        .select('id');
+
+      if (updateError) {
+        console.error('Error updating message:', updateError);
+        alert(`Error al actualizar el mensaje: ${updateError.message}`);
+        setUpdatingMessage(false);
+        return;
+      }
+
+      if (!updateData || updateData.length === 0) {
+        console.error('No rows updated - possible RLS issue');
+        alert('No se pudo actualizar el mensaje. Verifica que tengas permisos para editar este mensaje.');
+        setUpdatingMessage(false);
+        return;
+      }
+
+      console.log('Message updated successfully:', updateData);
+
+      // Luego obtener el mensaje actualizado con sus relaciones
+      const { data, error: selectError } = await supabase
+        .from('direct_messages')
+        .select(`
+          *,
+          sender_profile:profiles!direct_messages_sender_id_fkey(full_name, email, avatar_url),
+          receiver_profile:profiles!direct_messages_receiver_id_fkey(full_name, email, avatar_url),
+          direct_message_attachments(*)
+        `)
+        .eq('id', messageId)
+        .single();
+
+      if (selectError) {
+        console.error('Error fetching updated message:', selectError);
+        // Aún así actualizar el estado local con el contenido editado
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, message: editMessageContent.trim() } : msg
+          )
+        );
+      } else if (data) {
+        console.log('Fetched updated message:', data);
+        // Actualizar el estado local con los datos de la base de datos
+        const messageData = data as any;
+        
+        // Eliminar attachments duplicados
+        if (messageData.direct_message_attachments && Array.isArray(messageData.direct_message_attachments)) {
+          messageData.direct_message_attachments = messageData.direct_message_attachments.filter(
+            (attachment: any, index: number, self: any[]) =>
+              index === self.findIndex((a: any) => a.id === attachment.id)
+          );
+        }
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? messageData : msg
+          )
+        );
+      }
+
+      setEditingMessage(null);
+      setEditMessageContent('');
+    } catch (error: any) {
+      console.error('Error updating message:', error);
+      alert(`Error al actualizar el mensaje: ${error?.message || 'Error desconocido'}`);
+    } finally {
+      setUpdatingMessage(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este mensaje?')) return;
+
+    setDeletingMessage(messageId);
+    try {
+      console.log('Deleting message:', messageId);
+      
+      const { data, error } = await supabase
+        .from('direct_messages')
+        .delete()
+        .eq('id', messageId)
+        .select('id');
+
+      if (error) {
+        console.error('Error deleting message:', error);
+        alert(`Error al eliminar el mensaje: ${error.message}`);
+        setDeletingMessage(null);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        console.error('No rows deleted - possible RLS issue');
+        alert('No se pudo eliminar el mensaje. Verifica que tengas permisos para eliminar este mensaje.');
+        setDeletingMessage(null);
+        return;
+      }
+
+      console.log('Message deleted successfully:', data);
+      console.log('Removing message from local state:', messageId);
+
+      // Actualizar el estado local inmediatamente
+      setMessages((prev) => {
+        const filtered = prev.filter((msg) => msg.id !== messageId);
+        console.log('Messages after local filter:', filtered.length, 'removed:', prev.length - filtered.length);
+        return filtered;
+      });
+    } catch (error: any) {
+      console.error('Error deleting message:', error);
+      alert(`Error al eliminar el mensaje: ${error?.message || 'Error desconocido'}`);
+    } finally {
+      setDeletingMessage(null);
     }
   };
 
@@ -1476,8 +1725,50 @@ export function MessagesBell() {
                     return (
                       <div
                         key={msg.id}
-                        className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                        className={`flex ${isMine ? 'justify-end' : 'justify-start'} group gap-2`}
                       >
+                        {isMine && (
+                          <div className="flex flex-col items-start gap-1 flex-shrink-0 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {editingMessage === msg.id ? (
+                              <>
+                                <button
+                                  onClick={() => handleUpdateMessage(msg.id)}
+                                  disabled={updatingMessage}
+                                  className="bg-green-600/80 dark:bg-green-500/80 hover:bg-green-700/90 dark:hover:bg-green-600/90 text-white rounded transition p-1 disabled:opacity-50 backdrop-blur-sm"
+                                  title="Guardar cambios"
+                                >
+                                  <Check className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  disabled={updatingMessage}
+                                  className="bg-gray-200/80 dark:bg-gray-700/80 hover:bg-gray-300/90 dark:hover:bg-gray-600/90 text-gray-700 dark:text-gray-300 rounded transition p-1 disabled:opacity-50 backdrop-blur-sm"
+                                  title="Cancelar edición"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleStartEdit(msg)}
+                                  className="bg-blue-600/80 dark:bg-blue-500/80 hover:bg-blue-700/90 dark:hover:bg-blue-600/90 text-white rounded transition p-1 backdrop-blur-sm"
+                                  title="Editar mensaje"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  disabled={deletingMessage === msg.id}
+                                  className="bg-red-600/80 dark:bg-red-500/80 hover:bg-red-700/90 dark:hover:bg-red-600/90 text-white rounded transition p-1 disabled:opacity-50 backdrop-blur-sm"
+                                  title="Eliminar mensaje"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
                         <div
                           className={`max-w-[85%] sm:max-w-xs px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm ${
                             isMine
@@ -1485,8 +1776,27 @@ export function MessagesBell() {
                               : 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white border border-gray-200 dark:border-slate-600'
                           }`}
                         >
-                  {msg.message && msg.message !== '📎 Archivo adjunto' && (
-                    <p className="whitespace-pre-wrap break-words mb-1">{msg.message}</p>
+                          {editingMessage === msg.id ? (
+                            <textarea
+                              value={editMessageContent}
+                              onChange={(e) => setEditMessageContent(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                  e.preventDefault();
+                                  handleUpdateMessage(msg.id);
+                                } else if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  handleCancelEdit();
+                                }
+                              }}
+                              className="w-full px-2 py-1 border border-blue-400 dark:border-blue-300 bg-blue-500 dark:bg-blue-600 text-white rounded focus:ring-2 focus:ring-blue-300 focus:border-transparent resize-none text-xs sm:text-sm"
+                              rows={3}
+                              autoFocus
+                            />
+                          ) : (
+                            msg.message && msg.message !== '📎 Archivo adjunto' && (
+                              <p className="whitespace-pre-wrap break-words mb-1">{msg.message}</p>
+                            )
                           )}
                           
                           {msg.direct_message_attachments && msg.direct_message_attachments.length > 0 && (

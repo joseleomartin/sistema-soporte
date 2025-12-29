@@ -214,28 +214,47 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
     } else if ((notification.type === 'ticket_comment' || notification.type === 'ticket_status') && notification.ticket_id && onNavigateToTicket) {
       onNavigateToTicket(notification.ticket_id);
     } else if (notification.type === 'task_assigned' && notification.task_id) {
-      // Navegar a tareas
+      // Navegar a tareas y abrir la tarea específica directamente
       if (onNavigateToTasks) {
         onNavigateToTasks();
+        // Establecer el parámetro task en la URL para que TasksList lo detecte y abra la tarea directamente
+        window.history.replaceState(null, '', window.location.pathname + '#tasks?task=' + notification.task_id);
+        // Disparar evento como respaldo por si acaso
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('openTask', {
+            detail: { taskId: notification.task_id }
+          }));
+        }, 50);
       } else {
-        // Fallback: usar window.location si no hay callback
-        window.location.hash = 'tasks';
+        // Fallback: usar window.location con el parámetro task
+        window.location.hash = 'tasks?task=' + notification.task_id;
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('openTask', {
+            detail: { taskId: notification.task_id }
+          }));
+        }, 50);
       }
     } else if (notification.type === 'task_mention' && notification.task_id) {
-      // Navegar a tareas y abrir la tarea específica
+      // Navegar a tareas y abrir la tarea específica directamente
       if (onNavigateToTasks) {
         onNavigateToTasks();
+        // Establecer el parámetro task en la URL para que TasksList lo detecte y abra la tarea directamente
+        window.history.replaceState(null, '', window.location.pathname + '#tasks?task=' + notification.task_id);
+        // Disparar evento como respaldo por si acaso
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('openTask', {
+            detail: { taskId: notification.task_id }
+          }));
+        }, 50);
       } else {
-        // Fallback: usar window.location si no hay callback
-        window.location.hash = 'tasks';
+        // Fallback: usar window.location con el parámetro task
+        window.location.hash = 'tasks?task=' + notification.task_id;
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('openTask', {
+            detail: { taskId: notification.task_id }
+          }));
+        }, 50);
       }
-      // Disparar evento personalizado para abrir la tarea específica
-      // Esto se ejecutará después de que se navegue a la sección de tareas
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('openTask', {
-          detail: { taskId: notification.task_id }
-        }));
-      }, 100);
     } else if (notification.type === 'forum_mention' && notification.subforum_id) {
       // Navegar al foro/cliente
       if (onNavigateToForum) {

@@ -154,7 +154,12 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
           if (recurrenceMode === 'weekday' && (recurrenceWeekday === null || recurrenceWeekPosition === null)) {
             throw new Error('Por favor, selecciona el día de la semana y la posición en el mes para eventos recurrentes por día de la semana.');
           }
-          await supabase.rpc('generate_recurring_events');
+          try {
+            await supabase.rpc('generate_recurring_events');
+          } catch (rpcError) {
+            console.warn('Error al generar eventos recurrentes (no crítico):', rpcError);
+            // Continuar aunque falle la generación de eventos recurrentes
+          }
         }
       } else if (assignMode === 'departments') {
         // Asignar a todos los usuarios de los departamentos seleccionados
@@ -200,7 +205,12 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
           if (recurrenceMode === 'weekday' && (recurrenceWeekday === null || recurrenceWeekPosition === null)) {
             throw new Error('Por favor, selecciona el día de la semana y la posición en el mes para eventos recurrentes por día de la semana.');
           }
-          await supabase.rpc('generate_recurring_events');
+          try {
+            await supabase.rpc('generate_recurring_events');
+          } catch (rpcError) {
+            console.warn('Error al generar eventos recurrentes (no crítico):', rpcError);
+            // Continuar aunque falle la generación de eventos recurrentes
+          }
         }
       } else {
         // Crear un evento para cada usuario seleccionado
@@ -225,7 +235,12 @@ export function CreateEventModal({ selectedDate, onClose, onEventCreated }: Crea
           if (recurrenceMode === 'weekday' && (recurrenceWeekday === null || recurrenceWeekPosition === null)) {
             throw new Error('Por favor, selecciona el día de la semana y la posición en el mes para eventos recurrentes por día de la semana.');
           }
-          await supabase.rpc('generate_recurring_events');
+          try {
+            await supabase.rpc('generate_recurring_events');
+          } catch (rpcError) {
+            console.warn('Error al generar eventos recurrentes (no crítico):', rpcError);
+            // Continuar aunque falle la generación de eventos recurrentes
+          }
         }
       }
 

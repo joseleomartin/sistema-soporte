@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 import { Plus, Filter, Search, Clock, CheckCircle, XCircle, Loader } from 'lucide-react';
 import { CreateTicketModal } from './CreateTicketModal';
 import { TicketDetail } from './TicketDetail';
@@ -28,6 +29,7 @@ interface TicketsListProps {
 
 export function TicketsList({ selectedTicketId, onClearSelection }: TicketsListProps) {
   const { profile } = useAuth();
+  const { canCreate } = useDepartmentPermissions();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -188,13 +190,15 @@ export function TicketsList({ selectedTicketId, onClearSelection }: TicketsListP
             {profile?.role === 'user' ? 'Gestiona tus tickets de soporte' : 'Gestiona todos los tickets del sistema'}
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-        >
-          <Plus className="w-5 h-5" />
-          Crear Ticket
-        </button>
+        {canCreate('tickets') && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+          >
+            <Plus className="w-5 h-5" />
+            Crear Ticket
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">

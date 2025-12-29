@@ -6,5 +6,11 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
+    include: ['xlsx'],
+  },
+  resolve: {
+    alias: {
+      // Asegurar que xlsx se resuelva correctamente
+    },
   },
 });

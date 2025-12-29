@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, ExternalLink, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 
 type ProfessionalNewsItem = {
   id: string;
@@ -23,6 +24,7 @@ type FormState = {
 
 export function ProfessionalNews() {
   const { profile } = useAuth();
+  const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
   const [items, setItems] = useState<ProfessionalNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -202,7 +204,7 @@ export function ProfessionalNews() {
           </p>
         </div>
 
-        {isAdmin && (
+        {canCreate('professional-news') && (
           <button
             onClick={() => setShowForm(true)}
             className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-colors text-sm sm:text-base w-full sm:w-auto"
@@ -213,7 +215,7 @@ export function ProfessionalNews() {
         )}
       </div>
 
-      {isAdmin && showForm && (
+      {showForm && (
         <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             {editingItem ? 'Editar novedad profesional' : 'Agregar novedad profesional'}
@@ -343,7 +345,7 @@ export function ProfessionalNews() {
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
             Usá este espacio para guardar links importantes de AGIP, AFIP, convenios, resoluciones, etc.
           </p>
-          {isAdmin && (
+          {canCreate('professional-news') && (
             <button
               onClick={() => setShowForm(true)}
               className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 text-sm sm:text-base"
@@ -417,22 +419,26 @@ export function ProfessionalNews() {
                 </div>
               </button>
 
-              {isAdmin && (
+              {(canEdit('professional-news') || canDelete('professional-news')) && (
                 <div className="mt-2 sm:mt-3 flex items-center justify-end gap-1.5 sm:gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(item)}
-                    className="text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-blue-500 dark:border-blue-400 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item)}
-                    className="text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                  >
-                    Eliminar
-                  </button>
+                  {canEdit('professional-news') && (
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(item)}
+                      className="text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-blue-500 dark:border-blue-400 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                    >
+                      Editar
+                    </button>
+                  )}
+                  {canDelete('professional-news') && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item)}
+                      className="text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </div>
               )}
             </div>

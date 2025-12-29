@@ -8,6 +8,7 @@ import { TrendingUp, Plus, Edit, Trash2, Save, X, ChevronDown } from 'lucide-rea
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
+import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 
 type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
 type PurchaseMaterialInsert = Database['public']['Tables']['purchases_materials']['Insert'];
@@ -19,6 +20,7 @@ type TabType = 'materials' | 'products';
 
 export function PurchasesModule() {
   const { tenantId } = useTenant();
+  const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
   const [activeTab, setActiveTab] = useState<TabType>('materials');
   
   // Compras de Materia Prima
@@ -58,12 +60,35 @@ export function PurchasesModule() {
   const supplierInputRefMaterial = useRef<HTMLInputElement>(null);
   const supplierInputRefProduct = useRef<HTMLInputElement>(null);
 
+  // Materiales del stock para dropdown
+  type StockMaterial = Database['public']['Tables']['stock_materials']['Row'];
+  const [stockMaterials, setStockMaterials] = useState<StockMaterial[]>([]);
+  const [showMaterialDropdown, setShowMaterialDropdown] = useState(false);
+  const materialInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (tenantId) {
       loadPurchases();
       loadSuppliers();
+      loadStockMaterials();
     }
   }, [tenantId]);
+
+  const loadStockMaterials = async () => {
+    if (!tenantId) return;
+    try {
+      const { data, error } = await supabase
+        .from('stock_materials')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+      setStockMaterials(data || []);
+    } catch (error) {
+      console.error('Error loading stock materials:', error);
+    }
+  };
 
   const loadSuppliers = async () => {
     if (!tenantId) return;
@@ -88,6 +113,15 @@ export function PurchasesModule() {
       s.nombre.toLowerCase().includes(term) ||
       (s.razon_social && s.razon_social.toLowerCase().includes(term)) ||
       (s.cuit && s.cuit.includes(term))
+    );
+  };
+
+  const getFilteredMaterials = (searchTerm: string) => {
+    if (!searchTerm) return stockMaterials;
+    const term = searchTerm.toLowerCase();
+    return stockMaterials.filter(m => 
+      m.material.toLowerCase().includes(term) ||
+      m.nombre.toLowerCase().includes(term)
     );
   };
 
@@ -373,13 +407,15 @@ export function PurchasesModule() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Compras de Materia Prima</h2>
-            <button
-              onClick={() => setShowMaterialForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nueva Compra</span>
-            </button>
+            {canCreate('fabinsa-purchases') && (
+              <button
+                onClick={() => setShowMaterialForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nueva Compra</span>
+              </button>
+            )}
           </div>
 
           {/* Material Purchase Form */}
@@ -456,15 +492,49 @@ export function PurchasesModule() {
                       </div>
                     </div>
                   </div>
-                  <div>
+                  <div className="relative">
                     <label className="block text-sm font-medium mb-1">Material *</label>
-                    <input
-                      type="text"
-                      required
-                      value={materialForm.material}
-                      onChange={(e) => setMaterialForm({ ...materialForm, material: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md"
-                    />
+                    <div className="relative">
+                      <input
+                        ref={materialInputRef}
+                        type="text"
+                        required
+                        value={materialForm.material}
+                        onChange={(e) => {
+                          setMaterialForm({ ...materialForm, material: e.target.value });
+                          setShowMaterialDropdown(e.target.value.length > 0 && getFilteredMaterials(e.target.value).length > 0);
+                        }}
+                        onFocus={() => {
+                          if (getFilteredMaterials(materialForm.material).length > 0) {
+                            setShowMaterialDropdown(true);
+                          }
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => setShowMaterialDropdown(false), 200);
+                        }}
+                        className="w-full px-3 py-2 pr-8 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Selecciona o escribe un material"
+                      />
+                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      {showMaterialDropdown && getFilteredMaterials(materialForm.material).length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                          {getFilteredMaterials(materialForm.material).map((material) => (
+                            <button
+                              key={material.id}
+                              type="button"
+                              onClick={() => {
+                                setMaterialForm({ ...materialForm, material: material.material });
+                                setShowMaterialDropdown(false);
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                            >
+                              <div className="font-medium">{material.material}</div>
+                              <div className="text-sm text-gray-500">Stock: {material.kg.toFixed(2)} kg</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
@@ -564,17 +634,19 @@ export function PurchasesModule() {
                         ${purchase.total.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <button
-                          onClick={async () => {
-                            if (confirm('¿Eliminar esta compra?')) {
-                              await supabase.from('purchases_materials').delete().eq('id', purchase.id);
-                              loadPurchases();
-                            }
-                          }}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canDelete('fabinsa-purchases') && (
+                          <button
+                            onClick={async () => {
+                              if (confirm('¿Eliminar esta compra?')) {
+                                await supabase.from('purchases_materials').delete().eq('id', purchase.id);
+                                loadPurchases();
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -590,13 +662,15 @@ export function PurchasesModule() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Compras de Productos</h2>
-            <button
-              onClick={() => setShowProductForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nueva Compra</span>
-            </button>
+            {canCreate('fabinsa-purchases') && (
+              <button
+                onClick={() => setShowProductForm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nueva Compra</span>
+              </button>
+            )}
           </div>
 
           {/* Product Purchase Form */}
@@ -780,17 +854,19 @@ export function PurchasesModule() {
                         ${purchase.total.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <button
-                          onClick={async () => {
-                            if (confirm('¿Eliminar esta compra?')) {
-                              await supabase.from('purchases_products').delete().eq('id', purchase.id);
-                              loadPurchases();
-                            }
-                          }}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canDelete('fabinsa-purchases') && (
+                          <button
+                            onClick={async () => {
+                              if (confirm('¿Eliminar esta compra?')) {
+                                await supabase.from('purchases_products').delete().eq('id', purchase.id);
+                                loadPurchases();
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
