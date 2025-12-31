@@ -78,3 +78,4 @@ COMMENT ON FUNCTION confirm_all_emails_for_tenant IS
 'Función para confirmar los emails de todos los usuarios de un tenant.
 Retorna el número de usuarios confirmados.';
 
+

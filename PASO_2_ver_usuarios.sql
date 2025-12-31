@@ -15,3 +15,4 @@ LEFT JOIN profiles p ON p.id = u.id
 ORDER BY u.created_at DESC
 LIMIT 10;
 
+

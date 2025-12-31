@@ -119,3 +119,4 @@ COMMENT ON FUNCTION public.handle_new_user IS
 'Trigger que crea automáticamente un perfil cuando se crea un nuevo usuario en auth.users. 
 Maneja tenant_id desde metadata o asigna el tenant por defecto (emagroup).';
 
+

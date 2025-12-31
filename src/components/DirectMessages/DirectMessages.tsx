@@ -138,8 +138,8 @@ export function DirectMessages() {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Sender subscription status:', status);
+      .subscribe(() => {
+        // Subscription active
       });
 
     // Suscribirse a mensajes donde el usuario es destinatario
@@ -181,8 +181,8 @@ export function DirectMessages() {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Receiver subscription status:', status);
+      .subscribe(() => {
+        // Subscription active
       });
 
     return { channel1, channel2 };

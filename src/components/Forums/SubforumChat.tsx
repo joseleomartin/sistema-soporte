@@ -136,12 +136,11 @@ export function SubforumChat({ subforumId, onBack }: SubforumChatProps) {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
+      .subscribe(() => {
+        // Subscription active
       });
 
     return () => {
-      console.log('Unsubscribing from channel');
       supabase.removeChannel(channel);
     };
   }, [subforumId]);

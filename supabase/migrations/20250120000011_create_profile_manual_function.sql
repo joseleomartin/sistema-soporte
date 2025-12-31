@@ -45,3 +45,4 @@ COMMENT ON FUNCTION create_profile_for_user IS
 'Función para crear un perfil manualmente si el trigger handle_new_user falla.
 Usa SECURITY DEFINER para bypassear RLS. Útil para recuperación de errores.';
 
+

@@ -40,20 +40,126 @@ CREATE TABLE client_documents (
 );
 
 -- 3. TABLA DE MAPEO DE GOOGLE DRIVE
--- Primero eliminar la tabla si existe para evitar conflictos
-DROP TABLE IF EXISTS client_drive_mapping CASCADE;
-CREATE TABLE client_drive_mapping (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  google_drive_folder_id text NOT NULL,
-  folder_name text NOT NULL,
-  folder_link text,
-  created_by uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now(),
-  UNIQUE(client_id)
-);
+-- Modificar la tabla existente para soportar tanto subforum_id como client_id
+-- Si la tabla no existe, crearla con ambas columnas
+DO $$
+DECLARE
+  has_subforum_id BOOLEAN;
+  has_client_id BOOLEAN;
+BEGIN
+  -- Si la tabla no existe, crearla
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'client_drive_mapping') THEN
+    CREATE TABLE client_drive_mapping (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      subforum_id uuid REFERENCES subforums(id) ON DELETE CASCADE,
+      client_id uuid REFERENCES clients(id) ON DELETE CASCADE,
+      tenant_id uuid REFERENCES tenants(id) ON DELETE CASCADE,
+      google_drive_folder_id text NOT NULL,
+      folder_name text NOT NULL,
+      folder_link text,
+      created_by uuid REFERENCES profiles(id) ON DELETE CASCADE,
+      created_at timestamptz DEFAULT now(),
+      updated_at timestamptz DEFAULT now(),
+      CONSTRAINT check_subforum_or_client CHECK ((subforum_id IS NOT NULL AND client_id IS NULL) OR (subforum_id IS NULL AND client_id IS NOT NULL)),
+      CONSTRAINT unique_subforum UNIQUE(subforum_id),
+      CONSTRAINT unique_client UNIQUE(client_id)
+    );
+  ELSE
+    -- Si la tabla existe, agregar las columnas que falten
+    -- Agregar subforum_id si no existe (para compatibilidad con Forums)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'subforum_id') THEN
+      ALTER TABLE client_drive_mapping ADD COLUMN subforum_id uuid REFERENCES subforums(id) ON DELETE CASCADE;
+    END IF;
+    
+    -- Agregar client_id si no existe (para nuevo sistema de Clientes)
+    -- IMPORTANTE: Debe ser nullable para permitir que solo subforum_id tenga valor
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'client_id') THEN
+      ALTER TABLE client_drive_mapping ADD COLUMN client_id uuid REFERENCES clients(id) ON DELETE CASCADE;
+      -- Asegurar explícitamente que sea nullable
+      ALTER TABLE client_drive_mapping ALTER COLUMN client_id DROP NOT NULL;
+    END IF;
+    
+    -- Agregar tenant_id si no existe
+    -- IMPORTANTE: Debe ser nullable para permitir uso con subforums
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'tenant_id') THEN
+      ALTER TABLE client_drive_mapping ADD COLUMN tenant_id uuid REFERENCES tenants(id) ON DELETE CASCADE;
+      -- Asegurar explícitamente que sea nullable
+      ALTER TABLE client_drive_mapping ALTER COLUMN tenant_id DROP NOT NULL;
+    END IF;
+    
+    -- Agregar folder_link si no existe
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'folder_link') THEN
+      ALTER TABLE client_drive_mapping ADD COLUMN folder_link text;
+    END IF;
+    
+    -- Agregar created_by si no existe
+    -- IMPORTANTE: Debe ser nullable para permitir uso con subforums (la función original no lo usa)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'created_by') THEN
+      ALTER TABLE client_drive_mapping ADD COLUMN created_by uuid REFERENCES profiles(id) ON DELETE CASCADE;
+      -- Asegurar explícitamente que sea nullable
+      ALTER TABLE client_drive_mapping ALTER COLUMN created_by DROP NOT NULL;
+    END IF;
+    
+    -- Asegurar que subforum_id puede ser NULL (si existe y es NOT NULL)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'subforum_id' AND is_nullable = 'NO') THEN
+      ALTER TABLE client_drive_mapping ALTER COLUMN subforum_id DROP NOT NULL;
+    END IF;
+    
+    -- Asegurar que client_id puede ser NULL (si existe y es NOT NULL)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'client_id' AND is_nullable = 'NO') THEN
+      ALTER TABLE client_drive_mapping ALTER COLUMN client_id DROP NOT NULL;
+    END IF;
+    
+    -- Asegurar que tenant_id puede ser NULL (si existe y es NOT NULL)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'tenant_id' AND is_nullable = 'NO') THEN
+      ALTER TABLE client_drive_mapping ALTER COLUMN tenant_id DROP NOT NULL;
+    END IF;
+    
+    -- Asegurar que created_by puede ser NULL (si existe y es NOT NULL)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'created_by' AND is_nullable = 'NO') THEN
+      ALTER TABLE client_drive_mapping ALTER COLUMN created_by DROP NOT NULL;
+    END IF;
+    
+    -- Manejar restricciones UNIQUE de manera compatible
+    -- Para subforum_id: mantener constraint UNIQUE simple (necesario para ON CONFLICT en función original)
+    -- Para client_id: usar índice parcial (permite NULL)
+    
+    -- Verificar si ambas columnas existen
+    SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'subforum_id') INTO has_subforum_id;
+    SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'client_drive_mapping' AND column_name = 'client_id') INTO has_client_id;
+    
+    -- Para subforum_id: mantener/crear constraint UNIQUE simple (compatibilidad con función original que usa ON CONFLICT)
+    IF has_subforum_id THEN
+      -- Eliminar constraints/índices existentes de subforum_id
+      ALTER TABLE client_drive_mapping DROP CONSTRAINT IF EXISTS client_drive_mapping_subforum_id_key;
+      ALTER TABLE client_drive_mapping DROP CONSTRAINT IF EXISTS unique_subforum;
+      DROP INDEX IF EXISTS client_drive_mapping_subforum_id_key;
+      DROP INDEX IF EXISTS unique_subforum;
+      -- Crear constraint UNIQUE simple (necesario para ON CONFLICT en función original)
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'client_drive_mapping_subforum_id_key' AND conrelid = 'client_drive_mapping'::regclass) THEN
+        ALTER TABLE client_drive_mapping ADD CONSTRAINT client_drive_mapping_subforum_id_key UNIQUE(subforum_id);
+      END IF;
+    END IF;
+    
+    -- Para client_id: usar índice parcial (permite NULL cuando se usa subforum_id)
+    IF has_client_id THEN
+      -- Eliminar constraints/índices existentes de client_id
+      ALTER TABLE client_drive_mapping DROP CONSTRAINT IF EXISTS client_drive_mapping_client_id_key;
+      ALTER TABLE client_drive_mapping DROP CONSTRAINT IF EXISTS unique_client;
+      DROP INDEX IF EXISTS client_drive_mapping_client_id_key;
+      DROP INDEX IF EXISTS unique_client;
+      -- Crear índice parcial (solo cuando client_id no es NULL)
+      IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'client_drive_mapping' AND indexname = 'unique_client') THEN
+        CREATE UNIQUE INDEX unique_client ON client_drive_mapping(client_id) WHERE client_id IS NOT NULL;
+      END IF;
+    END IF;
+    
+    -- Agregar CHECK constraint si no existe
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_subforum_or_client' AND conrelid = 'client_drive_mapping'::regclass) THEN
+      ALTER TABLE client_drive_mapping ADD CONSTRAINT check_subforum_or_client CHECK ((subforum_id IS NOT NULL AND client_id IS NULL) OR (subforum_id IS NULL AND client_id IS NOT NULL));
+    END IF;
+  END IF;
+END $$;
 
 -- ============================================
 -- ÍNDICES PARA OPTIMIZACIÓN
@@ -65,8 +171,9 @@ CREATE INDEX IF NOT EXISTS idx_clients_cuit ON clients(cuit);
 CREATE INDEX IF NOT EXISTS idx_client_documents_client ON client_documents(client_id);
 CREATE INDEX IF NOT EXISTS idx_client_documents_tenant ON client_documents(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_client_documents_uploaded_by ON client_documents(uploaded_by);
-CREATE INDEX IF NOT EXISTS idx_client_drive_mapping_client ON client_drive_mapping(client_id);
-CREATE INDEX IF NOT EXISTS idx_client_drive_mapping_tenant ON client_drive_mapping(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_client_drive_mapping_subforum ON client_drive_mapping(subforum_id) WHERE subforum_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_client_drive_mapping_client ON client_drive_mapping(client_id) WHERE client_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_client_drive_mapping_tenant ON client_drive_mapping(tenant_id) WHERE tenant_id IS NOT NULL;
 
 -- ============================================
 -- HABILITAR ROW LEVEL SECURITY
@@ -161,45 +268,102 @@ CREATE POLICY "Admins and support can delete client documents"
 -- POLÍTICAS RLS - MAPEO DE GOOGLE DRIVE
 -- ============================================
 
--- Eliminar políticas existentes si existen
+-- Eliminar políticas existentes si existen (solo las nuevas, mantener las de subforums si existen)
 DROP POLICY IF EXISTS "Users can view client drive mappings from own tenant" ON client_drive_mapping;
 DROP POLICY IF EXISTS "Users can create client drive mappings in own tenant" ON client_drive_mapping;
 DROP POLICY IF EXISTS "Users can update client drive mappings in own tenant" ON client_drive_mapping;
 DROP POLICY IF EXISTS "Admins can delete client drive mappings" ON client_drive_mapping;
 
--- SELECT: Usuarios autenticados del mismo tenant pueden ver mapeos
+-- SELECT: Para clients (tenant_id), usuarios del mismo tenant pueden ver mapeos
+-- Para subforums, usar la política existente basada en subforum_permissions
 CREATE POLICY "Users can view client drive mappings from own tenant"
   ON client_drive_mapping FOR SELECT
   TO authenticated
-  USING (tenant_id = get_user_tenant_id());
+  USING (
+    -- Si es un client (tiene client_id y tenant_id)
+    (client_id IS NOT NULL AND tenant_id = get_user_tenant_id())
+    OR
+    -- Si es un subforum (tiene subforum_id), verificar permisos de subforum
+    (subforum_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM subforums
+      WHERE subforums.id = client_drive_mapping.subforum_id
+      AND (
+        EXISTS (
+          SELECT 1 FROM subforum_permissions
+          WHERE subforum_permissions.subforum_id = subforums.id
+          AND subforum_permissions.user_id = auth.uid()
+          AND subforum_permissions.can_view = true
+        )
+        OR EXISTS (
+          SELECT 1 FROM profiles
+          WHERE profiles.id = auth.uid()
+          AND profiles.role IN ('admin', 'support')
+        )
+      )
+    ))
+  );
 
--- INSERT: Usuarios autenticados del mismo tenant pueden crear mapeos
+-- INSERT: Para clients, usuarios del mismo tenant pueden crear mapeos
+-- Para subforums, solo admins/support (manejado por la función RPC)
 CREATE POLICY "Users can create client drive mappings in own tenant"
   ON client_drive_mapping FOR INSERT
   TO authenticated
   WITH CHECK (
-    tenant_id = get_user_tenant_id()
-    AND created_by = auth.uid()
+    -- Si es un client
+    (client_id IS NOT NULL AND tenant_id = get_user_tenant_id() AND created_by = auth.uid())
+    OR
+    -- Si es un subforum, solo admins/support (la función RPC ya valida esto)
+    (subforum_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'support')
+    ))
   );
 
--- UPDATE: Usuarios autenticados del mismo tenant pueden actualizar mapeos
+-- UPDATE: Para clients, usuarios del mismo tenant pueden actualizar mapeos
+-- Para subforums, solo admins/support
 CREATE POLICY "Users can update client drive mappings in own tenant"
   ON client_drive_mapping FOR UPDATE
   TO authenticated
-  USING (tenant_id = get_user_tenant_id())
-  WITH CHECK (tenant_id = get_user_tenant_id());
+  USING (
+    -- Si es un client
+    (client_id IS NOT NULL AND tenant_id = get_user_tenant_id())
+    OR
+    -- Si es un subforum, solo admins/support
+    (subforum_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'support')
+    ))
+  )
+  WITH CHECK (
+    -- Si es un client
+    (client_id IS NOT NULL AND tenant_id = get_user_tenant_id())
+    OR
+    -- Si es un subforum, solo admins/support
+    (subforum_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.role IN ('admin', 'support')
+    ))
+  );
 
--- DELETE: Solo admins pueden eliminar mapeos
+-- DELETE: Solo admins pueden eliminar mapeos (tanto clients como subforums)
 CREATE POLICY "Admins can delete client drive mappings"
   ON client_drive_mapping FOR DELETE
   TO authenticated
   USING (
-    tenant_id = get_user_tenant_id()
-    AND EXISTS (
+    EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = auth.uid()
       AND profiles.role = 'admin'
-      AND profiles.tenant_id = client_drive_mapping.tenant_id
+      AND (
+        -- Si es un client, verificar tenant
+        (client_drive_mapping.client_id IS NOT NULL AND profiles.tenant_id = client_drive_mapping.tenant_id)
+        OR
+        -- Si es un subforum, cualquier admin
+        (client_drive_mapping.subforum_id IS NOT NULL)
+      )
     )
   );
 
@@ -295,45 +459,54 @@ CREATE POLICY "Admins and support can delete client documents"
 -- FUNCIÓN RPC PARA GUARDAR MAPEO DE DRIVE
 -- ============================================
 
--- Eliminar todas las versiones de la función si existen
--- Nota: Hay una función existente con 3 parámetros (UUID, TEXT, TEXT) para subforums
--- Esta nueva función tiene 4 parámetros (uuid, text, text, text) para clients
--- Eliminamos todas las versiones posibles para evitar conflictos
-DO $$ 
+-- Crear función para subforums (3 parámetros) - mantener compatibilidad
+CREATE OR REPLACE FUNCTION save_client_drive_mapping(
+  p_subforum_id uuid,
+  p_google_drive_folder_id text,
+  p_folder_name text
+)
+RETURNS uuid AS $$
 DECLARE
-  func_record RECORD;
-  func_schema TEXT;
+  v_user_role text;
+  v_mapping_id uuid;
 BEGIN
-  -- Buscar y eliminar todas las funciones con este nombre
-  FOR func_record IN 
-    SELECT 
-      p.oid,
-      p.proname,
-      n.nspname as schema_name,
-      pg_get_function_identity_arguments(p.oid) as args
-    FROM pg_proc p
-    JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE p.proname = 'save_client_drive_mapping'
-      AND n.nspname = 'public'
-  LOOP
-    BEGIN
-      EXECUTE format('DROP FUNCTION IF EXISTS %I.%I(%s) CASCADE', 
-        func_record.schema_name,
-        func_record.proname,
-        func_record.args
-      );
-    EXCEPTION
-      WHEN OTHERS THEN
-        -- Si falla, continuar con la siguiente
-        NULL;
-    END;
-  END LOOP;
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Si falla, continuar
-    NULL;
-END $$;
+  -- Verificar que el usuario es admin o support
+  SELECT role INTO v_user_role
+  FROM profiles
+  WHERE id = auth.uid();
+  
+  IF v_user_role NOT IN ('admin', 'support') THEN
+    RAISE EXCEPTION 'Solo administradores y soporte pueden configurar carpetas de Drive';
+  END IF;
+  
+  -- Verificar que el subforum existe
+  IF NOT EXISTS (SELECT 1 FROM subforums WHERE id = p_subforum_id) THEN
+    RAISE EXCEPTION 'El subforo especificado no existe';
+  END IF;
+  
+  -- Insertar o actualizar el mapeo
+  INSERT INTO client_drive_mapping (
+    subforum_id,
+    google_drive_folder_id,
+    folder_name
+  )
+  VALUES (
+    p_subforum_id,
+    p_google_drive_folder_id,
+    p_folder_name
+  )
+  ON CONFLICT ON CONSTRAINT client_drive_mapping_subforum_id_key
+  DO UPDATE SET
+    google_drive_folder_id = EXCLUDED.google_drive_folder_id,
+    folder_name = EXCLUDED.folder_name,
+    updated_at = now()
+  RETURNING id INTO v_mapping_id;
+  
+  RETURN v_mapping_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Crear función para clients (4 parámetros) - nueva funcionalidad
 CREATE OR REPLACE FUNCTION save_client_drive_mapping(
   p_client_id uuid,
   p_google_drive_folder_id text,
@@ -371,7 +544,8 @@ BEGIN
     p_folder_link,
     auth.uid()
   )
-  ON CONFLICT (client_id) DO UPDATE SET
+  ON CONFLICT (client_id) WHERE client_id IS NOT NULL
+  DO UPDATE SET
     google_drive_folder_id = EXCLUDED.google_drive_folder_id,
     folder_name = EXCLUDED.folder_name,
     folder_link = EXCLUDED.folder_link,
@@ -385,8 +559,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON TABLE clients IS 'Clientes de empresas de producción';
 COMMENT ON TABLE client_documents IS 'Documentos asociados a clientes';
-COMMENT ON TABLE client_drive_mapping IS 'Mapeo de carpetas de Google Drive para clientes';
-COMMENT ON FUNCTION save_client_drive_mapping IS 'Guarda o actualiza el mapeo de Google Drive para un cliente';
+COMMENT ON TABLE client_drive_mapping IS 'Mapeo de carpetas de Google Drive para clientes y subforums';
+COMMENT ON FUNCTION save_client_drive_mapping(uuid, text, text) IS 'Guarda o actualiza el mapeo de Google Drive para un subforum (3 parámetros)';
+COMMENT ON FUNCTION save_client_drive_mapping(uuid, text, text, text) IS 'Guarda o actualiza el mapeo de Google Drive para un cliente (4 parámetros)';
 
 -- ============================================
 -- FIN DEL SCRIPT

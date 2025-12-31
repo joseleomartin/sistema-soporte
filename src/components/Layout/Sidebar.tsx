@@ -28,7 +28,8 @@ import {
   DollarSign,
   Truck,
   Menu,
-  X
+  X,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
@@ -101,6 +102,7 @@ const menuItems: MenuItem[] = [
   },
   { icon: Headphones, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
   { icon: UsersIcon, label: 'Usuarios', view: 'users', roles: ['admin'] },
+  { icon: CreditCard, label: 'Suscripción', view: 'subscription', roles: ['admin'] },
   { icon: Settings, label: 'Configuración', view: 'settings', roles: ['admin', 'support', 'user'] },
 ];
 

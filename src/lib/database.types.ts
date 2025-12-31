@@ -804,6 +804,8 @@ export interface Database {
           ganancia_total: number
           stock_antes: number
           stock_despues: number
+          cliente: string | null
+          order_id: string | null
           created_at: string
         }
         Insert: {
@@ -816,6 +818,8 @@ export interface Database {
           precio_unitario: number
           descuento_pct?: number
           iib_pct?: number
+          cliente?: string | null
+          order_id?: string | null
           precio_final: number
           costo_unitario: number
           ingreso_bruto: number
@@ -836,6 +840,7 @@ export interface Database {
           precio_unitario?: number
           descuento_pct?: number
           iib_pct?: number
+          cliente?: string | null
           precio_final?: number
           costo_unitario?: number
           ingreso_bruto?: number
@@ -859,6 +864,7 @@ export interface Database {
           moneda: 'ARS' | 'USD'
           valor_dolar: number | null
           total: number
+          order_id: string | null
           created_at: string
         }
         Insert: {
@@ -872,6 +878,7 @@ export interface Database {
           moneda?: 'ARS' | 'USD'
           valor_dolar?: number | null
           total: number
+          order_id?: string | null
           created_at?: string
         }
         Update: {
@@ -900,6 +907,7 @@ export interface Database {
           moneda: 'ARS' | 'USD'
           valor_dolar: number | null
           total: number
+          order_id: string | null
           created_at: string
         }
         Insert: {
@@ -913,6 +921,7 @@ export interface Database {
           moneda?: 'ARS' | 'USD'
           valor_dolar?: number | null
           total: number
+          order_id?: string | null
           created_at?: string
         }
         Update: {
@@ -1335,12 +1344,116 @@ export interface Database {
           updated_at?: string
         }
       }
+      subscriptions: {
+        Row: {
+          id: string
+          tenant_id: string
+          status: 'trial' | 'active' | 'expired' | 'cancelled'
+          plan_type: 'trial' | 'basic' | 'premium' | 'enterprise'
+          trial_start_date: string
+          trial_end_date: string | null
+          subscription_start_date: string | null
+          subscription_end_date: string | null
+          max_users: number
+          current_users_count: number
+          price_per_month: number
+          payment_method: string | null
+          payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
+          last_payment_date: string | null
+          next_payment_date: string | null
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          status?: 'trial' | 'active' | 'expired' | 'cancelled'
+          plan_type?: 'trial' | 'basic' | 'premium' | 'enterprise'
+          trial_start_date?: string
+          trial_end_date?: string | null
+          subscription_start_date?: string | null
+          subscription_end_date?: string | null
+          max_users?: number
+          current_users_count?: number
+          price_per_month?: number
+          payment_method?: string | null
+          payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
+          last_payment_date?: string | null
+          next_payment_date?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          status?: 'trial' | 'active' | 'expired' | 'cancelled'
+          plan_type?: 'trial' | 'basic' | 'premium' | 'enterprise'
+          trial_start_date?: string
+          trial_end_date?: string | null
+          subscription_start_date?: string | null
+          subscription_end_date?: string | null
+          max_users?: number
+          current_users_count?: number
+          price_per_month?: number
+          payment_method?: string | null
+          payment_status?: 'pending' | 'paid' | 'failed' | 'refunded'
+          last_payment_date?: string | null
+          next_payment_date?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_subscription_status: {
+        Args: {
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      check_user_limit: {
+        Args: {
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
+      activate_paid_subscription: {
+        Args: {
+          p_tenant_id: string
+          p_user_count?: number
+        }
+        Returns: undefined
+      }
+      calculate_subscription_price: {
+        Args: {
+          p_user_count: number
+        }
+        Returns: number
+      }
+      initialize_trial_subscription: {
+        Args: {
+          p_tenant_id: string
+        }
+        Returns: string
+      }
+      update_subscription_user_count: {
+        Args: {
+          p_tenant_id: string
+        }
+        Returns: undefined
+      }
+      fix_subscription_max_users_for_tenant: {
+        Args: {
+          p_tenant_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -17,3 +17,4 @@ LEFT JOIN auth.users u ON p.id = u.id
 WHERE t.slug IN ('test', 'demo')
 ORDER BY t.name, p.email;
 
+

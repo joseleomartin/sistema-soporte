@@ -30,3 +30,4 @@ COMMENT ON COLUMN subforums.client_type IS 'Tipo de cliente (por ejemplo: Monotr
 
 
 
+

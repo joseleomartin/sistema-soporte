@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Truck, Plus, Edit, Trash2, Save, X, FileText, Upload, Download, Folder, ExternalLink } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, Save, X, FileText, Upload, Download, Folder, ExternalLink, History, Calendar, DollarSign } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -16,6 +16,8 @@ import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermission
 
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
 type SupplierInsert = Database['public']['Tables']['suppliers']['Insert'];
+type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
+type PurchaseProduct = Database['public']['Tables']['purchases_products']['Row'];
 type SupplierDocument = Database['public']['Tables']['supplier_documents']['Row'];
 
 interface FileAttachment {
@@ -49,6 +51,13 @@ export function SuppliersModule() {
   const [driveFolderLink, setDriveFolderLink] = useState<string | null>(null);
   const [loadingDriveMapping, setLoadingDriveMapping] = useState(false);
   const [activeTab, setActiveTab] = useState<'files' | 'drive'>('files');
+
+  // Modal de historial de pedidos
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [selectedSupplierForOrders, setSelectedSupplierForOrders] = useState<Supplier | null>(null);
+  const [supplierMaterialPurchases, setSupplierMaterialPurchases] = useState<PurchaseMaterial[]>([]);
+  const [supplierProductPurchases, setSupplierProductPurchases] = useState<PurchaseProduct[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -86,6 +95,44 @@ export function SuppliersModule() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadSupplierOrders = async (supplier: Supplier) => {
+    if (!tenantId) return;
+    setLoadingOrders(true);
+    try {
+      // Cargar compras de materiales del proveedor
+      const { data: materialPurchases, error: materialError } = await supabase
+        .from('purchases_materials')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .ilike('proveedor', supplier.nombre)
+        .order('fecha', { ascending: false });
+
+      if (materialError) throw materialError;
+      setSupplierMaterialPurchases(materialPurchases || []);
+
+      // Cargar compras de productos del proveedor
+      const { data: productPurchases, error: productError } = await supabase
+        .from('purchases_products')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .ilike('proveedor', supplier.nombre)
+        .order('fecha', { ascending: false });
+
+      if (productError) throw productError;
+      setSupplierProductPurchases(productPurchases || []);
+    } catch (error) {
+      console.error('Error loading supplier orders:', error);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const openOrdersModal = async (supplier: Supplier) => {
+    setSelectedSupplierForOrders(supplier);
+    setShowOrdersModal(true);
+    await loadSupplierOrders(supplier);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -373,7 +420,7 @@ export function SuppliersModule() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 w-full">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
         <div className="flex items-center space-x-3 mb-2">
@@ -731,94 +778,334 @@ export function SuppliersModule() {
       )}
 
       {/* Suppliers Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Razón Social
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                CUIT
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Teléfono
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Provincia
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {suppliers.length === 0 ? (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                  No hay proveedores registrados
-                </td>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[20%]">
+                  Nombre
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell w-[18%]">
+                  Razón Social
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell w-[18%]">
+                  Dirección
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell w-[12%]">
+                  Teléfono
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell w-[18%]">
+                  Email
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell w-[10%]">
+                  Provincia
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
+                  Acciones
+                </th>
               </tr>
-            ) : (
-              suppliers.map((supplier) => (
-                <tr key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{supplier.nombre}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.razon_social || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.cuit || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.telefono || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.email || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {supplier.provincia || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        onClick={() => openDocumentsModal(supplier)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                        title="Ver documentos"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </button>
-                      {canEdit('fabinsa-suppliers') && (
-                        <button
-                          onClick={() => handleEdit(supplier)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      )}
-                      {canDelete('fabinsa-suppliers') && (
-                        <button
-                          onClick={() => handleDelete(supplier.id)}
-                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {suppliers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    No hay proveedores registrados
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                suppliers.map((supplier) => (
+                  <tr key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4">
+                      <button
+                        onClick={() => openOrdersModal(supplier)}
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline truncate block w-full text-left"
+                        title={supplier.nombre}
+                      >
+                        {supplier.nombre}
+                      </button>
+                      {/* Información adicional en móviles */}
+                      <div className="md:hidden mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                        {supplier.telefono && <div className="truncate">📞 {supplier.telefono}</div>}
+                        {supplier.email && <div className="truncate">✉️ {supplier.email}</div>}
+                        {supplier.razon_social && <div className="truncate">🏢 {supplier.razon_social}</div>}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                      <div className="truncate" title={supplier.razon_social || ''}>
+                        {supplier.razon_social || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                      <div className="truncate" title={supplier.direccion || ''}>
+                        {supplier.direccion || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                      <div className="truncate" title={supplier.telefono || ''}>
+                        {supplier.telefono || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                      <div className="truncate" title={supplier.email || ''}>
+                        {supplier.email || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
+                      <div className="truncate" title={supplier.provincia || ''}>
+                        {supplier.provincia || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-1 sm:space-x-2 flex-shrink-0">
+                        <button
+                          onClick={() => openDocumentsModal(supplier)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex-shrink-0"
+                          title="Ver documentos"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                        {canEdit('fabinsa-suppliers') && (
+                          <button
+                            onClick={() => handleEdit(supplier)}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex-shrink-0"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete('fabinsa-suppliers') && (
+                          <button
+                            onClick={() => handleDelete(supplier.id)}
+                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 flex-shrink-0"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Modal de Historial de Pedidos */}
+      {showOrdersModal && selectedSupplierForOrders && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center space-x-2 text-gray-900 dark:text-white">
+                  <History className="w-5 h-5 text-blue-600" />
+                  <span>Historial de Pedidos - {selectedSupplierForOrders.nombre}</span>
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  Compras de materiales y productos realizadas a este proveedor
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowOrdersModal(false);
+                  setSelectedSupplierForOrders(null);
+                  setSupplierMaterialPurchases([]);
+                  setSupplierProductPurchases([]);
+                }}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingOrders ? (
+                <div className="text-center py-8">
+                  <div className="text-gray-500 dark:text-gray-400">Cargando pedidos...</div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Compras de Materiales */}
+                  <div>
+                    <h4 className="text-md font-semibold mb-4 flex items-center space-x-2 text-gray-900 dark:text-white">
+                      <Truck className="w-4 h-4 text-blue-600" />
+                      <span>Compras de Materiales</span>
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                        ({supplierMaterialPurchases.length})
+                      </span>
+                    </h4>
+                    {supplierMaterialPurchases.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 py-4">No hay compras de materiales registradas para este proveedor</p>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                          <thead className="bg-gray-100 dark:bg-gray-600">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Fecha</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Material</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad (kg)</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio Unitario</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Moneda</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {supplierMaterialPurchases.map((purchase) => (
+                              <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                  <div className="flex items-center space-x-1">
+                                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                    <span>{new Date(purchase.fecha).toLocaleDateString('es-AR')}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.material}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                  {purchase.moneda === 'USD' && purchase.valor_dolar ? (
+                                    <div className="flex items-center space-x-1">
+                                      <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                      <span>${(purchase.precio / purchase.valor_dolar).toFixed(2)} USD</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center space-x-1">
+                                      <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                      <span>${purchase.precio.toFixed(2)} ARS</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                  <span className={`px-2 py-1 rounded text-xs ${
+                                    purchase.moneda === 'USD' 
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                  }`}>
+                                    {purchase.moneda}
+                                  </span>
+                                  {purchase.moneda === 'USD' && purchase.valor_dolar && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                                  ${purchase.total.toFixed(2)} ARS
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Compras de Productos */}
+                  <div>
+                    <h4 className="text-md font-semibold mb-4 flex items-center space-x-2 text-gray-900 dark:text-white">
+                      <Truck className="w-4 h-4 text-blue-600" />
+                      <span>Compras de Productos</span>
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                        ({supplierProductPurchases.length})
+                      </span>
+                    </h4>
+                    {supplierProductPurchases.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 py-4">No hay compras de productos registradas para este proveedor</p>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                          <thead className="bg-gray-100 dark:bg-gray-600">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Fecha</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Producto</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio Unitario</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Moneda</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {supplierProductPurchases.map((purchase) => (
+                              <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                  <div className="flex items-center space-x-1">
+                                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                    <span>{new Date(purchase.fecha).toLocaleDateString('es-AR')}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.producto}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                  {purchase.moneda === 'USD' && purchase.valor_dolar ? (
+                                    <div className="flex items-center space-x-1">
+                                      <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                      <span>${(purchase.precio / purchase.valor_dolar).toFixed(2)} USD</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center space-x-1">
+                                      <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                      <span>${purchase.precio.toFixed(2)} ARS</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                  <span className={`px-2 py-1 rounded text-xs ${
+                                    purchase.moneda === 'USD' 
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                  }`}>
+                                    {purchase.moneda}
+                                  </span>
+                                  {purchase.moneda === 'USD' && purchase.valor_dolar && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                                  ${purchase.total.toFixed(2)} ARS
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resumen Total */}
+                  {(supplierMaterialPurchases.length > 0 || supplierProductPurchases.length > 0) && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                      <h4 className="text-md font-semibold mb-2 text-gray-900 dark:text-white">Resumen Total</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Total Compras de Materiales:</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                            ${supplierMaterialPurchases.reduce((sum, p) => sum + p.total, 0).toFixed(2)} ARS
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Total Compras de Productos:</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                            ${supplierProductPurchases.reduce((sum, p) => sum + p.total, 0).toFixed(2)} ARS
+                          </p>
+                        </div>
+                        <div className="col-span-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                          <p className="text-gray-600 dark:text-gray-400">Total General:</p>
+                          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                            ${(supplierMaterialPurchases.reduce((sum, p) => sum + p.total, 0) + 
+                                supplierProductPurchases.reduce((sum, p) => sum + p.total, 0)).toFixed(2)} ARS
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

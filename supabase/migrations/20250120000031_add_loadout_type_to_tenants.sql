@@ -10,3 +10,4 @@ ADD COLUMN IF NOT EXISTS loadout_type text;
 -- Comentario
 COMMENT ON COLUMN tenants.loadout_type IS 'Tipo de plantilla aplicada: servicios, produccion, o null para personalizado';
 
+

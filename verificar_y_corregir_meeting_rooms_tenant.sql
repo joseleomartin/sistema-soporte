@@ -57,3 +57,4 @@ JOIN tenants t ON t.id = mr.tenant_id
 GROUP BY t.id, t.name, t.slug
 ORDER BY t.name;
 
+

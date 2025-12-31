@@ -24,3 +24,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE direct_messages;
 
 
 
+

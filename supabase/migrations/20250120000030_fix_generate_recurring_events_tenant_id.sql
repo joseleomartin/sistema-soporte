@@ -203,3 +203,4 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- - Incluye tenant_id en la verificación de duplicados
 -- ==================================================================
 
+

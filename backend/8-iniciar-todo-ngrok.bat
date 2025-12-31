@@ -48,17 +48,34 @@ set EXTRACTOR_PORT=5000
 
 REM Configurar Google OAuth
 REM ⚠️ IMPORTANTE:
-REM - Las credenciales deben configurarse como variables de entorno del sistema
-REM - Para desarrollo local, configura las variables GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET
+REM - Las credenciales están configuradas aquí para desarrollo local
 REM - Para producción, usa variables de entorno del sistema o del servidor
-REM - Ejemplo: set GOOGLE_CLIENT_ID=tu_client_id_aqui
-REM - Ejemplo: set GOOGLE_CLIENT_SECRET=tu_client_secret_aqui
+REM - Si las variables ya están configuradas en el sistema, se usarán esas
+REM - Si no, se usarán las credenciales configuradas aquí
+
+REM Configurar credenciales de Google (si no están ya configuradas)
+REM ⚠️ IMPORTANTE: Configura estas variables de entorno en tu sistema
+REM o proporciona los valores cuando ejecutes el script
 if "%GOOGLE_CLIENT_ID%"=="" (
-    echo ERROR: GOOGLE_CLIENT_ID no está configurado. Por favor configura la variable de entorno.
+    echo ERROR: GOOGLE_CLIENT_ID no está configurado como variable de entorno
+    echo Por favor, configura la variable de entorno GOOGLE_CLIENT_ID antes de ejecutar este script
+    echo Ejemplo: set GOOGLE_CLIENT_ID=tu-client-id-aqui
     exit /b 1
 )
 if "%GOOGLE_CLIENT_SECRET%"=="" (
-    echo ERROR: GOOGLE_CLIENT_SECRET no está configurado. Por favor configura la variable de entorno.
+    echo ERROR: GOOGLE_CLIENT_SECRET no está configurado como variable de entorno
+    echo Por favor, configura la variable de entorno GOOGLE_CLIENT_SECRET antes de ejecutar este script
+    echo Ejemplo: set GOOGLE_CLIENT_SECRET=tu-client-secret-aqui
+    exit /b 1
+)
+
+REM Verificar que las credenciales estén configuradas
+if "%GOOGLE_CLIENT_ID%"=="" (
+    echo ERROR: GOOGLE_CLIENT_ID no está configurado.
+    exit /b 1
+)
+if "%GOOGLE_CLIENT_SECRET%"=="" (
+    echo ERROR: GOOGLE_CLIENT_SECRET no está configurado.
     exit /b 1
 )
 

@@ -81,3 +81,4 @@ Si quieres confirmar el email de Fabinsa rápidamente:
 - En **producción**, es mejor configurar SMTP personalizado para que los emails funcionen correctamente
 - Una vez confirmado el email, el usuario podrá iniciar sesión normalmente
 
+

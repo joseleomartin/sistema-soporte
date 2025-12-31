@@ -813,15 +813,8 @@ export function MessagesBell() {
         }
       )
       .subscribe((status, err) => {
-        console.log('📡 Realtime subscription status for all events:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to all events (INSERT, UPDATE, DELETE) for direct_messages');
-        } else if (status === 'CHANNEL_ERROR') {
+        if (status === 'CHANNEL_ERROR') {
           console.error('❌ Error subscribing to events for direct_messages:', err);
-        } else if (status === 'TIMED_OUT') {
-          console.warn('⚠️ Subscription timed out, retrying...');
-        } else if (status === 'CLOSED') {
-          console.warn('⚠️ Subscription closed');
         }
       });
 

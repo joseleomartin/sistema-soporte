@@ -171,3 +171,4 @@ Si una migración falla:
 - Los datos existentes se migran automáticamente al tenant "EmaGroup"
 - Los nuevos usuarios se asignarán al tenant especificado en su metadata o al tenant por defecto
 
+

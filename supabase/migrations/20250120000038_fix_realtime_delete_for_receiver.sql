@@ -53,3 +53,4 @@ ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
 -- el evento DELETE a través de Realtime y el mensaje desaparecerá automáticamente
 -- ============================================
 
+

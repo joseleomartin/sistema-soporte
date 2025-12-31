@@ -49,3 +49,4 @@ $$;
 COMMENT ON FUNCTION create_tenant_for_registration IS 
 'Función para crear tenants durante el registro de nuevas empresas. Usa SECURITY DEFINER para bypassear RLS.';
 
+

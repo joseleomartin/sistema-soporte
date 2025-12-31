@@ -375,7 +375,7 @@ export function ClientsModule() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 w-full">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
         <div className="flex items-center space-x-3 mb-2">
@@ -733,93 +733,115 @@ export function ClientsModule() {
       )}
 
       {/* Clients Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Nombre
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Razón Social
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                CUIT
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Teléfono
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Provincia
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {clients.length === 0 ? (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                  No hay clientes registrados
-                </td>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[20%]">
+                  Nombre
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell w-[18%]">
+                  Razón Social
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell w-[12%]">
+                  CUIT
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell w-[12%]">
+                  Teléfono
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell w-[18%]">
+                  Email
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell w-[10%]">
+                  Provincia
+                </th>
+                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
+                  Acciones
+                </th>
               </tr>
-            ) : (
-              clients.map((client) => (
-                <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{client.nombre}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {client.razon_social || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {client.cuit || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {client.telefono || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {client.email || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {client.provincia || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        onClick={() => openDocumentsModal(client)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                        title="Ver documentos"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </button>
-                      {canEdit('forums') && (
-                        <button
-                          onClick={() => handleEdit(client)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      )}
-                      {canDelete('forums') && (
-                        <button
-                          onClick={() => handleDelete(client.id)}
-                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {clients.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    No hay clientes registrados
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                clients.map((client) => (
+                  <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={client.nombre}>
+                        {client.nombre}
+                      </div>
+                      {/* Información adicional en móviles */}
+                      <div className="md:hidden mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                        {client.telefono && <div className="truncate">📞 {client.telefono}</div>}
+                        {client.email && <div className="truncate">✉️ {client.email}</div>}
+                        {client.razon_social && <div className="truncate">🏢 {client.razon_social}</div>}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                      <div className="truncate" title={client.razon_social || ''}>
+                        {client.razon_social || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                      <div className="truncate" title={client.cuit || ''}>
+                        {client.cuit || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                      <div className="truncate" title={client.telefono || ''}>
+                        {client.telefono || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                      <div className="truncate" title={client.email || ''}>
+                        {client.email || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
+                      <div className="truncate" title={client.provincia || ''}>
+                        {client.provincia || '-'}
+                      </div>
+                    </td>
+                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-1 sm:space-x-2 flex-shrink-0">
+                        <button
+                          onClick={() => openDocumentsModal(client)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex-shrink-0"
+                          title="Ver documentos"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                        {canEdit('forums') && (
+                          <button
+                            onClick={() => handleEdit(client)}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex-shrink-0"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete('forums') && (
+                          <button
+                            onClick={() => handleDelete(client.id)}
+                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 flex-shrink-0"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

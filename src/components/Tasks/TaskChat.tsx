@@ -308,10 +308,7 @@ export function TaskChat({ taskId }: TaskChatProps) {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to task_messages and task_attachments');
-        } else if (status === 'CHANNEL_ERROR') {
+        if (status === 'CHANNEL_ERROR') {
           console.error('❌ Channel subscription error');
         } else if (status === 'TIMED_OUT') {
           console.error('❌ Subscription timed out');

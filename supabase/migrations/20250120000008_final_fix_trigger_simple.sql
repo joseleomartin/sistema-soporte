@@ -121,3 +121,4 @@ COMMENT ON FUNCTION public.handle_new_user IS
 Maneja tenant_id desde metadata o asigna el tenant por defecto (emagroup).
 Versión simplificada y robusta.';
 
+

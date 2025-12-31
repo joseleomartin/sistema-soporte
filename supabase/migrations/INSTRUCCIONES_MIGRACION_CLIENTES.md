@@ -88,6 +88,7 @@ ORDER BY tablename, policyname;
 - El módulo es similar al de Proveedores, pero adaptado para gestión de clientes
 - Los documentos se almacenan en el bucket `client-documents` de Supabase Storage
 - Se puede vincular una carpeta de Google Drive por cliente
+- **IMPORTANTE**: Esta migración modifica la tabla `client_drive_mapping` existente para soportar tanto `subforum_id` (Forums) como `client_id` (Clientes), manteniendo la compatibilidad con el sistema de Forums existente
 
 ---
 

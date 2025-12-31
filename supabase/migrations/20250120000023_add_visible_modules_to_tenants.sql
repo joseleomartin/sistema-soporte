@@ -19,3 +19,4 @@ COMMENT ON COLUMN tenants.visible_modules IS 'Módulos visibles para todos los u
 -- FIN DEL SCRIPT
 -- ============================================
 
+

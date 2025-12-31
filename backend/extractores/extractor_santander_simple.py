@@ -28,17 +28,40 @@ def safe_print(texto):
 def extraer_datos_santander_v3(pdf_path, excel_path=None):
     """Función principal para extraer datos de Santander"""
     try:
-        print(f"Extrayendo tablas del PDF: {pdf_path}")
+        # Validar que el archivo existe
+        if not os.path.exists(pdf_path):
+            safe_print(f"Error: El archivo PDF no existe: {pdf_path}")
+            return pd.DataFrame()
         
-        # Extraer tablas
-        tables = camelot.read_pdf(pdf_path, pages='all', flavor='lattice')
+        safe_print(f"Extrayendo tablas del PDF: {pdf_path}")
         
-        if not tables:
-            print("No se encontraron tablas con bordes definidos, intentando con método 'stream'...")
-            tables = camelot.read_pdf(pdf_path, pages='all', flavor='stream')
+        # Extraer tablas con manejo de errores mejorado
+        tables = None
+        try:
+            safe_print("Intentando extraer con método 'lattice'...")
+            tables = camelot.read_pdf(pdf_path, pages='all', flavor='lattice')
+        except Exception as e:
+            safe_print(f"Error con método 'lattice': {str(e)}")
+            tables = None
         
-        if not tables:
-            print("No se encontraron tablas en el PDF")
+        if not tables or len(tables) == 0:
+            safe_print("No se encontraron tablas con bordes definidos, intentando con método 'stream'...")
+            try:
+                tables = camelot.read_pdf(pdf_path, pages='all', flavor='stream')
+            except Exception as e:
+                safe_print(f"Error con método 'stream': {str(e)}")
+                tables = None
+        
+        if not tables or len(tables) == 0:
+            safe_print("No se encontraron tablas en el PDF")
+            # Intentar crear un Excel vacío para que el servidor no falle
+            if excel_path:
+                try:
+                    df_vacio = pd.DataFrame(columns=['Fecha', 'Origen', 'Descripcion', 'Debito', 'Credito', 'Saldo', 'Movimiento'])
+                    df_vacio.to_excel(excel_path, index=False)
+                    safe_print(f"Excel vacío creado en: {excel_path}")
+                except Exception as e:
+                    safe_print(f"Error creando Excel vacío: {str(e)}")
             return pd.DataFrame()
         
         print(f"Se encontraron {len(tables)} tablas")
@@ -75,13 +98,32 @@ def extraer_datos_santander_v3(pdf_path, excel_path=None):
         
         # Guardar Excel
         if excel_path:
-            guardar_excel_santander(df_procesado, excel_path)
+            try:
+                guardar_excel_santander(df_procesado, excel_path)
+            except Exception as e:
+                safe_print(f"Error guardando Excel: {str(e)}")
+                # Intentar guardar un Excel básico
+                try:
+                    df_procesado.to_excel(excel_path, index=False)
+                    safe_print(f"Excel básico guardado en: {excel_path}")
+                except Exception as e2:
+                    safe_print(f"Error guardando Excel básico: {str(e2)}")
         
-        print(f"Total de registros extraídos: {len(df_procesado)}")
+        safe_print(f"Total de registros extraídos: {len(df_procesado)}")
         return df_procesado
         
     except Exception as e:
-        safe_print(f"Error extrayendo datos: {e}")
+        import traceback
+        safe_print(f"Error extrayendo datos: {str(e)}")
+        safe_print(f"Traceback: {traceback.format_exc()}")
+        # Asegurar que siempre se retorne un DataFrame, incluso si está vacío
+        try:
+            if excel_path:
+                df_vacio = pd.DataFrame(columns=['Fecha', 'Origen', 'Descripcion', 'Debito', 'Credito', 'Saldo', 'Movimiento'])
+                df_vacio.to_excel(excel_path, index=False)
+                safe_print(f"Excel vacío creado debido al error en: {excel_path}")
+        except Exception as e2:
+            safe_print(f"Error creando Excel vacío: {str(e2)}")
         return pd.DataFrame()
 
 def procesar_tabla_santander(df):

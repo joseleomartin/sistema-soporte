@@ -31,6 +31,7 @@ import { MetricsModule } from './components/Fabinsa/Metrics/MetricsModule';
 import { CostsModule } from './components/Fabinsa/Costs/CostsModule';
 import { SuppliersModule } from './components/Fabinsa/Suppliers/SuppliersModule';
 import { ClientsModule } from './components/Fabinsa/Clients/ClientsModule';
+import { SubscriptionManagement } from './components/Subscription/SubscriptionManagement';
 import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
@@ -217,6 +218,8 @@ function MainApp() {
         return <SuppliersModule key={`fabinsa-suppliers-${viewKey}`} />;
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
+      case 'subscription':
+        return profile.role === 'admin' ? <SubscriptionManagement key={`subscription-${viewKey}`} /> : <div>No autorizado</div>;
       default:
         return <UserDashboard key={`dashboard-${viewKey}`} onNavigate={handleViewChange} />;
     }
@@ -236,7 +239,7 @@ function MainApp() {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <main className={`flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 transition-all duration-300 ${!sidebarCollapsed ? 'lg:ml-64' : ''}`}>
-        <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
+        <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' || currentView === 'forums' || currentView === 'fabinsa-suppliers' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
           {renderContent()}
         </div>
       </main>

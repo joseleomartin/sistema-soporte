@@ -110,3 +110,4 @@ function MyComponent() {
 - Si un usuario no tiene áreas asignadas, mantiene acceso completo (comportamiento por defecto)
 - Los permisos se actualizan en tiempo real cuando se modifican en la configuración del área
 
+

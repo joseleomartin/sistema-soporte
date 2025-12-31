@@ -157,12 +157,6 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
                 .from('ticket-attachments')
                 .getPublicUrl(attachment.path);
 
-              console.log('📁 Archivo encontrado:', {
-                name: attachment.name,
-                path: attachment.path,
-                publicUrl: urlData.publicUrl
-              });
-
               allFiles.push({
                 id: `${message.id}-${attachment.name}`,
                 file_name: attachment.name,

@@ -20,3 +20,4 @@ COMMENT ON COLUMN profiles.birthday IS 'Fecha de cumpleaños del usuario (solo m
 
 
 
+

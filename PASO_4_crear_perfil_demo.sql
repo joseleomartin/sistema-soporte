@@ -58,3 +58,4 @@ BEGIN
   RAISE NOTICE '   - Tenant: Demo Company (%)', demo_tenant_id;
 END $$;
 
+

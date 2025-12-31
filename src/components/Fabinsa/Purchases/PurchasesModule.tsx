@@ -3,7 +3,7 @@
  * Registro de compras de materia prima y productos
  */
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Plus, Edit, Trash2, Save, X, ChevronDown } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
@@ -18,6 +18,28 @@ type Supplier = Database['public']['Tables']['suppliers']['Row'];
 
 type TabType = 'materials' | 'products';
 
+interface MaterialItem {
+  id: string;
+  material: string;
+  cantidad: number;
+  precio: number;
+  moneda: 'ARS' | 'USD';
+  valor_dolar: number;
+  precioARS: number;
+  total: number;
+}
+
+interface ProductItem {
+  id: string;
+  producto: string;
+  cantidad: number;
+  precio: number;
+  moneda: 'ARS' | 'USD';
+  valor_dolar: number;
+  precioARS: number;
+  total: number;
+}
+
 export function PurchasesModule() {
   const { tenantId } = useTenant();
   const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
@@ -27,6 +49,7 @@ export function PurchasesModule() {
   const [materialPurchases, setMaterialPurchases] = useState<PurchaseMaterial[]>([]);
   const [showMaterialForm, setShowMaterialForm] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<PurchaseMaterial | null>(null);
+  const [materialItems, setMaterialItems] = useState<MaterialItem[]>([]);
   const [materialForm, setMaterialForm] = useState({
     fecha: new Date().toISOString().split('T')[0],
     material: '',
@@ -41,6 +64,7 @@ export function PurchasesModule() {
   const [productPurchases, setProductPurchases] = useState<PurchaseProduct[]>([]);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<PurchaseProduct | null>(null);
+  const [productItems, setProductItems] = useState<ProductItem[]>([]);
   const [productForm, setProductForm] = useState({
     fecha: new Date().toISOString().split('T')[0],
     producto: '',
@@ -52,6 +76,8 @@ export function PurchasesModule() {
   });
 
   const [loading, setLoading] = useState(true);
+  const [expandedMaterialOrders, setExpandedMaterialOrders] = useState<Set<string>>(new Set());
+  const [expandedProductOrders, setExpandedProductOrders] = useState<Set<string>>(new Set());
   
   // Proveedores para combobox
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -149,36 +175,100 @@ export function PurchasesModule() {
     }
   };
 
+  const handleAddMaterial = () => {
+    if (!materialForm.material || !materialForm.cantidad || !materialForm.precio) {
+      alert('Complete todos los campos requeridos');
+      return;
+    }
+
+    if (materialForm.moneda === 'USD' && !materialForm.valor_dolar) {
+      alert('Ingrese el valor del dólar');
+      return;
+    }
+
+    const cantidad = parseFloat(materialForm.cantidad);
+    const precio = parseFloat(materialForm.precio);
+    const valorDolar = materialForm.moneda === 'USD' ? parseFloat(materialForm.valor_dolar) : 1;
+    const precioARS = materialForm.moneda === 'USD' ? precio * valorDolar : precio;
+    const total = cantidad * precioARS;
+
+    // Verificar si ya existe el material en la lista
+    const existingItem = materialItems.find(item => item.material === materialForm.material);
+    if (existingItem) {
+      alert('Este material ya está en la lista. Elimínelo primero si desea cambiarlo.');
+      return;
+    }
+
+    const newItem: MaterialItem = {
+      id: Date.now().toString(),
+      material: materialForm.material,
+      cantidad,
+      precio,
+      moneda: materialForm.moneda,
+      valor_dolar: valorDolar,
+      precioARS,
+      total,
+    };
+
+    setMaterialItems([...materialItems, newItem]);
+
+    // Limpiar campos del material (mantener fecha y proveedor)
+    setMaterialForm({
+      ...materialForm,
+      material: '',
+      cantidad: '',
+      precio: '',
+      moneda: 'ARS',
+      valor_dolar: '',
+    });
+  };
+
+  const handleRemoveMaterial = (id: string) => {
+    setMaterialItems(materialItems.filter(item => item.id !== id));
+  };
+
   const handleMaterialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantId) return;
 
+    if (materialItems.length === 0) {
+      alert('Agregue al menos un material a la compra');
+      return;
+    }
+
+    if (!materialForm.proveedor) {
+      alert('Seleccione un proveedor');
+      return;
+    }
+
     try {
-      const cantidad = parseFloat(materialForm.cantidad);
-      const precio = parseFloat(materialForm.precio);
-      const valorDolar = materialForm.moneda === 'USD' ? parseFloat(materialForm.valor_dolar) : 1;
-      const precioARS = materialForm.moneda === 'USD' ? precio * valorDolar : precio;
-      const total = cantidad * precioARS;
+      // Crear fecha en zona horaria local para evitar problemas de UTC
+      const fechaLocal = new Date(materialForm.fecha + 'T00:00:00');
+      const fecha = fechaLocal.toISOString();
+      const proveedor = materialForm.proveedor;
+      
+      // Generar un order_id único para agrupar todos los materiales de esta compra
+      const orderId = crypto.randomUUID();
 
-      const data: PurchaseMaterialInsert = {
-        tenant_id: tenantId,
-        fecha: new Date(materialForm.fecha).toISOString(),
-        material: materialForm.material,
-        cantidad,
-        precio: precioARS,
-        proveedor: materialForm.proveedor,
-        moneda: materialForm.moneda,
-        valor_dolar: materialForm.moneda === 'USD' ? valorDolar : null,
-        total,
-      };
+      // Crear registros de compra para cada material con el mismo order_id
+      for (const item of materialItems) {
+        const data: PurchaseMaterialInsert & { order_id?: string } = {
+          tenant_id: tenantId,
+          fecha,
+          material: item.material,
+          cantidad: item.cantidad,
+          precio: item.precioARS,
+          proveedor,
+          moneda: item.moneda,
+          valor_dolar: item.moneda === 'USD' ? item.valor_dolar : null,
+          total: item.total,
+          order_id: orderId,
+        } as any;
 
-      if (editingMaterial) {
-        await supabase.from('purchases_materials').update(data).eq('id', editingMaterial.id);
-      } else {
         await supabase.from('purchases_materials').insert(data);
         
         // Actualizar stock automáticamente
-        await updateStockOnPurchase('material', materialForm.material, cantidad, precioARS, materialForm.moneda, valorDolar);
+        await updateStockOnPurchase('material', item.material, item.cantidad, item.precioARS, item.moneda, item.valor_dolar);
       }
 
       resetMaterialForm();
@@ -189,36 +279,100 @@ export function PurchasesModule() {
     }
   };
 
+  const handleAddProduct = () => {
+    if (!productForm.producto || !productForm.cantidad || !productForm.precio) {
+      alert('Complete todos los campos requeridos');
+      return;
+    }
+
+    if (productForm.moneda === 'USD' && !productForm.valor_dolar) {
+      alert('Ingrese el valor del dólar');
+      return;
+    }
+
+    const cantidad = parseInt(productForm.cantidad);
+    const precio = parseFloat(productForm.precio);
+    const valorDolar = productForm.moneda === 'USD' ? parseFloat(productForm.valor_dolar) : 1;
+    const precioARS = productForm.moneda === 'USD' ? precio * valorDolar : precio;
+    const total = cantidad * precioARS;
+
+    // Verificar si ya existe el producto en la lista
+    const existingItem = productItems.find(item => item.producto === productForm.producto);
+    if (existingItem) {
+      alert('Este producto ya está en la lista. Elimínelo primero si desea cambiarlo.');
+      return;
+    }
+
+    const newItem: ProductItem = {
+      id: Date.now().toString(),
+      producto: productForm.producto,
+      cantidad,
+      precio,
+      moneda: productForm.moneda,
+      valor_dolar: valorDolar,
+      precioARS,
+      total,
+    };
+
+    setProductItems([...productItems, newItem]);
+
+    // Limpiar campos del producto (mantener fecha y proveedor)
+    setProductForm({
+      ...productForm,
+      producto: '',
+      cantidad: '',
+      precio: '',
+      moneda: 'ARS',
+      valor_dolar: '',
+    });
+  };
+
+  const handleRemoveProduct = (id: string) => {
+    setProductItems(productItems.filter(item => item.id !== id));
+  };
+
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantId) return;
 
+    if (productItems.length === 0) {
+      alert('Agregue al menos un producto a la compra');
+      return;
+    }
+
+    if (!productForm.proveedor) {
+      alert('Seleccione un proveedor');
+      return;
+    }
+
     try {
-      const cantidad = parseInt(productForm.cantidad);
-      const precio = parseFloat(productForm.precio);
-      const valorDolar = productForm.moneda === 'USD' ? parseFloat(productForm.valor_dolar) : 1;
-      const precioARS = productForm.moneda === 'USD' ? precio * valorDolar : precio;
-      const total = cantidad * precioARS;
+      // Crear fecha en zona horaria local para evitar problemas de UTC
+      const fechaLocal = new Date(productForm.fecha + 'T00:00:00');
+      const fecha = fechaLocal.toISOString();
+      const proveedor = productForm.proveedor;
+      
+      // Generar un order_id único para agrupar todos los productos de esta compra
+      const orderId = crypto.randomUUID();
 
-      const data: PurchaseProductInsert = {
-        tenant_id: tenantId,
-        fecha: new Date(productForm.fecha).toISOString(),
-        producto: productForm.producto,
-        cantidad,
-        precio: precioARS,
-        proveedor: productForm.proveedor,
-        moneda: productForm.moneda,
-        valor_dolar: productForm.moneda === 'USD' ? valorDolar : null,
-        total,
-      };
+      // Crear registros de compra para cada producto con el mismo order_id
+      for (const item of productItems) {
+        const data: PurchaseProductInsert & { order_id?: string } = {
+          tenant_id: tenantId,
+          fecha,
+          producto: item.producto,
+          cantidad: item.cantidad,
+          precio: item.precioARS,
+          proveedor,
+          moneda: item.moneda,
+          valor_dolar: item.moneda === 'USD' ? item.valor_dolar : null,
+          total: item.total,
+          order_id: orderId,
+        } as any;
 
-      if (editingProduct) {
-        await supabase.from('purchases_products').update(data).eq('id', editingProduct.id);
-      } else {
         await supabase.from('purchases_products').insert(data);
         
         // Actualizar stock automáticamente
-        await updateStockOnPurchase('product', productForm.producto, cantidad, precioARS, productForm.moneda, valorDolar);
+        await updateStockOnPurchase('product', item.producto, item.cantidad, item.precioARS, item.moneda, item.valor_dolar);
       }
 
       resetProductForm();
@@ -343,6 +497,7 @@ export function PurchasesModule() {
       moneda: 'ARS',
       valor_dolar: '',
     });
+    setMaterialItems([]);
     setEditingMaterial(null);
     setShowMaterialForm(false);
   };
@@ -357,6 +512,7 @@ export function PurchasesModule() {
       moneda: 'ARS',
       valor_dolar: '',
     });
+    setProductItems([]);
     setEditingProduct(null);
     setShowProductForm(false);
   };
@@ -493,12 +649,14 @@ export function PurchasesModule() {
                     </div>
                   </div>
                   <div className="relative">
-                    <label className="block text-sm font-medium mb-1">Material *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Material {materialItems.length === 0 ? '*' : ''}
+                    </label>
                     <div className="relative">
                       <input
                         ref={materialInputRef}
                         type="text"
-                        required
+                        required={materialItems.length === 0}
                         value={materialForm.material}
                         onChange={(e) => {
                           setMaterialForm({ ...materialForm, material: e.target.value });
@@ -538,22 +696,26 @@ export function PurchasesModule() {
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Cantidad (kg) *</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Cantidad (kg) {materialItems.length === 0 ? '*' : ''}
+                      </label>
                       <input
                         type="number"
                         step="0.01"
-                        required
+                        required={materialItems.length === 0}
                         value={materialForm.cantidad}
                         onChange={(e) => setMaterialForm({ ...materialForm, cantidad: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Precio unitario *</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Precio unitario {materialItems.length === 0 ? '*' : ''}
+                      </label>
                       <input
                         type="number"
                         step="0.01"
-                        required
+                        required={materialItems.length === 0}
                         value={materialForm.precio}
                         onChange={(e) => setMaterialForm({ ...materialForm, precio: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md"
@@ -573,24 +735,95 @@ export function PurchasesModule() {
                   </div>
                   {materialForm.moneda === 'USD' && (
                     <div>
-                      <label className="block text-sm font-medium mb-1">Valor del Dólar *</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Valor del Dólar {materialItems.length === 0 ? '*' : ''}
+                      </label>
                       <input
                         type="number"
                         step="0.01"
-                        required
+                        required={materialItems.length === 0}
                         value={materialForm.valor_dolar}
                         onChange={(e) => setMaterialForm({ ...materialForm, valor_dolar: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md"
                       />
                     </div>
                   )}
+
+                  {/* Botón Agregar Material */}
+                  {materialForm.material && materialForm.cantidad && materialForm.precio && (
+                    <button
+                      type="button"
+                      onClick={handleAddMaterial}
+                      className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center space-x-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Agregar Material a la Compra</span>
+                    </button>
+                  )}
+
+                  {/* Lista de Materiales Agregados */}
+                  {materialItems.length > 0 && (
+                    <div className="border border-gray-300 rounded-md p-4">
+                      <h4 className="text-sm font-semibold mb-3">Materiales en la Compra ({materialItems.length})</h4>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {materialItems.map((item) => (
+                          <div key={item.id} className="bg-gray-50 p-3 rounded-md flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="font-medium">{item.material}</div>
+                              <div className="text-sm text-gray-600 mt-1">
+                                Cantidad: {item.cantidad.toFixed(2)} kg | Precio: ${item.precio.toFixed(2)} ({item.moneda}) | Total: ${item.total.toFixed(2)}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMaterial(item.id)}
+                              className="ml-2 text-red-600 hover:text-red-900"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-gray-300">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Total Compra:</span>
+                          <span className="text-lg font-bold text-blue-600">
+                            ${materialItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mensaje informativo si ya hay materiales */}
+                  {materialItems.length > 0 && !materialForm.material && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                      <p className="text-sm text-blue-800">
+                        ✓ Tienes {materialItems.length} material{materialItems.length > 1 ? 'es' : ''} agregado{materialItems.length > 1 ? 's' : ''}. Puedes agregar más materiales o hacer clic en "Guardar Compra" para finalizar.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex justify-end space-x-3">
                     <button type="button" onClick={resetMaterialForm} className="px-4 py-2 border rounded-md">
                       Cancelar
                     </button>
-                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md">
-                      Guardar
-                    </button>
+                    {materialItems.length > 0 ? (
+                      <button 
+                        type="submit" 
+                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-lg"
+                      >
+                        ✓ Guardar Compra ({materialItems.length} material{materialItems.length > 1 ? 'es' : ''})
+                      </button>
+                    ) : (
+                      <button 
+                        type="button" 
+                        disabled
+                        className="px-4 py-2 bg-gray-400 text-gray-200 rounded-md cursor-not-allowed"
+                      >
+                        Agregue al menos un material
+                      </button>
+                    )}
                   </div>
                 </form>
               </div>
@@ -619,37 +852,144 @@ export function PurchasesModule() {
                     </td>
                   </tr>
                 ) : (
-                  materialPurchases.map((purchase) => (
-                    <tr key={purchase.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {new Date(purchase.fecha).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.material}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.cantidad.toFixed(2)} kg</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        ${purchase.precio.toFixed(2)} ({purchase.moneda})
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.proveedor}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
-                        ${purchase.total.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        {canDelete('fabinsa-purchases') && (
-                          <button
-                            onClick={async () => {
-                              if (confirm('¿Eliminar esta compra?')) {
-                                await supabase.from('purchases_materials').delete().eq('id', purchase.id);
-                                loadPurchases();
-                              }
-                            }}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  (() => {
+                    // Agrupar compras por order_id
+                    const groupedPurchases = materialPurchases.reduce((acc: any, purchase: any) => {
+                      if (purchase.order_id) {
+                        if (!acc[purchase.order_id]) {
+                          acc[purchase.order_id] = {
+                            order_id: purchase.order_id,
+                            fecha: purchase.fecha,
+                            proveedor: purchase.proveedor,
+                            items: [],
+                            total_compra: 0,
+                          };
+                        }
+                        acc[purchase.order_id].items.push(purchase);
+                        acc[purchase.order_id].total_compra += purchase.total;
+                      } else {
+                        // Compras sin order_id (antiguas) se muestran individualmente
+                        if (!acc.individual) acc.individual = [];
+                        acc.individual.push(purchase);
+                      }
+                      return acc;
+                    }, {});
+
+                    const orders = Object.values(groupedPurchases).filter((g: any) => g.order_id);
+                    const individualPurchases = groupedPurchases.individual || [];
+
+                    return (
+                      <>
+                        {/* Mostrar órdenes agrupadas */}
+                        {orders.map((order: any) => {
+                          const isExpanded = expandedMaterialOrders.has(order.order_id);
+                          return (
+                            <React.Fragment key={order.order_id}>
+                              {/* Fila resumen de la orden */}
+                              <tr className="bg-blue-50 hover:bg-blue-100">
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900">
+                                  {new Date(order.fecha).toLocaleDateString('es-AR')}
+                                </td>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900" colSpan={2}>
+                                  <button
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedMaterialOrders);
+                                      if (isExpanded) {
+                                        newExpanded.delete(order.order_id);
+                                      } else {
+                                        newExpanded.add(order.order_id);
+                                      }
+                                      setExpandedMaterialOrders(newExpanded);
+                                    }}
+                                    className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
+                                  >
+                                    <span>Orden con {order.items.length} material{order.items.length > 1 ? 'es' : ''}</span>
+                                    <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                  </button>
+                                </td>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900"></td>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900">{order.proveedor}</td>
+                                <td className="px-6 py-3 text-sm font-semibold text-blue-600">
+                                  ${order.total_compra.toFixed(2)}
+                                </td>
+                                <td className="px-6 py-3 text-right text-sm">
+                                  {canDelete('fabinsa-purchases') && (
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm(`¿Eliminar toda la orden con ${order.items.length} material${order.items.length > 1 ? 'es' : ''}?`)) {
+                                          await supabase.from('purchases_materials').delete().eq('order_id', order.order_id);
+                                          loadPurchases();
+                                        }
+                                      }}
+                                      className="text-red-600 hover:text-red-900"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                              {/* Filas de materiales (si está expandida) */}
+                              {isExpanded && order.items.map((item: any) => {
+                                // El precio guardado es el precio unitario en ARS
+                                // Si la moneda original era USD, necesitamos convertir de vuelta a USD
+                                const precioUnitarioMostrar = item.moneda === 'USD' && item.valor_dolar 
+                                  ? item.precio / item.valor_dolar 
+                                  : item.precio;
+                                
+                                return (
+                                  <tr key={item.id} className="bg-gray-50 hover:bg-gray-100">
+                                    <td className="px-6 py-2 text-sm text-gray-600"></td>
+                                    <td className="px-6 py-2 text-sm text-gray-900 pl-8">
+                                      • {item.material}
+                                    </td>
+                                    <td className="px-6 py-2 text-sm text-gray-900">{item.cantidad.toFixed(2)} kg</td>
+                                    <td className="px-6 py-2 text-sm text-gray-900">
+                                      ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
+                                    </td>
+                                    <td className="px-6 py-2 text-sm text-gray-600"></td>
+                                    <td className="px-6 py-2 text-sm text-gray-900">${item.total.toFixed(2)}</td>
+                                    <td className="px-6 py-2 text-sm"></td>
+                                  </tr>
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        })}
+                        {/* Mostrar compras individuales (sin order_id) */}
+                        {individualPurchases.map((purchase: any) => (
+                          <tr key={purchase.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {new Date(purchase.fecha).toLocaleDateString('es-AR')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.material}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.cantidad.toFixed(2)} kg</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.proveedor}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                              ${purchase.total.toFixed(2)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                              {canDelete('fabinsa-purchases') && (
+                                <button
+                                  onClick={async () => {
+                                    if (confirm('¿Eliminar esta compra?')) {
+                                      await supabase.from('purchases_materials').delete().eq('id', purchase.id);
+                                      loadPurchases();
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </>
+                    );
+                  })()
                 )}
               </tbody>
             </table>
@@ -748,10 +1088,12 @@ export function PurchasesModule() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Producto *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Producto {productItems.length === 0 ? '*' : ''}
+                    </label>
                     <input
                       type="text"
-                      required
+                      required={productItems.length === 0}
                       value={productForm.producto}
                       onChange={(e) => setProductForm({ ...productForm, producto: e.target.value })}
                       className="w-full px-3 py-2 border rounded-md"
@@ -759,21 +1101,25 @@ export function PurchasesModule() {
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Cantidad *</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Cantidad {productItems.length === 0 ? '*' : ''}
+                      </label>
                       <input
                         type="number"
-                        required
+                        required={productItems.length === 0}
                         value={productForm.cantidad}
                         onChange={(e) => setProductForm({ ...productForm, cantidad: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Precio unitario *</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Precio unitario {productItems.length === 0 ? '*' : ''}
+                      </label>
                       <input
                         type="number"
                         step="0.01"
-                        required
+                        required={productItems.length === 0}
                         value={productForm.precio}
                         onChange={(e) => setProductForm({ ...productForm, precio: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md"
@@ -793,24 +1139,95 @@ export function PurchasesModule() {
                   </div>
                   {productForm.moneda === 'USD' && (
                     <div>
-                      <label className="block text-sm font-medium mb-1">Valor del Dólar *</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Valor del Dólar {productItems.length === 0 ? '*' : ''}
+                      </label>
                       <input
                         type="number"
                         step="0.01"
-                        required
+                        required={productItems.length === 0}
                         value={productForm.valor_dolar}
                         onChange={(e) => setProductForm({ ...productForm, valor_dolar: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md"
                       />
                     </div>
                   )}
+
+                  {/* Botón Agregar Producto */}
+                  {productForm.producto && productForm.cantidad && productForm.precio && (
+                    <button
+                      type="button"
+                      onClick={handleAddProduct}
+                      className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center space-x-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Agregar Producto a la Compra</span>
+                    </button>
+                  )}
+
+                  {/* Lista de Productos Agregados */}
+                  {productItems.length > 0 && (
+                    <div className="border border-gray-300 rounded-md p-4">
+                      <h4 className="text-sm font-semibold mb-3">Productos en la Compra ({productItems.length})</h4>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {productItems.map((item) => (
+                          <div key={item.id} className="bg-gray-50 p-3 rounded-md flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="font-medium">{item.producto}</div>
+                              <div className="text-sm text-gray-600 mt-1">
+                                Cantidad: {item.cantidad} u | Precio: ${item.precio.toFixed(2)} ({item.moneda}) | Total: ${item.total.toFixed(2)}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveProduct(item.id)}
+                              className="ml-2 text-red-600 hover:text-red-900"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-gray-300">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Total Compra:</span>
+                          <span className="text-lg font-bold text-blue-600">
+                            ${productItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mensaje informativo si ya hay productos */}
+                  {productItems.length > 0 && !productForm.producto && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                      <p className="text-sm text-blue-800">
+                        ✓ Tienes {productItems.length} producto{productItems.length > 1 ? 's' : ''} agregado{productItems.length > 1 ? 's' : ''}. Puedes agregar más productos o hacer clic en "Guardar Compra" para finalizar.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex justify-end space-x-3">
                     <button type="button" onClick={resetProductForm} className="px-4 py-2 border rounded-md">
                       Cancelar
                     </button>
-                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md">
-                      Guardar
-                    </button>
+                    {productItems.length > 0 ? (
+                      <button 
+                        type="submit" 
+                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-lg"
+                      >
+                        ✓ Guardar Compra ({productItems.length} producto{productItems.length > 1 ? 's' : ''})
+                      </button>
+                    ) : (
+                      <button 
+                        type="button" 
+                        disabled
+                        className="px-4 py-2 bg-gray-400 text-gray-200 rounded-md cursor-not-allowed"
+                      >
+                        Agregue al menos un producto
+                      </button>
+                    )}
                   </div>
                 </form>
               </div>
@@ -839,37 +1256,144 @@ export function PurchasesModule() {
                     </td>
                   </tr>
                 ) : (
-                  productPurchases.map((purchase) => (
-                    <tr key={purchase.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {new Date(purchase.fecha).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.producto}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.cantidad} u</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        ${purchase.precio.toFixed(2)} ({purchase.moneda})
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.proveedor}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
-                        ${purchase.total.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        {canDelete('fabinsa-purchases') && (
-                          <button
-                            onClick={async () => {
-                              if (confirm('¿Eliminar esta compra?')) {
-                                await supabase.from('purchases_products').delete().eq('id', purchase.id);
-                                loadPurchases();
-                              }
-                            }}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  (() => {
+                    // Agrupar compras por order_id
+                    const groupedPurchases = productPurchases.reduce((acc: any, purchase: any) => {
+                      if (purchase.order_id) {
+                        if (!acc[purchase.order_id]) {
+                          acc[purchase.order_id] = {
+                            order_id: purchase.order_id,
+                            fecha: purchase.fecha,
+                            proveedor: purchase.proveedor,
+                            items: [],
+                            total_compra: 0,
+                          };
+                        }
+                        acc[purchase.order_id].items.push(purchase);
+                        acc[purchase.order_id].total_compra += purchase.total;
+                      } else {
+                        // Compras sin order_id (antiguas) se muestran individualmente
+                        if (!acc.individual) acc.individual = [];
+                        acc.individual.push(purchase);
+                      }
+                      return acc;
+                    }, {});
+
+                    const orders = Object.values(groupedPurchases).filter((g: any) => g.order_id);
+                    const individualPurchases = groupedPurchases.individual || [];
+
+                    return (
+                      <>
+                        {/* Mostrar órdenes agrupadas */}
+                        {orders.map((order: any) => {
+                          const isExpanded = expandedProductOrders.has(order.order_id);
+                          return (
+                            <React.Fragment key={order.order_id}>
+                              {/* Fila resumen de la orden */}
+                              <tr className="bg-blue-50 hover:bg-blue-100">
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900">
+                                  {new Date(order.fecha).toLocaleDateString('es-AR')}
+                                </td>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900" colSpan={2}>
+                                  <button
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedProductOrders);
+                                      if (isExpanded) {
+                                        newExpanded.delete(order.order_id);
+                                      } else {
+                                        newExpanded.add(order.order_id);
+                                      }
+                                      setExpandedProductOrders(newExpanded);
+                                    }}
+                                    className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
+                                  >
+                                    <span>Orden con {order.items.length} producto{order.items.length > 1 ? 's' : ''}</span>
+                                    <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                  </button>
+                                </td>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900"></td>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900">{order.proveedor}</td>
+                                <td className="px-6 py-3 text-sm font-semibold text-blue-600">
+                                  ${order.total_compra.toFixed(2)}
+                                </td>
+                                <td className="px-6 py-3 text-right text-sm">
+                                  {canDelete('fabinsa-purchases') && (
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm(`¿Eliminar toda la orden con ${order.items.length} producto${order.items.length > 1 ? 's' : ''}?`)) {
+                                          await supabase.from('purchases_products').delete().eq('order_id', order.order_id);
+                                          loadPurchases();
+                                        }
+                                      }}
+                                      className="text-red-600 hover:text-red-900"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                              {/* Filas de productos (si está expandida) */}
+                              {isExpanded && order.items.map((item: any) => {
+                                // El precio guardado es el precio unitario en ARS
+                                // Si la moneda original era USD, necesitamos convertir de vuelta a USD
+                                const precioUnitarioMostrar = item.moneda === 'USD' && item.valor_dolar 
+                                  ? item.precio / item.valor_dolar 
+                                  : item.precio;
+                                
+                                return (
+                                  <tr key={item.id} className="bg-gray-50 hover:bg-gray-100">
+                                    <td className="px-6 py-2 text-sm text-gray-600"></td>
+                                    <td className="px-6 py-2 text-sm text-gray-900 pl-8">
+                                      • {item.producto}
+                                    </td>
+                                    <td className="px-6 py-2 text-sm text-gray-900">{item.cantidad} u</td>
+                                    <td className="px-6 py-2 text-sm text-gray-900">
+                                      ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
+                                    </td>
+                                    <td className="px-6 py-2 text-sm text-gray-600"></td>
+                                    <td className="px-6 py-2 text-sm text-gray-900">${item.total.toFixed(2)}</td>
+                                    <td className="px-6 py-2 text-sm"></td>
+                                  </tr>
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        })}
+                        {/* Mostrar compras individuales (sin order_id) */}
+                        {individualPurchases.map((purchase: any) => (
+                          <tr key={purchase.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {new Date(purchase.fecha).toLocaleDateString('es-AR')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.producto}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.cantidad} u</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.proveedor}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                              ${purchase.total.toFixed(2)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                              {canDelete('fabinsa-purchases') && (
+                                <button
+                                  onClick={async () => {
+                                    if (confirm('¿Eliminar esta compra?')) {
+                                      await supabase.from('purchases_products').delete().eq('id', purchase.id);
+                                      loadPurchases();
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </>
+                    );
+                  })()
                 )}
               </tbody>
             </table>

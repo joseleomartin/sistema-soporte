@@ -1602,26 +1602,60 @@ def extract():
             
             # Ejecutar la extracción
             logger.info(f"Extrayendo datos de {banco_id}...")
+            df = None
             try:
-                df = extractor_function(str(pdf_path), str(excel_path))
+                # Llamar a la función extractora
+                result = extractor_function(str(pdf_path), str(excel_path))
+                
+                # Verificar el resultado
+                if result is None:
+                    logger.warning(f"El extractor retornó None para {banco_id}")
+                    df = pd.DataFrame()
+                elif isinstance(result, pd.DataFrame):
+                    df = result
+                else:
+                    logger.warning(f"El extractor retornó un tipo inesperado: {type(result)}")
+                    df = pd.DataFrame()
+                    
             except Exception as extract_error:
                 logger.error(f"Error durante la extracción: {str(extract_error)}", exc_info=True)
-                return jsonify({
-                    'success': False,
-                    'message': f'Error al extraer datos: {str(extract_error)}'
-                }), 500
+                # Crear un DataFrame vacío para evitar que el servidor falle completamente
+                df = pd.DataFrame()
+                # Intentar crear un Excel vacío
+                try:
+                    if not excel_path.exists():
+                        df_vacio = pd.DataFrame(columns=['Fecha', 'Origen', 'Descripcion', 'Debito', 'Credito', 'Saldo', 'Movimiento'])
+                        df_vacio.to_excel(str(excel_path), index=False)
+                        logger.info(f"Excel vacío creado debido al error")
+                except Exception as e:
+                    logger.error(f"Error creando Excel vacío: {str(e)}")
             
             # Verificar que se generó el archivo Excel
             if not excel_path.exists():
                 logger.warning(f"El archivo Excel no se generó en: {excel_path}")
-                return jsonify({
-                    'success': False,
-                    'message': 'No se pudo generar el archivo Excel'
-                }), 500
+                # Intentar crear un Excel vacío
+                try:
+                    df_vacio = pd.DataFrame(columns=['Fecha', 'Origen', 'Descripcion', 'Debito', 'Credito', 'Saldo', 'Movimiento'])
+                    df_vacio.to_excel(str(excel_path), index=False)
+                    logger.info(f"Excel vacío creado como fallback")
+                except Exception as e:
+                    logger.error(f"Error creando Excel vacío: {str(e)}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'No se pudo generar el archivo Excel'
+                    }), 500
             
             # Obtener información del resultado
-            rows = len(df) if df is not None and hasattr(df, '__len__') else 0
+            rows = len(df) if df is not None and hasattr(df, '__len__') and not df.empty else 0
             logger.info(f"Extracción completada: {rows} filas extraídas")
+            
+            # Si no se extrajeron datos, informar al usuario
+            if rows == 0:
+                logger.warning(f"No se extrajeron datos del PDF de {banco_id}")
+                return jsonify({
+                    'success': False,
+                    'message': 'No se pudieron extraer datos del PDF. Verifica que el formato sea correcto.'
+                }), 200
 
             base_url = request.host_url.rstrip('/')
 
