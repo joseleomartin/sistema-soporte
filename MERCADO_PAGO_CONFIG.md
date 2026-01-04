@@ -1,13 +1,35 @@
 # 💳 Configuración de Mercado Pago
 
-## 🔑 Credenciales de Testing
+## 🔑 Configuración de Credenciales
 
-Las siguientes credenciales están configuradas para **testing**:
+Las credenciales de Mercado Pago se configuran mediante **variables de entorno** para mayor seguridad.
 
+### Variables de Entorno Requeridas
+
+- `VITE_MERCADO_PAGO_PUBLIC_KEY` - Public Key de Mercado Pago
+- `VITE_MERCADO_PAGO_ACCESS_TOKEN` - Access Token de Mercado Pago
+
+### Configuración en Vercel
+
+1. Ve a tu proyecto en [Vercel Dashboard](https://vercel.com/dashboard)
+2. Selecciona tu proyecto
+3. Ve a **Settings** > **Environment Variables**
+4. Agrega las siguientes variables:
+   - **Key**: `VITE_MERCADO_PAGO_PUBLIC_KEY`
+     **Value**: Tu Public Key de Mercado Pago (ej: `TEST-66c930bd-cd83-4f1f-9b2a-e4e61ab8d34a` para testing)
+   - **Key**: `VITE_MERCADO_PAGO_ACCESS_TOKEN`
+     **Value**: Tu Access Token de Mercado Pago (ej: `TEST-4695715759543089-010316-f6747241113849c50f351eda0b12b7b8-586133200` para testing)
+5. Selecciona los entornos donde aplicar (Production, Preview, Development)
+6. Haz clic en **Save**
+7. **Re-deploy** tu aplicación para que los cambios surtan efecto
+
+### Valores por Defecto (Testing)
+
+Si las variables de entorno no están configuradas, el sistema usará credenciales de testing por defecto:
 - **Public Key**: `TEST-66c930bd-cd83-4f1f-9b2a-e4e61ab8d34a`
 - **Access Token**: `TEST-4695715759543089-010316-f6747241113849c50f351eda0b12b7b8-586133200`
 
-⚠️ **IMPORTANTE**: Estas credenciales están hardcodeadas en `project/src/lib/mercadoPago.ts` para facilitar el testing.
+⚠️ **IMPORTANTE**: En producción, siempre configura las variables de entorno con tus credenciales reales.
 
 ## ⚠️ IMPORTANTE: Seguridad en Producción
 
