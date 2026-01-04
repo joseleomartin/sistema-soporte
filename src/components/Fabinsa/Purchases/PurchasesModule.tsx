@@ -520,7 +520,7 @@ export function PurchasesModule() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Cargando compras...</div>
+        <div className="text-gray-500 dark:text-gray-400">Cargando compras...</div>
       </div>
     );
   }
@@ -528,16 +528,16 @@ export function PurchasesModule() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 -mx-6 -mt-6 mb-6">
+      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
         <div className="flex items-center space-x-3 mb-2">
           <TrendingUp className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Compras</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Compras</h1>
         </div>
-        <p className="text-sm text-gray-600">Registro de compras de materia prima y productos</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Registro de compras de materia prima y productos</p>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 mb-6">
+      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 mb-6">
         <div className="flex space-x-1">
           {[
             { id: 'materials' as TabType, label: 'Compras de Materia Prima' },
@@ -548,8 +548,8 @@ export function PurchasesModule() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               {tab.label}
@@ -562,7 +562,7 @@ export function PurchasesModule() {
       {activeTab === 'materials' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Compras de Materia Prima</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Compras de Materia Prima</h2>
             {canCreate('fabinsa-purchases') && (
               <button
                 onClick={() => setShowMaterialForm(true)}
@@ -577,29 +577,29 @@ export function PurchasesModule() {
           {/* Material Purchase Form */}
           {showMaterialForm && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {editingMaterial ? 'Editar Compra' : 'Nueva Compra de Materia Prima'}
                   </h3>
-                  <button onClick={resetMaterialForm} className="text-gray-500">
+                  <button onClick={resetMaterialForm} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
                 <form onSubmit={handleMaterialSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Fecha *</label>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Fecha *</label>
                       <input
                         type="date"
                         required
                         value={materialForm.fecha}
                         onChange={(e) => setMaterialForm({ ...materialForm, fecha: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     <div className="relative">
-                      <label className="block text-sm font-medium mb-1">Proveedor *</label>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Proveedor *</label>
                       <div className="relative">
                         <input
                           ref={supplierInputRefMaterial}
@@ -618,12 +618,12 @@ export function PurchasesModule() {
                           onBlur={() => {
                             setTimeout(() => setShowSupplierDropdownMaterial(false), 200);
                           }}
-                          className="w-full px-3 py-2 pr-8 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="Escribe o selecciona un proveedor"
                         />
-                        <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
                         {showSupplierDropdownMaterial && getFilteredSuppliers(materialForm.proveedor).length > 0 && (
-                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
                             {getFilteredSuppliers(materialForm.proveedor).map((supplier) => (
                               <button
                                 key={supplier.id}
@@ -632,14 +632,14 @@ export function PurchasesModule() {
                                   setMaterialForm({ ...materialForm, proveedor: supplier.nombre });
                                   setShowSupplierDropdownMaterial(false);
                                 }}
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-600 focus:bg-blue-50 dark:focus:bg-slate-600 focus:outline-none text-gray-900 dark:text-white"
                               >
                                 <div className="font-medium">{supplier.nombre}</div>
                                 {supplier.razon_social && (
-                                  <div className="text-sm text-gray-500">{supplier.razon_social}</div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400">{supplier.razon_social}</div>
                                 )}
                                 {supplier.cuit && (
-                                  <div className="text-xs text-gray-400">CUIT: {supplier.cuit}</div>
+                                  <div className="text-xs text-gray-400 dark:text-gray-500">CUIT: {supplier.cuit}</div>
                                 )}
                               </button>
                             ))}
@@ -649,7 +649,7 @@ export function PurchasesModule() {
                     </div>
                   </div>
                   <div className="relative">
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                       Material {materialItems.length === 0 ? '*' : ''}
                     </label>
                     <div className="relative">
@@ -670,12 +670,12 @@ export function PurchasesModule() {
                         onBlur={() => {
                           setTimeout(() => setShowMaterialDropdown(false), 200);
                         }}
-                        className="w-full px-3 py-2 pr-8 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Selecciona o escribe un material"
                       />
-                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
                       {showMaterialDropdown && getFilteredMaterials(materialForm.material).length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
                           {getFilteredMaterials(materialForm.material).map((material) => (
                             <button
                               key={material.id}
@@ -684,10 +684,10 @@ export function PurchasesModule() {
                                 setMaterialForm({ ...materialForm, material: material.material });
                                 setShowMaterialDropdown(false);
                               }}
-                              className="w-full text-left px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                              className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-600 focus:bg-blue-50 dark:focus:bg-slate-600 focus:outline-none text-gray-900 dark:text-white"
                             >
                               <div className="font-medium">{material.material}</div>
-                              <div className="text-sm text-gray-500">Stock: {material.kg.toFixed(2)} kg</div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">Stock: {material.kg.toFixed(2)} kg</div>
                             </button>
                           ))}
                         </div>
@@ -696,7 +696,7 @@ export function PurchasesModule() {
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         Cantidad (kg) {materialItems.length === 0 ? '*' : ''}
                       </label>
                       <input
@@ -705,11 +705,11 @@ export function PurchasesModule() {
                         required={materialItems.length === 0}
                         value={materialForm.cantidad}
                         onChange={(e) => setMaterialForm({ ...materialForm, cantidad: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         Precio unitario {materialItems.length === 0 ? '*' : ''}
                       </label>
                       <input
@@ -718,15 +718,15 @@ export function PurchasesModule() {
                         required={materialItems.length === 0}
                         value={materialForm.precio}
                         onChange={(e) => setMaterialForm({ ...materialForm, precio: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Moneda</label>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Moneda</label>
                       <select
                         value={materialForm.moneda}
                         onChange={(e) => setMaterialForm({ ...materialForm, moneda: e.target.value as 'ARS' | 'USD' })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       >
                         <option value="ARS">ARS</option>
                         <option value="USD">USD</option>
@@ -735,7 +735,7 @@ export function PurchasesModule() {
                   </div>
                   {materialForm.moneda === 'USD' && (
                     <div>
-                      <label className="block text-sm font-medium mb-1">
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         Valor del Dólar {materialItems.length === 0 ? '*' : ''}
                       </label>
                       <input
@@ -744,7 +744,7 @@ export function PurchasesModule() {
                         required={materialItems.length === 0}
                         value={materialForm.valor_dolar}
                         onChange={(e) => setMaterialForm({ ...materialForm, valor_dolar: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
                   )}
@@ -763,31 +763,31 @@ export function PurchasesModule() {
 
                   {/* Lista de Materiales Agregados */}
                   {materialItems.length > 0 && (
-                    <div className="border border-gray-300 rounded-md p-4">
-                      <h4 className="text-sm font-semibold mb-3">Materiales en la Compra ({materialItems.length})</h4>
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-gray-50 dark:bg-slate-700">
+                      <h4 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">Materiales en la Compra ({materialItems.length})</h4>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {materialItems.map((item) => (
-                          <div key={item.id} className="bg-gray-50 p-3 rounded-md flex justify-between items-start">
+                          <div key={item.id} className="bg-white dark:bg-slate-600 p-3 rounded-md flex justify-between items-start">
                             <div className="flex-1">
-                              <div className="font-medium">{item.material}</div>
-                              <div className="text-sm text-gray-600 mt-1">
+                              <div className="font-medium text-gray-900 dark:text-white">{item.material}</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                 Cantidad: {item.cantidad.toFixed(2)} kg | Precio: ${item.precio.toFixed(2)} ({item.moneda}) | Total: ${item.total.toFixed(2)}
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveMaterial(item.id)}
-                              className="ml-2 text-red-600 hover:text-red-900"
+                              className="ml-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                             >
                               <X className="w-4 h-4" />
                             </button>
                           </div>
                         ))}
                       </div>
-                      <div className="mt-3 pt-3 border-t border-gray-300">
+                      <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Total Compra:</span>
-                          <span className="text-lg font-bold text-blue-600">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Total Compra:</span>
+                          <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                             ${materialItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
                           </span>
                         </div>
@@ -797,15 +797,15 @@ export function PurchasesModule() {
 
                   {/* Mensaje informativo si ya hay materiales */}
                   {materialItems.length > 0 && !materialForm.material && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                      <p className="text-sm text-blue-800">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                      <p className="text-sm text-blue-800 dark:text-blue-300">
                         ✓ Tienes {materialItems.length} material{materialItems.length > 1 ? 'es' : ''} agregado{materialItems.length > 1 ? 's' : ''}. Puedes agregar más materiales o hacer clic en "Guardar Compra" para finalizar.
                       </p>
                     </div>
                   )}
 
                   <div className="flex justify-end space-x-3">
-                    <button type="button" onClick={resetMaterialForm} className="px-4 py-2 border rounded-md">
+                    <button type="button" onClick={resetMaterialForm} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600">
                       Cancelar
                     </button>
                     {materialItems.length > 0 ? (
@@ -831,23 +831,23 @@ export function PurchasesModule() {
           )}
 
           {/* Material Purchases Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Material</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Fecha</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Material</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cantidad</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Precio</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Proveedor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {materialPurchases.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       No hay compras registradas
                     </td>
                   </tr>
@@ -886,11 +886,11 @@ export function PurchasesModule() {
                           return (
                             <React.Fragment key={order.order_id}>
                               {/* Fila resumen de la orden */}
-                              <tr className="bg-blue-50 hover:bg-blue-100">
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900">
+                              <tr className="bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30">
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">
                                   {new Date(order.fecha).toLocaleDateString('es-AR')}
                                 </td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900" colSpan={2}>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white" colSpan={2}>
                                   <button
                                     onClick={() => {
                                       const newExpanded = new Set(expandedMaterialOrders);
@@ -901,15 +901,15 @@ export function PurchasesModule() {
                                       }
                                       setExpandedMaterialOrders(newExpanded);
                                     }}
-                                    className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
+                                    className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                                   >
                                     <span>Orden con {order.items.length} material{order.items.length > 1 ? 'es' : ''}</span>
                                     <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                   </button>
                                 </td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900"></td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900">{order.proveedor}</td>
-                                <td className="px-6 py-3 text-sm font-semibold text-blue-600">
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white"></td>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{order.proveedor}</td>
+                                <td className="px-6 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400">
                                   ${order.total_compra.toFixed(2)}
                                 </td>
                                 <td className="px-6 py-3 text-right text-sm">
@@ -921,7 +921,7 @@ export function PurchasesModule() {
                                           loadPurchases();
                                         }
                                       }}
-                                      className="text-red-600 hover:text-red-900"
+                                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -937,17 +937,17 @@ export function PurchasesModule() {
                                   : item.precio;
                                 
                                 return (
-                                  <tr key={item.id} className="bg-gray-50 hover:bg-gray-100">
-                                    <td className="px-6 py-2 text-sm text-gray-600"></td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 pl-8">
+                                  <tr key={item.id} className="bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600">
+                                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
+                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white pl-8">
                                       • {item.material}
                                     </td>
-                                    <td className="px-6 py-2 text-sm text-gray-900">{item.cantidad.toFixed(2)} kg</td>
-                                    <td className="px-6 py-2 text-sm text-gray-900">
+                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">{item.cantidad.toFixed(2)} kg</td>
+                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
                                       ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
                                     </td>
-                                    <td className="px-6 py-2 text-sm text-gray-600"></td>
-                                    <td className="px-6 py-2 text-sm text-gray-900">${item.total.toFixed(2)}</td>
+                                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
+                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">${item.total.toFixed(2)}</td>
                                     <td className="px-6 py-2 text-sm"></td>
                                   </tr>
                                 );
@@ -957,17 +957,17 @@ export function PurchasesModule() {
                         })}
                         {/* Mostrar compras individuales (sin order_id) */}
                         {individualPurchases.map((purchase: any) => (
-                          <tr key={purchase.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                               {new Date(purchase.fecha).toLocaleDateString('es-AR')}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.material}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.cantidad.toFixed(2)} kg</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.material}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)} kg</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                               ${purchase.precio.toFixed(2)} ({purchase.moneda})
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.proveedor}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.proveedor}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
                               ${purchase.total.toFixed(2)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -979,7 +979,7 @@ export function PurchasesModule() {
                                       loadPurchases();
                                     }
                                   }}
-                                  className="text-red-600 hover:text-red-900"
+                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1001,7 +1001,7 @@ export function PurchasesModule() {
       {activeTab === 'products' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Compras de Productos</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Compras de Productos</h2>
             {canCreate('fabinsa-purchases') && (
               <button
                 onClick={() => setShowProductForm(true)}
@@ -1016,25 +1016,25 @@ export function PurchasesModule() {
           {/* Product Purchase Form */}
           {showProductForm && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {editingProduct ? 'Editar Compra' : 'Nueva Compra de Producto'}
                   </h3>
-                  <button onClick={resetProductForm} className="text-gray-500">
+                  <button onClick={resetProductForm} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
                 <form onSubmit={handleProductSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Fecha *</label>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Fecha *</label>
                       <input
                         type="date"
                         required
                         value={productForm.fecha}
                         onChange={(e) => setProductForm({ ...productForm, fecha: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     <div className="relative">
@@ -1057,12 +1057,12 @@ export function PurchasesModule() {
                           onBlur={() => {
                             setTimeout(() => setShowSupplierDropdownProduct(false), 200);
                           }}
-                          className="w-full px-3 py-2 pr-8 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="Escribe o selecciona un proveedor"
                         />
-                        <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
                         {showSupplierDropdownProduct && getFilteredSuppliers(productForm.proveedor).length > 0 && (
-                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
                             {getFilteredSuppliers(productForm.proveedor).map((supplier) => (
                               <button
                                 key={supplier.id}
@@ -1071,14 +1071,14 @@ export function PurchasesModule() {
                                   setProductForm({ ...productForm, proveedor: supplier.nombre });
                                   setShowSupplierDropdownProduct(false);
                                 }}
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-600 focus:bg-blue-50 dark:focus:bg-slate-600 focus:outline-none text-gray-900 dark:text-white"
                               >
                                 <div className="font-medium">{supplier.nombre}</div>
                                 {supplier.razon_social && (
-                                  <div className="text-sm text-gray-500">{supplier.razon_social}</div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400">{supplier.razon_social}</div>
                                 )}
                                 {supplier.cuit && (
-                                  <div className="text-xs text-gray-400">CUIT: {supplier.cuit}</div>
+                                  <div className="text-xs text-gray-400 dark:text-gray-500">CUIT: {supplier.cuit}</div>
                                 )}
                               </button>
                             ))}
@@ -1088,7 +1088,7 @@ export function PurchasesModule() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                       Producto {productItems.length === 0 ? '*' : ''}
                     </label>
                     <input
@@ -1096,12 +1096,12 @@ export function PurchasesModule() {
                       required={productItems.length === 0}
                       value={productForm.producto}
                       onChange={(e) => setProductForm({ ...productForm, producto: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                     />
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         Cantidad {productItems.length === 0 ? '*' : ''}
                       </label>
                       <input
@@ -1109,11 +1109,11 @@ export function PurchasesModule() {
                         required={productItems.length === 0}
                         value={productForm.cantidad}
                         onChange={(e) => setProductForm({ ...productForm, cantidad: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         Precio unitario {productItems.length === 0 ? '*' : ''}
                       </label>
                       <input
@@ -1122,15 +1122,15 @@ export function PurchasesModule() {
                         required={productItems.length === 0}
                         value={productForm.precio}
                         onChange={(e) => setProductForm({ ...productForm, precio: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Moneda</label>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Moneda</label>
                       <select
                         value={productForm.moneda}
                         onChange={(e) => setProductForm({ ...productForm, moneda: e.target.value as 'ARS' | 'USD' })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       >
                         <option value="ARS">ARS</option>
                         <option value="USD">USD</option>
@@ -1139,7 +1139,7 @@ export function PurchasesModule() {
                   </div>
                   {productForm.moneda === 'USD' && (
                     <div>
-                      <label className="block text-sm font-medium mb-1">
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         Valor del Dólar {productItems.length === 0 ? '*' : ''}
                       </label>
                       <input
@@ -1148,7 +1148,7 @@ export function PurchasesModule() {
                         required={productItems.length === 0}
                         value={productForm.valor_dolar}
                         onChange={(e) => setProductForm({ ...productForm, valor_dolar: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       />
                     </div>
                   )}
@@ -1167,31 +1167,31 @@ export function PurchasesModule() {
 
                   {/* Lista de Productos Agregados */}
                   {productItems.length > 0 && (
-                    <div className="border border-gray-300 rounded-md p-4">
-                      <h4 className="text-sm font-semibold mb-3">Productos en la Compra ({productItems.length})</h4>
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-gray-50 dark:bg-slate-700">
+                      <h4 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">Productos en la Compra ({productItems.length})</h4>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {productItems.map((item) => (
-                          <div key={item.id} className="bg-gray-50 p-3 rounded-md flex justify-between items-start">
+                          <div key={item.id} className="bg-white dark:bg-slate-600 p-3 rounded-md flex justify-between items-start">
                             <div className="flex-1">
-                              <div className="font-medium">{item.producto}</div>
-                              <div className="text-sm text-gray-600 mt-1">
+                              <div className="font-medium text-gray-900 dark:text-white">{item.producto}</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                 Cantidad: {item.cantidad} u | Precio: ${item.precio.toFixed(2)} ({item.moneda}) | Total: ${item.total.toFixed(2)}
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveProduct(item.id)}
-                              className="ml-2 text-red-600 hover:text-red-900"
+                              className="ml-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                             >
                               <X className="w-4 h-4" />
                             </button>
                           </div>
                         ))}
                       </div>
-                      <div className="mt-3 pt-3 border-t border-gray-300">
+                      <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Total Compra:</span>
-                          <span className="text-lg font-bold text-blue-600">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">Total Compra:</span>
+                          <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                             ${productItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
                           </span>
                         </div>
@@ -1201,15 +1201,15 @@ export function PurchasesModule() {
 
                   {/* Mensaje informativo si ya hay productos */}
                   {productItems.length > 0 && !productForm.producto && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                      <p className="text-sm text-blue-800">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                      <p className="text-sm text-blue-800 dark:text-blue-300">
                         ✓ Tienes {productItems.length} producto{productItems.length > 1 ? 's' : ''} agregado{productItems.length > 1 ? 's' : ''}. Puedes agregar más productos o hacer clic en "Guardar Compra" para finalizar.
                       </p>
                     </div>
                   )}
 
                   <div className="flex justify-end space-x-3">
-                    <button type="button" onClick={resetProductForm} className="px-4 py-2 border rounded-md">
+                    <button type="button" onClick={resetProductForm} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600">
                       Cancelar
                     </button>
                     {productItems.length > 0 ? (
@@ -1235,23 +1235,23 @@ export function PurchasesModule() {
           )}
 
           {/* Product Purchases Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Fecha</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Producto</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cantidad</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Precio</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Proveedor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {productPurchases.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       No hay compras registradas
                     </td>
                   </tr>
@@ -1290,11 +1290,11 @@ export function PurchasesModule() {
                           return (
                             <React.Fragment key={order.order_id}>
                               {/* Fila resumen de la orden */}
-                              <tr className="bg-blue-50 hover:bg-blue-100">
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900">
+                              <tr className="bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30">
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">
                                   {new Date(order.fecha).toLocaleDateString('es-AR')}
                                 </td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900" colSpan={2}>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white" colSpan={2}>
                                   <button
                                     onClick={() => {
                                       const newExpanded = new Set(expandedProductOrders);
@@ -1305,15 +1305,15 @@ export function PurchasesModule() {
                                       }
                                       setExpandedProductOrders(newExpanded);
                                     }}
-                                    className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
+                                    className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                                   >
                                     <span>Orden con {order.items.length} producto{order.items.length > 1 ? 's' : ''}</span>
                                     <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                   </button>
                                 </td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900"></td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900">{order.proveedor}</td>
-                                <td className="px-6 py-3 text-sm font-semibold text-blue-600">
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white"></td>
+                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{order.proveedor}</td>
+                                <td className="px-6 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400">
                                   ${order.total_compra.toFixed(2)}
                                 </td>
                                 <td className="px-6 py-3 text-right text-sm">
@@ -1325,7 +1325,7 @@ export function PurchasesModule() {
                                           loadPurchases();
                                         }
                                       }}
-                                      className="text-red-600 hover:text-red-900"
+                                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -1341,17 +1341,17 @@ export function PurchasesModule() {
                                   : item.precio;
                                 
                                 return (
-                                  <tr key={item.id} className="bg-gray-50 hover:bg-gray-100">
-                                    <td className="px-6 py-2 text-sm text-gray-600"></td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 pl-8">
+                                  <tr key={item.id} className="bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600">
+                                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
+                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white pl-8">
                                       • {item.producto}
                                     </td>
-                                    <td className="px-6 py-2 text-sm text-gray-900">{item.cantidad} u</td>
-                                    <td className="px-6 py-2 text-sm text-gray-900">
+                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">{item.cantidad} u</td>
+                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
                                       ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
                                     </td>
-                                    <td className="px-6 py-2 text-sm text-gray-600"></td>
-                                    <td className="px-6 py-2 text-sm text-gray-900">${item.total.toFixed(2)}</td>
+                                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
+                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">${item.total.toFixed(2)}</td>
                                     <td className="px-6 py-2 text-sm"></td>
                                   </tr>
                                 );
@@ -1361,17 +1361,17 @@ export function PurchasesModule() {
                         })}
                         {/* Mostrar compras individuales (sin order_id) */}
                         {individualPurchases.map((purchase: any) => (
-                          <tr key={purchase.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                               {new Date(purchase.fecha).toLocaleDateString('es-AR')}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.producto}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.cantidad} u</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.producto}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad} u</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                               ${purchase.precio.toFixed(2)} ({purchase.moneda})
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">{purchase.proveedor}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.proveedor}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
                               ${purchase.total.toFixed(2)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -1383,7 +1383,7 @@ export function PurchasesModule() {
                                       loadPurchases();
                                     }
                                   }}
-                                  className="text-red-600 hover:text-red-900"
+                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
