@@ -19,3 +19,4 @@ COMMENT ON COLUMN profiles.visible_modules IS 'Módulos visibles para el usuario
 -- ============================================
 
 
+

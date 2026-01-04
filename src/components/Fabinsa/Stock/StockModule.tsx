@@ -10,6 +10,7 @@ import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { parseProductName } from '../../../lib/fabinsaCalculations';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { BulkImportStockModal } from './BulkImportStockModal';
 
 type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
 type PurchaseProduct = Database['public']['Tables']['purchases_products']['Row'];
@@ -80,6 +81,9 @@ export function StockModule() {
   const [productPurchases, setProductPurchases] = useState<PurchaseProduct[]>([]);
   const [resaleInventoryMovements, setResaleInventoryMovements] = useState<InventoryMovement[]>([]);
   const [loadingResaleMovements, setLoadingResaleMovements] = useState(false);
+
+  // Modal de importación
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     if (tenantId) {
@@ -378,15 +382,28 @@ export function StockModule() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Materia Prima</h2>
-            {canCreate('fabinsa-stock') && (
-              <button
-                onClick={() => setShowMaterialForm(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Agregar</span>
-              </button>
-            )}
+            <div className="flex items-center space-x-2">
+              {canCreate('fabinsa-stock') && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowImportModal(true);
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Importar</span>
+                  </button>
+                  <button
+                    onClick={() => setShowMaterialForm(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Agregar</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Material Form */}
@@ -713,15 +730,28 @@ export function StockModule() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos Fabricados</h2>
-            {canCreate('fabinsa-stock') && (
-              <button
-                onClick={() => setShowProductForm(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Agregar</span>
-              </button>
-            )}
+            <div className="flex items-center space-x-2">
+              {canCreate('fabinsa-stock') && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowImportModal(true);
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Importar</span>
+                  </button>
+                  <button
+                    onClick={() => setShowProductForm(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Agregar</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Product Form */}
@@ -903,15 +933,28 @@ export function StockModule() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos de Reventa</h2>
-            {canCreate('fabinsa-stock') && (
-              <button
-                onClick={() => setShowResaleForm(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Agregar</span>
-              </button>
-            )}
+            <div className="flex items-center space-x-2">
+              {canCreate('fabinsa-stock') && (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowImportModal(true);
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Importar</span>
+                  </button>
+                  <button
+                    onClick={() => setShowResaleForm(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Agregar</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Resale Form */}
@@ -1281,6 +1324,18 @@ export function StockModule() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Modal de Importación */}
+      {showImportModal && (
+        <BulkImportStockModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            loadAllStock();
+            setShowImportModal(false);
+          }}
+          importType={activeTab === 'materials' ? 'materials' : activeTab === 'products' ? 'products' : 'resale'}
+        />
       )}
     </div>
   );

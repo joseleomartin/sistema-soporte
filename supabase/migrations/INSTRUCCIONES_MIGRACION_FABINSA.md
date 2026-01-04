@@ -128,3 +128,4 @@ Una vez ejecutada la migración:
 Si aún hay problemas, verifica en la consola del navegador (F12) el error específico.
 
 
+

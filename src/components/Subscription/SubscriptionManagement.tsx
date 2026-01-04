@@ -16,6 +16,7 @@ import {
   Building2,
   RefreshCw
 } from 'lucide-react';
+import { MercadoPagoCheckout } from './MercadoPagoCheckout';
 
 interface SubscriptionStatus {
   has_subscription: boolean;
@@ -43,12 +44,7 @@ export function SubscriptionManagement() {
   const [activating, setActivating] = useState(false);
   const [fixing, setFixing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-  useEffect(() => {
-    if (profile?.role === 'admin' && tenant?.id) {
-      loadSubscriptionStatus();
-    }
-  }, [profile?.role, tenant?.id]);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const loadSubscriptionStatus = async () => {
     if (!tenant?.id) return;
@@ -70,34 +66,98 @@ export function SubscriptionManagement() {
     }
   };
 
+  const handlePaymentCallback = async (status: string, paymentId: string | null, preferenceId: string | null) => {
+    if (!tenant?.id || !subscriptionStatus) return;
+
+    try {
+      if (status === 'success' || status === 'approved') {
+        // Pago exitoso, activar suscripción
+        const { error } = await supabase.rpc('activate_paid_subscription', {
+          p_tenant_id: tenant.id,
+          p_user_count: subscriptionStatus.current_users
+        });
+
+        if (error) throw error;
+
+        setMessage({ 
+          type: 'success', 
+          text: '¡Pago procesado exitosamente! Tu suscripción ha sido activada.' 
+        });
+        
+        // Limpiar parámetros de URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Recargar estado
+        await loadSubscriptionStatus();
+      } else if (status === 'failure' || status === 'rejected') {
+        setMessage({ 
+          type: 'error', 
+          text: 'El pago fue rechazado. Por favor, intenta nuevamente.' 
+        });
+        
+        // Limpiar parámetros de URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (status === 'pending') {
+        setMessage({ 
+          type: 'success', 
+          text: 'El pago está pendiente de confirmación. Te notificaremos cuando se procese.' 
+        });
+        
+        // Limpiar parámetros de URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    } catch (error: any) {
+      console.error('Error processing payment callback:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.message || 'Error al procesar el pago' 
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (profile?.role === 'admin' && tenant?.id) {
+      loadSubscriptionStatus();
+    }
+  }, [profile?.role, tenant?.id]);
+
+  // Manejar callback de Mercado Pago después de cargar el estado
+  useEffect(() => {
+    if (!subscriptionStatus || !tenant?.id) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    const paymentId = urlParams.get('payment_id');
+    const preferenceId = urlParams.get('preference_id');
+    
+    if (status && (paymentId || preferenceId)) {
+      handlePaymentCallback(status, paymentId, preferenceId);
+    }
+  }, [subscriptionStatus, tenant?.id]);
+
   const handleActivateSubscription = async () => {
     if (!tenant?.id || !subscriptionStatus) return;
+
+    // Validar que el precio sea válido
+    if (!subscriptionStatus.price_per_month || subscriptionStatus.price_per_month <= 0) {
+      setMessage({ 
+        type: 'error', 
+        text: 'El precio de la suscripción no es válido. Por favor, contacta al soporte.' 
+      });
+      return;
+    }
 
     setActivating(true);
     setMessage(null);
 
     try {
-      // En una implementación real, aquí iría la integración con el sistema de pagos
-      // Por ahora, simulamos la activación con la cantidad actual de usuarios
-      const { error } = await supabase.rpc('activate_paid_subscription', {
-        p_tenant_id: tenant.id,
-        p_user_count: subscriptionStatus.current_users
-      });
-
-      if (error) throw error;
-
-      setMessage({ 
-        type: 'success', 
-        text: 'Suscripción activada exitosamente. En producción, aquí se procesaría el pago.' 
-      });
-      
-      // Recargar estado
-      await loadSubscriptionStatus();
+      // Abrir checkout de Mercado Pago
+      setShowCheckout(true);
     } catch (error: any) {
-      console.error('Error activating subscription:', error);
+      console.error('Error opening checkout:', error);
       setMessage({ 
         type: 'error', 
-        text: error.message || 'Error al activar la suscripción' 
+        text: error.message || 'Error al abrir el checkout' 
       });
     } finally {
       setActivating(false);
@@ -524,8 +584,28 @@ export function SubscriptionManagement() {
           <li>• El precio de la suscripción se calcula según la cantidad de usuarios.</li>
           <li>• La suscripción se renueva automáticamente cada mes.</li>
           <li>• Puedes agregar más usuarios en cualquier momento, el precio se ajustará automáticamente.</li>
+          <li>• Los pagos se procesan de forma segura a través de Mercado Pago.</li>
         </ul>
       </div>
+
+      {/* Modal de Checkout de Mercado Pago */}
+      {showCheckout && subscriptionStatus && tenant?.id && (
+        <MercadoPagoCheckout
+          onClose={() => setShowCheckout(false)}
+          onSuccess={() => {
+            setShowCheckout(false);
+            loadSubscriptionStatus();
+          }}
+          params={{
+            title: `Suscripción Mensual - ${subscriptionStatus.current_users} usuario${subscriptionStatus.current_users !== 1 ? 's' : ''}`,
+            description: `Suscripción mensual para ${subscriptionStatus.current_users} usuario${subscriptionStatus.current_users !== 1 ? 's' : ''}`,
+            quantity: 1,
+            unit_price: subscriptionStatus.price_per_month,
+            tenant_id: tenant.id,
+            user_count: subscriptionStatus.current_users,
+          }}
+        />
+      )}
     </div>
   );
 }

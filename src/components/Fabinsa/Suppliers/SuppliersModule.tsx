@@ -13,6 +13,7 @@ import { GoogleDriveFolderSelector } from '../../Forums/GoogleDriveFolderSelecto
 import { GoogleDriveViewer } from '../../Forums/GoogleDriveViewer';
 import { DriveFolder } from '../../../lib/googleDriveAPI';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { BulkImportSuppliersModal } from './BulkImportSuppliersModal';
 
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
 type SupplierInsert = Database['public']['Tables']['suppliers']['Insert'];
@@ -51,6 +52,7 @@ export function SuppliersModule() {
   const [driveFolderLink, setDriveFolderLink] = useState<string | null>(null);
   const [loadingDriveMapping, setLoadingDriveMapping] = useState(false);
   const [activeTab, setActiveTab] = useState<'files' | 'drive'>('files');
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Modal de historial de pedidos
   const [showOrdersModal, setShowOrdersModal] = useState(false);
@@ -434,13 +436,22 @@ export function SuppliersModule() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Proveedores</h2>
         {canCreate('fabinsa-suppliers') && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nuevo Proveedor</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Importar</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Proveedor</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -1105,6 +1116,17 @@ export function SuppliersModule() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Importación */}
+      {showImportModal && (
+        <BulkImportSuppliersModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            loadSuppliers();
+            setShowImportModal(false);
+          }}
+        />
       )}
     </div>
   );

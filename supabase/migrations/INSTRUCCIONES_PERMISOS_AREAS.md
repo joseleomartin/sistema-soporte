@@ -111,3 +111,4 @@ function MyComponent() {
 - Los permisos se actualizan en tiempo real cuando se modifican en la configuración del área
 
 
+

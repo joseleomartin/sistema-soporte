@@ -14,6 +14,7 @@ import { GoogleDriveFolderSelector } from '../../Forums/GoogleDriveFolderSelecto
 import { GoogleDriveViewer } from '../../Forums/GoogleDriveViewer';
 import { DriveFolder } from '../../../lib/googleDriveAPI';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { BulkImportClientsModal } from './BulkImportClientsModal';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
@@ -50,6 +51,7 @@ export function ClientsModule() {
   const [driveFolderLink, setDriveFolderLink] = useState<string | null>(null);
   const [loadingDriveMapping, setLoadingDriveMapping] = useState(false);
   const [activeTab, setActiveTab] = useState<'files' | 'drive'>('files');
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -389,13 +391,22 @@ export function ClientsModule() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Clientes</h2>
         {canCreate('forums') && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nuevo Cliente</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Importar</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Cliente</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -843,6 +854,17 @@ export function ClientsModule() {
           </table>
         </div>
       </div>
+
+      {/* Modal de Importación */}
+      {showImportModal && (
+        <BulkImportClientsModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            loadClients();
+            setShowImportModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -158,3 +158,4 @@ Maneja tenant_id desde metadata o asigna el tenant por defecto (emagroup).
 Versión final robusta con manejo completo de errores.';
 
 
+

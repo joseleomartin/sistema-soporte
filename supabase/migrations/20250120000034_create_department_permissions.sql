@@ -96,3 +96,4 @@ COMMENT ON COLUMN department_permissions.can_delete IS 'Permite eliminar registr
 -- ============================================
 
 
+

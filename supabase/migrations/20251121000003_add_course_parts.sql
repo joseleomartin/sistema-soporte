@@ -99,3 +99,4 @@ COMMENT ON COLUMN course_parts.description IS 'Descripción de la parte';
 
 
 
+

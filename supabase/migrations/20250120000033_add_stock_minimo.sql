@@ -28,3 +28,4 @@ COMMENT ON COLUMN resale_products.stock_minimo IS 'Cantidad mínima de stock en 
 -- ============================================
 
 
+

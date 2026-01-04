@@ -56,6 +56,7 @@ export function CostsModule() {
     cantidad_fabricar: 0,
     iibb_porcentaje: 0,
     cantidad_por_hora: 0,
+    otros_costos: 0,
   });
   const [editMaterials, setEditMaterials] = useState<Array<{ material_name: string; kg_por_unidad: number }>>([]);
   // Form data for manual product
@@ -396,6 +397,7 @@ export function CostsModule() {
       cantidad_fabricar: item.cantidad_fabricar,
       iibb_porcentaje: item.product?.iibb_porcentaje || item.iibb_porcentaje || 0,
       cantidad_por_hora: item.product?.cantidad_por_hora || item.cantidad_por_hora || 0,
+      otros_costos: (item.product as any)?.otros_costos || item.otros_costos || 0,
     });
     // Cargar materiales editables
     setEditMaterials(item.materials.map(m => ({
@@ -417,6 +419,7 @@ export function CostsModule() {
             cantidad_fabricar: editFormData.cantidad_fabricar,
             cantidad_por_hora: editFormData.cantidad_por_hora || null,
             iibb_porcentaje: editFormData.iibb_porcentaje || null,
+            otros_costos: editFormData.otros_costos || null,
           })
           .eq('id', selectedItem.product.id);
 
@@ -1246,6 +1249,7 @@ export function CostsModule() {
           cantidad_fabricar: editFormData.cantidad_fabricar,
           iibb_porcentaje: editFormData.iibb_porcentaje,
           cantidad_por_hora: editFormData.cantidad_por_hora,
+          otros_costos: editFormData.otros_costos,
           materials: updatedMaterials,
         });
         const productName = selectedItem.product?.nombre || selectedItem.nombre_manual || 'Producto sin nombre';
@@ -1337,6 +1341,20 @@ export function CostsModule() {
                         value={editFormData.iibb_porcentaje}
                         onChange={(e) => setEditFormData({ ...editFormData, iibb_porcentaje: parseFloat(e.target.value) || 0 })}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        Otros Costos (ARS)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editFormData.otros_costos}
+                        onChange={(e) => setEditFormData({ ...editFormData, otros_costos: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="0.00"
                       />
                     </div>
 
@@ -1447,6 +1465,10 @@ export function CostsModule() {
                           <span className="ml-2 font-semibold text-gray-900 dark:text-white">${itemCosts.costo_mo_unitario.toFixed(2)}</span>
                         </div>
                         <div>
+                          <span className="text-gray-600 dark:text-gray-400">Otros Costos:</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${(itemCosts.otros_costos_unitario || 0).toFixed(2)}</span>
+                        </div>
+                        <div>
                           <span className="text-gray-600 dark:text-gray-400">IIBB:</span>
                           <span className="ml-2 font-semibold text-gray-900 dark:text-white">${iibbUnitario.toFixed(2)}</span>
                         </div>
@@ -1519,6 +1541,20 @@ export function CostsModule() {
                             <div 
                               className="bg-purple-600 h-2 rounded-full" 
                               style={{ width: `${itemCosts.costo_total_unitario > 0 ? (itemCosts.costo_mo_unitario / itemCosts.costo_total_unitario) * 100 : 0}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">Otros Costos</span>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              ${(itemCosts.otros_costos_unitario || 0).toFixed(2)} ({itemCosts.costo_total_unitario > 0 ? (((itemCosts.otros_costos_unitario || 0) / itemCosts.costo_total_unitario) * 100).toFixed(1) : 0}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div 
+                              className="bg-indigo-600 h-2 rounded-full" 
+                              style={{ width: `${itemCosts.costo_total_unitario > 0 ? ((itemCosts.otros_costos_unitario || 0) / itemCosts.costo_total_unitario) * 100 : 0}%` }}
                             ></div>
                           </div>
                         </div>

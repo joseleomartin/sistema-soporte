@@ -135,3 +135,4 @@ Si estás en desarrollo y necesitas confirmar el email manualmente:
 4. Considera configurar SMTP personalizado para mejor confiabilidad
 
 
+

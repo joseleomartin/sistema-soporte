@@ -4,12 +4,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Save, X, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Users, Upload } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { calculateEmployeeMetrics, EmployeeMetrics } from '../../../lib/fabinsaCalculations';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { BulkImportEmployeesModal } from './BulkImportEmployeesModal';
 
 type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = Database['public']['Tables']['employees']['Insert'];
@@ -23,6 +24,7 @@ export function EmployeesModule() {
   const [showForm, setShowForm] = useState(false);
   const [metrics, setMetrics] = useState<Record<string, EmployeeMetrics>>({});
   const [error, setError] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -231,13 +233,22 @@ export function EmployeesModule() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Empleados</h2>
         {canCreate('fabinsa-employees') && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nuevo Empleado</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Importar</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Empleado</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -523,6 +534,17 @@ export function EmployeesModule() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal de Importación */}
+      {showImportModal && (
+        <BulkImportEmployeesModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            loadEmployees();
+            setShowImportModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

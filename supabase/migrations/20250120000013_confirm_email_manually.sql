@@ -79,3 +79,4 @@ COMMENT ON FUNCTION confirm_all_emails_for_tenant IS
 Retorna el número de usuarios confirmados.';
 
 
+

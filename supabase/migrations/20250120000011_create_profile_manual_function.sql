@@ -46,3 +46,4 @@ COMMENT ON FUNCTION create_profile_for_user IS
 Usa SECURITY DEFINER para bypassear RLS. Útil para recuperación de errores.';
 
 
+
