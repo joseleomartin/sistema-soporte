@@ -38,7 +38,7 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
   const [isPersonal, setIsPersonal] = useState(profile?.role !== 'admin');
   const [assignmentType, setAssignmentType] = useState<'user' | 'department'>('user');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
   const [taskManagerId, setTaskManagerId] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
@@ -231,8 +231,8 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
         return 'Debes seleccionar al menos un usuario';
       }
 
-      if (assignmentType === 'department' && !selectedDepartmentId) {
-        return 'Debes seleccionar un área';
+      if (assignmentType === 'department' && selectedDepartmentIds.length === 0) {
+        return 'Debes seleccionar al menos un área';
       }
     }
 
@@ -327,13 +327,15 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
             });
           }
         } else {
-          // Crear una asignación para el departamento
-          assignments.push({
-            task_id: taskData.id,
-            assigned_to_department: selectedDepartmentId,
-            assigned_by: profile.id,
-            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
-          });
+          // Crear una asignación por cada departamento seleccionado
+          for (const departmentId of selectedDepartmentIds) {
+            assignments.push({
+              task_id: taskData.id,
+              assigned_to_department: departmentId,
+              assigned_by: profile.id,
+              tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
+            });
+          }
         }
 
         const { error: assignmentError } = await supabase
@@ -683,21 +685,47 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
               </div>
             )}
 
-            {/* Selector de Departamento */}
+            {/* Selector de Departamentos Múltiples */}
             {assignmentType === 'department' && (
-              <select
-                value={selectedDepartmentId}
-                onChange={(e) => setSelectedDepartmentId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                required
-              >
-                <option value="">Selecciona un área</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600 dark:text-gray-300">Selecciona una o más áreas:</p>
+                <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-700 task-dropdown-scroll">
+                  {departments.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">No hay áreas disponibles</p>
+                  ) : (
+                    departments.map((dept) => (
+                      <label
+                        key={dept.id}
+                        className="flex items-center gap-3 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedDepartmentIds.includes(dept.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDepartmentIds([...selectedDepartmentIds, dept.id]);
+                            } else {
+                              setSelectedDepartmentIds(selectedDepartmentIds.filter(id => id !== dept.id));
+                            }
+                          }}
+                          className="w-4 h-4 text-indigo-600 dark:text-indigo-400 rounded focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{dept.name}</p>
+                          {dept.description && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{dept.description}</p>
+                          )}
+                        </div>
+                      </label>
+                    ))
+                  )}
+                </div>
+                {selectedDepartmentIds.length > 0 && (
+                  <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                    {selectedDepartmentIds.length} área(s) seleccionada(s)
+                  </p>
+                )}
+              </div>
             )}
           </div>
           )}

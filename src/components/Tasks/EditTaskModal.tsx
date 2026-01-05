@@ -64,7 +64,7 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
   const [isPersonal, setIsPersonal] = useState(task.is_personal || false);
   const [assignmentType, setAssignmentType] = useState<'user' | 'department'>('user');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(task.assigned_users?.map(u => u.id) || []);
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState(task.assigned_departments?.[0]?.id || '');
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>(task.assigned_departments?.map(d => d.id) || []);
   const [taskManagerId, setTaskManagerId] = useState(task.task_manager_id || '');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
@@ -255,8 +255,8 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
         return 'Debes seleccionar al menos un usuario';
       }
 
-      if (assignmentType === 'department' && !selectedDepartmentId) {
-        return 'Debes seleccionar un área';
+      if (assignmentType === 'department' && selectedDepartmentIds.length === 0) {
+        return 'Debes seleccionar al menos un área';
       }
     }
 
@@ -340,12 +340,15 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
             });
           }
         } else {
-          assignments.push({
-            task_id: task.id,
-            assigned_to_department: selectedDepartmentId,
-            assigned_by: profile.id,
-            tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
-          });
+          // Crear una asignación por cada departamento seleccionado
+          for (const departmentId of selectedDepartmentIds) {
+            assignments.push({
+              task_id: task.id,
+              assigned_to_department: departmentId,
+              assigned_by: profile.id,
+              tenant_id: profile.tenant_id // Agregar tenant_id para aislamiento multi-tenant
+            });
+          }
         }
 
         if (assignments.length > 0) {
@@ -696,21 +699,47 @@ export function EditTaskModal({ task, onClose, onSuccess }: EditTaskModalProps) 
               </div>
             )}
 
-            {/* Selector de Departamento */}
+            {/* Selector de Departamentos Múltiples */}
             {assignmentType === 'department' && (
-              <select
-                value={selectedDepartmentId}
-                onChange={(e) => setSelectedDepartmentId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                required
-              >
-                <option value="">Selecciona un área</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600 dark:text-gray-300">Selecciona una o más áreas:</p>
+                <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-700 task-dropdown-scroll">
+                  {departments.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">No hay áreas disponibles</p>
+                  ) : (
+                    departments.map((dept) => (
+                      <label
+                        key={dept.id}
+                        className="flex items-center gap-3 p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedDepartmentIds.includes(dept.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDepartmentIds([...selectedDepartmentIds, dept.id]);
+                            } else {
+                              setSelectedDepartmentIds(selectedDepartmentIds.filter(id => id !== dept.id));
+                            }
+                          }}
+                          className="w-4 h-4 text-indigo-600 dark:text-indigo-400 rounded focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{dept.name}</p>
+                          {dept.description && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{dept.description}</p>
+                          )}
+                        </div>
+                      </label>
+                    ))
+                  )}
+                </div>
+                {selectedDepartmentIds.length > 0 && (
+                  <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                    {selectedDepartmentIds.length} área(s) seleccionada(s)
+                  </p>
+                )}
+              </div>
             )}
           </div>
           )}
