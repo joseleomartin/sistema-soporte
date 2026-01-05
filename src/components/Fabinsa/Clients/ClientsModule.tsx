@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, Edit, Trash2, Save, X, FileText, Upload, Download, Folder, ExternalLink } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Save, X, FileText, Upload, Download, Folder, ExternalLink, History, Calendar, DollarSign, ShoppingCart, Search } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -19,6 +19,7 @@ import { BulkImportClientsModal } from './BulkImportClientsModal';
 type Client = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
 type ClientDocument = Database['public']['Tables']['client_documents']['Row'];
+type Sale = Database['public']['Tables']['sales']['Row'];
 
 interface FileAttachment {
   id: string;
@@ -53,6 +54,13 @@ export function ClientsModule() {
   const [activeTab, setActiveTab] = useState<'files' | 'drive'>('files');
   const [showImportModal, setShowImportModal] = useState(false);
 
+  // Modal de historial de ventas
+  const [showSalesHistoryModal, setShowSalesHistoryModal] = useState(false);
+  const [selectedClientForSales, setSelectedClientForSales] = useState<Client | null>(null);
+  const [clientSales, setClientSales] = useState<Sale[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
   // Form state
   const [formData, setFormData] = useState({
     nombre: '',
@@ -80,7 +88,7 @@ export function ClientsModule() {
         .from('clients')
         .select('*')
         .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
+        .order('nombre', { ascending: true });
 
       if (error) throw error;
       setClients(data || []);
@@ -183,6 +191,33 @@ export function ClientsModule() {
     setShowDocumentsModal(true);
     await loadDocuments(client.id);
     await loadDriveMapping(client.id);
+  };
+
+  const loadClientSales = async (client: Client) => {
+    if (!tenantId) return;
+    setLoadingSales(true);
+    try {
+      // Cargar ventas del cliente (por nombre o razón social)
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .or(`cliente.ilike.%${client.nombre}%,cliente.ilike.%${client.razon_social || ''}%`)
+        .order('fecha', { ascending: false });
+
+      if (salesError) throw salesError;
+      setClientSales(salesData || []);
+    } catch (error) {
+      console.error('Error loading client sales:', error);
+    } finally {
+      setLoadingSales(false);
+    }
+  };
+
+  const openSalesHistoryModal = async (client: Client) => {
+    setSelectedClientForSales(client);
+    setShowSalesHistoryModal(true);
+    await loadClientSales(client);
   };
 
   const loadDocuments = async (clientId: string) => {
@@ -408,6 +443,28 @@ export function ClientsModule() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Buscador */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre, razón social, CUIT, teléfono o email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Form Modal */}
@@ -745,47 +802,68 @@ export function ClientsModule() {
 
       {/* Clients Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
+        <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 min-w-[600px] md:min-w-[700px] lg:min-w-[900px]">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[20%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[140px] sm:min-w-[150px]">
                   Nombre
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell w-[18%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell min-w-[130px] lg:min-w-[140px]">
                   Razón Social
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell w-[12%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[110px] lg:min-w-[120px]">
                   CUIT
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell w-[12%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell min-w-[110px] md:min-w-[120px]">
                   Teléfono
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell w-[18%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[160px] lg:min-w-[180px]">
                   Email
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell w-[10%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden 2xl:table-cell min-w-[90px] lg:min-w-[100px]">
                   Provincia
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[90px] md:min-w-[100px]">
                   Acciones
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {clients.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    No hay clientes registrados
-                  </td>
-                </tr>
-              ) : (
-                clients.map((client) => (
+              {(() => {
+                const filteredClients = searchTerm
+                  ? clients.filter((client) => {
+                      const term = searchTerm.toLowerCase();
+                      return (
+                        client.nombre.toLowerCase().includes(term) ||
+                        (client.razon_social && client.razon_social.toLowerCase().includes(term)) ||
+                        (client.cuit && client.cuit.includes(term)) ||
+                        (client.telefono && client.telefono.includes(term)) ||
+                        (client.email && client.email.toLowerCase().includes(term))
+                      );
+                    })
+                  : clients;
+
+                if (filteredClients.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        {searchTerm ? 'No se encontraron clientes que coincidan con la búsqueda' : 'No hay clientes registrados'}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return filteredClients.map((client) => (
                   <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={client.nombre}>
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4">
+                      <button
+                        onClick={() => openSalesHistoryModal(client)}
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline truncate block w-full text-left"
+                        title={client.nombre}
+                      >
                         {client.nombre}
-                      </div>
+                      </button>
                       {/* Información adicional en móviles */}
                       <div className="md:hidden mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
                         {client.telefono && <div className="truncate">📞 {client.telefono}</div>}
@@ -793,32 +871,32 @@ export function ClientsModule() {
                         {client.razon_social && <div className="truncate">🏢 {client.razon_social}</div>}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
                       <div className="truncate" title={client.razon_social || ''}>
                         {client.razon_social || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
                       <div className="truncate" title={client.cuit || ''}>
                         {client.cuit || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                       <div className="truncate" title={client.telefono || ''}>
                         {client.telefono || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
                       <div className="truncate" title={client.email || ''}>
                         {client.email || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden 2xl:table-cell">
                       <div className="truncate" title={client.provincia || ''}>
                         {client.provincia || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-right text-sm font-medium">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-right text-sm font-medium">
                       <div className="flex justify-end space-x-1 sm:space-x-2 flex-shrink-0">
                         <button
                           onClick={() => openDocumentsModal(client)}
@@ -848,12 +926,130 @@ export function ClientsModule() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                ));
+              })()}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Modal de Historial de Ventas */}
+      {showSalesHistoryModal && selectedClientForSales && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center space-x-2 text-gray-900 dark:text-white">
+                  <History className="w-5 h-5 text-blue-600" />
+                  <span>Historial de Ventas - {selectedClientForSales.nombre}</span>
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  Ventas realizadas a este cliente
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSalesHistoryModal(false);
+                  setSelectedClientForSales(null);
+                  setClientSales([]);
+                }}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingSales ? (
+                <div className="text-center py-8">
+                  <div className="text-gray-500 dark:text-gray-400">Cargando ventas...</div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Lista de Ventas */}
+                  <div>
+                    <h4 className="text-md font-semibold mb-4 flex items-center space-x-2 text-gray-900 dark:text-white">
+                      <ShoppingCart className="w-4 h-4 text-blue-600" />
+                      <span>Ventas</span>
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                        ({clientSales.length})
+                      </span>
+                    </h4>
+                    {clientSales.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 py-4">No hay ventas registradas para este cliente</p>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                          <thead className="bg-gray-100 dark:bg-gray-600">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Fecha</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Producto</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio Unitario</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Ingreso Neto</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Ganancia</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {clientSales.map((sale) => (
+                              <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                  <div className="flex items-center space-x-1">
+                                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                    <span>{new Date(sale.fecha).toLocaleDateString('es-AR')}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                  ${sale.precio_unitario.toFixed(2)} ARS
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                                  ${sale.ingreso_neto.toFixed(2)} ARS
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
+                                  ${sale.ganancia_total.toFixed(2)} ARS
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resumen Total */}
+                  {clientSales.length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                      <h4 className="text-md font-semibold mb-2 text-gray-900 dark:text-white">Resumen Total</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Total Ingresos Netos:</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                            ${clientSales.reduce((sum, s) => sum + s.ingreso_neto, 0).toFixed(2)} ARS
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Total Ganancia:</p>
+                          <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                            ${clientSales.reduce((sum, s) => sum + s.ganancia_total, 0).toFixed(2)} ARS
+                          </p>
+                        </div>
+                        <div className="col-span-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                          <p className="text-gray-600 dark:text-gray-400">Total Ventas:</p>
+                          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                            {clientSales.length} {clientSales.length === 1 ? 'venta' : 'ventas'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Importación */}
       {showImportModal && (

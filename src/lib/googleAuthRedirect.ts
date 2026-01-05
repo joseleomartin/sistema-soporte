@@ -44,7 +44,17 @@ async function getGoogleClientId(): Promise<string> {
           const data = await response.json();
           if (data.client_id) {
             cachedClientId = data.client_id;
-            console.log('✅ Client ID obtenido del backend');
+            console.log('✅ Client ID obtenido del backend:', data.client_id);
+            console.log('✅ Client ID completo (para verificar):', data.client_id);
+            
+            // Validar que sea el Client ID correcto
+            if (data.client_id !== '398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com') {
+              console.error('❌ ADVERTENCIA: El Client ID del backend NO coincide con el esperado');
+              console.error('❌ Client ID recibido:', data.client_id);
+              console.error('❌ Client ID esperado: 398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com');
+              console.error('❌ Verifica que el backend tenga el Client ID correcto configurado');
+            }
+            
             return cachedClientId;
           }
         } else {
@@ -57,6 +67,7 @@ async function getGoogleClientId(): Promise<string> {
         // El backend respondió con un error HTTP
         const errorText = await response.text().catch(() => 'Error desconocido');
         console.warn(`⚠️ El backend respondió con error ${response.status}:`, errorText.substring(0, 200));
+        console.warn('⚠️ Verifica que el backend esté corriendo y que las credenciales estén configuradas');
       }
     } catch (error: any) {
       console.warn('⚠️ No se pudo obtener Client ID del backend:', error.message);
@@ -197,9 +208,16 @@ export async function startGoogleAuth(): Promise<void> {
   console.log('🔐 Redirigiendo a Google para autenticación...');
   console.log('📍 Entorno:', isLocal ? '🛠️ DESARROLLO LOCAL' : '🚀 PRODUCCIÓN');
   console.log('📍 Client ID usado:', clientId);
+  console.log('📍 Client ID completo (para copiar):', clientId);
   console.log('📍 URL de retorno:', redirectUri);
   console.log('📍 Origen actual:', window.location.origin);
   console.log('');
+  
+  // Guardar en localStorage para poder verlo después de la redirección
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('last_used_google_client_id', clientId);
+    localStorage.setItem('last_used_redirect_uri', redirectUri);
+  }
   
   if (isLocal) {
     console.log('🛠️ MODO DESARROLLO LOCAL DETECTADO');

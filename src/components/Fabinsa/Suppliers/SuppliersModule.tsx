@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Truck, Plus, Edit, Trash2, Save, X, FileText, Upload, Download, Folder, ExternalLink, History, Calendar, DollarSign } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, Save, X, FileText, Upload, Download, Folder, ExternalLink, History, Calendar, DollarSign, Search } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -60,6 +60,7 @@ export function SuppliersModule() {
   const [supplierMaterialPurchases, setSupplierMaterialPurchases] = useState<PurchaseMaterial[]>([]);
   const [supplierProductPurchases, setSupplierProductPurchases] = useState<PurchaseProduct[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -88,7 +89,7 @@ export function SuppliersModule() {
         .from('suppliers')
         .select('*')
         .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
+        .order('nombre', { ascending: true });
 
       if (error) throw error;
       setSuppliers(data || []);
@@ -455,6 +456,28 @@ export function SuppliersModule() {
         )}
       </div>
 
+      {/* Buscador */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre, razón social, CUIT, teléfono o email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -790,44 +813,61 @@ export function SuppliersModule() {
 
       {/* Suppliers Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
+        <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 min-w-[600px] md:min-w-[700px] lg:min-w-[900px]">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[20%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[140px] sm:min-w-[150px]">
                   Nombre
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell w-[18%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell min-w-[130px] lg:min-w-[140px]">
                   Razón Social
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell w-[18%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[140px] lg:min-w-[150px]">
                   Dirección
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell w-[12%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell min-w-[110px] md:min-w-[120px]">
                   Teléfono
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell w-[18%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[160px] lg:min-w-[180px]">
                   Email
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell w-[10%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden 2xl:table-cell min-w-[90px] lg:min-w-[100px]">
                   Provincia
                 </th>
-                <th className="px-2 sm:px-3 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
+                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[90px] md:min-w-[100px]">
                   Acciones
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {suppliers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    No hay proveedores registrados
-                  </td>
-                </tr>
-              ) : (
-                suppliers.map((supplier) => (
+              {(() => {
+                const filteredSuppliers = searchTerm
+                  ? suppliers.filter((supplier) => {
+                      const term = searchTerm.toLowerCase();
+                      return (
+                        supplier.nombre.toLowerCase().includes(term) ||
+                        (supplier.razon_social && supplier.razon_social.toLowerCase().includes(term)) ||
+                        (supplier.cuit && supplier.cuit.includes(term)) ||
+                        (supplier.telefono && supplier.telefono.includes(term)) ||
+                        (supplier.email && supplier.email.toLowerCase().includes(term))
+                      );
+                    })
+                  : suppliers;
+
+                if (filteredSuppliers.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        {searchTerm ? 'No se encontraron proveedores que coincidan con la búsqueda' : 'No hay proveedores registrados'}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return filteredSuppliers.map((supplier) => (
                   <tr key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4">
                       <button
                         onClick={() => openOrdersModal(supplier)}
                         className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline truncate block w-full text-left"
@@ -842,32 +882,32 @@ export function SuppliersModule() {
                         {supplier.razon_social && <div className="truncate">🏢 {supplier.razon_social}</div>}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
                       <div className="truncate" title={supplier.razon_social || ''}>
                         {supplier.razon_social || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
                       <div className="truncate" title={supplier.direccion || ''}>
                         {supplier.direccion || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                       <div className="truncate" title={supplier.telefono || ''}>
                         {supplier.telefono || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
                       <div className="truncate" title={supplier.email || ''}>
                         {supplier.email || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden 2xl:table-cell">
                       <div className="truncate" title={supplier.provincia || ''}>
                         {supplier.provincia || '-'}
                       </div>
                     </td>
-                    <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-right text-sm font-medium">
+                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-right text-sm font-medium">
                       <div className="flex justify-end space-x-1 sm:space-x-2 flex-shrink-0">
                         <button
                           onClick={() => openDocumentsModal(supplier)}
@@ -897,8 +937,8 @@ export function SuppliersModule() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                ));
+              })()}
             </tbody>
           </table>
         </div>

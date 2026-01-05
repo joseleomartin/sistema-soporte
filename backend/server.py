@@ -97,6 +97,26 @@ ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
 ]
 
+# Función para verificar si un origen está permitido (incluye ngrok y Vercel)
+def is_allowed_origin(origin: str) -> bool:
+    """Verifica si un origen está permitido, incluyendo dominios dinámicos como ngrok y Vercel"""
+    if not origin:
+        return False
+    
+    # Orígenes exactos
+    if origin in ALLOWED_ORIGINS:
+        return True
+    
+    # Permitir cualquier dominio de ngrok
+    if '.ngrok-free.app' in origin or '.ngrok.io' in origin or '.ngrok.app' in origin:
+        return True
+    
+    # Permitir cualquier dominio de Vercel
+    if '.vercel.app' in origin or 'vercel.app' in origin:
+        return True
+    
+    return False
+
 # Directorio de extractores
 EXTRACTORES_DIR = Path(__file__).parent / 'extractores'
 TEMP_DIR = Path(tempfile.gettempdir()) / 'extractores_temp'
@@ -1833,7 +1853,7 @@ def exchange_google_token():
         
         # Verificar origen de la petición
         origin = request.headers.get('Origin', '')
-        if origin and origin not in ALLOWED_ORIGINS:
+        if origin and not is_allowed_origin(origin):
             logger.warning(f"Origen no permitido intentando acceder a /api/google/oauth/token: {origin}")
             return jsonify({
                 'error': 'Origen no permitido',
@@ -1883,7 +1903,9 @@ def exchange_google_token():
         
         logger.info(f"Intercambiando código por token (redirect_uri: {redirect_uri})")
         logger.info(f"Client ID usado: {client_id[:20]}..." if client_id else "Client ID: NO CONFIGURADO")
+        logger.info(f"Client ID completo: {client_id}" if client_id else "Client ID: NO CONFIGURADO")
         logger.info(f"Client Secret configurado: {'SÍ' if client_secret else 'NO'}")
+        logger.info(f"Client Secret (primeros 10 caracteres): {client_secret[:10]}..." if client_secret else "Client Secret: NO CONFIGURADO")
         
         # Intercambiar código por token
         token_response = requests.post('https://oauth2.googleapis.com/token', data={
@@ -1893,6 +1915,8 @@ def exchange_google_token():
             'redirect_uri': redirect_uri,
             'grant_type': 'authorization_code',
         })
+        
+        logger.info(f"Respuesta de Google OAuth: Status {token_response.status_code}")
         
         if token_response.status_code != 200:
             try:
@@ -1931,7 +1955,7 @@ def refresh_google_token():
         
         # Verificar origen de la petición
         origin = request.headers.get('Origin', '')
-        if origin and origin not in ALLOWED_ORIGINS:
+        if origin and not is_allowed_origin(origin):
             logger.warning(f"Origen no permitido intentando acceder a /api/google/oauth/refresh: {origin}")
             return jsonify({
                 'error': 'Origen no permitido',
@@ -1961,6 +1985,9 @@ def refresh_google_token():
             }), 500
         
         logger.info("Refrescando token de acceso")
+        logger.info(f"Client ID usado: {client_id[:30]}..." if client_id else "Client ID: NO CONFIGURADO")
+        logger.info(f"Client Secret configurado: {'SÍ' if client_secret else 'NO'}")
+        logger.info(f"Client Secret (primeros 10 caracteres): {client_secret[:10]}..." if client_secret else "Client Secret: NO CONFIGURADO")
         
         token_response = requests.post('https://oauth2.googleapis.com/token', data={
             'client_id': client_id,
@@ -1972,9 +1999,14 @@ def refresh_google_token():
         if token_response.status_code != 200:
             try:
                 error_data = token_response.json()
+                logger.error(f"Error al refrescar token: {error_data}")
+                # Si es invalid_client, verificar credenciales
+                if error_data.get('error') == 'invalid_client':
+                    logger.error("ERROR: invalid_client - El Client ID o Client Secret no son correctos")
+                    logger.error("Verifica que el Client ID y Client Secret en el script coincidan con los de Google Cloud Console")
             except:
                 error_data = {'error': 'Error desconocido al refrescar token', 'status_code': token_response.status_code}
-            logger.error(f"Error al refrescar token: {error_data}")
+                logger.error(f"Error al refrescar token (no JSON): {error_data}")
             # Retornar un mensaje más descriptivo
             return jsonify({
                 'error': error_data.get('error', 'Error al refrescar token'),
@@ -1999,7 +2031,7 @@ def get_google_client_id():
         
         # Verificar origen de la petición
         origin = request.headers.get('Origin', '')
-        if origin and origin not in ALLOWED_ORIGINS:
+        if origin and not is_allowed_origin(origin):
             logger.warning(f"Origen no permitido intentando acceder a /api/google/client-id: {origin}")
             return jsonify({
                 'error': 'Origen no permitido',
