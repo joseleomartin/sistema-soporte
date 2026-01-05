@@ -4,11 +4,12 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Plus, Edit, Trash2, Save, X, ChevronDown } from 'lucide-react';
+import { TrendingUp, Plus, Edit, Trash2, Save, X, ChevronDown, FileText } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { generateOrderPDF, OrderData } from '../../../lib/pdfGenerator';
 
 type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
 type PurchaseMaterialInsert = Database['public']['Tables']['purchases_materials']['Insert'];
@@ -41,8 +42,8 @@ interface ProductItem {
 }
 
 export function PurchasesModule() {
-  const { tenantId } = useTenant();
-  const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
+  const { tenantId, tenant } = useTenant();
+  const { canCreate, canEdit, canDelete, canPrint } = useDepartmentPermissions();
   const [activeTab, setActiveTab] = useState<TabType>('materials');
   
   // Compras de Materia Prima
@@ -225,6 +226,53 @@ export function PurchasesModule() {
 
   const handleRemoveMaterial = (id: string) => {
     setMaterialItems(materialItems.filter(item => item.id !== id));
+  };
+
+  const handlePrintMaterialOrder = async (order: any) => {
+    const orderData: OrderData = {
+      tipo: 'compra',
+      fecha: order.fecha,
+      proveedor: order.proveedor,
+      order_id: order.order_id,
+      items: order.items.map((item: any) => ({
+        material: item.material,
+        cantidad: item.cantidad,
+        precio: item.precio,
+        total: item.total,
+        moneda: item.moneda,
+        valor_dolar: item.valor_dolar,
+      })),
+      total_compra: order.total_compra,
+      logoUrl: tenant?.logo_url || undefined,
+      companyName: tenant?.name || undefined,
+    };
+    await generateOrderPDF(orderData);
+  };
+
+  const handlePrintProductOrder = async (order: any) => {
+    const orderData: OrderData = {
+      tipo: 'compra',
+      fecha: order.fecha,
+      proveedor: order.proveedor,
+      order_id: order.order_id,
+      items: order.items.map((item: any) => {
+        const precioUnitarioMostrar = item.moneda === 'USD' && item.valor_dolar 
+          ? item.precio / item.valor_dolar 
+          : item.precio;
+        return {
+          producto: item.producto,
+          cantidad: item.cantidad,
+          precio: precioUnitarioMostrar,
+          total: item.total,
+          moneda: item.moneda,
+          valor_dolar: item.valor_dolar,
+        };
+      }),
+      total_compra: order.total_compra,
+      logoUrl: tenant?.logo_url || undefined,
+      companyName: tenant?.name || undefined,
+    };
+    await generateOrderPDF(orderData);
   };
 
   const handleMaterialSubmit = async (e: React.FormEvent) => {
@@ -913,19 +961,31 @@ export function PurchasesModule() {
                                   ${order.total_compra.toFixed(2)}
                                 </td>
                                 <td className="px-6 py-3 text-right text-sm">
-                                  {canDelete('fabinsa-purchases') && (
+                                  <div className="flex items-center justify-end gap-2">
+                                    {canPrint('fabinsa-purchases') && (
                                     <button
-                                      onClick={async () => {
-                                        if (confirm(`¿Eliminar toda la orden con ${order.items.length} material${order.items.length > 1 ? 'es' : ''}?`)) {
-                                          await supabase.from('purchases_materials').delete().eq('order_id', order.order_id);
-                                          loadPurchases();
-                                        }
-                                      }}
-                                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                      onClick={() => handlePrintMaterialOrder(order)}
+                                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                      title="Imprimir/Generar PDF"
                                     >
-                                      <Trash2 className="w-4 h-4" />
+                                      <FileText className="w-4 h-4" />
                                     </button>
-                                  )}
+                                    )}
+                                    {canDelete('fabinsa-purchases') && (
+                                      <button
+                                        onClick={async () => {
+                                          if (confirm(`¿Eliminar toda la orden con ${order.items.length} material${order.items.length > 1 ? 'es' : ''}?`)) {
+                                            await supabase.from('purchases_materials').delete().eq('order_id', order.order_id);
+                                            loadPurchases();
+                                          }
+                                        }}
+                                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                        title="Eliminar orden"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                               {/* Filas de materiales (si está expandida) */}
@@ -971,19 +1031,49 @@ export function PurchasesModule() {
                               ${purchase.total.toFixed(2)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                              {canDelete('fabinsa-purchases') && (
+                              <div className="flex items-center justify-end gap-2">
+                                {canPrint('fabinsa-purchases') && (
                                 <button
                                   onClick={async () => {
-                                    if (confirm('¿Eliminar esta compra?')) {
-                                      await supabase.from('purchases_materials').delete().eq('id', purchase.id);
-                                      loadPurchases();
-                                    }
+                                    const orderData: OrderData = {
+                                      tipo: 'compra',
+                                      fecha: purchase.fecha,
+                                      proveedor: purchase.proveedor,
+                                      items: [{
+                                        material: purchase.material,
+                                        cantidad: purchase.cantidad,
+                                        precio: purchase.precio,
+                                        total: purchase.total,
+                                        moneda: purchase.moneda,
+                                        valor_dolar: purchase.valor_dolar,
+                                      }],
+                                      total_compra: purchase.total,
+                                      logoUrl: tenant?.logo_url || undefined,
+                                      companyName: tenant?.name || undefined,
+                                    };
+                                    await generateOrderPDF(orderData);
                                   }}
-                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                  title="Imprimir/Generar PDF"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <FileText className="w-4 h-4" />
                                 </button>
-                              )}
+                                )}
+                                {canDelete('fabinsa-purchases') && (
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm('¿Eliminar esta compra?')) {
+                                        await supabase.from('purchases_materials').delete().eq('id', purchase.id);
+                                        loadPurchases();
+                                      }
+                                    }}
+                                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                    title="Eliminar compra"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1317,19 +1407,31 @@ export function PurchasesModule() {
                                   ${order.total_compra.toFixed(2)}
                                 </td>
                                 <td className="px-6 py-3 text-right text-sm">
-                                  {canDelete('fabinsa-purchases') && (
+                                  <div className="flex items-center justify-end gap-2">
+                                    {canPrint('fabinsa-purchases') && (
                                     <button
-                                      onClick={async () => {
-                                        if (confirm(`¿Eliminar toda la orden con ${order.items.length} producto${order.items.length > 1 ? 's' : ''}?`)) {
-                                          await supabase.from('purchases_products').delete().eq('order_id', order.order_id);
-                                          loadPurchases();
-                                        }
-                                      }}
-                                      className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                      onClick={() => handlePrintProductOrder(order)}
+                                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                      title="Imprimir/Generar PDF"
                                     >
-                                      <Trash2 className="w-4 h-4" />
+                                      <FileText className="w-4 h-4" />
                                     </button>
-                                  )}
+                                    )}
+                                    {canDelete('fabinsa-purchases') && (
+                                      <button
+                                        onClick={async () => {
+                                          if (confirm(`¿Eliminar toda la orden con ${order.items.length} producto${order.items.length > 1 ? 's' : ''}?`)) {
+                                            await supabase.from('purchases_products').delete().eq('order_id', order.order_id);
+                                            loadPurchases();
+                                          }
+                                        }}
+                                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                        title="Eliminar orden"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                               {/* Filas de productos (si está expandida) */}
@@ -1375,19 +1477,52 @@ export function PurchasesModule() {
                               ${purchase.total.toFixed(2)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                              {canDelete('fabinsa-purchases') && (
+                              <div className="flex items-center justify-end gap-2">
+                                {canPrint('fabinsa-purchases') && (
                                 <button
                                   onClick={async () => {
-                                    if (confirm('¿Eliminar esta compra?')) {
-                                      await supabase.from('purchases_products').delete().eq('id', purchase.id);
-                                      loadPurchases();
-                                    }
+                                    const precioUnitarioMostrar = purchase.moneda === 'USD' && purchase.valor_dolar 
+                                      ? purchase.precio / purchase.valor_dolar 
+                                      : purchase.precio;
+                                    const orderData: OrderData = {
+                                      tipo: 'compra',
+                                      fecha: purchase.fecha,
+                                      proveedor: purchase.proveedor,
+                                      items: [{
+                                        producto: purchase.producto,
+                                        cantidad: purchase.cantidad,
+                                        precio: precioUnitarioMostrar,
+                                        total: purchase.total,
+                                        moneda: purchase.moneda,
+                                        valor_dolar: purchase.valor_dolar,
+                                      }],
+                                      total_compra: purchase.total,
+                                      logoUrl: tenant?.logo_url || undefined,
+                                      companyName: tenant?.name || undefined,
+                                    };
+                                    await generateOrderPDF(orderData);
                                   }}
-                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                  title="Imprimir/Generar PDF"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <FileText className="w-4 h-4" />
                                 </button>
-                              )}
+                                )}
+                                {canDelete('fabinsa-purchases') && (
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm('¿Eliminar esta compra?')) {
+                                        await supabase.from('purchases_products').delete().eq('id', purchase.id);
+                                        loadPurchases();
+                                      }
+                                    }}
+                                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                    title="Eliminar compra"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

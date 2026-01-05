@@ -11,6 +11,7 @@ interface PermissionCheck {
   canCreate: boolean;
   canEdit: boolean;
   canDelete: boolean;
+  canPrint: boolean;
 }
 
 /**
@@ -74,6 +75,7 @@ export function useDepartmentPermissions() {
             can_create: existing.can_create || perm.can_create,
             can_edit: existing.can_edit || perm.can_edit,
             can_delete: existing.can_delete || perm.can_delete,
+            can_print: existing.can_print || perm.can_print,
           };
         }
       });
@@ -170,6 +172,28 @@ export function useDepartmentPermissions() {
   };
 
   /**
+   * Verifica si el usuario puede imprimir/generar PDFs en un módulo
+   */
+  const canPrint = (moduleView: string): boolean => {
+    // Mientras se cargan los permisos, no mostrar nada
+    if (loading) return false;
+
+    if (profile?.role === 'admin') return true;
+    
+    // Si no tiene áreas asignadas, permitir todo (comportamiento por defecto)
+    if (userDepartments.length === 0) return true;
+
+    // Si tiene áreas asignadas pero no hay permisos configurados para ningún módulo,
+    // permitir todo (para evitar bloqueos si no se han configurado permisos aún)
+    if (Object.keys(permissions).length === 0) return true;
+
+    const perm = permissions[moduleView];
+    // Si no hay permiso configurado para este módulo específico, permitir por defecto
+    // Solo si hay un permiso explícitamente configurado, usar ese valor
+    return perm ? perm.can_print : true;
+  };
+
+  /**
    * Obtiene todos los permisos de un módulo
    */
   const getPermissions = (moduleView: string): PermissionCheck => {
@@ -178,6 +202,7 @@ export function useDepartmentPermissions() {
       canCreate: canCreate(moduleView),
       canEdit: canEdit(moduleView),
       canDelete: canDelete(moduleView),
+      canPrint: canPrint(moduleView),
     };
   };
 
@@ -187,6 +212,7 @@ export function useDepartmentPermissions() {
     canCreate,
     canEdit,
     canDelete,
+    canPrint,
     getPermissions,
     userDepartments,
   };

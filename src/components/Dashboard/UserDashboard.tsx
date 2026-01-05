@@ -1992,8 +1992,8 @@ function CreateVacationModal({ onClose, onSuccess }: {
       return;
     }
 
-    if (!profile?.id) {
-      setError('No se pudo identificar el usuario');
+    if (!profile?.id || !profile?.tenant_id) {
+      setError('No se pudo identificar el usuario o la empresa');
       return;
     }
 
@@ -2004,6 +2004,7 @@ function CreateVacationModal({ onClose, onSuccess }: {
         .from('vacations')
         .insert({
           user_id: profile.id,
+          tenant_id: profile.tenant_id, // Asegurar aislamiento multi-tenant
           type: type,
           start_date: startDate,
           end_date: endDate,

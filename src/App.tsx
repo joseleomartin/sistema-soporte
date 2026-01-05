@@ -35,10 +35,12 @@ import { SubscriptionManagement } from './components/Subscription/SubscriptionMa
 import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
+import { useDepartmentPermissions } from './hooks/useDepartmentPermissions';
 
 function MainApp() {
   const { user, profile, loading } = useAuth();
   const { tenant } = useTenant();
+  const { canView } = useDepartmentPermissions();
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedSubforumId, setSelectedSubforumId] = useState<string | null>(null);
@@ -164,6 +166,17 @@ function MainApp() {
 
     switch (currentView) {
       case 'dashboard':
+        // Verificar permisos para ver Inicio/Dashboard
+        if (!canView('dashboard')) {
+          return (
+            <div className="flex items-center justify-center h-screen">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No autorizado</h2>
+                <p className="text-gray-600 dark:text-gray-400">No tienes permisos para ver esta sección.</p>
+              </div>
+            </div>
+          );
+        }
         // Si es empresa de producción, mostrar Métricas en lugar del dashboard normal
         if (isProductionCompany) {
           return <MetricsModule key={`dashboard-metrics-${viewKey}`} />;

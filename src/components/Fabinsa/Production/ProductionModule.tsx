@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Save, X, Factory, CheckCircle, Trash } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Factory, CheckCircle, Trash, FileText } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -13,6 +13,7 @@ import { calculateFIFOPricesForMaterials } from '../../../lib/fifoCalculations';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { ConfirmModal } from '../../Common/ConfirmModal';
 import { AlertModal } from '../../Common/AlertModal';
+import { generateOrderPDF, OrderData } from '../../../lib/pdfGenerator';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductInsert = Database['public']['Tables']['products']['Insert'];
@@ -22,8 +23,8 @@ type StockMaterial = Database['public']['Tables']['stock_materials']['Row'];
 type Employee = Database['public']['Tables']['employees']['Row'];
 
 export function ProductionModule() {
-  const { tenantId } = useTenant();
-  const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
+  const { tenantId, tenant } = useTenant();
+  const { canCreate, canEdit, canDelete, canPrint } = useDepartmentPermissions();
   const [products, setProducts] = useState<Product[]>([]);
   const [materials, setMaterials] = useState<Record<string, ProductMaterial[]>>({});
   const [stockMaterials, setStockMaterials] = useState<StockMaterial[]>([]);
@@ -183,6 +184,41 @@ export function ProductionModule() {
   const loadEmployees = async () => {
     if (!tenantId) return;
     await loadAllData();
+  };
+
+  const handlePrintProductionOrder = async (product: Product) => {
+    const productMaterials = materials[product.id] || [];
+    const costs = calculateProductCost(product);
+    
+    const orderData: OrderData = {
+      tipo: 'produccion',
+      fecha: product.created_at || new Date().toISOString(),
+      nombre: product.nombre,
+      familia: product.familia || undefined,
+      medida: product.medida || undefined,
+      caracteristica: product.caracteristica || undefined,
+      cantidad_fabricar: product.cantidad_fabricar,
+      items: productMaterials.map(mat => ({
+        material: mat.material_name,
+        cantidad: mat.kg_por_unidad * (product.cantidad_fabricar || 0),
+        precio: (() => {
+          const stockMat = stockMaterials.find(m => m.material === mat.material_name);
+          if (stockMat) {
+            const precioPorKg = stockMat.moneda === 'USD' 
+              ? stockMat.costo_kilo_usd * stockMat.valor_dolar
+              : stockMat.costo_kilo_usd;
+            return precioPorKg;
+          }
+          return 0;
+        })(),
+      })),
+      costo_mp: costs.costoMP,
+      costo_mo: costs.costoMO,
+      costo_total: costs.costoTotal,
+      logoUrl: tenant?.logo_url || undefined,
+      companyName: tenant?.name || undefined,
+    };
+    await generateOrderPDF(orderData);
   };
 
   const calculateProductCost = (product: Product): { costoMP: number; costoMO: number; otrosCostos: number; costoTotal: number } => {
@@ -1185,6 +1221,15 @@ export function ProductionModule() {
                       </td>
                       <td className="px-2 py-3 text-right text-xs font-medium">
                         <div className="flex justify-end space-x-1">
+                          {canPrint('fabinsa-production') && (
+                          <button
+                            onClick={() => handlePrintProductionOrder(product)}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                            title="Imprimir/Generar PDF"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          )}
                           {canEdit('fabinsa-production') && (
                             <button
                               onClick={() => completeProduction(product)}

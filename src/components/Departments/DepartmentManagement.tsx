@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
 import { Database } from '../../lib/database.types';
-import { Building2, Plus, Edit2, Trash2, Users, CheckCircle, AlertCircle, X, Settings, Eye, PlusCircle, Edit, Trash, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, Plus, Edit2, Trash2, Users, CheckCircle, AlertCircle, X, Settings, Eye, PlusCircle, Edit, Trash, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 
 interface Department {
@@ -721,7 +721,7 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
     }
   };
 
-  const updatePermission = async (moduleView: string, field: 'can_view' | 'can_create' | 'can_edit' | 'can_delete', value: boolean) => {
+  const updatePermission = async (moduleView: string, field: 'can_view' | 'can_create' | 'can_edit' | 'can_delete' | 'can_print', value: boolean) => {
     if (!tenantId) return;
 
     setSaving(true);
@@ -753,6 +753,7 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
             can_create: field === 'can_create' ? value : false,
             can_edit: field === 'can_edit' ? value : false,
             can_delete: field === 'can_delete' ? value : false,
+            can_print: field === 'can_print' ? value : false,
           })
           .select()
           .single();
@@ -781,6 +782,7 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
       can_create: false,
       can_edit: false,
       can_delete: false,
+      can_print: false,
     };
   };
 
@@ -919,7 +921,7 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
                           </div>
 
                           {subPerm.can_view && (
-                            <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
                               <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                   type="checkbox"
@@ -952,6 +954,17 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
                                 />
                                 <Trash className="w-4 h-4 text-gray-500" />
                                 <span className="text-sm text-gray-600 dark:text-gray-300">Eliminar</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={subPerm.can_print}
+                                  onChange={(e) => updatePermission(subItem.view, 'can_print', e.target.checked)}
+                                  disabled={saving}
+                                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                                />
+                                <FileText className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm text-gray-600 dark:text-gray-300">Imprimir</span>
                               </label>
                             </div>
                           )}

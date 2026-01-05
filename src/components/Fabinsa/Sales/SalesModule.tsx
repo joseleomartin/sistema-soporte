@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, Trash2, ChevronDown, X } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, ChevronDown, X, Printer, FileText } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { calculateSaleValues } from '../../../lib/fabinsaCalculations';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { generateOrderPDF, OrderData } from '../../../lib/pdfGenerator';
 
 type Sale = Database['public']['Tables']['sales']['Row'];
 type SaleInsert = Database['public']['Tables']['sales']['Insert'];
@@ -37,8 +38,8 @@ interface SaleItem {
 }
 
 export function SalesModule() {
-  const { tenantId } = useTenant();
-  const { canCreate, canDelete } = useDepartmentPermissions();
+  const { tenantId, tenant } = useTenant();
+  const { canCreate, canDelete, canPrint } = useDepartmentPermissions();
   const [sales, setSales] = useState<Sale[]>([]);
   const [fabricatedProducts, setFabricatedProducts] = useState<StockProduct[]>([]);
   const [resaleProducts, setResaleProducts] = useState<ResaleProduct[]>([]);
@@ -244,6 +245,111 @@ export function SalesModule() {
 
   const handleRemoveItem = (id: string) => {
     setSaleItems(saleItems.filter(item => item.id !== id));
+  };
+
+  const handlePrintOrder = async (order: any) => {
+    // Cargar datos completos del cliente si está disponible
+    let clienteData = null;
+    if (order.cliente && tenantId) {
+      try {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .ilike('nombre', order.cliente)
+          .limit(1)
+          .maybeSingle();
+        
+        if (clientData) {
+          clienteData = {
+            nombre: clientData.nombre,
+            razon_social: clientData.razon_social,
+            cuit: clientData.cuit,
+            telefono: clientData.telefono,
+            email: clientData.email,
+            provincia: clientData.provincia,
+            direccion: clientData.direccion,
+            observaciones: clientData.observaciones,
+          };
+        }
+      } catch (error) {
+        console.error('Error loading client data:', error);
+      }
+    }
+
+    const orderData: OrderData = {
+      tipo: 'venta',
+      fecha: order.fecha,
+      cliente: order.cliente,
+      clienteData: clienteData || undefined,
+      order_id: order.order_id,
+      items: order.items.map((item: any) => ({
+        producto: item.producto,
+        tipo: item.tipo_producto,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+        costo_unitario: item.costo_unitario,
+        ingreso_neto: item.ingreso_neto,
+        ganancia_total: item.ganancia_total,
+      })),
+      total_ingreso_neto: order.total_ingreso_neto,
+      total_ganancia: order.total_ganancia,
+      logoUrl: tenant?.logo_url || undefined,
+      companyName: tenant?.name || undefined,
+    };
+    await generateOrderPDF(orderData);
+  };
+
+  const handlePrintIndividualSale = async (sale: any) => {
+    // Cargar datos completos del cliente si está disponible
+    let clienteData = null;
+    if (sale.cliente && tenantId) {
+      try {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .ilike('nombre', sale.cliente)
+          .limit(1)
+          .maybeSingle();
+        
+        if (clientData) {
+          clienteData = {
+            nombre: clientData.nombre,
+            razon_social: clientData.razon_social,
+            cuit: clientData.cuit,
+            telefono: clientData.telefono,
+            email: clientData.email,
+            provincia: clientData.provincia,
+            direccion: clientData.direccion,
+            observaciones: clientData.observaciones,
+          };
+        }
+      } catch (error) {
+        console.error('Error loading client data:', error);
+      }
+    }
+
+    const orderData: OrderData = {
+      tipo: 'venta',
+      fecha: sale.fecha,
+      cliente: sale.cliente,
+      clienteData: clienteData || undefined,
+      items: [{
+        producto: sale.producto,
+        tipo: sale.tipo_producto,
+        cantidad: sale.cantidad,
+        precio_unitario: sale.precio_unitario,
+        costo_unitario: sale.costo_unitario,
+        ingreso_neto: sale.ingreso_neto,
+        ganancia_total: sale.ganancia_total,
+      }],
+      total_ingreso_neto: sale.ingreso_neto,
+      total_ganancia: sale.ganancia_total,
+      logoUrl: tenant?.logo_url || undefined,
+      companyName: tenant?.name || undefined,
+    };
+    await generateOrderPDF(orderData);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -769,49 +875,61 @@ export function SalesModule() {
                               ${order.total_ganancia.toFixed(2)}
                             </td>
                             <td className="px-6 py-3 text-right text-sm">
-                              {canDelete('fabinsa-sales') && (
+                              <div className="flex items-center justify-end gap-2">
+                                {canPrint('fabinsa-sales') && (
                                 <button
-                                  onClick={async () => {
-                                    if (confirm(`¿Eliminar toda la orden con ${order.items.length} producto${order.items.length > 1 ? 's' : ''}? Esto restaurará el stock.`)) {
-                                      for (const item of order.items) {
-                                        // Restaurar stock
-                                        if (item.tipo_producto === 'fabricado') {
-                                          const { data: prod } = await supabase
-                                            .from('stock_products')
-                                            .select('*')
-                                            .eq('tenant_id', tenantId)
-                                            .ilike('nombre', item.producto)
-                                            .limit(1);
-                                          if (prod && prod[0]) {
-                                            await supabase
+                                  onClick={() => handlePrintOrder(order)}
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                  title="Imprimir/Generar PDF"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </button>
+                                )}
+                                {canDelete('fabinsa-sales') && (
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm(`¿Eliminar toda la orden con ${order.items.length} producto${order.items.length > 1 ? 's' : ''}? Esto restaurará el stock.`)) {
+                                        for (const item of order.items) {
+                                          // Restaurar stock
+                                          if (item.tipo_producto === 'fabricado') {
+                                            const { data: prod } = await supabase
                                               .from('stock_products')
-                                              .update({ cantidad: prod[0].cantidad + item.cantidad })
-                                              .eq('id', prod[0].id);
-                                          }
-                                        } else {
-                                          const { data: prod } = await supabase
-                                            .from('resale_products')
-                                            .select('*')
-                                            .eq('tenant_id', tenantId)
-                                            .ilike('nombre', item.producto)
-                                            .limit(1);
-                                          if (prod && prod[0]) {
-                                            await supabase
+                                              .select('*')
+                                              .eq('tenant_id', tenantId)
+                                              .ilike('nombre', item.producto)
+                                              .limit(1);
+                                            if (prod && prod[0]) {
+                                              await supabase
+                                                .from('stock_products')
+                                                .update({ cantidad: prod[0].cantidad + item.cantidad })
+                                                .eq('id', prod[0].id);
+                                            }
+                                          } else {
+                                            const { data: prod } = await supabase
                                               .from('resale_products')
-                                              .update({ cantidad: prod[0].cantidad + item.cantidad })
-                                              .eq('id', prod[0].id);
+                                              .select('*')
+                                              .eq('tenant_id', tenantId)
+                                              .ilike('nombre', item.producto)
+                                              .limit(1);
+                                            if (prod && prod[0]) {
+                                              await supabase
+                                                .from('resale_products')
+                                                .update({ cantidad: prod[0].cantidad + item.cantidad })
+                                                .eq('id', prod[0].id);
+                                            }
                                           }
                                         }
+                                        await supabase.from('sales').delete().eq('order_id', order.order_id);
+                                        loadData();
                                       }
-                                      await supabase.from('sales').delete().eq('order_id', order.order_id);
-                                      loadData();
-                                    }
-                                  }}
-                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
+                                    }}
+                                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                    title="Eliminar orden"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                           {/* Filas de productos (si está expandida) */}
@@ -869,47 +987,59 @@ export function SalesModule() {
                           ${sale.ganancia_total.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          {canDelete('fabinsa-sales') && (
+                          <div className="flex items-center justify-end gap-2">
+                            {canPrint('fabinsa-sales') && (
                             <button
-                              onClick={async () => {
-                                if (confirm('¿Eliminar esta venta? Esto restaurará el stock.')) {
-                                  // Restaurar stock
-                                  if (sale.tipo_producto === 'fabricado') {
-                                    const { data: prod } = await supabase
-                                      .from('stock_products')
-                                      .select('*')
-                                      .eq('tenant_id', tenantId)
-                                      .ilike('nombre', sale.producto)
-                                      .limit(1);
-                                    if (prod && prod[0]) {
-                                      await supabase
-                                        .from('stock_products')
-                                        .update({ cantidad: prod[0].cantidad + sale.cantidad })
-                                        .eq('id', prod[0].id);
-                                    }
-                                  } else {
-                                    const { data: prod } = await supabase
-                                      .from('resale_products')
-                                      .select('*')
-                                      .eq('tenant_id', tenantId)
-                                      .ilike('nombre', sale.producto)
-                                      .limit(1);
-                                    if (prod && prod[0]) {
-                                      await supabase
-                                        .from('resale_products')
-                                        .update({ cantidad: prod[0].cantidad + sale.cantidad })
-                                        .eq('id', prod[0].id);
-                                    }
-                                  }
-                                  await supabase.from('sales').delete().eq('id', sale.id);
-                                  loadData();
-                                }
-                              }}
-                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                              onClick={() => handlePrintIndividualSale(sale)}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                              title="Imprimir/Generar PDF"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <FileText className="w-4 h-4" />
                             </button>
-                          )}
+                            )}
+                            {canDelete('fabinsa-sales') && (
+                              <button
+                                onClick={async () => {
+                                  if (confirm('¿Eliminar esta venta? Esto restaurará el stock.')) {
+                                    // Restaurar stock
+                                    if (sale.tipo_producto === 'fabricado') {
+                                      const { data: prod } = await supabase
+                                        .from('stock_products')
+                                        .select('*')
+                                        .eq('tenant_id', tenantId)
+                                        .ilike('nombre', sale.producto)
+                                        .limit(1);
+                                      if (prod && prod[0]) {
+                                        await supabase
+                                          .from('stock_products')
+                                          .update({ cantidad: prod[0].cantidad + sale.cantidad })
+                                          .eq('id', prod[0].id);
+                                      }
+                                    } else {
+                                      const { data: prod } = await supabase
+                                        .from('resale_products')
+                                        .select('*')
+                                        .eq('tenant_id', tenantId)
+                                        .ilike('nombre', sale.producto)
+                                        .limit(1);
+                                      if (prod && prod[0]) {
+                                        await supabase
+                                          .from('resale_products')
+                                          .update({ cantidad: prod[0].cantidad + sale.cantidad })
+                                          .eq('id', prod[0].id);
+                                      }
+                                    }
+                                    await supabase.from('sales').delete().eq('id', sale.id);
+                                    loadData();
+                                  }
+                                }}
+                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                title="Eliminar venta"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
