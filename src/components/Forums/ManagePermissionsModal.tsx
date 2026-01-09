@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import { X, Search, Check } from 'lucide-react';
 
 interface User {
@@ -27,6 +28,7 @@ export function ManagePermissionsModal({
   subforumName,
   onClose,
 }: ManagePermissionsModalProps) {
+  const { profile } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [permissions, setPermissions] = useState<Map<string, Permission>>(new Map());
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,6 +105,10 @@ export function ManagePermissionsModal({
   const handleSave = async () => {
     setSaving(true);
     try {
+      if (!profile?.tenant_id) {
+        throw new Error('No se pudo identificar la empresa');
+      }
+
       const { error: deleteError } = await supabase
         .from('subforum_permissions')
         .delete()
@@ -115,6 +121,7 @@ export function ManagePermissionsModal({
         .map((p) => ({
           subforum_id: subforumId,
           user_id: p.user_id,
+          tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
           can_view: p.can_view,
           can_post: p.can_post,
           can_moderate: p.can_moderate,

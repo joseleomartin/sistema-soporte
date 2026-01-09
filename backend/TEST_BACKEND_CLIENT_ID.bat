@@ -55,3 +55,12 @@ echo Si ves un error, revisa los logs del servidor Flask
 echo.
 pause
 
+
+
+
+
+
+
+
+
+

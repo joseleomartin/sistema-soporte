@@ -5,7 +5,7 @@ Actualizado con las nuevas credenciales de Google OAuth 2.0
 
 ---
 
-## 🔐 Credenciales Nuevas
+## 🔐 Credenciales Actuales
 
 ### Client ID
 ```
@@ -16,15 +16,15 @@ TU_CLIENT_ID_AQUI.apps.googleusercontent.com
 ```
 TU_CLIENT_SECRET_AQUI
 ```
+*(Obtenido del archivo JSON, creado el 18 de noviembre de 2025)*
 
 ---
 
 ## 📝 Configuración de Variables de Entorno
 
-### Frontend (Vercel o Desarrollo Local)
+### Frontend (Vercel) ✅
 
-Crea un archivo `.env` en la carpeta `project/` con:
-
+**Ya configurado:**
 ```env
 VITE_GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
 ```
@@ -33,16 +33,38 @@ VITE_GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
 - NO incluyas el Client Secret en el frontend por seguridad
 - Si usas el backend para OAuth, solo necesitas el Client ID aquí
 
-### Backend (Railway/Render/ngrok)
+### Backend
 
-**Opción 1: Variables de Entorno**
+**Opción 1: Backend Local con ngrok (Tu caso actual)** ✅
+
+Las credenciales ya están configuradas en el script `backend/8-iniciar-todo-ngrok.bat`:
+```bat
+GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
+```
+
+**Solo necesitas:**
+1. Ejecutar `backend/8-iniciar-todo-ngrok.bat`
+2. Copiar la URL de ngrok que aparece
+3. Configurar `VITE_BACKEND_URL` en Vercel con esa URL
+
+**Opción 2: Backend Desplegado en Railway/Render/Otro Servicio**
+
+Si el backend está desplegado en un servicio externo, agrega estas variables de entorno:
+
 ```env
 GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
 ```
 
-**Opción 2: Script de ngrok (backend/8-iniciar-todo-ngrok.bat)** ✅
-Las credenciales ya están configuradas en el script. Solo ejecuta el script para iniciar el backend con ngrok.
+**Opción 3: Backend en Vercel (Serverless Functions)**
+
+Si el backend está desplegado en Vercel como serverless functions, agrega en Vercel → Settings → Environment Variables:
+
+```env
+GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
+```
 
 **Para usar con ngrok:**
 1. Ejecuta `backend/8-iniciar-todo-ngrok.bat`
@@ -55,16 +77,36 @@ Las credenciales ya están configuradas en el script. Solo ejecuta el script par
 
 ---
 
-## 🚀 Pasos para Actualizar en Vercel
+## 🚀 Configuración en Vercel
+
+### Frontend (Ya configurado) ✅
 
 1. Ve a: https://vercel.com/dashboard
 2. Selecciona tu proyecto
 3. Ve a **Settings** → **Environment Variables**
-4. Edita o agrega:
+4. Verifica que exista:
    - **Name**: `VITE_GOOGLE_CLIENT_ID`
    - **Value**: `TU_CLIENT_ID_AQUI.apps.googleusercontent.com`
    - **Environments**: Production, Preview, Development
-5. Guarda y **redesplega**
+
+### Backend (Solo si el backend está en Vercel)
+
+Si el backend está desplegado en Vercel como serverless functions:
+
+1. Ve a: https://vercel.com/dashboard
+2. Selecciona tu proyecto
+3. Ve a **Settings** → **Environment Variables**
+4. Agrega:
+   - **Name**: `GOOGLE_CLIENT_ID`
+   - **Value**: `TU_CLIENT_ID_AQUI.apps.googleusercontent.com`
+   - **Environments**: Production, Preview, Development
+   - **Save**
+5. Agrega:
+   - **Name**: `GOOGLE_CLIENT_SECRET`
+   - **Value**: `TU_CLIENT_SECRET_AQUI`
+   - **Environments**: Production, Preview, Development
+   - **Save**
+6. **Redesplega** la aplicación
 
 ---
 
@@ -73,7 +115,7 @@ Las credenciales ya están configuradas en el script. Solo ejecuta el script par
 ### Railway
 1. Ve a tu proyecto → **Variables**
 2. Actualiza o agrega:
-   - `GOOGLE_CLIENT_ID` = `TU_CLIENT_ID_AQUI.apps.googleusercontent.com`
+   - `GOOGLE_CLIENT_ID` = `TU_CLIENT_ID_AQUI`
    - `GOOGLE_CLIENT_SECRET` = `TU_CLIENT_SECRET_AQUI`
 3. Guarda y redesplega
 

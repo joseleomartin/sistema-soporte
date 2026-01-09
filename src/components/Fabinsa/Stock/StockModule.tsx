@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Package, Plus, Edit, Trash2, Save, X, Upload, Download, History, Calendar, DollarSign, Truck } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Save, X, Upload, Download, History, Calendar, DollarSign, Truck, Eye } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -23,7 +23,7 @@ type StockProductInsert = Database['public']['Tables']['stock_products']['Insert
 type ResaleProduct = Database['public']['Tables']['resale_products']['Row'];
 type ResaleProductInsert = Database['public']['Tables']['resale_products']['Insert'];
 
-type TabType = 'materials' | 'products' | 'resale';
+type TabType = 'materials' | 'products' | 'resale' | 'reception';
 
 export function StockModule() {
   const { tenantId } = useTenant();
@@ -85,20 +85,571 @@ export function StockModule() {
   // Modal de importación
   const [showImportModal, setShowImportModal] = useState(false);
 
+  // Control de Recepción (Compras)
+  const [receptionControls, setReceptionControls] = useState<any[]>([]);
+  const [receptionItems, setReceptionItems] = useState<Record<string, any[]>>({});
+  const [receptionQuantities, setReceptionQuantities] = useState<Record<string, Record<string, number>>>({});
+  const [loadingReception, setLoadingReception] = useState(false);
+  const [receptionFilter, setReceptionFilter] = useState<'all' | 'completed' | 'pending'>('all');
+  
+  // Control de Recepción (Ventas)
+  const [salesReceptionControls, setSalesReceptionControls] = useState<any[]>([]);
+  const [salesReceptionItems, setSalesReceptionItems] = useState<Record<string, any[]>>({});
+  const [salesReceptionQuantities, setSalesReceptionQuantities] = useState<Record<string, Record<string, number>>>({});
+  const [loadingSalesReception, setLoadingSalesReception] = useState(false);
+  const [receptionTypeFilter, setReceptionTypeFilter] = useState<'all' | 'purchases' | 'sales'>('all');
+
+  const loadReceptionControls = async () => {
+    if (!tenantId) return;
+    setLoadingReception(true);
+    try {
+      console.log('Cargando controles de recepción para tenant:', tenantId);
+      
+      // Cargar controles (pendientes y completados)
+      const { data: controls, error } = await supabase
+        .from('purchase_reception_control')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error al cargar controles de recepción:', error);
+        throw error;
+      }
+
+      console.log('Controles encontrados:', controls?.length || 0, controls);
+      setReceptionControls(controls || []);
+
+      // Cargar items de cada control
+      const itemsMap: Record<string, any[]> = {};
+      const quantitiesMap: Record<string, Record<string, number>> = {};
+
+      for (const control of controls || []) {
+        const { data: items, error: itemsError } = await supabase
+          .from('purchase_reception_items')
+          .select('*')
+          .eq('reception_control_id', control.id)
+          .order('created_at', { ascending: true });
+
+        if (itemsError) {
+          console.error('Error al cargar items del control:', control.id, itemsError);
+          throw itemsError;
+        }
+        
+        console.log(`Items para control ${control.id}:`, items?.length || 0);
+        itemsMap[control.id] = items || [];
+
+        // Inicializar cantidades recibidas (usar cantidad_recibida si existe, sino cantidad_esperada)
+        const qtyMap: Record<string, number> = {};
+        (items || []).forEach((item: any) => {
+          // Si el control está completado, usar cantidad_recibida guardada
+          // Si está pendiente, usar cantidad_esperada como valor inicial
+          qtyMap[item.id] = control.estado === 'completado' 
+            ? (item.cantidad_recibida || item.cantidad_esperada)
+            : (item.cantidad_recibida || item.cantidad_esperada);
+        });
+        quantitiesMap[control.id] = qtyMap;
+      }
+
+      setReceptionItems(itemsMap);
+      setReceptionQuantities(quantitiesMap);
+    } catch (error) {
+      console.error('Error loading reception controls:', error);
+      alert('Error al cargar controles de recepción. Verifica la consola para más detalles.');
+    } finally {
+      setLoadingReception(false);
+    }
+  };
+
+  const handleUpdateReceptionQuantity = (controlId: string, itemId: string, quantity: number) => {
+    setReceptionQuantities(prev => ({
+      ...prev,
+      [controlId]: {
+        ...prev[controlId],
+        [itemId]: quantity,
+      },
+    }));
+  };
+
+  const handleCompleteReception = async (control: any) => {
+    if (!tenantId) return;
+    
+    const items = receptionItems[control.id] || [];
+    const quantities = receptionQuantities[control.id] || {};
+
+    // Validar que todas las cantidades estén ingresadas
+    for (const item of items) {
+      if (!quantities[item.id] || quantities[item.id] <= 0) {
+        alert(`Por favor ingrese la cantidad recibida para ${item.item_nombre}`);
+        return;
+      }
+    }
+
+    if (!confirm('¿Confirmar el control de recepción y actualizar el stock?')) {
+      return;
+    }
+
+    try {
+      // Actualizar cantidades recibidas en los items
+      for (const item of items) {
+        const { error: updateError } = await supabase
+          .from('purchase_reception_items')
+          .update({ cantidad_recibida: quantities[item.id] })
+          .eq('id', item.id);
+
+        if (updateError) throw updateError;
+      }
+
+      // Actualizar stock según el tipo de compra
+      if (control.purchase_type === 'material') {
+        // Cargar la orden de compra para obtener los materiales
+        const { data: purchases, error: purchasesError } = await supabase
+          .from('purchases_materials')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('order_id', control.order_id);
+
+        if (purchasesError) throw purchasesError;
+
+        for (const purchase of purchases || []) {
+          // Buscar el item de recepción correspondiente
+          const receptionItem = items.find((item: any) => item.item_nombre === purchase.material);
+          if (!receptionItem) {
+            console.warn(`No se encontró item de recepción para material: ${purchase.material}`);
+            continue;
+          }
+
+          // Obtener cantidad recibida, usar cantidad_recibida del item si no está en quantities
+          const cantidadRecibida = quantities[receptionItem.id] ?? receptionItem.cantidad_recibida ?? receptionItem.cantidad_esperada;
+          
+          if (!cantidadRecibida || cantidadRecibida <= 0) {
+            console.warn(`Cantidad recibida inválida para material: ${purchase.material}`, cantidadRecibida);
+            continue;
+          }
+
+          // Buscar o crear el material en stock
+          const { data: existingMaterial, error: findError } = await supabase
+            .from('stock_materials')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('nombre', purchase.material)
+            .maybeSingle();
+
+          if (findError && findError.code !== 'PGRST116') {
+            console.error('Error buscando material:', findError);
+            throw findError;
+          }
+
+          if (existingMaterial) {
+            // Actualizar cantidad existente (usar kg)
+            // purchase.precio siempre está en ARS (es precioARS guardado en la compra)
+            // Si la compra fue en USD, necesitamos convertir de vuelta a USD para actualizar costo_kilo_usd
+            const costoKiloUSD = purchase.moneda === 'USD' && purchase.valor_dolar
+              ? purchase.precio / purchase.valor_dolar  // Convertir de ARS a USD
+              : purchase.precio; // Si fue en ARS, el precio ya está en ARS
+            
+            const { error: updateError } = await supabase
+              .from('stock_materials')
+              .update({ 
+                kg: (existingMaterial.kg || 0) + cantidadRecibida,
+                costo_kilo_usd: costoKiloUSD,
+                valor_dolar: purchase.valor_dolar || existingMaterial.valor_dolar || 1,
+                moneda: purchase.moneda || existingMaterial.moneda || 'ARS',
+              })
+              .eq('id', existingMaterial.id);
+
+            if (updateError) {
+              console.error('Error actualizando material:', updateError);
+              throw updateError;
+            }
+          } else {
+            // Crear nuevo material en stock
+            // purchase.precio siempre está en ARS (es precioARS guardado en la compra)
+            // Si la compra fue en USD, necesitamos convertir de vuelta a USD para guardar en costo_kilo_usd
+            const costoKiloUSD = purchase.moneda === 'USD' && purchase.valor_dolar
+              ? purchase.precio / purchase.valor_dolar  // Convertir de ARS a USD
+              : purchase.precio; // Si fue en ARS, el precio ya está en ARS
+            
+            const { error: insertError } = await supabase
+              .from('stock_materials')
+              .insert({
+                tenant_id: tenantId,
+                nombre: purchase.material,
+                material: purchase.material,
+                kg: cantidadRecibida,
+                costo_kilo_usd: costoKiloUSD,
+                valor_dolar: purchase.valor_dolar || 1,
+                moneda: purchase.moneda || 'ARS',
+              });
+
+            if (insertError) {
+              console.error('Error insertando material:', insertError);
+              throw insertError;
+            }
+          }
+
+          // Registrar movimiento de inventario
+          const { error: movementError } = await supabase.from('inventory_movements').insert({
+            tenant_id: tenantId,
+            tipo: 'ingreso_mp',
+            item_nombre: purchase.material,
+            cantidad: cantidadRecibida,
+            motivo: `Recepción de compra - Orden ${control.order_id.substring(0, 8)}`,
+          });
+
+          if (movementError) {
+            console.error('Error insertando movimiento de inventario:', movementError);
+            throw movementError;
+          }
+        }
+      } else if (control.purchase_type === 'product') {
+        // Similar para productos
+        const { data: purchases, error: purchasesError } = await supabase
+          .from('purchases_products')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('order_id', control.order_id);
+
+        if (purchasesError) throw purchasesError;
+
+        for (const purchase of purchases || []) {
+          const receptionItem = items.find((item: any) => item.item_nombre === purchase.producto);
+          if (!receptionItem) {
+            console.warn(`No se encontró item de recepción para producto: ${purchase.producto}`);
+            continue;
+          }
+
+          // Obtener cantidad recibida, usar cantidad_recibida del item si no está en quantities
+          const cantidadRecibida = quantities[receptionItem.id] ?? receptionItem.cantidad_recibida ?? receptionItem.cantidad_esperada;
+          
+          if (!cantidadRecibida || cantidadRecibida <= 0) {
+            console.warn(`Cantidad recibida inválida para producto: ${purchase.producto}`, cantidadRecibida);
+            continue;
+          }
+
+          const { data: existingProduct, error: findError } = await supabase
+            .from('resale_products')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('nombre', purchase.producto)
+            .maybeSingle();
+
+          if (findError && findError.code !== 'PGRST116') {
+            console.error('Error buscando producto de reventa:', findError);
+            throw findError;
+          }
+
+          // purchase.precio siempre está en ARS (es precioARS guardado en la compra)
+          // Si la compra fue en USD, necesitamos convertir de vuelta a USD para guardar en costo_unitario
+          const costo_unitario = purchase.moneda === 'USD' && purchase.valor_dolar
+            ? purchase.precio / purchase.valor_dolar  // Convertir de ARS a USD
+            : purchase.precio; // Si fue en ARS, el precio ya está en ARS
+          
+          // Calcular costo final siempre en pesos
+          const costo_unitario_en_pesos = purchase.moneda === 'USD' && purchase.valor_dolar
+            ? costo_unitario * purchase.valor_dolar
+            : costo_unitario;
+          const costo_unitario_final = costo_unitario_en_pesos; // Sin otros costos por defecto
+
+          if (existingProduct) {
+            const { error: updateError } = await supabase
+              .from('resale_products')
+              .update({ 
+                cantidad: (existingProduct.cantidad || 0) + cantidadRecibida,
+                costo_unitario: costo_unitario,
+                costo_unitario_final: costo_unitario_final,
+                valor_dolar: purchase.valor_dolar || existingProduct.valor_dolar || null,
+                moneda: purchase.moneda || existingProduct.moneda || 'ARS',
+              })
+              .eq('id', existingProduct.id);
+
+            if (updateError) {
+              console.error('Error actualizando producto de reventa:', updateError);
+              throw updateError;
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from('resale_products')
+              .insert({
+                tenant_id: tenantId,
+                nombre: purchase.producto,
+                cantidad: cantidadRecibida,
+                costo_unitario: costo_unitario,
+                otros_costos: 0,
+                costo_unitario_final: costo_unitario_final,
+                moneda: purchase.moneda || 'ARS',
+                valor_dolar: purchase.valor_dolar || null,
+              });
+
+            if (insertError) {
+              console.error('Error insertando producto de reventa:', insertError);
+              throw insertError;
+            }
+          }
+
+          const { error: movementError } = await supabase.from('inventory_movements').insert({
+            tenant_id: tenantId,
+            tipo: 'ingreso_pr',
+            item_nombre: purchase.producto,
+            cantidad: cantidadRecibida,
+            motivo: `Recepción de compra - Orden ${control.order_id.substring(0, 8)}`,
+          });
+
+          if (movementError) {
+            console.error('Error insertando movimiento de inventario:', movementError);
+            throw movementError;
+          }
+        }
+      }
+
+      // Marcar control como completado
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || null;
+      
+      const { error: completeError } = await supabase
+        .from('purchase_reception_control')
+        .update({
+          estado: 'completado',
+          fecha_control: new Date().toISOString(),
+          controlado_por: userId,
+        })
+        .eq('id', control.id);
+
+      if (completeError) throw completeError;
+
+      alert('Control de recepción completado y stock actualizado');
+      await loadReceptionControls();
+      await loadAllStock();
+    } catch (error) {
+      console.error('Error completing reception:', error);
+      alert('Error al completar el control de recepción');
+    }
+  };
+
+  const loadSalesReceptionControls = async () => {
+    if (!tenantId) return;
+    setLoadingSalesReception(true);
+    try {
+      // Cargar controles de recepción de ventas
+      const { data: controls, error } = await supabase
+        .from('sales_reception_control')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error al cargar controles de recepción de ventas:', error);
+        throw error;
+      }
+
+      setSalesReceptionControls(controls || []);
+
+      // Cargar items de cada control
+      const itemsMap: Record<string, any[]> = {};
+      const quantitiesMap: Record<string, Record<string, number>> = {};
+
+      for (const control of controls || []) {
+        const { data: items, error: itemsError } = await supabase
+          .from('sales_reception_items')
+          .select('*')
+          .eq('reception_control_id', control.id)
+          .order('created_at', { ascending: true });
+
+        if (itemsError) {
+          console.error('Error al cargar items del control de venta:', control.id, itemsError);
+          throw itemsError;
+        }
+        
+        itemsMap[control.id] = items || [];
+
+        // Inicializar cantidades recibidas
+        const qtyMap: Record<string, number> = {};
+        (items || []).forEach((item: any) => {
+          qtyMap[item.id] = control.estado === 'completado' 
+            ? (item.cantidad_recibida || item.cantidad_esperada)
+            : (item.cantidad_recibida || item.cantidad_esperada);
+        });
+        quantitiesMap[control.id] = qtyMap;
+      }
+
+      setSalesReceptionItems(itemsMap);
+      setSalesReceptionQuantities(quantitiesMap);
+    } catch (error) {
+      console.error('Error loading sales reception controls:', error);
+      // No mostrar alerta si la tabla no existe aún (migración no ejecutada)
+      if (!(error as any).message?.includes('does not exist')) {
+        alert('Error al cargar controles de recepción de ventas. Verifica la consola para más detalles.');
+      }
+    } finally {
+      setLoadingSalesReception(false);
+    }
+  };
+
+  const handleCompleteSalesReception = async (control: any) => {
+    if (!tenantId) return;
+    
+    const items = salesReceptionItems[control.id] || [];
+    const quantities = salesReceptionQuantities[control.id] || {};
+
+    // Validar que todas las cantidades estén ingresadas
+    for (const item of items) {
+      if (!quantities[item.id] || quantities[item.id] <= 0) {
+        alert(`Por favor ingrese la cantidad recibida para ${item.item_nombre}`);
+        return;
+      }
+    }
+
+    if (!confirm('¿Confirmar el control de recepción y actualizar el stock? Esto descontará el stock de los productos.')) {
+      return;
+    }
+
+    try {
+      // Actualizar cantidades recibidas en los items
+      for (const item of items) {
+        const { error: updateError } = await supabase
+          .from('sales_reception_items')
+          .update({ cantidad_recibida: quantities[item.id] })
+          .eq('id', item.id);
+
+        if (updateError) throw updateError;
+      }
+
+      // Cargar la orden de venta para obtener los productos
+      const { data: sales, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('order_id', control.order_id);
+
+      if (salesError) throw salesError;
+
+      // Actualizar stock según el tipo de producto
+      for (const sale of sales || []) {
+        // Buscar el item de recepción correspondiente
+        const receptionItem = items.find((item: any) => item.item_nombre === sale.producto);
+        if (!receptionItem) {
+          console.warn(`No se encontró item de recepción para producto: ${sale.producto}`);
+          continue;
+        }
+
+        const cantidadRecibida = quantities[receptionItem.id] ?? receptionItem.cantidad_recibida ?? receptionItem.cantidad_esperada;
+        
+        if (!cantidadRecibida || cantidadRecibida <= 0) {
+          console.warn(`Cantidad recibida inválida para producto: ${sale.producto}`, cantidadRecibida);
+          continue;
+        }
+
+        if (sale.tipo_producto === 'fabricado') {
+          // Buscar o crear el producto en stock
+          const { data: existingProduct, error: findError } = await supabase
+            .from('stock_products')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('nombre', sale.producto)
+            .maybeSingle();
+
+          if (findError && findError.code !== 'PGRST116') {
+            console.error('Error buscando producto:', findError);
+            throw findError;
+          }
+
+          if (existingProduct) {
+            // Descontar cantidad recibida del stock
+            const nuevaCantidad = Math.max(0, existingProduct.cantidad - cantidadRecibida);
+            const { error: updateError } = await supabase
+              .from('stock_products')
+              .update({ cantidad: nuevaCantidad })
+              .eq('id', existingProduct.id);
+
+            if (updateError) throw updateError;
+          } else {
+            console.warn(`Producto fabricado no encontrado en stock: ${sale.producto}`);
+          }
+        } else {
+          // Producto de reventa
+          const { data: existingProduct, error: findError } = await supabase
+            .from('resale_products')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('nombre', sale.producto)
+            .maybeSingle();
+
+          if (findError && findError.code !== 'PGRST116') {
+            console.error('Error buscando producto de reventa:', findError);
+            throw findError;
+          }
+
+          if (existingProduct) {
+            // Descontar cantidad recibida del stock
+            const nuevaCantidad = Math.max(0, existingProduct.cantidad - cantidadRecibida);
+            const { error: updateError } = await supabase
+              .from('resale_products')
+              .update({ cantidad: nuevaCantidad })
+              .eq('id', existingProduct.id);
+
+            if (updateError) throw updateError;
+          } else {
+            console.warn(`Producto de reventa no encontrado en stock: ${sale.producto}`);
+          }
+        }
+
+        // Registrar movimiento de inventario
+        const { error: movementError } = await supabase.from('inventory_movements').insert({
+          tenant_id: tenantId,
+          tipo: sale.tipo_producto === 'fabricado' ? 'egreso_fab' : 'egreso_pr',
+          item_nombre: sale.producto,
+          cantidad: cantidadRecibida,
+          motivo: `Recepción de venta confirmada - Orden ${control.order_id.substring(0, 8)}`,
+        });
+
+        if (movementError) {
+          console.error('Error insertando movimiento de inventario:', movementError);
+          throw movementError;
+        }
+      }
+
+      // Marcar control como completado
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || null;
+      
+      const { error: completeError } = await supabase
+        .from('sales_reception_control')
+        .update({
+          estado: 'completado',
+          fecha_control: new Date().toISOString(),
+          controlado_por: userId,
+        })
+        .eq('id', control.id);
+
+      if (completeError) throw completeError;
+
+      alert('Control de recepción de venta completado y stock actualizado');
+      await loadSalesReceptionControls();
+      await loadAllStock();
+    } catch (error) {
+      console.error('Error completing sales reception:', error);
+      alert('Error al completar el control de recepción de venta');
+    }
+  };
+
   useEffect(() => {
     if (tenantId) {
       loadAllStock();
+      if (activeTab === 'reception') {
+        loadReceptionControls();
+        loadSalesReceptionControls();
+      }
     }
-  }, [tenantId]);
+  }, [tenantId, activeTab]);
 
   const loadMaterialMovements = async (material: StockMaterial) => {
     if (!tenantId) return;
     setLoadingMovements(true);
     try {
-      // Cargar compras relacionadas con esta materia prima
+      // Cargar compras relacionadas con esta materia prima (incluyendo campos de IVA)
       const { data: purchases, error: purchasesError } = await supabase
         .from('purchases_materials')
-        .select('*')
+        .select('*, tiene_iva, iva_pct')
         .eq('tenant_id', tenantId)
         .ilike('material', material.material)
         .order('fecha', { ascending: false });
@@ -134,10 +685,10 @@ export function StockModule() {
     if (!tenantId) return;
     setLoadingResaleMovements(true);
     try {
-      // Cargar compras relacionadas con este producto de reventa
+      // Cargar compras relacionadas con este producto de reventa (incluyendo campos de IVA)
       const { data: purchases, error: purchasesError } = await supabase
         .from('purchases_products')
-        .select('*')
+        .select('*, tiene_iva, iva_pct')
         .eq('tenant_id', tenantId)
         .ilike('producto', product.nombre)
         .order('fecha', { ascending: false });
@@ -173,12 +724,19 @@ export function StockModule() {
     if (!tenantId) return;
     setLoading(true);
     try {
-      // Load materials
-      const { data: mats } = await supabase
+      // Load materials - cargar todos sin límite
+      const { data: mats, error: matsError, count } = await supabase
         .from('stock_materials')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
+      
+      if (matsError) {
+        console.error('Error cargando materiales:', matsError);
+        throw matsError;
+      }
+      
+      console.log(`Materiales cargados: ${mats?.length || 0} de ${count || 'desconocido'}`);
       setMaterials(mats || []);
 
       // Load products
@@ -293,7 +851,16 @@ export function StockModule() {
     try {
       const costo_unitario = parseFloat(resaleForm.costo_unitario);
       const otros_costos = parseFloat(resaleForm.otros_costos) || 0;
-      const costo_unitario_final = costo_unitario + otros_costos;
+      const valor_dolar = resaleForm.valor_dolar ? parseFloat(resaleForm.valor_dolar) : 1;
+      
+      // Calcular costo final siempre en pesos
+      // Si el costo unitario está en USD, convertirlo a pesos multiplicando por valor_dolar
+      const costo_unitario_en_pesos = resaleForm.moneda === 'USD' 
+        ? costo_unitario * valor_dolar 
+        : costo_unitario;
+      
+      // El costo final es el costo unitario en pesos + otros costos (que siempre están en pesos)
+      const costo_unitario_final = costo_unitario_en_pesos + otros_costos;
 
       const data: ResaleProductInsert = {
         tenant_id: tenantId,
@@ -361,6 +928,7 @@ export function StockModule() {
             { id: 'materials' as TabType, label: 'Materia Prima' },
             { id: 'products' as TabType, label: 'Productos Fabricados' },
             { id: 'resale' as TabType, label: 'Productos de Reventa' },
+            { id: 'reception' as TabType, label: 'Control de Recepción' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -381,7 +949,14 @@ export function StockModule() {
       {activeTab === 'materials' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Materia Prima</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Materia Prima</h2>
+              {materials.length > 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Total: {materials.length} material{materials.length !== 1 ? 'es' : ''}
+                </p>
+              )}
+            </div>
             <div className="flex items-center space-x-2">
               {canCreate('fabinsa-stock') && (
                 <>
@@ -629,17 +1204,24 @@ export function StockModule() {
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.proveedor}</td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)}</td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                      {purchase.moneda === 'USD' && purchase.valor_dolar ? (
-                                        <div className="flex items-center space-x-1">
-                                          <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                          <span>${(purchase.precio / purchase.valor_dolar).toFixed(2)} USD</span>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center space-x-1">
-                                          <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                          <span>${purchase.precio.toFixed(2)} ARS</span>
-                                        </div>
-                                      )}
+                                      {(() => {
+                                        // Mostrar precio unitario sin IVA
+                                        const precioBase = purchase.moneda === 'USD' && purchase.valor_dolar 
+                                          ? purchase.precio / purchase.valor_dolar 
+                                          : purchase.precio;
+                                        
+                                        return purchase.moneda === 'USD' && purchase.valor_dolar ? (
+                                          <div className="flex items-center space-x-1">
+                                            <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                            <span>${precioBase.toFixed(2)} USD</span>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center space-x-1">
+                                            <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                            <span>${precioBase.toFixed(2)} ARS</span>
+                                          </div>
+                                        );
+                                      })()}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                                       <span className={`px-2 py-1 rounded text-xs ${
@@ -656,7 +1238,10 @@ export function StockModule() {
                                       )}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                      ${purchase.total.toFixed(2)} ARS
+                                      {(() => {
+                                        // Mostrar total sin IVA
+                                        return `$${purchase.total.toFixed(2)} ARS`;
+                                      })()}
                                     </td>
                                   </tr>
                                 ))}
@@ -1031,6 +1616,7 @@ export function StockModule() {
                         <input
                           type="number"
                           step="0.01"
+                          required
                           value={resaleForm.valor_dolar}
                           onChange={(e) => setResaleForm({ ...resaleForm, valor_dolar: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -1038,6 +1624,52 @@ export function StockModule() {
                       </div>
                     )}
                   </div>
+                  {resaleForm.costo_unitario && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vista Previa del Costo Final:</div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Costo Unitario:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            ${parseFloat(resaleForm.costo_unitario || '0').toFixed(2)} {resaleForm.moneda}
+                          </span>
+                        </div>
+                        {resaleForm.moneda === 'USD' && resaleForm.valor_dolar && (
+                          <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                            <span>× Valor Dólar:</span>
+                            <span>${parseFloat(resaleForm.valor_dolar).toFixed(2)}</span>
+                          </div>
+                        )}
+                        {resaleForm.moneda === 'USD' && resaleForm.valor_dolar && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Costo Unitario en Pesos:</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              ${(parseFloat(resaleForm.costo_unitario || '0') * parseFloat(resaleForm.valor_dolar)).toFixed(2)} ARS
+                            </span>
+                          </div>
+                        )}
+                        {parseFloat(resaleForm.otros_costos || '0') > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Otros Costos:</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              ${parseFloat(resaleForm.otros_costos || '0').toFixed(2)} ARS
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between pt-2 border-t border-blue-200 dark:border-blue-800">
+                          <span className="font-semibold text-gray-900 dark:text-white">Costo Final:</span>
+                          <span className="font-bold text-blue-600 dark:text-blue-400">
+                            ${(
+                              (resaleForm.moneda === 'USD' && resaleForm.valor_dolar
+                                ? parseFloat(resaleForm.costo_unitario || '0') * parseFloat(resaleForm.valor_dolar)
+                                : parseFloat(resaleForm.costo_unitario || '0')
+                              ) + parseFloat(resaleForm.otros_costos || '0')
+                            ).toFixed(2)} ARS
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Stock Mínimo (unidades)</label>
                     <input
@@ -1115,8 +1747,12 @@ export function StockModule() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {stockMinimo}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${prod.costo_unitario.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${prod.costo_unitario_final.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          ${prod.costo_unitario.toFixed(2)} {prod.moneda}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-semibold">
+                          ${prod.costo_unitario_final.toFixed(2)} ARS
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.moneda}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex justify-end space-x-2">
@@ -1230,17 +1866,41 @@ export function StockModule() {
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.proveedor}</td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad}</td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                      {purchase.moneda === 'USD' && purchase.valor_dolar ? (
-                                        <div className="flex items-center space-x-1">
-                                          <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                          <span>${(purchase.precio / purchase.valor_dolar).toFixed(2)} USD</span>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center space-x-1">
-                                          <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                          <span>${purchase.precio.toFixed(2)} ARS</span>
-                                        </div>
-                                      )}
+                                      {(() => {
+                                        // Calcular precio unitario con IVA si corresponde
+                                        const precioBase = purchase.moneda === 'USD' && purchase.valor_dolar 
+                                          ? purchase.precio / purchase.valor_dolar 
+                                          : purchase.precio;
+                                        const tieneIva = (purchase as any).tiene_iva || false;
+                                        const ivaPct = (purchase as any).iva_pct || 0;
+                                        const precioConIva = tieneIva ? precioBase * (1 + ivaPct / 100) : precioBase;
+                                        
+                                        return purchase.moneda === 'USD' && purchase.valor_dolar ? (
+                                          <div className="flex flex-col space-y-1">
+                                            <div className="flex items-center space-x-1">
+                                              <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                              <span>${precioConIva.toFixed(2)} USD</span>
+                                            </div>
+                                            {tieneIva && (
+                                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                (Base: ${precioBase.toFixed(2)} + IVA {ivaPct}%)
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="flex flex-col space-y-1">
+                                            <div className="flex items-center space-x-1">
+                                              <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                              <span>${precioConIva.toFixed(2)} ARS</span>
+                                            </div>
+                                            {tieneIva && (
+                                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                (Base: ${precioBase.toFixed(2)} + IVA {ivaPct}%)
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                                       <span className={`px-2 py-1 rounded text-xs ${
@@ -1323,6 +1983,523 @@ export function StockModule() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Control de Recepción Tab */}
+      {activeTab === 'reception' && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Control de Recepción</h2>
+            {/* Filtros */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mr-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Tipo:</span>
+                <button
+                  onClick={() => setReceptionTypeFilter('all')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    receptionTypeFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Todas
+                </button>
+                <button
+                  onClick={() => setReceptionTypeFilter('purchases')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    receptionTypeFilter === 'purchases'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Compras
+                </button>
+                <button
+                  onClick={() => setReceptionTypeFilter('sales')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    receptionTypeFilter === 'sales'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Ventas
+                </button>
+              </div>
+              <button
+                onClick={() => setReceptionFilter('all')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  receptionFilter === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                Todas
+              </button>
+              <button
+                onClick={() => setReceptionFilter('pending')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  receptionFilter === 'pending'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                Incompletas
+              </button>
+              <button
+                onClick={() => setReceptionFilter('completed')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  receptionFilter === 'completed'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                Completadas
+              </button>
+            </div>
+          </div>
+
+          {loadingReception || loadingSalesReception ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">Cargando controles...</div>
+          ) : (() => {
+            // Filtrar controles de compras según el filtro seleccionado
+            const filteredPurchaseControls = receptionControls.filter((control) => {
+              if (receptionTypeFilter === 'sales') return false; // Ocultar compras si solo se muestran ventas
+              if (receptionTypeFilter === 'purchases') return true; // Mostrar todas las compras
+              if (receptionTypeFilter === 'all') return true; // Mostrar todas si es 'all'
+              if (receptionFilter === 'all') return true;
+              if (receptionFilter === 'completed') {
+                // Solo mostrar completadas sin diferencias negativas
+                const items = receptionItems[control.id] || [];
+                const quantities = receptionQuantities[control.id] || {};
+                const hasNegativeDifference = items.some((item: any) => {
+                  const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
+                  return cantidadRecibida < item.cantidad_esperada;
+                });
+                return control.estado === 'completado' && !hasNegativeDifference;
+              }
+              if (receptionFilter === 'pending') {
+                // Mostrar pendientes Y completadas con diferencias negativas
+                const items = receptionItems[control.id] || [];
+                const quantities = receptionQuantities[control.id] || {};
+                const hasNegativeDifference = items.some((item: any) => {
+                  const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
+                  return cantidadRecibida < item.cantidad_esperada;
+                });
+                return control.estado === 'pendiente' || (control.estado === 'completado' && hasNegativeDifference);
+              }
+              return true;
+            });
+
+            // Filtrar controles de ventas según el filtro seleccionado
+            const filteredSalesControls = salesReceptionControls.filter((control) => {
+              if (receptionTypeFilter === 'purchases') return false; // Ocultar ventas si solo se muestran compras
+              if (receptionTypeFilter === 'sales') return true; // Mostrar todas las ventas
+              if (receptionTypeFilter === 'all') return true; // Mostrar todas si es 'all'
+              
+              if (receptionFilter === 'all') return true;
+              if (receptionFilter === 'completed') {
+                const items = salesReceptionItems[control.id] || [];
+                const quantities = salesReceptionQuantities[control.id] || {};
+                const hasNegativeDifference = items.some((item: any) => {
+                  const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
+                  return cantidadRecibida < item.cantidad_esperada;
+                });
+                return control.estado === 'completado' && !hasNegativeDifference;
+              }
+              if (receptionFilter === 'pending') {
+                const items = salesReceptionItems[control.id] || [];
+                const quantities = salesReceptionQuantities[control.id] || {};
+                const hasNegativeDifference = items.some((item: any) => {
+                  const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
+                  return cantidadRecibida < item.cantidad_esperada;
+                });
+                return control.estado === 'pendiente' || (control.estado === 'completado' && hasNegativeDifference);
+              }
+              return true;
+            });
+
+            const hasAnyControls = filteredPurchaseControls.length > 0 || filteredSalesControls.length > 0;
+
+            if (!hasAnyControls) {
+              return (
+                <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-8 text-center">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {receptionFilter === 'all' 
+                      ? 'No hay órdenes de control de recepción'
+                      : receptionFilter === 'completed'
+                      ? 'No hay órdenes completadas sin diferencias'
+                      : 'No hay órdenes pendientes o con diferencias negativas'}
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-6">
+                {/* Controles de Recepción de Compras */}
+                {filteredPurchaseControls.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-semibold mb-3 text-gray-900 dark:text-white">Compras</h3>
+              <div className="space-y-4">
+                      {filteredPurchaseControls.map((control) => {
+                const items = receptionItems[control.id] || [];
+                const quantities = receptionQuantities[control.id] || {};
+                
+                // Calcular si hay diferencias negativas (menos stock recibido)
+                const hasNegativeDifference = items.some((item: any) => {
+                  const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
+                  return cantidadRecibida < item.cantidad_esperada;
+                });
+                
+                // Determinar el color del borde según el estado y diferencias
+                const borderColor = control.estado === 'completado' 
+                  ? (hasNegativeDifference 
+                      ? 'border-red-500 dark:border-red-600' 
+                      : 'border-green-500 dark:border-green-600')
+                  : 'border-gray-200 dark:border-gray-700';
+                
+                const bgColor = control.estado === 'completado'
+                  ? (hasNegativeDifference
+                      ? 'bg-red-50 dark:bg-red-900/20'
+                      : 'bg-green-50 dark:bg-green-900/20')
+                  : 'bg-blue-50 dark:bg-blue-900/20';
+
+                return (
+                  <div key={control.id} className={`bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden border-2 ${borderColor}`}>
+                    <div className={`px-6 py-4 ${bgColor} border-b border-gray-200 dark:border-gray-700`}>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                              Orden {control.order_id.substring(0, 8)}
+                            </h3>
+                            {control.estado === 'completado' && (
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                hasNegativeDifference
+                                  ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                  : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                              }`}>
+                                {hasNegativeDifference ? '⚠ Menor Stock' : '✓ Completado'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Tipo: {control.purchase_type === 'material' ? 'Materia Prima' : 'Producto'} | 
+                            Fecha recepción: {new Date(control.fecha_recepcion).toLocaleDateString('es-AR')}
+                            {control.fecha_control && (
+                              <> | Completado: {new Date(control.fecha_control).toLocaleDateString('es-AR')}</>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {control.estado === 'pendiente' && (
+                            <button
+                              onClick={() => handleCompleteReception(control)}
+                              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
+                            >
+                              <Save className="w-4 h-4" />
+                              <span>Completar Control</span>
+                            </button>
+                          )}
+                          {(control.estado === 'completado' || hasNegativeDifference) && (
+                            <button
+                              onClick={() => {
+                                // Scroll a la sección de detalles o mostrar modal de revisión
+                                const element = document.getElementById(`reception-details-${control.id}`);
+                                if (element) {
+                                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                              }}
+                              className={`px-4 py-2 rounded-md flex items-center space-x-2 ${
+                                hasNegativeDifference
+                                  ? 'bg-red-600 text-white hover:bg-red-700'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                              }`}
+                              title={hasNegativeDifference ? 'Revisar diferencias de stock' : 'Revisar control'}
+                            >
+                              <Eye className="w-4 h-4" />
+                              <span>Revisar</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-6 py-4">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-slate-700">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                              Item
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                              Cantidad Esperada
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                              Cantidad Recibida
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                              Diferencia
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                              Unidad
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {items.map((item: any) => {
+                            const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
+                            const diferencia = cantidadRecibida - item.cantidad_esperada;
+                            const isNegative = diferencia < 0;
+                            const isCompleted = control.estado === 'completado';
+
+                            return (
+                              <tr key={item.id} className={`hover:bg-gray-50 dark:hover:bg-slate-700 ${
+                                isCompleted && isNegative ? 'bg-red-50 dark:bg-red-900/10' : 
+                                isCompleted && !isNegative ? 'bg-green-50 dark:bg-green-900/10' : ''
+                              }`}>
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                                  {item.item_nombre}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                                  {item.cantidad_esperada.toFixed(2)} {item.unidad}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {isCompleted ? (
+                                    <span className={`text-sm font-medium ${
+                                      isNegative 
+                                        ? 'text-red-600 dark:text-red-400' 
+                                        : 'text-green-600 dark:text-green-400'
+                                    }`}>
+                                      {cantidadRecibida.toFixed(2)} {item.unidad}
+                                    </span>
+                                  ) : (
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={cantidadRecibida}
+                                      onChange={(e) => handleUpdateReceptionQuantity(control.id, item.id, parseFloat(e.target.value) || 0)}
+                                      className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                    />
+                                  )}
+                                </td>
+                                <td className={`px-4 py-3 text-sm font-semibold ${
+                                  diferencia > 0 
+                                    ? 'text-green-600 dark:text-green-400' 
+                                    : diferencia < 0 
+                                    ? 'text-red-600 dark:text-red-400' 
+                                    : 'text-gray-600 dark:text-gray-400'
+                                }`}>
+                                  {diferencia > 0 ? '+' : ''}{diferencia.toFixed(2)} {item.unidad}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                  {item.unidad}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Controles de Recepción de Ventas */}
+                {filteredSalesControls.length > 0 && (
+                  <div>
+                    <h3 className="text-md font-semibold mb-3 text-gray-900 dark:text-white">Ventas</h3>
+                    <div className="space-y-4">
+                      {filteredSalesControls.map((control) => {
+                        const items = salesReceptionItems[control.id] || [];
+                        const quantities = salesReceptionQuantities[control.id] || {};
+                        
+                        // Calcular si hay diferencias negativas
+                        const hasNegativeDifference = items.some((item: any) => {
+                          const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
+                          return cantidadRecibida < item.cantidad_esperada;
+                        });
+                        
+                        // Determinar el color del borde según el estado y diferencias
+                        const borderColor = control.estado === 'completado' 
+                          ? (hasNegativeDifference 
+                              ? 'border-red-500 dark:border-red-600' 
+                              : 'border-green-500 dark:border-green-600')
+                          : 'border-gray-200 dark:border-gray-700';
+                        
+                        const bgColor = control.estado === 'completado'
+                          ? (hasNegativeDifference
+                              ? 'bg-red-50 dark:bg-red-900/20'
+                              : 'bg-green-50 dark:bg-green-900/20')
+                          : 'bg-blue-50 dark:bg-blue-900/20';
+
+                        return (
+                          <div key={control.id} className={`bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden border-2 ${borderColor}`}>
+                            <div className={`px-6 py-4 ${bgColor} border-b border-gray-200 dark:border-gray-700`}>
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                      Orden Venta {control.order_id.substring(0, 8)}
+                                    </h3>
+                                    {control.estado === 'completado' && (
+                                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                        hasNegativeDifference
+                                          ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                          : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                      }`}>
+                                        {hasNegativeDifference ? '⚠ Menor Stock' : '✓ Completado'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    Fecha recepción: {new Date(control.fecha_recepcion).toLocaleDateString('es-AR')}
+                                    {control.fecha_control && (
+                                      <> | Completado: {new Date(control.fecha_control).toLocaleDateString('es-AR')}</>
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {control.estado === 'pendiente' && (
+                                    <button
+                                      onClick={() => handleCompleteSalesReception(control)}
+                                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
+                                    >
+                                      <Save className="w-4 h-4" />
+                                      <span>Completar Control</span>
+                                    </button>
+                                  )}
+                                  {(control.estado === 'completado' || hasNegativeDifference) && (
+                                    <button
+                                      onClick={() => {
+                                        const element = document.getElementById(`sales-reception-details-${control.id}`);
+                                        if (element) {
+                                          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        }
+                                      }}
+                                      className={`px-4 py-2 rounded-md flex items-center space-x-2 ${
+                                        hasNegativeDifference
+                                          ? 'bg-red-600 text-white hover:bg-red-700'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                                      }`}
+                                      title={hasNegativeDifference ? 'Revisar diferencias de stock' : 'Revisar control'}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      <span>Revisar</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div id={`sales-reception-details-${control.id}`} className="px-6 py-4">
+                              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-slate-700">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                      Item
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                      Tipo
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                      Cantidad Esperada
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                      Cantidad Recibida
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                      Diferencia
+                                    </th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                                      Unidad
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                  {items.map((item: any) => {
+                                    const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
+                                    const diferencia = cantidadRecibida - item.cantidad_esperada;
+                                    const isNegative = diferencia < 0;
+                                    const isCompleted = control.estado === 'completado';
+
+                                    return (
+                                      <tr key={item.id} className={`hover:bg-gray-50 dark:hover:bg-slate-700 ${
+                                        isCompleted && isNegative ? 'bg-red-50 dark:bg-red-900/10' : 
+                                        isCompleted && !isNegative ? 'bg-green-50 dark:bg-green-900/10' : ''
+                                      }`}>
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                                          {item.item_nombre}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm">
+                                          <span className={`px-2 py-1 rounded text-xs ${
+                                            item.tipo_producto === 'fabricado' 
+                                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' 
+                                              : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                          }`}>
+                                            {item.tipo_producto}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                                          {item.cantidad_esperada.toFixed(2)} {item.unidad}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          {isCompleted ? (
+                                            <span className={`text-sm font-medium ${
+                                              isNegative 
+                                                ? 'text-red-600 dark:text-red-400' 
+                                                : 'text-green-600 dark:text-green-400'
+                                            }`}>
+                                              {cantidadRecibida.toFixed(2)} {item.unidad}
+                                            </span>
+                                          ) : (
+                                            <input
+                                              type="number"
+                                              min="0"
+                                              step="0.01"
+                                              value={cantidadRecibida}
+                                              onChange={(e) => {
+                                                const newQuantities = { ...salesReceptionQuantities };
+                                                if (!newQuantities[control.id]) newQuantities[control.id] = {};
+                                                newQuantities[control.id][item.id] = parseFloat(e.target.value) || 0;
+                                                setSalesReceptionQuantities(newQuantities);
+                                              }}
+                                              className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                            />
+                                          )}
+                                        </td>
+                                        <td className={`px-4 py-3 text-sm font-semibold ${
+                                          diferencia > 0 
+                                            ? 'text-green-600 dark:text-green-400' 
+                                            : diferencia < 0 
+                                            ? 'text-red-600 dark:text-red-400' 
+                                            : 'text-gray-600 dark:text-gray-400'
+                                        }`}>
+                                          {diferencia > 0 ? '+' : ''}{diferencia.toFixed(2)} {item.unidad}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                                          {item.unidad}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

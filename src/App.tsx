@@ -6,6 +6,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { Sidebar } from './components/Layout/Sidebar';
 import { UserDashboard } from './components/Dashboard/UserDashboard';
+import { ProductionDashboard } from './components/Dashboard/ProductionDashboard';
 import { TicketsList } from './components/Tickets/TicketsList';
 import { ForumsList } from './components/Forums/ForumsList';
 import { MeetingRoomsList } from './components/Meetings/MeetingRoomsList';
@@ -177,11 +178,11 @@ function MainApp() {
             </div>
           );
         }
-        // Si es empresa de producción, mostrar Métricas en lugar del dashboard normal
+        // Si es empresa de producción, mostrar dashboard de producción con vacaciones y calendario
         if (isProductionCompany) {
-          return <MetricsModule key={`dashboard-metrics-${viewKey}`} />;
+          return <ProductionDashboard key={`dashboard-production-${viewKey}`} />;
         }
-        // Todos los roles usan el mismo dashboard personalizado
+        // Para empresas de servicio, usar el dashboard personalizado normal
         return <UserDashboard key={`dashboard-${viewKey}`} onNavigate={handleViewChange} />;
       case 'tickets':
         return <TicketsList key={`tickets-${viewKey}`} selectedTicketId={selectedTicketId} onClearSelection={() => setSelectedTicketId(null)} />;
@@ -251,7 +252,7 @@ function MainApp() {
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      <main className={`flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 transition-all duration-300 ${!sidebarCollapsed ? 'lg:ml-64' : ''}`}>
+      <main className={`flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' || currentView === 'forums' || currentView === 'fabinsa-suppliers' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
           {renderContent()}
         </div>

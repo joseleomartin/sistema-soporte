@@ -214,6 +214,10 @@ export function BulkAssignUsersModal({
   const handleSave = async () => {
     setSaving(true);
     try {
+      if (!profile?.tenant_id) {
+        throw new Error('No se pudo identificar la empresa');
+      }
+
       // Para cada cliente, actualizar sus permisos
       const updates: Promise<any>[] = [];
       let totalChanges = 0;
@@ -268,6 +272,7 @@ export function BulkAssignUsersModal({
           const newPerms = toAdd.map((userId) => ({
             subforum_id: client.id,
             user_id: userId,
+            tenant_id: profile.tenant_id, // Agregar tenant_id para aislamiento multi-tenant
             can_view: true,
             can_post: true,
             can_moderate: false,

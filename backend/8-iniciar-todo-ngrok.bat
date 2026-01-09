@@ -53,20 +53,20 @@ REM - Para producción, usa variables de entorno del sistema o del servidor
 REM - Si las variables ya están configuradas en el sistema, se usarán esas
 REM - Si no, se usarán las credenciales configuradas aquí
 
-REM Configurar credenciales de Google (si no están ya configuradas)
-REM ⚠️ IMPORTANTE: Configura estas variables de entorno en tu sistema
-REM o proporciona los valores cuando ejecutes el script
+REM Configurar credenciales de Google (si no están ya configuradas como variables de entorno)
 if "%GOOGLE_CLIENT_ID%"=="" (
-    echo ERROR: GOOGLE_CLIENT_ID no está configurado como variable de entorno
-    echo Por favor, configura la variable de entorno GOOGLE_CLIENT_ID antes de ejecutar este script
-    echo Ejemplo: set GOOGLE_CLIENT_ID=tu-client-id-aqui
-    exit /b 1
+    REM Si no está configurada como variable de entorno, usar la credencial del archivo JSON
+    REM ⚠️ IMPORTANTE: Reemplaza TU_CLIENT_ID_AQUI con tu Client ID real
+    set GOOGLE_CLIENT_ID=TU_CLIENT_ID_AQUI.apps.googleusercontent.com
+    echo Configurando GOOGLE_CLIENT_ID desde el script...
+    echo ADVERTENCIA: Usa tu Client ID real en lugar de TU_CLIENT_ID_AQUI
 )
 if "%GOOGLE_CLIENT_SECRET%"=="" (
-    echo ERROR: GOOGLE_CLIENT_SECRET no está configurado como variable de entorno
-    echo Por favor, configura la variable de entorno GOOGLE_CLIENT_SECRET antes de ejecutar este script
-    echo Ejemplo: set GOOGLE_CLIENT_SECRET=tu-client-secret-aqui
-    exit /b 1
+    REM Si no está configurada como variable de entorno, usar la credencial
+    REM ⚠️ IMPORTANTE: Reemplaza TU_CLIENT_SECRET_AQUI con tu Client Secret real
+    set GOOGLE_CLIENT_SECRET=TU_CLIENT_SECRET_AQUI
+    echo Configurando GOOGLE_CLIENT_SECRET desde el script...
+    echo ADVERTENCIA: Usa tu Client Secret real en lugar de TU_CLIENT_SECRET_AQUI
 )
 
 REM Verificar que las credenciales estén configuradas
@@ -78,6 +78,9 @@ if "%GOOGLE_CLIENT_SECRET%"=="" (
     echo ERROR: GOOGLE_CLIENT_SECRET no está configurado.
     exit /b 1
 )
+
+echo Credenciales de Google OAuth configuradas correctamente
+echo.
 
 echo ================================================
 echo  PASO 1: Iniciando servidor Flask
@@ -102,7 +105,15 @@ echo.
 echo NOTA: Se abrira una ventana "Servidor Flask" donde veras los logs
 echo Si hay errores, apareceran en esa ventana
 echo.
-start "Servidor Flask" cmd /k "python server.py"
+echo ================================================
+echo  CREDENCIALES CONFIGURADAS:
+echo ================================================
+echo Client ID: %GOOGLE_CLIENT_ID%
+echo Client Secret: %GOOGLE_CLIENT_SECRET:~0,10%...
+echo ================================================
+echo.
+REM Pasar las variables de entorno al proceso del servidor
+start "Servidor Flask" cmd /k "set GOOGLE_CLIENT_ID=%GOOGLE_CLIENT_ID% && set GOOGLE_CLIENT_SECRET=%GOOGLE_CLIENT_SECRET% && set PORT=%PORT% && set EXTRACTOR_PORT=%EXTRACTOR_PORT% && python server.py"
 
 echo Servidor iniciando...
 echo Esperando a que el servidor este listo...
@@ -205,6 +216,30 @@ echo Tu servidor estara disponible en una URL publica
 echo.
 echo IMPORTANTE: ngrok mostrara una URL tipo:
 echo   https://xxxx-xx-xx-xx-xx.ngrok-free.app
+echo.
+echo ================================================
+echo  CONFIGURACION REQUERIDA EN GOOGLE CLOUD CONSOLE
+echo ================================================
+echo.
+echo DESPUES de que ngrok muestre la URL, debes:
+echo.
+echo 1. Copiar la URL completa de ngrok
+echo    Ejemplo: https://abc123.ngrok-free.app
+echo.
+echo 2. Ir a Google Cloud Console:
+echo    https://console.cloud.google.com/apis/credentials
+echo.
+echo 3. Buscar el Client ID configurado en este script
+echo.
+echo 4. Agregar en "URI de redireccion autorizados":
+echo    https://TU-URL-NGROK.ngrok-free.app/google-oauth-callback
+echo.
+echo 5. Agregar en "Origenes JavaScript autorizados":
+echo    https://TU-URL-NGROK.ngrok-free.app
+echo.
+echo 6. Guardar y esperar 1-2 minutos
+echo.
+echo ================================================
 echo.
 echo Copia esa URL y usala en VITE_BACKEND_URL en Vercel
 echo.

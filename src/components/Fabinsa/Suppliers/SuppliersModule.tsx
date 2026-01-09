@@ -999,52 +999,65 @@ export function SuppliersModule() {
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad (kg)</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio Unitario</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Moneda</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">IVA</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Total</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {supplierMaterialPurchases.map((purchase) => (
-                              <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                  <div className="flex items-center space-x-1">
-                                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                    <span>{new Date(purchase.fecha).toLocaleDateString('es-AR')}</span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.material}</td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)}</td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                  {purchase.moneda === 'USD' && purchase.valor_dolar ? (
+                            {supplierMaterialPurchases.map((purchase) => {
+                              const tieneIva = (purchase as any).tiene_iva || false;
+                              const ivaPct = (purchase as any).iva_pct || 0;
+                              const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
+                              return (
+                                <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                     <div className="flex items-center space-x-1">
-                                      <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                      <span>${(purchase.precio / purchase.valor_dolar).toFixed(2)} USD</span>
+                                      <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                      <span>{new Date(purchase.fecha).toLocaleDateString('es-AR')}</span>
                                     </div>
-                                  ) : (
-                                    <div className="flex items-center space-x-1">
-                                      <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                      <span>${purchase.precio.toFixed(2)} ARS</span>
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                  <span className={`px-2 py-1 rounded text-xs ${
-                                    purchase.moneda === 'USD' 
-                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
-                                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                  }`}>
-                                    {purchase.moneda}
-                                  </span>
-                                  {purchase.moneda === 'USD' && purchase.valor_dolar && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                      Dólar: ${purchase.valor_dolar.toFixed(2)}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                  ${purchase.total.toFixed(2)} ARS
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.material}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                    {purchase.moneda === 'USD' && purchase.valor_dolar ? (
+                                      <div className="flex items-center space-x-1">
+                                        <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                        <span>${(purchase.precio / purchase.valor_dolar).toFixed(2)} USD</span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center space-x-1">
+                                        <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                        <span>${purchase.precio.toFixed(2)} ARS</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                    <span className={`px-2 py-1 rounded text-xs ${
+                                      purchase.moneda === 'USD' 
+                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                    }`}>
+                                      {purchase.moneda}
+                                    </span>
+                                    {purchase.moneda === 'USD' && purchase.valor_dolar && (
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                    {tieneIva ? (
+                                      <span>${ivaMonto.toFixed(2)} ARS ({ivaPct}%)</span>
+                                    ) : (
+                                      <span className="text-gray-400 dark:text-gray-500">Sin IVA</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                                    ${purchase.total.toFixed(2)} ARS
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -1072,52 +1085,65 @@ export function SuppliersModule() {
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio Unitario</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Moneda</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">IVA</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Total</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {supplierProductPurchases.map((purchase) => (
-                              <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                  <div className="flex items-center space-x-1">
-                                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                    <span>{new Date(purchase.fecha).toLocaleDateString('es-AR')}</span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.producto}</td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad}</td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                  {purchase.moneda === 'USD' && purchase.valor_dolar ? (
+                            {supplierProductPurchases.map((purchase) => {
+                              const tieneIva = (purchase as any).tiene_iva || false;
+                              const ivaPct = (purchase as any).iva_pct || 0;
+                              const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
+                              return (
+                                <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                     <div className="flex items-center space-x-1">
-                                      <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                      <span>${(purchase.precio / purchase.valor_dolar).toFixed(2)} USD</span>
+                                      <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                      <span>{new Date(purchase.fecha).toLocaleDateString('es-AR')}</span>
                                     </div>
-                                  ) : (
-                                    <div className="flex items-center space-x-1">
-                                      <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                      <span>${purchase.precio.toFixed(2)} ARS</span>
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                  <span className={`px-2 py-1 rounded text-xs ${
-                                    purchase.moneda === 'USD' 
-                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
-                                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                  }`}>
-                                    {purchase.moneda}
-                                  </span>
-                                  {purchase.moneda === 'USD' && purchase.valor_dolar && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                      Dólar: ${purchase.valor_dolar.toFixed(2)}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                  ${purchase.total.toFixed(2)} ARS
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.producto}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                    {purchase.moneda === 'USD' && purchase.valor_dolar ? (
+                                      <div className="flex items-center space-x-1">
+                                        <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                        <span>${(purchase.precio / purchase.valor_dolar).toFixed(2)} USD</span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center space-x-1">
+                                        <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                        <span>${purchase.precio.toFixed(2)} ARS</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                    <span className={`px-2 py-1 rounded text-xs ${
+                                      purchase.moneda === 'USD' 
+                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                    }`}>
+                                      {purchase.moneda}
+                                    </span>
+                                    {purchase.moneda === 'USD' && purchase.valor_dolar && (
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                    {tieneIva ? (
+                                      <span>${ivaMonto.toFixed(2)} ARS ({ivaPct}%)</span>
+                                    ) : (
+                                      <span className="text-gray-400 dark:text-gray-500">Sin IVA</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                                    ${purchase.total.toFixed(2)} ARS
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -1171,4 +1197,8 @@ export function SuppliersModule() {
     </div>
   );
 }
+
+
+
+
 

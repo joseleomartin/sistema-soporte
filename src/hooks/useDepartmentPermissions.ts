@@ -92,6 +92,9 @@ export function useDepartmentPermissions() {
    * Verifica si el usuario puede ver un módulo
    */
   const canView = (moduleView: string): boolean => {
+    // Dashboard/Inicio siempre está habilitado para todos los usuarios
+    if (moduleView === 'dashboard') return true;
+
     // Mientras se cargan los permisos, no mostrar nada
     if (loading) return false;
 
@@ -217,4 +220,5 @@ export function useDepartmentPermissions() {
     userDepartments,
   };
 }
+
 

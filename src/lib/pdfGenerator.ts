@@ -279,9 +279,6 @@ export async function generateOrderPDF(order: OrderData) {
         item.tipo || '-',
         item.cantidad.toString(),
         item.precio_unitario ? `$${item.precio_unitario.toFixed(2)}` : '-',
-        item.costo_unitario ? `$${item.costo_unitario.toFixed(2)}` : '-',
-        item.ingreso_neto ? `$${item.ingreso_neto.toFixed(2)}` : '-',
-        item.ganancia_total ? `$${item.ganancia_total.toFixed(2)}` : '-',
       ];
     } else if (order.tipo === 'compra') {
       const moneda = item.moneda || 'ARS';
@@ -308,7 +305,7 @@ export async function generateOrderPDF(order: OrderData) {
 
   const headers = 
     order.tipo === 'venta'
-      ? ['Producto', 'Tipo', 'Cantidad', 'Precio Unit.', 'Costo Unit.', 'Ingreso Neto', 'Ganancia']
+      ? ['Producto', 'Tipo', 'Cantidad', 'Precio Unit.']
       : order.tipo === 'compra'
       ? ['Material/Producto', 'Cantidad', 'Precio', 'Moneda', 'Total']
       : ['Material', 'Cantidad (kg)', 'Costo'];
@@ -331,13 +328,12 @@ export async function generateOrderPDF(order: OrderData) {
   doc.setFontSize(12);
 
   if (order.tipo === 'venta') {
-    if (order.total_ingreso_neto !== undefined) {
-      doc.text(`Total Ingreso Neto: $${order.total_ingreso_neto.toFixed(2)}`, margin, yPos);
-      yPos += 7;
-    }
-    if (order.total_ganancia !== undefined) {
-      doc.text(`Total Ganancia: $${order.total_ganancia.toFixed(2)}`, margin, yPos);
-    }
+    // Calcular total de la venta (cantidad * precio unitario)
+    const totalVenta = order.items.reduce((sum, item) => {
+      const precio = item.precio_unitario || 0;
+      return sum + (precio * item.cantidad);
+    }, 0);
+    doc.text(`Total: $${totalVenta.toFixed(2)}`, margin, yPos);
   } else if (order.tipo === 'compra') {
     if (order.total_compra !== undefined) {
       doc.text(`Total Compra: $${order.total_compra.toFixed(2)}`, margin, yPos);
@@ -378,4 +374,8 @@ export async function generateOrderPDF(order: OrderData) {
   // Guardar PDF
   doc.save(fileName);
 }
+
+
+
+
 

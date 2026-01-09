@@ -53,3 +53,7 @@ COMMENT ON COLUMN client_favorites.subforum_id IS 'ID del subforo (cliente) marc
 
 
 
+
+
+
+

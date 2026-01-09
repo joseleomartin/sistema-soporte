@@ -64,3 +64,12 @@ Si `VITE_GOOGLE_CLIENT_ID` tiene un valor diferente a:
 
 Después de cambiar las variables de entorno en Vercel, **DEBES redesplegar** para que los cambios surtan efecto. Los cambios no se aplican automáticamente a la aplicación ya desplegada.
 
+
+
+
+
+
+
+
+
+

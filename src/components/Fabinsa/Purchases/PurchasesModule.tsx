@@ -3,8 +3,8 @@
  * Registro de compras de materia prima y productos
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Plus, Edit, Trash2, Save, X, ChevronDown, FileText } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { TrendingUp, Plus, Edit, Trash2, Save, X, ChevronDown, FileText, CheckCircle, Package, DollarSign } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -27,7 +27,10 @@ interface MaterialItem {
   moneda: 'ARS' | 'USD';
   valor_dolar: number;
   precioARS: number;
+  tiene_iva: boolean;
+  iva_pct: number;
   total: number;
+  total_con_iva?: number;
 }
 
 interface ProductItem {
@@ -38,7 +41,10 @@ interface ProductItem {
   moneda: 'ARS' | 'USD';
   valor_dolar: number;
   precioARS: number;
+  tiene_iva: boolean;
+  iva_pct: number;
   total: number;
+  total_con_iva?: number;
 }
 
 export function PurchasesModule() {
@@ -80,6 +86,10 @@ export function PurchasesModule() {
   const [expandedMaterialOrders, setExpandedMaterialOrders] = useState<Set<string>>(new Set());
   const [expandedProductOrders, setExpandedProductOrders] = useState<Set<string>>(new Set());
   
+  // Controles de recepción para verificar problemas
+  const [receptionControls, setReceptionControls] = useState<any[]>([]);
+  const [receptionItems, setReceptionItems] = useState<Record<string, any[]>>({});
+  
   // Proveedores para combobox
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [showSupplierDropdownMaterial, setShowSupplierDropdownMaterial] = useState(false);
@@ -100,6 +110,137 @@ export function PurchasesModule() {
       loadStockMaterials();
     }
   }, [tenantId]);
+
+  // Memoizar el agrupamiento y cálculos de compras de materiales
+  const groupedMaterialPurchases = useMemo(() => {
+    if (materialPurchases.length === 0) return { orders: [], individual: [] };
+
+    const grouped = materialPurchases.reduce((acc: any, purchase: any) => {
+      if (purchase.order_id) {
+        if (!acc[purchase.order_id]) {
+          acc[purchase.order_id] = {
+            order_id: purchase.order_id,
+            fecha: purchase.fecha,
+            proveedor: purchase.proveedor,
+            items: [],
+            total_compra: 0,
+            subtotal_sin_iva: 0,
+            total_iva: 0,
+            tiene_iva: false,
+            iva_pct: 0,
+          };
+        }
+        acc[purchase.order_id].items.push(purchase);
+        
+        // purchase.total siempre es el subtotal sin IVA
+        const tieneIva = purchase.tiene_iva || false;
+        const ivaPct = purchase.iva_pct || 0;
+        const totalSinIva = purchase.total;
+        const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
+        const totalConIva = totalSinIva + ivaMonto;
+        
+        acc[purchase.order_id].total_compra += totalConIva;
+        acc[purchase.order_id].subtotal_sin_iva += totalSinIva;
+        acc[purchase.order_id].total_iva += ivaMonto;
+        if (tieneIva) {
+          acc[purchase.order_id].tiene_iva = true;
+          // Si ya hay un iva_pct y es diferente, mantener el mayor o el primero encontrado
+          // Si no hay iva_pct aún, establecerlo
+          if (acc[purchase.order_id].iva_pct === 0 || acc[purchase.order_id].iva_pct === ivaPct) {
+            acc[purchase.order_id].iva_pct = ivaPct;
+          } else {
+            // Si hay diferentes porcentajes, usar el mayor
+            acc[purchase.order_id].iva_pct = Math.max(acc[purchase.order_id].iva_pct, ivaPct);
+          }
+        }
+      } else {
+        if (!acc.individual) acc.individual = [];
+        acc.individual.push(purchase);
+      }
+      return acc;
+    }, {});
+
+    const orders = Object.values(grouped).filter((g: any) => g.order_id);
+    orders.forEach((order: any) => {
+      if (order.items && order.items.length > 0) {
+        order.estado = order.items[0].estado || 'pendiente';
+        order.pagado = order.items[0].pagado || false;
+      } else {
+        order.estado = 'pendiente';
+        order.pagado = false;
+      }
+    });
+    orders.sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    const individual = grouped.individual || [];
+
+    return { orders, individual };
+  }, [materialPurchases]);
+
+  // Memoizar el agrupamiento y cálculos de compras de productos
+  const groupedProductPurchases = useMemo(() => {
+    if (productPurchases.length === 0) return { orders: [], individual: [] };
+
+    const grouped = productPurchases.reduce((acc: any, purchase: any) => {
+      if (purchase.order_id) {
+        if (!acc[purchase.order_id]) {
+          acc[purchase.order_id] = {
+            order_id: purchase.order_id,
+            fecha: purchase.fecha,
+            proveedor: purchase.proveedor,
+            items: [],
+            total_compra: 0,
+            subtotal_sin_iva: 0,
+            total_iva: 0,
+            tiene_iva: false,
+            iva_pct: 0,
+            estado: purchase.estado || 'pendiente',
+          };
+        }
+        acc[purchase.order_id].items.push(purchase);
+        
+        // purchase.total siempre es el subtotal sin IVA
+        const tieneIva = purchase.tiene_iva || false;
+        const ivaPct = purchase.iva_pct || 0;
+        const totalSinIva = purchase.total;
+        const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
+        const totalConIva = totalSinIva + ivaMonto;
+        
+        acc[purchase.order_id].total_compra += totalConIva;
+        acc[purchase.order_id].subtotal_sin_iva += totalSinIva;
+        acc[purchase.order_id].total_iva += ivaMonto;
+        if (tieneIva) {
+          acc[purchase.order_id].tiene_iva = true;
+          // Si ya hay un iva_pct y es diferente, mantener el mayor o el primero encontrado
+          // Si no hay iva_pct aún, establecerlo
+          if (acc[purchase.order_id].iva_pct === 0 || acc[purchase.order_id].iva_pct === ivaPct) {
+            acc[purchase.order_id].iva_pct = ivaPct;
+          } else {
+            // Si hay diferentes porcentajes, usar el mayor
+            acc[purchase.order_id].iva_pct = Math.max(acc[purchase.order_id].iva_pct, ivaPct);
+          }
+        }
+      } else {
+        if (!acc.individual) acc.individual = [];
+        acc.individual.push(purchase);
+      }
+      return acc;
+    }, {});
+
+    const orders = Object.values(grouped).filter((g: any) => g.order_id);
+    orders.forEach((order: any) => {
+      if (order.items && order.items.length > 0) {
+        order.estado = order.items[0].estado || 'pendiente';
+        order.pagado = order.items[0].pagado || false;
+      } else {
+        order.estado = 'pendiente';
+        order.pagado = false;
+      }
+    });
+    orders.sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    const individual = grouped.individual || [];
+
+    return { orders, individual };
+  }, [productPurchases]);
 
   const loadStockMaterials = async () => {
     if (!tenantId) return;
@@ -169,11 +310,55 @@ export function PurchasesModule() {
         .eq('tenant_id', tenantId)
         .order('fecha', { ascending: false });
       setProductPurchases(prods || []);
+
+      // Cargar controles de recepción para verificar problemas
+      await loadReceptionControls();
     } catch (error) {
       console.error('Error loading purchases:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadReceptionControls = async () => {
+    if (!tenantId) return;
+    try {
+      const { data: controls, error } = await supabase
+        .from('purchase_reception_control')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('fecha_recepcion', { ascending: false });
+
+      if (error) throw error;
+      setReceptionControls(controls || []);
+
+      // Cargar items de recepción
+      const itemsMap: Record<string, any[]> = {};
+      for (const control of controls || []) {
+        const { data: items } = await supabase
+          .from('purchase_reception_items')
+          .select('*')
+          .eq('reception_control_id', control.id);
+        if (items) {
+          itemsMap[control.id] = items;
+        }
+      }
+      setReceptionItems(itemsMap);
+    } catch (error) {
+      console.error('Error loading reception controls:', error);
+    }
+  };
+
+  // Función para verificar si una orden tiene problemas en el control de recepción
+  const hasReceptionProblems = (orderId: string): boolean => {
+    const control = receptionControls.find(c => c.order_id === orderId);
+    if (!control || control.estado !== 'completado') return false;
+    
+    const items = receptionItems[control.id] || [];
+    return items.some((item: any) => {
+      const cantidadRecibida = item.cantidad_recibida || item.cantidad_esperada;
+      return cantidadRecibida < item.cantidad_esperada;
+    });
   };
 
   const handleAddMaterial = () => {
@@ -200,6 +385,12 @@ export function PurchasesModule() {
       return;
     }
 
+    // Calcular total con IVA si aplica
+    const ivaPct = 21.00; // IVA por defecto 21%
+    const tieneIva = false; // Por defecto sin IVA, el usuario puede cambiarlo
+    const totalSinIva = total;
+    const totalConIva = tieneIva ? totalSinIva * (1 + ivaPct / 100) : totalSinIva;
+
     const newItem: MaterialItem = {
       id: Date.now().toString(),
       material: materialForm.material,
@@ -208,7 +399,10 @@ export function PurchasesModule() {
       moneda: materialForm.moneda,
       valor_dolar: valorDolar,
       precioARS,
-      total,
+      tiene_iva: tieneIva,
+      iva_pct: ivaPct,
+      total: totalSinIva,
+      total_con_iva: totalConIva,
     };
 
     setMaterialItems([...materialItems, newItem]);
@@ -226,6 +420,35 @@ export function PurchasesModule() {
 
   const handleRemoveMaterial = (id: string) => {
     setMaterialItems(materialItems.filter(item => item.id !== id));
+  };
+
+  const handleToggleMaterialIva = (id: string) => {
+    setMaterialItems(materialItems.map(item => {
+      if (item.id === id) {
+        const tieneIva = !item.tiene_iva;
+        const totalConIva = tieneIva ? item.total * (1 + item.iva_pct / 100) : item.total;
+        return {
+          ...item,
+          tiene_iva: tieneIva,
+          total_con_iva: totalConIva,
+        };
+      }
+      return item;
+    }));
+  };
+
+  const handleUpdateMaterialIvaPct = (id: string, ivaPct: number) => {
+    setMaterialItems(materialItems.map(item => {
+      if (item.id === id) {
+        const totalConIva = item.tiene_iva ? item.total * (1 + ivaPct / 100) : item.total;
+        return {
+          ...item,
+          iva_pct: ivaPct,
+          total_con_iva: totalConIva,
+        };
+      }
+      return item;
+    }));
   };
 
   const handlePrintMaterialOrder = async (order: any) => {
@@ -300,7 +523,7 @@ export function PurchasesModule() {
 
       // Crear registros de compra para cada material con el mismo order_id
       for (const item of materialItems) {
-        const data: PurchaseMaterialInsert & { order_id?: string } = {
+        const data: PurchaseMaterialInsert & { order_id?: string; estado?: string; tiene_iva?: boolean; iva_pct?: number } = {
           tenant_id: tenantId,
           fecha,
           material: item.material,
@@ -309,21 +532,33 @@ export function PurchasesModule() {
           proveedor,
           moneda: item.moneda,
           valor_dolar: item.moneda === 'USD' ? item.valor_dolar : null,
-          total: item.total,
+          total: item.total, // Siempre guardar el subtotal sin IVA
           order_id: orderId,
+          estado: 'pendiente', // Estado inicial
+          tiene_iva: item.tiene_iva,
+          iva_pct: item.iva_pct,
         } as any;
 
-        await supabase.from('purchases_materials').insert(data);
+        const { error: insertError } = await supabase.from('purchases_materials').insert(data);
         
-        // Actualizar stock automáticamente
-        await updateStockOnPurchase('material', item.material, item.cantidad, item.precioARS, item.moneda, item.valor_dolar);
+        if (insertError) {
+          console.error('Error inserting purchase:', insertError);
+          throw insertError;
+        }
+        
+        // NO actualizar stock automáticamente - se actualizará cuando se complete el control de recepción
       }
 
       resetMaterialForm();
       loadPurchases();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving purchase:', error);
-      alert('Error al guardar la compra');
+      const errorMessage = error?.message || 'Error al guardar la compra';
+      if (errorMessage.includes('column') || errorMessage.includes('does not exist') || errorMessage.includes('tiene_iva') || errorMessage.includes('iva_pct') || errorMessage.includes('estado')) {
+        alert('Error: Las migraciones de base de datos no se han ejecutado. Por favor, ejecuta las migraciones en Supabase:\n\n1. 20250120000050_add_purchase_status_and_reception_control.sql\n2. 20250120000051_add_iva_to_purchases.sql\n\nError: ' + errorMessage);
+      } else {
+        alert(`Error al guardar la compra: ${errorMessage}`);
+      }
     }
   };
 
@@ -351,6 +586,12 @@ export function PurchasesModule() {
       return;
     }
 
+    // Calcular total con IVA si aplica
+    const ivaPct = 21.00; // IVA por defecto 21%
+    const tieneIva = false; // Por defecto sin IVA, el usuario puede cambiarlo
+    const totalSinIva = total;
+    const totalConIva = tieneIva ? totalSinIva * (1 + ivaPct / 100) : totalSinIva;
+
     const newItem: ProductItem = {
       id: Date.now().toString(),
       producto: productForm.producto,
@@ -359,7 +600,10 @@ export function PurchasesModule() {
       moneda: productForm.moneda,
       valor_dolar: valorDolar,
       precioARS,
-      total,
+      tiene_iva: tieneIva,
+      iva_pct: ivaPct,
+      total: totalSinIva,
+      total_con_iva: totalConIva,
     };
 
     setProductItems([...productItems, newItem]);
@@ -377,6 +621,35 @@ export function PurchasesModule() {
 
   const handleRemoveProduct = (id: string) => {
     setProductItems(productItems.filter(item => item.id !== id));
+  };
+
+  const handleToggleProductIva = (id: string) => {
+    setProductItems(productItems.map(item => {
+      if (item.id === id) {
+        const tieneIva = !item.tiene_iva;
+        const totalConIva = tieneIva ? item.total * (1 + item.iva_pct / 100) : item.total;
+        return {
+          ...item,
+          tiene_iva: tieneIva,
+          total_con_iva: totalConIva,
+        };
+      }
+      return item;
+    }));
+  };
+
+  const handleUpdateProductIvaPct = (id: string, ivaPct: number) => {
+    setProductItems(productItems.map(item => {
+      if (item.id === id) {
+        const totalConIva = item.tiene_iva ? item.total * (1 + ivaPct / 100) : item.total;
+        return {
+          ...item,
+          iva_pct: ivaPct,
+          total_con_iva: totalConIva,
+        };
+      }
+      return item;
+    }));
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
@@ -404,7 +677,7 @@ export function PurchasesModule() {
 
       // Crear registros de compra para cada producto con el mismo order_id
       for (const item of productItems) {
-        const data: PurchaseProductInsert & { order_id?: string } = {
+        const data: PurchaseProductInsert & { order_id?: string; estado?: string; tiene_iva?: boolean; iva_pct?: number } = {
           tenant_id: tenantId,
           fecha,
           producto: item.producto,
@@ -413,21 +686,205 @@ export function PurchasesModule() {
           proveedor,
           moneda: item.moneda,
           valor_dolar: item.moneda === 'USD' ? item.valor_dolar : null,
-          total: item.total,
+          total: item.total, // Siempre guardar el subtotal sin IVA
           order_id: orderId,
+          estado: 'pendiente', // Estado inicial
+          tiene_iva: item.tiene_iva,
+          iva_pct: item.iva_pct,
         } as any;
 
         await supabase.from('purchases_products').insert(data);
         
-        // Actualizar stock automáticamente
-        await updateStockOnPurchase('product', item.producto, item.cantidad, item.precioARS, item.moneda, item.valor_dolar);
+        // NO actualizar stock automáticamente - se actualizará cuando se complete el control de recepción
       }
 
       resetProductForm();
       loadPurchases();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving purchase:', error);
-      alert('Error al guardar la compra');
+      const errorMessage = error?.message || 'Error al guardar la compra';
+      if (errorMessage.includes('column') || errorMessage.includes('does not exist') || errorMessage.includes('tiene_iva') || errorMessage.includes('iva_pct') || errorMessage.includes('estado')) {
+        alert('Error: Las migraciones de base de datos no se han ejecutado. Por favor, ejecuta las migraciones en Supabase:\n\n1. 20250120000050_add_purchase_status_and_reception_control.sql\n2. 20250120000051_add_iva_to_purchases.sql\n\nError: ' + errorMessage);
+      } else {
+        alert(`Error al guardar la compra: ${errorMessage}`);
+      }
+    }
+  };
+
+  // Funciones para actualizar estado de recepción
+  const updateReceptionStatus = async (
+    type: 'material' | 'product',
+    orderId: string,
+    status: 'pendiente' | 'recibido'
+  ) => {
+    if (!tenantId) return;
+
+    try {
+      const table = type === 'material' ? 'purchases_materials' : 'purchases_products';
+      console.log(`Actualizando estado de recepción: ${table}, orderId: ${orderId}, status: ${status}`);
+      
+      // Actualizar estado localmente primero para feedback inmediato
+      if (type === 'material') {
+        setMaterialPurchases(prev => prev.map(p => 
+          p.order_id === orderId ? { ...p, estado: status } : p
+        ));
+      } else {
+        setProductPurchases(prev => prev.map(p => 
+          p.order_id === orderId ? { ...p, estado: status } : p
+        ));
+      }
+      
+      const { data, error } = await supabase
+        .from(table)
+        .update({ estado: status })
+        .eq('order_id', orderId)
+        .eq('tenant_id', tenantId)
+        .select();
+      
+      if (error) {
+        console.error('Error updating purchase status:', error);
+        // Revertir cambio local si falla
+        loadPurchases();
+        throw error;
+      }
+      
+      console.log('Registros actualizados:', data?.length || 0);
+      
+      // Crear el control de recepción solo si el estado es 'recibido'
+      if (status === 'recibido') {
+        console.log('Creando control de recepción...', { orderId, tenantId, type });
+        
+        if (!orderId) {
+          console.error('Error: order_id es null o undefined');
+          alert('Error: La compra no tiene order_id. No se puede crear el control de recepción.');
+          return;
+        }
+        
+        // Verificar si ya existe un control
+        const { data: existingControl } = await supabase
+          .from('purchase_reception_control')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('order_id', orderId)
+          .eq('purchase_type', type === 'material' ? 'material' : 'product')
+          .maybeSingle();
+        
+        if (existingControl) {
+          console.log('✅ Control de recepción ya existe:', existingControl.id);
+          return;
+        }
+        
+        // Crear el control directamente
+        const purchaseType = type === 'material' ? 'material' : 'product';
+        
+        // 1. Crear el control
+        const { data: newControl, error: controlError } = await supabase
+          .from('purchase_reception_control')
+          .insert({
+            tenant_id: tenantId,
+            order_id: orderId,
+            purchase_type: purchaseType,
+            estado: 'pendiente'
+          })
+          .select()
+          .single();
+        
+        if (controlError) {
+          console.error('Error creando control:', controlError);
+          // Intentar con RPC como respaldo
+          const { data: rpcControlId, error: rpcError } = await supabase.rpc('create_reception_control_manual', {
+            p_order_id: orderId,
+            p_tenant_id: tenantId,
+            p_purchase_type: purchaseType
+          });
+          
+          if (rpcError) {
+            console.error('Error con RPC también:', rpcError);
+            // No mostrar alert, solo loguear el error
+          } else {
+            console.log('✅ Control creado con RPC:', rpcControlId);
+          }
+        } else {
+          console.log('✅ Control creado:', newControl.id);
+          
+          // 2. Crear los items del control
+          const itemNameField = type === 'material' ? 'material' : 'producto';
+          const unidad = type === 'material' ? 'kg' : 'unidades';
+          
+          const { data: purchaseItems, error: itemsError } = await supabase
+            .from(table)
+            .select(`${itemNameField}, cantidad`)
+            .eq('tenant_id', tenantId)
+            .eq('order_id', orderId);
+          
+          if (itemsError) {
+            console.error('Error obteniendo items de la compra:', itemsError);
+            // No mostrar alert, solo loguear
+          } else {
+            // Insertar items del control
+            const receptionItems = (purchaseItems || []).map((item: any) => ({
+              tenant_id: tenantId,
+              reception_control_id: newControl.id,
+              item_nombre: item[itemNameField],
+              cantidad_esperada: item.cantidad,
+              cantidad_recibida: item.cantidad, // Inicializar con la cantidad esperada
+              unidad: unidad
+            }));
+            
+            if (receptionItems.length > 0) {
+              const { error: insertItemsError } = await supabase
+                .from('purchase_reception_items')
+                .insert(receptionItems);
+              
+              if (insertItemsError) {
+                console.error('Error insertando items del control:', insertItemsError);
+              } else {
+                console.log('✅ Items del control creados:', receptionItems.length);
+              }
+            }
+          }
+        }
+      }
+      
+      // Recargar para sincronizar con la base de datos
+      loadPurchases();
+    } catch (error) {
+      console.error('Error updating reception status:', error);
+      alert('Error al actualizar el estado de recepción');
+      // Recargar para restaurar el estado correcto
+      loadPurchases();
+    }
+  };
+
+  // Funciones para actualizar estado de pago
+  const updatePaymentStatus = async (
+    type: 'material' | 'product',
+    orderId: string,
+    pagado: boolean
+  ) => {
+    if (!tenantId) return;
+
+    try {
+      const table = type === 'material' ? 'purchases_materials' : 'purchases_products';
+      console.log(`Actualizando estado de pago: ${table}, orderId: ${orderId}, pagado: ${pagado}`);
+      
+      const { data, error } = await supabase
+        .from(table)
+        .update({ pagado: pagado })
+        .eq('order_id', orderId)
+        .eq('tenant_id', tenantId)
+        .select();
+      
+      if (error) {
+        console.error('Error updating payment status:', error);
+        throw error;
+      }
+      
+      console.log('Registros actualizados:', data?.length || 0);
+      loadPurchases();
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      alert('Error al actualizar el estado de pago');
     }
   };
 
@@ -815,20 +1272,57 @@ export function PurchasesModule() {
                       <h4 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">Materiales en la Compra ({materialItems.length})</h4>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {materialItems.map((item) => (
-                          <div key={item.id} className="bg-white dark:bg-slate-600 p-3 rounded-md flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900 dark:text-white">{item.material}</div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Cantidad: {item.cantidad.toFixed(2)} kg | Precio: ${item.precio.toFixed(2)} ({item.moneda}) | Total: ${item.total.toFixed(2)}
+                          <div key={item.id} className="bg-white dark:bg-slate-600 p-3 rounded-md">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900 dark:text-white">{item.material}</div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                  Cantidad: {item.cantidad.toFixed(2)} kg | Precio: ${item.precio.toFixed(2)} ({item.moneda})
+                                </div>
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                                  {item.tiene_iva ? (
+                                    <>
+                                      Subtotal: ${item.total.toFixed(2)} | IVA ({item.iva_pct}%): ${((item.total_con_iva || item.total) - item.total).toFixed(2)} | Total: ${(item.total_con_iva || item.total).toFixed(2)}
+                                    </>
+                                  ) : (
+                                    <>Total: ${item.total.toFixed(2)}</>
+                                  )}
+                                </div>
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveMaterial(item.id)}
+                                className="ml-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveMaterial(item.id)}
-                              className="ml-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+                            <div className="mt-2 flex items-center space-x-3 pt-2 border-t border-gray-200 dark:border-gray-500">
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={item.tiene_iva}
+                                  onChange={() => handleToggleMaterialIva(item.id)}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-700 dark:border-gray-600"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">Tiene IVA</span>
+                              </label>
+                              {item.tiene_iva && (
+                                <div className="flex items-center space-x-2">
+                                  <label className="text-sm text-gray-700 dark:text-gray-300">IVA:</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    value={item.iva_pct}
+                                    onChange={(e) => handleUpdateMaterialIvaPct(item.id, parseFloat(e.target.value) || 21)}
+                                    className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                  />
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">%</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -836,7 +1330,7 @@ export function PurchasesModule() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Total Compra:</span>
                           <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            ${materialItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                            ${materialItems.reduce((sum, item) => sum + (item.tiene_iva ? (item.total_con_iva || item.total) : item.total), 0).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -859,7 +1353,7 @@ export function PurchasesModule() {
                     {materialItems.length > 0 ? (
                       <button 
                         type="submit" 
-                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-lg"
+                        className="px-2 sm:px-3 md:px-4 lg:px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-lg"
                       >
                         ✓ Guardar Compra ({materialItems.length} material{materialItems.length > 1 ? 'es' : ''})
                       </button>
@@ -880,96 +1374,137 @@ export function PurchasesModule() {
 
           {/* Material Purchases Table */}
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="overflow-x-auto">
+              <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
               <thead className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Material</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cantidad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Precio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Proveedor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acciones</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Fecha</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">Material</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">Cantidad</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Precio</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-28">Proveedor</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-16">IVA</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Total IVA</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Costo</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Total</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-28">Estado</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-32">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {materialPurchases.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={11} className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       No hay compras registradas
                     </td>
                   </tr>
                 ) : (
-                  (() => {
-                    // Agrupar compras por order_id
-                    const groupedPurchases = materialPurchases.reduce((acc: any, purchase: any) => {
-                      if (purchase.order_id) {
-                        if (!acc[purchase.order_id]) {
-                          acc[purchase.order_id] = {
-                            order_id: purchase.order_id,
-                            fecha: purchase.fecha,
-                            proveedor: purchase.proveedor,
-                            items: [],
-                            total_compra: 0,
-                          };
-                        }
-                        acc[purchase.order_id].items.push(purchase);
-                        acc[purchase.order_id].total_compra += purchase.total;
-                      } else {
-                        // Compras sin order_id (antiguas) se muestran individualmente
-                        if (!acc.individual) acc.individual = [];
-                        acc.individual.push(purchase);
-                      }
-                      return acc;
-                    }, {});
-
-                    const orders = Object.values(groupedPurchases).filter((g: any) => g.order_id);
-                    const individualPurchases = groupedPurchases.individual || [];
-
-                    return (
-                      <>
+                  <>
                         {/* Mostrar órdenes agrupadas */}
-                        {orders.map((order: any) => {
+                        {groupedMaterialPurchases.orders.map((order: any) => {
                           const isExpanded = expandedMaterialOrders.has(order.order_id);
+                          const hasProblems = hasReceptionProblems(order.order_id);
                           return (
                             <React.Fragment key={order.order_id}>
                               {/* Fila resumen de la orden */}
-                              <tr className="bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30">
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                              <tr className={`${hasProblems ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border-l-4 border-red-500' : 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'}`}>
+                                <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white">
                                   {new Date(order.fecha).toLocaleDateString('es-AR')}
                                 </td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white" colSpan={2}>
-                                  <button
-                                    onClick={() => {
-                                      const newExpanded = new Set(expandedMaterialOrders);
-                                      if (isExpanded) {
-                                        newExpanded.delete(order.order_id);
-                                      } else {
-                                        newExpanded.add(order.order_id);
-                                      }
-                                      setExpandedMaterialOrders(newExpanded);
-                                    }}
-                                    className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                  >
-                                    <span>Orden con {order.items.length} material{order.items.length > 1 ? 'es' : ''}</span>
-                                    <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                                  </button>
+                                <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white" colSpan={2}>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => {
+                                        const newExpanded = new Set(expandedMaterialOrders);
+                                        if (isExpanded) {
+                                          newExpanded.delete(order.order_id);
+                                        } else {
+                                          newExpanded.add(order.order_id);
+                                        }
+                                        setExpandedMaterialOrders(newExpanded);
+                                      }}
+                                      className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                    >
+                                      <span className="text-xs">Orden con {order.items.length} material{order.items.length > 1 ? 'es' : ''}</span>
+                                      <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {hasProblems && (
+                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                                        ⚠ Problema en Control
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white"></td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{order.proveedor}</td>
-                                <td className="px-6 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white"></td>
+                                <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white text-xs">{order.proveedor}</td>
+                                <td className="px-2 py-3 text-sm text-gray-900 dark:text-white text-xs">
+                                  {order.tiene_iva ? `${order.iva_pct}%` : 'Sin IVA'}
+                                </td>
+                                <td className="px-2 py-3 text-sm font-semibold text-gray-900 dark:text-white text-xs">
+                                  ${order.total_iva.toFixed(2)}
+                                </td>
+                                <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
+                                  ${order.subtotal_sin_iva.toFixed(2)}
+                                </td>
+                                <td className="px-2 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
                                   ${order.total_compra.toFixed(2)}
                                 </td>
-                                <td className="px-6 py-3 text-right text-sm">
-                                  <div className="flex items-center justify-end gap-2">
+                                <td className="px-2 py-3 text-sm">
+                                  <div className="flex flex-col gap-1">
+                                    {/* Estado de Recepción */}
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      order.estado === 'recibido'
+                                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                                    }`}>
+                                      {order.estado === 'recibido' ? 'Recibido' : 'Pendiente'}
+                                    </span>
+                                    {/* Estado de Pago */}
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      order.pagado
+                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                    }`}>
+                                      {order.pagado ? 'Pagado' : 'Impago'}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-2 py-3 text-sm whitespace-nowrap">
+                                  <div className="flex items-center gap-1">
+                                    {canEdit('fabinsa-purchases') && (
+                                      <button
+                                        onClick={() => updateReceptionStatus('material', order.order_id, order.estado === 'recibido' ? 'pendiente' : 'recibido')}
+                                        className={`p-1 rounded text-white transition-colors flex-shrink-0 ${
+                                          order.estado === 'recibido'
+                                            ? 'bg-orange-600 dark:bg-orange-500 hover:bg-orange-700 dark:hover:bg-orange-600'
+                                            : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'
+                                        }`}
+                                        title={order.estado === 'recibido' ? 'Marcar como Pendiente' : 'Marcar como Recibido'}
+                                      >
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    {canEdit('fabinsa-purchases') && (
+                                      <button
+                                        onClick={() => updatePaymentStatus('material', order.order_id, !order.pagado)}
+                                        className={`p-1 rounded text-white transition-colors flex-shrink-0 ${
+                                          order.pagado
+                                            ? 'bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600'
+                                            : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'
+                                        }`}
+                                        title={order.pagado ? 'Marcar como Impago' : 'Marcar como Pagado'}
+                                      >
+                                        <DollarSign className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
                                     {canPrint('fabinsa-purchases') && (
-                                    <button
-                                      onClick={() => handlePrintMaterialOrder(order)}
-                                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                                      title="Imprimir/Generar PDF"
-                                    >
-                                      <FileText className="w-4 h-4" />
-                                    </button>
+                                      <button
+                                        onClick={() => handlePrintMaterialOrder(order)}
+                                        className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors flex-shrink-0"
+                                        title="Imprimir/Generar PDF"
+                                      >
+                                        <FileText className="w-3.5 h-3.5" />
+                                      </button>
                                     )}
                                     {canDelete('fabinsa-purchases') && (
                                       <button
@@ -979,10 +1514,10 @@ export function PurchasesModule() {
                                             loadPurchases();
                                           }
                                         }}
-                                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                        className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors flex-shrink-0"
                                         title="Eliminar orden"
                                       >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     )}
                                   </div>
@@ -996,19 +1531,38 @@ export function PurchasesModule() {
                                   ? item.precio / item.valor_dolar 
                                   : item.precio;
                                 
+                                // Calcular IVA para este item
+                                const tieneIva = item.tiene_iva || false;
+                                const ivaPct = item.iva_pct || 0;
+                                const totalSinIva = item.total;
+                                const totalConIva = tieneIva ? totalSinIva * (1 + ivaPct / 100) : totalSinIva;
+                                const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
+                                
                                 return (
                                   <tr key={item.id} className="bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600">
-                                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white pl-8">
+                                    <td className="px-2 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white pl-6 text-xs">
                                       • {item.material}
                                     </td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">{item.cantidad.toFixed(2)} kg</td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">{item.cantidad.toFixed(2)} kg</td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
                                       ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
                                     </td>
-                                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">${item.total.toFixed(2)}</td>
-                                    <td className="px-6 py-2 text-sm"></td>
+                                    <td className="px-2 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
+                                      {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
+                                      ${ivaMonto.toFixed(2)}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
+                                      ${totalSinIva.toFixed(2)}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
+                                      ${totalConIva.toFixed(2)}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm"></td>
+                                    <td className="px-2 py-2 text-sm"></td>
                                   </tr>
                                 );
                               })}
@@ -1016,73 +1570,193 @@ export function PurchasesModule() {
                           );
                         })}
                         {/* Mostrar compras individuales (sin order_id) */}
-                        {individualPurchases.map((purchase: any) => (
-                          <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {new Date(purchase.fecha).toLocaleDateString('es-AR')}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.material}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)} kg</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              ${purchase.precio.toFixed(2)} ({purchase.moneda})
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.proveedor}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                              ${purchase.total.toFixed(2)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                              <div className="flex items-center justify-end gap-2">
-                                {canPrint('fabinsa-purchases') && (
-                                <button
-                                  onClick={async () => {
-                                    const orderData: OrderData = {
-                                      tipo: 'compra',
-                                      fecha: purchase.fecha,
-                                      proveedor: purchase.proveedor,
-                                      items: [{
-                                        material: purchase.material,
-                                        cantidad: purchase.cantidad,
-                                        precio: purchase.precio,
-                                        total: purchase.total,
-                                        moneda: purchase.moneda,
-                                        valor_dolar: purchase.valor_dolar,
-                                      }],
-                                      total_compra: purchase.total,
-                                      logoUrl: tenant?.logo_url || undefined,
-                                      companyName: tenant?.name || undefined,
-                                    };
-                                    await generateOrderPDF(orderData);
-                                  }}
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                                  title="Imprimir/Generar PDF"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                </button>
-                                )}
-                                {canDelete('fabinsa-purchases') && (
+                        {groupedProductPurchases.individual.map((purchase: any) => {
+                          // Calcular IVA para compras individuales
+                          const tieneIva = purchase.tiene_iva || false;
+                          const ivaPct = purchase.iva_pct || 0;
+                          const totalSinIva = purchase.total;
+                          const totalConIva = tieneIva ? totalSinIva * (1 + ivaPct / 100) : totalSinIva;
+                          const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
+                          
+                          return (
+                            <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                                {new Date(purchase.fecha).toLocaleDateString('es-AR')}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.material}</td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad.toFixed(2)} kg</td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                                ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.proveedor}</td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                                {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white text-xs">
+                                ${ivaMonto.toFixed(2)}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
+                                ${totalSinIva.toFixed(2)}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
+                                ${totalConIva.toFixed(2)}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm">
+                                <div className="flex flex-col gap-1">
+                                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                    purchase.estado === 'recibido'
+                                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                      : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                                  }`}>
+                                    {purchase.estado === 'recibido' ? 'Recibido' : 'Pendiente'}
+                                  </span>
+                                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                    purchase.pagado
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                      : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                  }`}>
+                                    {purchase.pagado ? 'Pagado' : 'Impago'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-right text-sm">
+                                <div className="flex items-center justify-end gap-1">
+                                  {canPrint('fabinsa-purchases') && (
                                   <button
                                     onClick={async () => {
-                                      if (confirm('¿Eliminar esta compra?')) {
-                                        await supabase.from('purchases_materials').delete().eq('id', purchase.id);
-                                        loadPurchases();
-                                      }
+                                      const orderData: OrderData = {
+                                        tipo: 'compra',
+                                        fecha: purchase.fecha,
+                                        proveedor: purchase.proveedor,
+                                        items: [{
+                                          material: purchase.material,
+                                          cantidad: purchase.cantidad,
+                                          precio: purchase.precio,
+                                          total: purchase.total,
+                                          moneda: purchase.moneda,
+                                          valor_dolar: purchase.valor_dolar,
+                                        }],
+                                        total_compra: purchase.total,
+                                        logoUrl: tenant?.logo_url || undefined,
+                                        companyName: tenant?.name || undefined,
+                                      };
+                                      await generateOrderPDF(orderData);
                                     }}
-                                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                                    title="Eliminar compra"
+                                    className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors flex-shrink-0"
+                                    title="Imprimir/Generar PDF"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <FileText className="w-3.5 h-3.5" />
                                   </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                                  )}
+                                  {canDelete('fabinsa-purchases') && (
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm('¿Eliminar esta compra?')) {
+                                          await supabase.from('purchases_materials').delete().eq('id', purchase.id);
+                                          loadPurchases();
+                                        }
+                                      }}
+                                      className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors flex-shrink-0"
+                                      title="Eliminar compra"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {/* Mostrar compras individuales (sin order_id) */}
+                        {groupedMaterialPurchases.individual.map((purchase: any) => {
+                          // Calcular IVA para compras individuales
+                          const tieneIva = purchase.tiene_iva || false;
+                          const ivaPct = purchase.iva_pct || 0;
+                          const totalSinIva = purchase.total;
+                          const totalConIva = tieneIva ? totalSinIva * (1 + ivaPct / 100) : totalSinIva;
+                          const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
+                          
+                          return (
+                            <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                                {new Date(purchase.fecha).toLocaleDateString('es-AR')}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                                {purchase.material}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad.toFixed(2)} kg</td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                                ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.proveedor}</td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                                {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                                ${ivaMonto.toFixed(2)}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
+                                ${totalSinIva.toFixed(2)}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
+                                ${totalConIva.toFixed(2)}
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm">
+                                <div className="flex flex-col gap-1">
+                                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                    purchase.estado === 'recibido'
+                                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                      : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                                  }`}>
+                                    {purchase.estado === 'recibido' ? 'Recibido' : 'Pendiente'}
+                                  </span>
+                                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                    purchase.pagado
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                      : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                  }`}>
+                                    {purchase.pagado ? 'Pagado' : 'Impago'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-2 py-3 whitespace-nowrap text-right text-sm">
+                                <div className="flex items-center justify-end gap-1">
+                                  {canEdit('fabinsa-purchases') && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingMaterial(purchase);
+                                        setShowMaterialForm(true);
+                                      }}
+                                      className="p-1 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex-shrink-0"
+                                      title="Editar compra"
+                                    >
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {canDelete('fabinsa-purchases') && (
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm('¿Eliminar esta compra?')) {
+                                          await supabase.from('purchases_materials').delete().eq('id', purchase.id);
+                                          loadPurchases();
+                                        }
+                                      }}
+                                      className="p-1 rounded text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex-shrink-0"
+                                      title="Eliminar compra"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </>
-                    );
-                  })()
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -1261,20 +1935,57 @@ export function PurchasesModule() {
                       <h4 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">Productos en la Compra ({productItems.length})</h4>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {productItems.map((item) => (
-                          <div key={item.id} className="bg-white dark:bg-slate-600 p-3 rounded-md flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900 dark:text-white">{item.producto}</div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                Cantidad: {item.cantidad} u | Precio: ${item.precio.toFixed(2)} ({item.moneda}) | Total: ${item.total.toFixed(2)}
+                          <div key={item.id} className="bg-white dark:bg-slate-600 p-3 rounded-md">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900 dark:text-white">{item.producto}</div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                  Cantidad: {item.cantidad} u | Precio: ${item.precio.toFixed(2)} ({item.moneda})
+                                </div>
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                                  {item.tiene_iva ? (
+                                    <>
+                                      Subtotal: ${item.total.toFixed(2)} | IVA ({item.iva_pct}%): ${((item.total_con_iva || item.total) - item.total).toFixed(2)} | Total: ${(item.total_con_iva || item.total).toFixed(2)}
+                                    </>
+                                  ) : (
+                                    <>Total: ${item.total.toFixed(2)}</>
+                                  )}
+                                </div>
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveProduct(item.id)}
+                                className="ml-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveProduct(item.id)}
-                              className="ml-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
+                            <div className="mt-2 flex items-center space-x-3 pt-2 border-t border-gray-200 dark:border-gray-500">
+                              <label className="flex items-center space-x-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={item.tiene_iva}
+                                  onChange={() => handleToggleProductIva(item.id)}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-700 dark:border-gray-600"
+                                />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">Tiene IVA</span>
+                              </label>
+                              {item.tiene_iva && (
+                                <div className="flex items-center space-x-2">
+                                  <label className="text-sm text-gray-700 dark:text-gray-300">IVA:</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    value={item.iva_pct}
+                                    onChange={(e) => handleUpdateProductIvaPct(item.id, parseFloat(e.target.value) || 21)}
+                                    className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                  />
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">%</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1282,7 +1993,7 @@ export function PurchasesModule() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Total Compra:</span>
                           <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            ${productItems.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+                            ${productItems.reduce((sum, item) => sum + (item.tiene_iva ? (item.total_con_iva || item.total) : item.total), 0).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -1305,7 +2016,7 @@ export function PurchasesModule() {
                     {productItems.length > 0 ? (
                       <button 
                         type="submit" 
-                        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-lg"
+                        className="px-2 sm:px-3 md:px-4 lg:px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-lg"
                       >
                         ✓ Guardar Compra ({productItems.length} producto{productItems.length > 1 ? 's' : ''})
                       </button>
@@ -1326,95 +2037,136 @@ export function PurchasesModule() {
 
           {/* Product Purchases Table */}
           <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="overflow-x-auto">
+              <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
               <thead className="bg-gray-50 dark:bg-slate-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Producto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cantidad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Precio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Proveedor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acciones</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Fecha</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">Producto</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">Cantidad</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Precio</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-28">Proveedor</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-16">IVA</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Total IVA</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Costo</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Total</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-28">Estado</th>
+                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-32">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {productPurchases.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={11} className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       No hay compras registradas
                     </td>
                   </tr>
                 ) : (
-                  (() => {
-                    // Agrupar compras por order_id
-                    const groupedPurchases = productPurchases.reduce((acc: any, purchase: any) => {
-                      if (purchase.order_id) {
-                        if (!acc[purchase.order_id]) {
-                          acc[purchase.order_id] = {
-                            order_id: purchase.order_id,
-                            fecha: purchase.fecha,
-                            proveedor: purchase.proveedor,
-                            items: [],
-                            total_compra: 0,
-                          };
-                        }
-                        acc[purchase.order_id].items.push(purchase);
-                        acc[purchase.order_id].total_compra += purchase.total;
-                      } else {
-                        // Compras sin order_id (antiguas) se muestran individualmente
-                        if (!acc.individual) acc.individual = [];
-                        acc.individual.push(purchase);
-                      }
-                      return acc;
-                    }, {});
-
-                    const orders = Object.values(groupedPurchases).filter((g: any) => g.order_id);
-                    const individualPurchases = groupedPurchases.individual || [];
-
-                    return (
-                      <>
+                  <>
                         {/* Mostrar órdenes agrupadas */}
-                        {orders.map((order: any) => {
+                        {groupedProductPurchases.orders.map((order: any) => {
                           const isExpanded = expandedProductOrders.has(order.order_id);
+                          const hasProblems = hasReceptionProblems(order.order_id);
                           return (
                             <React.Fragment key={order.order_id}>
                               {/* Fila resumen de la orden */}
-                              <tr className="bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30">
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                              <tr className={`${hasProblems ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border-l-4 border-red-500' : 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30'}`}>
+                                <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white">
                                   {new Date(order.fecha).toLocaleDateString('es-AR')}
                                 </td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white" colSpan={2}>
-                                  <button
-                                    onClick={() => {
-                                      const newExpanded = new Set(expandedProductOrders);
-                                      if (isExpanded) {
-                                        newExpanded.delete(order.order_id);
-                                      } else {
-                                        newExpanded.add(order.order_id);
-                                      }
-                                      setExpandedProductOrders(newExpanded);
-                                    }}
-                                    className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                  >
-                                    <span>Orden con {order.items.length} producto{order.items.length > 1 ? 's' : ''}</span>
-                                    <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                                  </button>
+                                <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white" colSpan={2}>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => {
+                                        const newExpanded = new Set(expandedProductOrders);
+                                        if (isExpanded) {
+                                          newExpanded.delete(order.order_id);
+                                        } else {
+                                          newExpanded.add(order.order_id);
+                                        }
+                                        setExpandedProductOrders(newExpanded);
+                                      }}
+                                      className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                    >
+                                      <span className="text-xs">Orden con {order.items.length} producto{order.items.length > 1 ? 's' : ''}</span>
+                                      <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {hasProblems && (
+                                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                                        ⚠ Problema en Control
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white"></td>
-                                <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{order.proveedor}</td>
-                                <td className="px-6 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white"></td>
+                                <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white text-xs">{order.proveedor}</td>
+                                <td className="px-2 py-3 text-sm text-gray-900 dark:text-white text-xs">
+                                  {order.tiene_iva ? `${order.iva_pct}%` : 'Sin IVA'}
+                                </td>
+                                <td className="px-2 py-3 text-sm font-semibold text-gray-900 dark:text-white text-xs">
+                                  ${order.total_iva.toFixed(2)}
+                                </td>
+                                <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
+                                  ${order.subtotal_sin_iva.toFixed(2)}
+                                </td>
+                                <td className="px-2 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
                                   ${order.total_compra.toFixed(2)}
                                 </td>
-                                <td className="px-6 py-3 text-right text-sm">
-                                  <div className="flex items-center justify-end gap-2">
+                                <td className="px-2 py-3 text-sm">
+                                  <div className="flex flex-col gap-1">
+                                    {/* Estado de Recepción */}
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      order.estado === 'recibido'
+                                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                                    }`}>
+                                      {order.estado === 'recibido' ? 'Recibido' : 'Pendiente'}
+                                    </span>
+                                    {/* Estado de Pago */}
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      order.pagado
+                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                    }`}>
+                                      {order.pagado ? 'Pagado' : 'Impago'}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-2 py-3 text-sm whitespace-nowrap">
+                                  <div className="flex items-center gap-1">
+                                    {canEdit('fabinsa-purchases') && (
+                                      <button
+                                        onClick={() => updateReceptionStatus('product', order.order_id, order.estado === 'recibido' ? 'pendiente' : 'recibido')}
+                                        className={`p-1 rounded text-white transition-colors flex-shrink-0 ${
+                                          order.estado === 'recibido'
+                                            ? 'bg-orange-600 dark:bg-orange-500 hover:bg-orange-700 dark:hover:bg-orange-600'
+                                            : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'
+                                        }`}
+                                        title={order.estado === 'recibido' ? 'Marcar como Pendiente' : 'Marcar como Recibido'}
+                                      >
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    {canEdit('fabinsa-purchases') && (
+                                      <button
+                                        onClick={() => updatePaymentStatus('product', order.order_id, !order.pagado)}
+                                        className={`p-1 rounded text-white transition-colors flex-shrink-0 ${
+                                          order.pagado
+                                            ? 'bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600'
+                                            : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'
+                                        }`}
+                                        title={order.pagado ? 'Marcar como Impago' : 'Marcar como Pagado'}
+                                      >
+                                        <DollarSign className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
                                     {canPrint('fabinsa-purchases') && (
                                     <button
                                       onClick={() => handlePrintProductOrder(order)}
-                                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                      className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors flex-shrink-0"
                                       title="Imprimir/Generar PDF"
                                     >
-                                      <FileText className="w-4 h-4" />
+                                      <FileText className="w-3.5 h-3.5" />
                                     </button>
                                     )}
                                     {canDelete('fabinsa-purchases') && (
@@ -1425,10 +2177,10 @@ export function PurchasesModule() {
                                             loadPurchases();
                                           }
                                         }}
-                                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                        className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors flex-shrink-0"
                                         title="Eliminar orden"
                                       >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     )}
                                   </div>
@@ -1442,19 +2194,38 @@ export function PurchasesModule() {
                                   ? item.precio / item.valor_dolar 
                                   : item.precio;
                                 
+                                // Calcular IVA para este item
+                                const tieneIva = item.tiene_iva || false;
+                                const ivaPct = item.iva_pct || 0;
+                                const totalSinIva = item.total;
+                                const totalConIva = tieneIva ? totalSinIva * (1 + ivaPct / 100) : totalSinIva;
+                                const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
+                                
                                 return (
                                   <tr key={item.id} className="bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600">
-                                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white pl-8">
+                                    <td className="px-2 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white pl-6 text-xs">
                                       • {item.producto}
                                     </td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">{item.cantidad} u</td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">{item.cantidad} u</td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
                                       ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
                                     </td>
-                                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">${item.total.toFixed(2)}</td>
-                                    <td className="px-6 py-2 text-sm"></td>
+                                    <td className="px-2 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
+                                      {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
+                                      ${ivaMonto.toFixed(2)}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
+                                      ${totalSinIva.toFixed(2)}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
+                                      ${totalConIva.toFixed(2)}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm"></td>
+                                    <td className="px-2 py-2 text-sm"></td>
                                   </tr>
                                 );
                               })}
@@ -1462,22 +2233,57 @@ export function PurchasesModule() {
                           );
                         })}
                         {/* Mostrar compras individuales (sin order_id) */}
-                        {individualPurchases.map((purchase: any) => (
+                        {groupedProductPurchases.individual.map((purchase: any) => {
+                          // Calcular IVA para compras individuales
+                          const tieneIva = purchase.tiene_iva || false;
+                          const ivaPct = purchase.iva_pct || 0;
+                          const totalSinIva = purchase.total;
+                          const totalConIva = tieneIva ? totalSinIva * (1 + ivaPct / 100) : totalSinIva;
+                          const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
+                          
+                          return (
                           <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
                               {new Date(purchase.fecha).toLocaleDateString('es-AR')}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.producto}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad} u</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.producto}</td>
+                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad} u</td>
+                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
                               ${purchase.precio.toFixed(2)} ({purchase.moneda})
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.proveedor}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                              ${purchase.total.toFixed(2)}
+                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.proveedor}</td>
+                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
+                              {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                              <div className="flex items-center justify-end gap-2">
+                            <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white text-xs">
+                              ${ivaMonto.toFixed(2)}
+                            </td>
+                            <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
+                              ${totalSinIva.toFixed(2)}
+                            </td>
+                            <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
+                              ${totalConIva.toFixed(2)}
+                            </td>
+                            <td className="px-2 py-3 whitespace-nowrap text-sm">
+                              <div className="flex flex-col gap-1">
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  purchase.estado === 'recibido'
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                                }`}>
+                                  {purchase.estado === 'recibido' ? 'Recibido' : 'Pendiente'}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  purchase.pagado
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                    : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                }`}>
+                                  {purchase.pagado ? 'Pagado' : 'Impago'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-2 py-3 whitespace-nowrap text-right text-sm">
+                              <div className="flex items-center justify-end gap-1">
                                 {canPrint('fabinsa-purchases') && (
                                 <button
                                   onClick={async () => {
@@ -1502,10 +2308,10 @@ export function PurchasesModule() {
                                     };
                                     await generateOrderPDF(orderData);
                                   }}
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors flex-shrink-0"
                                   title="Imprimir/Generar PDF"
                                 >
-                                  <FileText className="w-4 h-4" />
+                                  <FileText className="w-3.5 h-3.5" />
                                 </button>
                                 )}
                                 {canDelete('fabinsa-purchases') && (
@@ -1516,25 +2322,114 @@ export function PurchasesModule() {
                                         loadPurchases();
                                       }
                                     }}
-                                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                    className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors flex-shrink-0"
                                     title="Eliminar compra"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 )}
                               </div>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
+                        {/* Mostrar compras individuales (sin order_id) */}
+                        {groupedProductPurchases.individual.map((purchase: any) => {
+                          // Calcular IVA para compras individuales
+                          const tieneIva = purchase.tiene_iva || false;
+                          const ivaPct = purchase.iva_pct || 0;
+                          const totalSinIva = purchase.total;
+                          const totalConIva = tieneIva ? totalSinIva * (1 + ivaPct / 100) : totalSinIva;
+                          const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
+                          
+                          return (
+                            <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                {new Date(purchase.fecha).toLocaleDateString('es-AR')}
+                              </td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                {purchase.producto}
+                              </td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)} u</td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                              </td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.proveedor}</td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
+                              </td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                ${ivaMonto.toFixed(2)}
+                              </td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
+                                ${totalSinIva.toFixed(2)}
+                              </td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                ${totalConIva.toFixed(2)}
+                              </td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm">
+                                <div className="flex flex-col gap-1">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    purchase.estado === 'recibido'
+                                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                                      : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                                  }`}>
+                                    {purchase.estado === 'recibido' ? 'Recibido' : 'Pendiente'}
+                                  </span>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    purchase.pagado
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                      : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                  }`}>
+                                    {purchase.pagado ? 'Pagado' : 'Impago'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm">
+                                <div className="flex items-center justify-end gap-2">
+                                  {canEdit('fabinsa-purchases') && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingProduct(purchase);
+                                        setShowProductForm(true);
+                                      }}
+                                      className="p-1.5 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex-shrink-0"
+                                      title="Editar compra"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                  {canDelete('fabinsa-purchases') && (
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm('¿Eliminar esta compra?')) {
+                                          await supabase.from('purchases_products').delete().eq('id', purchase.id);
+                                          loadPurchases();
+                                        }
+                                      }}
+                                      className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex-shrink-0"
+                                      title="Eliminar compra"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </>
-                    );
-                  })()
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 }
+
+
+
+

@@ -161,3 +161,12 @@ Cada vez que reinicies ngrok y obtengas una URL nueva, debes:
 1. Agregar la nueva URL a Google Cloud Console
 2. O mantener el túnel ngrok abierto para reutilizar la misma URL
 
+
+
+
+
+
+
+
+
+

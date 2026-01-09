@@ -321,7 +321,17 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
           if (error.error === 'invalid_grant') {
             errorMessage = 'El código de autorización es inválido o expiró. Por favor, intenta autenticarte nuevamente.';
           } else if (error.error === 'invalid_client') {
-            errorMessage = 'Las credenciales de Google (Client ID o Client Secret) son incorrectas. Verifica la configuración en el backend.';
+            const clientId = await getGoogleClientId().catch(() => 'NO CONFIGURADO');
+            errorMessage = `El Client ID no existe en Google Cloud Console.\n\n` +
+              `Client ID usado: ${clientId}\n\n` +
+              `SOLUCIÓN:\n` +
+              `1. Ve a: https://console.cloud.google.com/apis/credentials\n` +
+              `2. Proyecto: silken-tape-478614-b6\n` +
+              `3. Verifica que el Client ID '${clientId}' exista\n` +
+              `4. Si NO existe, créalo de tipo "Aplicación web"\n` +
+              `5. Agrega esta URL en "URI de redirección autorizados": ${redirectUri}\n` +
+              `6. Agrega este origen en "Orígenes JavaScript autorizados": ${window.location.origin}\n\n` +
+              `Ver archivo: backend/SOLUCION_OAUTH_CLIENT_NOT_FOUND_PASO_A_PASO.md para más detalles.`;
           } else if (error.error === 'redirect_uri_mismatch') {
             errorMessage = `La URL de redirección no coincide. Verifica que ${redirectUri} esté configurada en Google Cloud Console.`;
           }
@@ -439,6 +449,11 @@ export async function getAccessToken(retryCount = 0): Promise<string> {
       } catch (error: any) {
         console.error('Error refrescando token:', error);
         
+        // Si el error es que el Client ID no existe, mostrar mensaje específico
+        if (error.message?.includes('Client ID no existe') || error.message?.includes('OAuth client was not found')) {
+          throw error; // Re-lanzar el error con el mensaje específico
+        }
+        
         // Si es un error recuperable y no hemos intentado demasiadas veces, reintentar
         if (retryCount < 2 && (
           error.message?.includes('network') || 
@@ -452,11 +467,11 @@ export async function getAccessToken(retryCount = 0): Promise<string> {
         }
         
         // Si el error es que el refresh token es inválido, no lanzar error genérico
-        if (error.message?.includes('invalid_grant') || error.message?.includes('invalid')) {
+        if (error.message?.includes('invalid_grant') || (error.message?.includes('invalid') && !error.message?.includes('Client ID'))) {
           throw new Error('El token de renovación es inválido. Por favor, autentica nuevamente.');
         }
         
-        throw new Error('No se pudo renovar el token automáticamente. Por favor, autentica nuevamente.');
+        throw error; // Re-lanzar el error original para mantener el mensaje específico
       }
     } else {
       throw new Error('Token expirado y no hay token de renovación. Por favor, autentica nuevamente.');
@@ -520,9 +535,27 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
         
         const errorMessage = error.error_description || error.error || error.message || 'Error desconocido';
         
-        // Si es 401, el backend está disponible pero las credenciales no están configuradas
-        // Intentar método directo como fallback solo si VITE_GOOGLE_CLIENT_SECRET está disponible
+        // Si es 401, verificar si es invalid_client (Client ID no existe) u otro error
         if (tokenResponse.status === 401) {
+          const isInvalidClient = error.error === 'invalid_client' || errorMessage.includes('invalid_client') || errorMessage.includes('OAuth client was not found');
+          
+          if (isInvalidClient) {
+            // El Client ID no existe en Google Cloud Console
+            const clientId = await getGoogleClientId().catch(() => 'NO CONFIGURADO');
+            throw new Error(
+              `El Client ID no existe en Google Cloud Console.\n\n` +
+              `Client ID usado: ${clientId}\n\n` +
+              `SOLUCIÓN:\n` +
+              `1. Ve a: https://console.cloud.google.com/apis/credentials\n` +
+              `2. Proyecto: silken-tape-478614-b6\n` +
+              `3. Verifica que el Client ID '${clientId}' exista\n` +
+              `4. Si NO existe, créalo de tipo "Aplicación web"\n` +
+              `5. Actualiza el script 8-iniciar-todo-ngrok.bat con el nuevo Client ID y Secret\n\n` +
+              `Ver archivo: backend/SOLUCION_OAUTH_CLIENT_NOT_FOUND_PASO_A_PASO.md para más detalles.`
+            );
+          }
+          
+          // Si es otro error 401, intentar método directo como fallback solo si VITE_GOOGLE_CLIENT_SECRET está disponible
           const hasClientSecret = !!import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
           if (hasClientSecret) {
             console.warn(`Backend devolvió error 401 (${errorMessage}), intentando método directo como fallback`);

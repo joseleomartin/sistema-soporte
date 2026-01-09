@@ -21,3 +21,12 @@ COMMENT ON COLUMN department_permissions.can_print IS 'Permite imprimir/generar 
 -- - Para activar impresión, configurar en: Personas > Áreas > Permisos
 -- ==================================================================
 
+
+
+
+
+
+
+
+
+

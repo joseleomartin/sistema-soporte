@@ -265,3 +265,7 @@ COMMENT ON COLUMN tasks.recurrence_week_position IS 'Posición en el mes para re
 
 
 
+
+
+
+

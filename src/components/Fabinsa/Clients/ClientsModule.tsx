@@ -70,6 +70,8 @@ export function ClientsModule() {
     email: '',
     provincia: '',
     direccion: '',
+    localidad: '',
+    condicion_pago: '',
     observaciones: '',
   });
 
@@ -86,11 +88,20 @@ export function ClientsModule() {
       setLoading(true);
       const { data, error } = await supabase
         .from('clients')
-        .select('*')
+        .select('id, tenant_id, nombre, razon_social, cuit, telefono, email, provincia, direccion, localidad, condicion_pago, observaciones, created_at, updated_at')
         .eq('tenant_id', tenantId)
         .order('nombre', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error cargando clientes:', error);
+        throw error;
+      }
+      
+      console.log('Clientes cargados:', data); // Debug
+      if (data && data.length > 0) {
+        console.log('Primer cliente ejemplo:', data[0]); // Debug - ver qué campos tiene
+      }
+      
       setClients(data || []);
     } catch (error) {
       console.error('Error loading clients:', error);
@@ -104,7 +115,7 @@ export function ClientsModule() {
     if (!tenantId) return;
 
     try {
-      const clientData: ClientInsert = {
+      const clientData: any = {
         tenant_id: tenantId,
         nombre: formData.nombre.trim(),
         razon_social: formData.razon_social.trim() || null,
@@ -113,26 +124,40 @@ export function ClientsModule() {
         email: formData.email.trim() || null,
         provincia: formData.provincia.trim() || null,
         direccion: formData.direccion.trim() || null,
+        localidad: formData.localidad.trim() || null,
+        condicion_pago: formData.condicion_pago.trim() || null,
         observaciones: formData.observaciones.trim() || null,
       };
+      console.log('Guardando cliente con datos:', clientData); // Debug
+      console.log('condicion_pago value:', clientData.condicion_pago); // Debug
+      console.log('observaciones value:', clientData.observaciones); // Debug
 
       if (editingClient) {
-        const { error } = await supabase
+        const { data: updatedData, error } = await supabase
           .from('clients')
           .update(clientData)
-          .eq('id', editingClient.id);
+          .eq('id', editingClient.id)
+          .select('id, tenant_id, nombre, razon_social, cuit, telefono, email, provincia, direccion, localidad, condicion_pago, observaciones, created_at, updated_at')
+          .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error actualizando cliente:', error);
+          throw error;
+        }
+        console.log('Cliente actualizado, datos devueltos:', updatedData); // Debug
       } else {
         const { error } = await supabase
           .from('clients')
           .insert(clientData);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error insertando cliente:', error);
+          throw error;
+        }
       }
 
       resetForm();
-      loadClients();
+      await loadClients(); // Esperar a que se recarguen los datos
     } catch (error: any) {
       console.error('Error saving client:', error);
       alert(`Error al guardar el cliente: ${error?.message || 'Error desconocido'}`);
@@ -140,16 +165,27 @@ export function ClientsModule() {
   };
 
   const handleEdit = (client: Client) => {
-    setFormData({
-      nombre: client.nombre,
+    console.log('Editando cliente completo:', client); // Debug
+    console.log('condicion_pago:', client.condicion_pago); // Debug
+    console.log('observaciones:', client.observaciones); // Debug
+    console.log('localidad:', client.localidad); // Debug
+    
+    const formDataToSet = {
+      nombre: client.nombre || '',
       razon_social: client.razon_social || '',
       cuit: client.cuit || '',
       telefono: client.telefono || '',
       email: client.email || '',
       provincia: client.provincia || '',
       direccion: client.direccion || '',
+      localidad: client.localidad || '',
+      condicion_pago: client.condicion_pago || '',
       observaciones: client.observaciones || '',
-    });
+    };
+    
+    console.log('FormData que se va a establecer:', formDataToSet); // Debug
+    
+    setFormData(formDataToSet);
     setEditingClient(client);
     setShowForm(true);
   };
@@ -180,6 +216,8 @@ export function ClientsModule() {
       email: '',
       provincia: '',
       direccion: '',
+      localidad: '',
+      condicion_pago: '',
       observaciones: '',
     });
     setEditingClient(null);
@@ -565,6 +603,30 @@ export function ClientsModule() {
                   type="text"
                   value={formData.direccion}
                   onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Localidad
+                </label>
+                <input
+                  type="text"
+                  value={formData.localidad}
+                  onChange={(e) => setFormData({ ...formData, localidad: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Condición de Pago
+                </label>
+                <input
+                  type="text"
+                  value={formData.condicion_pago}
+                  onChange={(e) => setFormData({ ...formData, condicion_pago: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
@@ -987,31 +1049,44 @@ export function ClientsModule() {
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio Unitario</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Ingreso Neto</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">IVA</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Ganancia</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {clientSales.map((sale) => (
-                              <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                  <div className="flex items-center space-x-1">
-                                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                    <span>{new Date(sale.fecha).toLocaleDateString('es-AR')}</span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                  ${sale.precio_unitario.toFixed(2)} ARS
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                  ${sale.ingreso_neto.toFixed(2)} ARS
-                                </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
-                                  ${sale.ganancia_total.toFixed(2)} ARS
-                                </td>
-                              </tr>
-                            ))}
+                            {clientSales.map((sale) => {
+                              const tieneIva = (sale as any).tiene_iva || false;
+                              const ivaPct = (sale as any).iva_pct || 0;
+                              const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                              return (
+                                <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                    <div className="flex items-center space-x-1">
+                                      <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                      <span>{new Date(sale.fecha).toLocaleDateString('es-AR')}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                    ${sale.precio_unitario.toFixed(2)} ARS
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                                    ${sale.ingreso_neto.toFixed(2)} ARS
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                    {tieneIva ? (
+                                      <span>${ivaMonto.toFixed(2)} ARS ({ivaPct}%)</span>
+                                    ) : (
+                                      <span className="text-gray-400 dark:text-gray-500">Sin IVA</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
+                                    ${sale.ganancia_total.toFixed(2)} ARS
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -1027,6 +1102,17 @@ export function ClientsModule() {
                           <p className="text-gray-600 dark:text-gray-400">Total Ingresos Netos:</p>
                           <p className="text-lg font-semibold text-gray-900 dark:text-white">
                             ${clientSales.reduce((sum, s) => sum + s.ingreso_neto, 0).toFixed(2)} ARS
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Total IVA:</p>
+                          <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                            ${clientSales.reduce((sum, s) => {
+                              const tieneIva = (s as any).tiene_iva || false;
+                              const ivaPct = (s as any).iva_pct || 0;
+                              const ivaMonto = tieneIva ? s.ingreso_neto * (ivaPct / 100) : 0;
+                              return sum + ivaMonto;
+                            }, 0).toFixed(2)} ARS
                           </p>
                         </div>
                         <div>
@@ -1064,4 +1150,10 @@ export function ClientsModule() {
     </div>
   );
 }
+
+
+
+
+
+
 

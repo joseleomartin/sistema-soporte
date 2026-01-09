@@ -29,7 +29,8 @@ import {
   Truck,
   Menu,
   X,
-  CreditCard
+  CreditCard,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
@@ -93,6 +94,7 @@ const menuItems: MenuItem[] = [
       { icon: ShoppingCart, label: 'Ventas', view: 'fabinsa-sales', roles: ['admin', 'support', 'user'] },
       { icon: TrendingUp, label: 'Compras', view: 'fabinsa-purchases', roles: ['admin', 'support', 'user'] },
       { icon: DollarSign, label: 'Costos', view: 'fabinsa-costs', roles: ['admin', 'support', 'user'] },
+      { icon: BarChart3, label: 'Métricas', view: 'fabinsa-metrics', roles: ['admin', 'support', 'user'] },
       { icon: Truck, label: 'Proveedores', view: 'fabinsa-suppliers', roles: ['admin', 'support', 'user'] },
       { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
       { icon: Clock, label: 'Carga de Horas', view: 'time-tracking', roles: ['admin', 'support', 'user'] },
@@ -119,16 +121,32 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved ? JSON.parse(saved) : false;
   });
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
   const handleToggleCollapse = () => {
-    const newState = !sidebarCollapsed;
-    setSidebarCollapsed(newState);
-    if (onToggleCollapse) {
-      onToggleCollapse();
+    if (sidebarCollapsed) {
+      // Al expandir, cambiar inmediatamente
+      const newState = false;
+      setSidebarCollapsed(newState);
+      setIsTransitioning(false);
+      if (onToggleCollapse) {
+        onToggleCollapse();
+      }
+    } else {
+      // Al colapsar, esperar un momento para que se carguen los elementos
+      setIsTransitioning(true);
+      setTimeout(() => {
+        const newState = true;
+        setSidebarCollapsed(newState);
+        setIsTransitioning(false);
+        if (onToggleCollapse) {
+          onToggleCollapse();
+        }
+      }, 150); // Esperar 150ms antes de colapsar
     }
   };
 
@@ -260,45 +278,45 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
 
   return (
     <>
-      {/* Botón flotante para mostrar/ocultar sidebar cuando está colapsado */}
-      {isSidebarCollapsed && (
-        <button
-          onClick={handleToggleCollapse}
-          className={`fixed left-4 top-4 z-50 p-2 rounded-lg ${isDark ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-white text-gray-700 hover:bg-gray-50'} shadow-lg border ${isDark ? 'border-slate-700' : 'border-gray-200'}`}
-          title="Mostrar menú"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-      )}
-
-      <aside className={`${isSidebarCollapsed ? '-translate-x-full' : 'translate-x-0'} transition-transform duration-300 ease-in-out w-64 ${isDark ? 'bg-slate-800' : 'bg-white'} ${isDark ? 'border-slate-700' : 'border-gray-200'} border-r flex flex-col h-screen fixed left-0 top-0 z-40`}>
-        <div className={`px-4 py-3 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-b flex-shrink-0`}>
-          <div className="flex items-center justify-between mb-3 gap-2">
-            <div className="flex items-center flex-1 min-w-0">
-              {!isSidebarCollapsed && (
-                <>
-                  {tenant?.logo_url && !logoError ? (
-                    <img 
-                      src={tenant.logo_url} 
-                      alt={tenant.name || 'Logo de la empresa'} 
-                      className="h-16 w-auto object-contain max-w-[140px]"
-                      onError={() => setLogoError(true)}
-                    />
-                  ) : logoError ? (
-                    <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {tenant?.name || 'EmaGroup'}
-                    </h1>
-                  ) : (
-                    <img 
-                      src="/logo ema.png" 
-                      alt="EmaGroup" 
-                      className="h-16 w-auto object-contain"
-                      onError={() => setLogoError(true)}
-                    />
-                  )}
-                </>
-              )}
-            </div>
+      <aside className={`transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-16' : 'w-64'} ${isDark ? 'bg-slate-800' : 'bg-white'} ${isDark ? 'border-slate-700' : 'border-gray-200'} border-r flex flex-col h-screen fixed left-0 top-0 z-40`}>
+        {/* Overlay para prevenir interacciones durante la transición */}
+        {isTransitioning && (
+          <div className="absolute inset-0 bg-transparent z-50" />
+        )}
+        <div className={`${isSidebarCollapsed ? 'px-2' : 'px-4'} py-3 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-b flex-shrink-0`}>
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} mb-3 gap-2`}>
+            {(!isSidebarCollapsed || isTransitioning) && (
+              <div className={`flex items-center flex-1 min-w-0 transition-opacity duration-200 ${isSidebarCollapsed && !isTransitioning ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                {tenant?.logo_url && !logoError ? (
+                  <img 
+                    src={tenant.logo_url} 
+                    alt={tenant.name || 'Logo de la empresa'} 
+                    className="h-16 w-auto object-contain max-w-[140px]"
+                    onError={() => setLogoError(true)}
+                  />
+                ) : logoError ? (
+                  <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {tenant?.name || 'EmaGroup'}
+                  </h1>
+                ) : (
+                  <img 
+                    src="/logo ema.png" 
+                    alt="EmaGroup" 
+                    className="h-16 w-auto object-contain"
+                    onError={() => setLogoError(true)}
+                  />
+                )}
+              </div>
+            )}
+            {isSidebarCollapsed && (
+              <button
+                onClick={handleToggleCollapse}
+                className={`p-1.5 rounded-lg ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                title="Expandir menú"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
             {!isSidebarCollapsed && (
               <div className="flex items-center gap-2">
                 <NotificationBell 
@@ -313,15 +331,15 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                 <button
                   onClick={handleToggleCollapse}
                   className={`p-1.5 rounded-lg ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                  title="Ocultar menú"
+                  title="Colapsar menú"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             )}
           </div>
-        {profile && !isSidebarCollapsed && (
-          <div className={`pt-4 ${isDark ? 'border-slate-700' : 'border-gray-100'} border-t`}>
+        {profile && (!isSidebarCollapsed || isTransitioning) && (
+          <div className={`pt-4 ${isDark ? 'border-slate-700' : 'border-gray-100'} border-t transition-opacity duration-200 ${isSidebarCollapsed && !isTransitioning ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                 {avatarUrl ? (
@@ -349,116 +367,144 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         )}
       </div>
 
-      {!isSidebarCollapsed && (
-        <nav className="flex-1 p-4 overflow-y-auto min-h-0">
-          <ul className="space-y-1">
-            {filteredItems.map((item) => {
-            const Icon = item.icon;
-            const hasSubItems = item.subItems && item.subItems.length > 0;
-            const isExpanded = expandedMenus.has(item.label);
-            const isActive = item.view ? isViewActive(item.view) : false;
-            const hasActiveSubItem = isSubItemActive(item.subItems);
-            const showBadge = item.view === 'tools' && activeJobsCount > 0;
-            const isMenuActive = isActive || hasActiveSubItem;
+      <nav className="flex-1 overflow-y-auto min-h-0">
+        <ul className={`space-y-1 ${isSidebarCollapsed ? 'p-2' : 'p-4'}`}>
+          {filteredItems.map((item) => {
+          const Icon = item.icon;
+          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const isExpanded = expandedMenus.has(item.label);
+          const isActive = item.view ? isViewActive(item.view) : false;
+          const hasActiveSubItem = isSubItemActive(item.subItems);
+          const showBadge = item.view === 'tools' && activeJobsCount > 0;
+          const isMenuActive = isActive || hasActiveSubItem;
 
-            // Filtrar subitems por rol
-            const filteredSubItems = item.subItems?.filter(subItem =>
-              profile && subItem.roles.includes(profile.role)
-            ) || [];
+          // Filtrar subitems por rol, permisos y módulos visibles
+          const filteredSubItems = item.subItems?.filter(subItem => {
+            if (!profile || !subItem.roles.includes(profile.role)) return false;
+            // Verificar permisos de área
+            if (!canView(subItem.view)) return false;
+            // Si visible_modules existe y el módulo está explícitamente en false, ocultarlo
+            if (visibleModules && visibleModules[subItem.view] === false) return false;
+            return true;
+          }) || [];
 
-            return (
-              <li key={item.label}>
-                <button
-                  onClick={() => {
-                    if (hasSubItems) {
-                      toggleMenu(item.label);
-                    } else if (item.view) {
-                      onViewChange(item.view);
+          // No renderizar items principales que solo tienen subitems si todos los subitems están desactivados
+          // y el sidebar está colapsado (excepto durante la transición)
+          if (hasSubItems && filteredSubItems.length === 0 && isSidebarCollapsed && !isTransitioning) {
+            return null;
+          }
+
+          return (
+            <li key={item.label}>
+              <button
+                onClick={() => {
+                  if (hasSubItems && !isSidebarCollapsed) {
+                    toggleMenu(item.label);
+                  } else if (item.view) {
+                    onViewChange(item.view);
+                  } else if (hasSubItems && isSidebarCollapsed) {
+                    // Si está colapsado y tiene subitems, expandir y mostrar el primero visible
+                    toggleMenu(item.label);
+                    if (filteredSubItems.length > 0) {
+                      onViewChange(filteredSubItems[0].view);
                     }
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition relative ${
-                    isMenuActive
-                      ? isDark 
-                        ? 'bg-blue-600 text-white font-medium'
-                        : 'bg-blue-50 text-blue-700 font-medium'
-                      : isDark
-                      ? 'text-white hover:bg-slate-700'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  {hasSubItems && (
-                    isExpanded ? (
-                      <ChevronUp className="w-4 h-4 flex-shrink-0" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 flex-shrink-0" />
-                    )
-                  )}
-                  {showBadge && (
-                    <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
-                      {activeJobsCount}
-                    </span>
-                  )}
-                </button>
-                {hasSubItems && isExpanded && filteredSubItems.length > 0 && (
-                  <ul className="ml-4 mt-1 space-y-1">
-                    {filteredSubItems.map((subItem) => {
-                      const SubIcon = subItem.icon;
-                      const isSubActive = isViewActive(subItem.view);
-                      const showSubBadge = subItem.view === 'tools' && activeJobsCount > 0;
-                      return (
-                        <li key={subItem.view}>
-                          <button
-                            onClick={() => onViewChange(subItem.view)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition relative ${
-                              isSubActive
-                                ? isDark 
-                                  ? 'bg-blue-600 text-white font-medium'
-                                  : 'bg-blue-50 text-blue-700 font-medium'
-                                : isDark
-                                ? 'text-white hover:bg-slate-700'
-                                : 'text-gray-700 hover:bg-gray-50'
-                            }`}
-                          >
-                            <SubIcon className="w-4 h-4" />
-                            <span className="flex-1 text-left text-sm">{subItem.label}</span>
-                            {showSubBadge && (
-                              <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
-                                {activeJobsCount}
-                              </span>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  }
+                }}
+                className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 rounded-lg transition relative ${
+                  isMenuActive
+                    ? isDark 
+                      ? 'bg-blue-600 text-white font-medium'
+                      : 'bg-blue-50 text-blue-700 font-medium'
+                    : isDark
+                    ? 'text-white hover:bg-slate-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+                title={isSidebarCollapsed ? item.label : undefined}
+              >
+                <Icon className="w-5 h-5" />
+                {(!isSidebarCollapsed || isTransitioning) && (
+                  <div className={`flex-1 flex items-center gap-2 transition-opacity duration-200 ${isSidebarCollapsed && !isTransitioning ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                    <span className="text-left">{item.label}</span>
+                    {hasSubItems && filteredSubItems.length > 0 && (
+                      isExpanded ? (
+                        <ChevronUp className="w-4 h-4 flex-shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                      )
+                    )}
+                    {showBadge && (
+                      <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
+                        {activeJobsCount}
+                      </span>
+                    )}
+                  </div>
                 )}
-              </li>
-            );
-            })}
-          </ul>
-        </nav>
-      )}
+              </button>
+              {hasSubItems && isExpanded && filteredSubItems.length > 0 && !isSidebarCollapsed && (
+                <ul className="ml-4 mt-1 space-y-1">
+                  {filteredSubItems.map((subItem) => {
+                    const SubIcon = subItem.icon;
+                    const isSubActive = isViewActive(subItem.view);
+                    const showSubBadge = subItem.view === 'tools' && activeJobsCount > 0;
+                    return (
+                      <li key={subItem.view}>
+                        <button
+                          onClick={() => onViewChange(subItem.view)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition relative ${
+                            isSubActive
+                              ? isDark 
+                                ? 'bg-blue-600 text-white font-medium'
+                                : 'bg-blue-50 text-blue-700 font-medium'
+                              : isDark
+                              ? 'text-white hover:bg-slate-700'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <SubIcon className="w-4 h-4" />
+                          <span className="flex-1 text-left text-sm">{subItem.label}</span>
+                          {showSubBadge && (
+                            <span className="bg-blue-600 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center animate-pulse">
+                              {activeJobsCount}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </li>
+          );
+          })}
+        </ul>
+      </nav>
 
-      {!isSidebarCollapsed && (
-        <div className={`p-4 ${isDark ? 'border-slate-700' : 'border-gray-200'} border-t flex-shrink-0 mt-auto space-y-1`}>
-          <button
-            onClick={toggleTheme}
-            className={`w-full flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
-          >
-            <Sun className="w-5 h-5" />
-            <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
-          </button>
-          <button
-            onClick={signOut}
-            className={`w-full flex items-center gap-3 px-4 py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Cerrar Sesión</span>
-          </button>
-        </div>
-      )}
+      <div className={`${isSidebarCollapsed ? 'p-2' : 'p-4'} ${isDark ? 'border-slate-700' : 'border-gray-200'} border-t flex-shrink-0 mt-auto space-y-1`}>
+        <button
+          onClick={toggleTheme}
+          className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
+          title={isSidebarCollapsed ? (isDark ? 'Modo Claro' : 'Modo Oscuro') : undefined}
+        >
+          <Sun className="w-5 h-5" />
+          {(!isSidebarCollapsed || isTransitioning) && (
+            <span className={`transition-opacity duration-200 ${isSidebarCollapsed && !isTransitioning ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+              {isDark ? 'Modo Claro' : 'Modo Oscuro'}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={signOut}
+          className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'} rounded-lg transition`}
+          title={isSidebarCollapsed ? 'Cerrar Sesión' : undefined}
+        >
+          <LogOut className="w-5 h-5" />
+          {(!isSidebarCollapsed || isTransitioning) && (
+            <span className={`transition-opacity duration-200 ${isSidebarCollapsed && !isTransitioning ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+              Cerrar Sesión
+            </span>
+          )}
+        </button>
+      </div>
     </aside>
     </>
   );

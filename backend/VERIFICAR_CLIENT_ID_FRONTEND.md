@@ -125,3 +125,12 @@ Después de hacer los cambios:
 4. Si aparece ese Client ID, el problema debería estar resuelto
 5. Si sigue apareciendo un Client ID diferente, verifica las variables de entorno en Vercel
 
+
+
+
+
+
+
+
+
+

@@ -1922,12 +1922,41 @@ def exchange_google_token():
             try:
                 error_data = token_response.json()
                 logger.error(f"Error de Google OAuth: {error_data}")
+                
+                # Mensaje más específico para "invalid_client"
+                if error_data.get('error') == 'invalid_client':
+                    logger.error("=" * 60)
+                    logger.error("ERROR: invalid_client - El Client ID NO existe en Google Cloud Console")
+                    logger.error("=" * 60)
+                    logger.error(f"Client ID usado: {client_id}")
+                    logger.error(f"Client Secret (primeros 10): {client_secret[:10]}..." if client_secret else "Client Secret: NO CONFIGURADO")
+                    logger.error(f"Redirect URI usado: {redirect_uri}")
+                    logger.error("")
+                    logger.error("SOLUCIÓN:")
+                    logger.error("1. Ve a Google Cloud Console: https://console.cloud.google.com/apis/credentials")
+                    logger.error("2. Proyecto: silken-tape-478614-b6")
+                    logger.error(f"3. Verifica que el Client ID '{client_id}' exista")
+                    logger.error("4. Si NO existe, créalo de tipo 'Aplicación web'")
+                    logger.error(f"5. Agrega esta URL en 'URI de redirección autorizados': {redirect_uri}")
+                    logger.error(f"6. Agrega este origen en 'Orígenes JavaScript autorizados': {redirect_uri.replace('/google-oauth-callback', '')}")
+                    logger.error("=" * 60)
+                
                 # Incluir información adicional para debugging
                 error_data['debug_info'] = {
                     'client_id_configured': bool(client_id),
+                    'client_id_used': client_id[:30] + '...' if client_id else None,
                     'client_secret_configured': bool(client_secret),
                     'redirect_uri_used': redirect_uri,
                 }
+                
+                # Mensaje de ayuda más específico
+                if error_data.get('error') == 'invalid_client':
+                    error_data['help_message'] = (
+                        f"El Client ID '{client_id}' no existe en Google Cloud Console. "
+                        "Verifica que el Client ID exista y sea de tipo 'Aplicación web'. "
+                        f"Asegúrate de agregar '{redirect_uri}' en 'URI de redirección autorizados'."
+                    )
+                
                 return jsonify(error_data), token_response.status_code
             except:
                 # Si no se puede parsear JSON, devolver el texto
@@ -1986,8 +2015,10 @@ def refresh_google_token():
         
         logger.info("Refrescando token de acceso")
         logger.info(f"Client ID usado: {client_id[:30]}..." if client_id else "Client ID: NO CONFIGURADO")
+        logger.info(f"Client ID completo: {client_id}" if client_id else "Client ID: NO CONFIGURADO")
         logger.info(f"Client Secret configurado: {'SÍ' if client_secret else 'NO'}")
         logger.info(f"Client Secret (primeros 10 caracteres): {client_secret[:10]}..." if client_secret else "Client Secret: NO CONFIGURADO")
+        logger.info(f"Client Secret (últimos 5 caracteres): ...{client_secret[-5:]}" if client_secret and len(client_secret) > 5 else "Client Secret: NO CONFIGURADO")
         
         token_response = requests.post('https://oauth2.googleapis.com/token', data={
             'client_id': client_id,
@@ -2000,18 +2031,39 @@ def refresh_google_token():
             try:
                 error_data = token_response.json()
                 logger.error(f"Error al refrescar token: {error_data}")
-                # Si es invalid_client, verificar credenciales
+                
+                # Si es invalid_client, dar información más específica
                 if error_data.get('error') == 'invalid_client':
-                    logger.error("ERROR: invalid_client - El Client ID o Client Secret no son correctos")
-                    logger.error("Verifica que el Client ID y Client Secret en el script coincidan con los de Google Cloud Console")
+                    logger.error("=" * 60)
+                    logger.error("ERROR: invalid_client - El Client ID NO existe o el Client Secret NO coincide")
+                    logger.error("=" * 60)
+                    logger.error(f"Client ID usado: {client_id}")
+                    logger.error(f"Client Secret (primeros 10): {client_secret[:10]}..." if client_secret else "Client Secret: NO CONFIGURADO")
+                    logger.error(f"Client Secret (últimos 5): ...{client_secret[-5:]}" if client_secret and len(client_secret) > 5 else "Client Secret: NO CONFIGURADO")
+                    logger.error("")
+                    logger.error("VERIFICA EN GOOGLE CLOUD CONSOLE:")
+                    logger.error("1. Que el Client ID exista: https://console.cloud.google.com/apis/credentials")
+                    logger.error("2. Proyecto: silken-tape-478614-b6")
+                    logger.error(f"3. Que el Client Secret termine en: ...{client_secret[-5:] if client_secret and len(client_secret) > 5 else 'NO CONFIGURADO'}")
+                    logger.error("4. Si hay múltiples Client Secrets, verifica que uses el correcto")
+                    logger.error("5. El Client Secret debe coincidir EXACTAMENTE (incluyendo mayúsculas/minúsculas)")
+                    logger.error("=" * 60)
+                    
+                    # Mensaje más específico para el frontend
+                    error_data['help_message'] = (
+                        f"El Client ID '{client_id}' no existe en Google Cloud Console. "
+                        "Verifica que el Client ID exista y sea de tipo 'Aplicación web'. "
+                        "Si no existe, créalo en Google Cloud Console y actualiza las credenciales en el backend."
+                    )
             except:
                 error_data = {'error': 'Error desconocido al refrescar token', 'status_code': token_response.status_code}
-                logger.error(f"Error al refrescar token (no JSON): {error_data}")
+                logger.error(f"Error al refrescar token (no JSON): {token_response.text}")
+            
             # Retornar un mensaje más descriptivo
             return jsonify({
                 'error': error_data.get('error', 'Error al refrescar token'),
-                'error_description': error_data.get('error_description', 'Verifica que las credenciales de Google estén configuradas correctamente'),
-                'message': error_data.get('error_description') or error_data.get('error') or 'Error al refrescar token'
+                'error_description': error_data.get('error_description') or error_data.get('help_message') or 'Verifica que las credenciales de Google estén configuradas correctamente',
+                'message': error_data.get('error_description') or error_data.get('help_message') or error_data.get('error') or 'Error al refrescar token'
             }), token_response.status_code
         
         token_data = token_response.json()

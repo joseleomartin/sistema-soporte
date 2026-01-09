@@ -387,12 +387,14 @@ export function calculateSaleValues(
   quantity: number,
   iibPct: number,
   discountPct: number,
-  unitCost: number
+  unitCost: number,
+  tieneIva: boolean = false,
+  ivaPct: number = 0
 ): SaleCalculation {
   const precio_neto_iib = basePrice * (1 - iibPct / 100);
   const precio_final = precio_neto_iib * (1 - discountPct / 100);
   const ingreso_bruto = basePrice * quantity;
-  const ingreso_neto = precio_final * quantity;
+  const ingreso_neto = precio_final * quantity; // Ingreso neto sin IVA
   const ganancia_un = precio_final - unitCost;
   const ganancia_total = ganancia_un * quantity;
 

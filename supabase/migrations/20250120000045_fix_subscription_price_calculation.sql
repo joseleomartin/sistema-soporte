@@ -83,3 +83,12 @@ $$;
 COMMENT ON FUNCTION get_subscription_status IS 
 'Retorna el estado completo de la suscripción del tenant. Calcula el precio basado en la cantidad actual de usuarios.';
 
+
+
+
+
+
+
+
+
+

@@ -189,3 +189,7 @@ COMMENT ON FUNCTION generate_invitation_code IS 'Genera un nuevo código de invi
 
 
 
+
+
+
+

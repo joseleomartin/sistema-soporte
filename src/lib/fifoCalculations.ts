@@ -28,12 +28,23 @@ export async function calculateFIFOCost(
   materialName: string,
   cantidadNecesaria: number
 ): Promise<FIFOCostResult> {
+  // Primero, buscar el material en stock_materials por nombre para obtener el campo "material"
+  // porque purchases_materials usa el campo "material", no "nombre"
+  const { data: stockData } = await supabase
+    .from('stock_materials')
+    .select('material')
+    .eq('tenant_id', tenantId)
+    .ilike('nombre', materialName)
+    .limit(1);
+
+  const materialField = (stockData && stockData.length > 0 && stockData[0].material) || materialName;
+
   // Obtener todas las compras del material ordenadas por fecha (más antiguas primero)
   const { data: compras, error } = await supabase
     .from('purchases_materials')
     .select('*')
     .eq('tenant_id', tenantId)
-    .ilike('material', materialName)
+    .ilike('material', materialField)
     .order('fecha', { ascending: true }); // Más antiguas primero
 
   if (error) {
@@ -101,11 +112,21 @@ export async function getFIFOUnitPrice(
   tenantId: string,
   materialName: string
 ): Promise<number> {
+  // Primero, buscar el material en stock_materials por nombre para obtener el campo "material"
+  const { data: stockData } = await supabase
+    .from('stock_materials')
+    .select('material')
+    .eq('tenant_id', tenantId)
+    .ilike('nombre', materialName)
+    .limit(1);
+
+  const materialField = (stockData && stockData.length > 0 && stockData[0].material) || materialName;
+
   const { data: compras, error } = await supabase
     .from('purchases_materials')
     .select('precio, moneda, valor_dolar')
     .eq('tenant_id', tenantId)
-    .ilike('material', materialName)
+    .ilike('material', materialField)
     .order('fecha', { ascending: true }) // Más antigua primero
     .limit(1);
 
@@ -136,23 +157,33 @@ async function getFIFOPriceInfo(
   tenantId: string,
   materialName: string
 ): Promise<{ precioARS: number; moneda: 'ARS' | 'USD'; valorDolar: number }> {
+  // Primero, buscar el material en stock_materials por nombre para obtener el campo "material"
+  // porque purchases_materials usa el campo "material", no "nombre"
+  const { data: stockData } = await supabase
+    .from('stock_materials')
+    .select('material, costo_kilo_usd, moneda, valor_dolar')
+    .eq('tenant_id', tenantId)
+    .ilike('nombre', materialName)
+    .limit(1);
+
+  let materialField = materialName; // Fallback al nombre si no se encuentra
+
+  if (stockData && stockData.length > 0) {
+    // Usar el campo "material" del stock para buscar en purchases_materials
+    materialField = stockData[0].material || materialName;
+  }
+
+  // Buscar compras por el campo "material"
   const { data: compras, error } = await supabase
     .from('purchases_materials')
     .select('precio, moneda, valor_dolar')
     .eq('tenant_id', tenantId)
-    .ilike('material', materialName)
+    .ilike('material', materialField)
     .order('fecha', { ascending: true }) // Más antigua primero
     .limit(1);
 
   if (error || !compras || compras.length === 0) {
     // Si no hay compras, obtener del stock como fallback
-    const { data: stockData } = await supabase
-      .from('stock_materials')
-      .select('costo_kilo_usd, moneda, valor_dolar')
-      .eq('tenant_id', tenantId)
-      .ilike('material', materialName)
-      .limit(1);
-
     if (stockData && stockData.length > 0) {
       const stock = stockData[0];
       const precioARS = stock.moneda === 'USD' 

@@ -14,3 +14,7 @@ COMMENT ON COLUMN products.otros_costos IS 'Otros costos adicionales en ARS para
 
 
 
+
+
+
+

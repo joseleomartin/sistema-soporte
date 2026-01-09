@@ -47,3 +47,7 @@ Usa SECURITY DEFINER para bypassear RLS. Útil para recuperación de errores.';
 
 
 
+
+
+
+

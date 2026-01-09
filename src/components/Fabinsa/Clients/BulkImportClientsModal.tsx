@@ -17,6 +17,8 @@ interface ClientImportRow {
   email?: string;
   provincia?: string;
   direccion?: string;
+  localidad?: string;
+  condicion_pago?: string;
   observaciones?: string;
 }
 
@@ -75,6 +77,10 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
               const email = row['Email'] ? String(row['Email'] || '').trim() : undefined;
               const provincia = row['Provincia'] ? String(row['Provincia'] || '').trim() : undefined;
               const direccion = row['Direccion'] || row['Dirección'] ? String(row['Direccion'] || row['Dirección'] || '').trim() : undefined;
+              const localidad = row['Localidad'] ? String(row['Localidad'] || '').trim() : undefined;
+              const condicion_pago = row['Condicion de Pago'] || row['Condicion_Pago'] || row['Condición de Pago'] || row['Condición_Pago'] 
+                ? String(row['Condicion de Pago'] || row['Condicion_Pago'] || row['Condición de Pago'] || row['Condición_Pago'] || '').trim() 
+                : undefined;
               const observaciones = row['Observaciones'] ? String(row['Observaciones'] || '').trim() : undefined;
 
               rows.push({
@@ -85,6 +91,8 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
                 email: email || undefined,
                 provincia: provincia || undefined,
                 direccion: direccion || undefined,
+                localidad: localidad || undefined,
+                condicion_pago: condicion_pago || undefined,
                 observaciones: observaciones || undefined,
               });
             } catch (error: any) {
@@ -174,6 +182,8 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
             email: row.email || null,
             provincia: row.provincia || null,
             direccion: row.direccion || null,
+            localidad: row.localidad || null,
+            condicion_pago: row.condicion_pago || null,
             observaciones: row.observaciones || null,
           };
 
@@ -225,6 +235,8 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
         'Email': '',
         'Provincia': 'SANTA FE',
         'Direccion': '',
+        'Localidad': '',
+        'Condicion de Pago': '',
         'Observaciones': '',
       },
       {
@@ -235,6 +247,8 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
         'Email': '',
         'Provincia': 'BS AS INTERIOR',
         'Direccion': '',
+        'Localidad': '',
+        'Condicion de Pago': '',
         'Observaciones': '',
       },
       {
@@ -245,6 +259,8 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
         'Email': 'ventas@domdistribuciones.com.ar',
         'Provincia': 'SANTA FE',
         'Direccion': '',
+        'Localidad': '',
+        'Condicion de Pago': '',
         'Observaciones': '',
       },
     ];
@@ -274,10 +290,10 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
               <li>El archivo debe ser Excel (.xlsx o .xls)</li>
               <li>Debe contener la columna: <strong>Nombre</strong> (requerida)</li>
-              <li>Columnas opcionales: Razon_Social, CUIT, Telefono, Email, Provincia, Direccion, Observaciones</li>
+              <li>Columnas opcionales: Razon_Social, CUIT, Telefono, Email, Provincia, Direccion, Localidad, Condicion de Pago, Observaciones</li>
               <li>Puede descargar la plantilla de ejemplo haciendo clic en el botón de abajo</li>
               <li>Si un cliente ya existe (mismo nombre o CUIT), se actualizará en lugar de crear uno nuevo</li>
-              <li>Las columnas pueden tener o no tildes (ej: "Razon_Social" o "Razón_Social")</li>
+              <li>Las columnas pueden tener o no tildes (ej: "Razon_Social" o "Razón_Social", "Condicion de Pago" o "Condición de Pago")</li>
             </ul>
           </div>
 
@@ -365,4 +381,13 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
 

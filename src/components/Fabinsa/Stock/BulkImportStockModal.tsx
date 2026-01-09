@@ -90,34 +90,88 @@ export function BulkImportStockModal({ onClose, onSuccess, importType }: BulkImp
 
           const rows: any[] = [];
 
-          for (const row of jsonData) {
+          for (let i = 0; i < jsonData.length; i++) {
+            const row = jsonData[i];
             try {
               if (importType === 'materials') {
                 const nombre = String(row['Nombre'] || '').trim();
-                const material = String(row['Material'] || '').trim();
+                const material = String(row['Material'] || nombre).trim(); // Si no hay Material, usar Nombre
                 
-                if (!nombre || !material) {
+                if (!nombre || nombre.toLowerCase() === 'nombre' || nombre === '') {
+                  // Saltar fila de encabezado o filas vacías
+                  if (i > 0) { // Solo loguear si no es la primera fila (puede ser el header)
+                    console.warn(`Fila ${i + 1} sin nombre válido, saltando:`, row);
+                  }
                   continue;
                 }
 
                 // Parsear cantidad (puede venir como "Cantidad", "KG", "Kg" o "Cantidad_KG")
-                const cantidadRaw = row['Cantidad'] || row['KG'] || row['Kg'] || row['Cantidad_KG'] || row['Cantidad_Kg'] || '';
-                const kg = cantidadRaw ? parseFloat(String(cantidadRaw).replace(',', '.')) : undefined;
+                const cantidadRaw = row['Cantidad'] || row['KG'] || row['Kg'] || row['Cantidad_KG'] || row['Cantidad_Kg'] || row['Cantidad (KG)'] || '';
+                const kg = cantidadRaw ? parseFloat(String(cantidadRaw).replace(/[,]/g, '.').replace(/[^\d.-]/g, '')) : undefined;
                 
-                const stock_minimo = parseFloat(String(row['Stock_Minimo'] || '0').replace(',', '.')) || 0;
-                const costo_kilo_usd = row['Costo_Kilo_USD'] ? parseFloat(String(row['Costo_Kilo_USD']).replace(',', '.')) : undefined;
-                const moneda = (String(row['Moneda'] || 'ARS').toUpperCase() === 'USD' ? 'USD' : 'ARS') as 'ARS' | 'USD';
-                const valor_dolar = row['Valor_Dolar'] ? parseFloat(String(row['Valor_Dolar']).replace(',', '.')) : undefined;
+                const stock_minimoRaw = row['Stock_Minimo'] || row['Stock Minimo'] || row['Stock_Mínimo'] || '0';
+                const stock_minimo = parseFloat(String(stock_minimoRaw).replace(/[,]/g, '.').replace(/[^\d.-]/g, '')) || 0;
+                
+                // Parsear costo - puede estar en ARS o USD según la columna Moneda
+                const costoRaw = row['Costo_Kilo_USD'] || row['Costo Kilo USD'] || row['Costo_Kilo'] || '';
+                // Limpiar el string antes de parsear (remover espacios, comas como separador decimal)
+                const costoStr = String(costoRaw).trim().replace(/[,]/g, '.').replace(/[^\d.-]/g, '');
+                const costo_original = costoStr && costoStr !== '' && costoStr !== '-' ? parseFloat(costoStr) : null;
+                
+                const monedaRaw = String(row['Moneda'] || 'ARS').trim().toUpperCase();
+                const moneda = (monedaRaw === 'USD' ? 'USD' : 'ARS') as 'ARS' | 'USD';
+                
+                // Parsear valor del dólar - si no está, usar valor por defecto según moneda
+                const valorDolarRaw = row['Valor_Dolar'] || row['Valor Dolar'] || row['Valor_Dólar'] || '';
+                const valorDolarStr = String(valorDolarRaw).trim().replace(/[,]/g, '.').replace(/[^\d.-]/g, '');
+                // Si es USD, valor_dolar puede ser 1 o el valor indicado. Si es ARS y no está, usar 1515 por defecto
+                let valor_dolar: number | undefined = undefined;
+                if (moneda === 'USD') {
+                  valor_dolar = valorDolarStr && valorDolarStr !== '' ? parseFloat(valorDolarStr) : 1;
+                } else {
+                  valor_dolar = valorDolarStr && valorDolarStr !== '' ? parseFloat(valorDolarStr) : 1515; // Valor por defecto para ARS
+                }
+                
+                // Calcular costo_kilo_usd: si es ARS, guardar tal cual sin convertir; si es USD, usar directamente
+                let costo_kilo_usd: number | undefined = undefined;
+                if (costo_original !== null && costo_original !== undefined && !isNaN(costo_original) && costo_original >= 0) {
+                  if (moneda === 'ARS') {
+                    // Si el costo está en ARS, guardarlo tal cual sin convertir a USD
+                    costo_kilo_usd = costo_original;
+                  } else {
+                    // Si el costo ya está en USD, usarlo directamente
+                    costo_kilo_usd = costo_original;
+                  }
+                } else {
+                  // Si no hay costo, dejar como undefined (será 0 en la BD)
+                  costo_kilo_usd = undefined;
+                }
 
-                rows.push({
+                // Asegurar que costo_kilo_usd sea un número válido (0 si es undefined/null)
+                const costo_kilo_usd_final = costo_kilo_usd !== null && costo_kilo_usd !== undefined && !isNaN(costo_kilo_usd) 
+                  ? costo_kilo_usd 
+                  : 0;
+
+                const materialData = {
                   nombre,
                   material,
                   kg,
                   stock_minimo,
-                  costo_kilo_usd,
+                  costo_kilo_usd: costo_kilo_usd_final,
                   moneda,
                   valor_dolar,
-                });
+                };
+                rows.push(materialData);
+                
+                // Log detallado
+                if (costo_original !== null && costo_original !== undefined) {
+                  const logInfo = moneda === 'ARS' 
+                    ? `${costo_kilo_usd_final.toFixed(2)} ARS (guardado tal cual)`
+                    : `${costo_kilo_usd_final.toFixed(2)} USD`;
+                  console.log(`Fila ${i + 1}: ${nombre} | Costo: ${logInfo} | Moneda: ${moneda}`);
+                } else {
+                  console.log(`Fila ${i + 1}: ${nombre} | Sin costo especificado`);
+                }
               } else if (importType === 'products') {
                 const nombre = String(row['Nombre'] || '').trim();
                 const cantidad = parseFloat(String(row['Cantidad'] || '0').replace(',', '.')) || 0;
@@ -204,31 +258,63 @@ export function BulkImportStockModal({ onClose, onSuccess, importType }: BulkImp
     try {
       const rows = await parseExcel(file);
 
+      // Para materiales, NO deduplicar - cada fila del Excel debe procesarse
+      // La deduplicación solo debe ocurrir cuando se busca en la BD
+      let rowsToProcess = rows;
+      if (importType === 'materials') {
+        console.log(`Total de filas parseadas del Excel: ${rows.length}`);
+        // No deduplicar aquí - dejar que la BD maneje los duplicados
+        rowsToProcess = rows;
+      }
+
       let imported = 0;
       let errors = 0;
       const errorDetails: string[] = [];
 
-      for (const row of rows) {
+      for (const row of rowsToProcess) {
+        let wasExisting = false;
         try {
           if (importType === 'materials') {
             const materialRow = row as MaterialImportRow;
             
-            // Verificar si ya existe
-            const { data: existing } = await supabase
+            // El costo_kilo_usd ya está calculado correctamente en el parseo (convertido a USD)
+            // Usar 0 si no está definido
+            let costo_kilo_usd = materialRow.costo_kilo_usd !== null && 
+                                 materialRow.costo_kilo_usd !== undefined && 
+                                 !isNaN(materialRow.costo_kilo_usd)
+              ? materialRow.costo_kilo_usd 
+              : 0;
+            
+            // El valor_dolar también ya está parseado correctamente
+            const valor_dolar = materialRow.valor_dolar !== null && 
+                               materialRow.valor_dolar !== undefined &&
+                               !isNaN(materialRow.valor_dolar) &&
+                               materialRow.valor_dolar > 0
+              ? materialRow.valor_dolar
+              : (materialRow.moneda === 'USD' ? 1 : 1515);
+
+            // Verificar si ya existe SOLO por nombre exacto (case-insensitive)
+            // Cada material debe tener un nombre único, aunque puedan compartir el mismo tipo de material
+            const { data: existingByName } = await supabase
               .from('stock_materials')
               .select('id')
               .eq('tenant_id', tenantId)
-              .ilike('material', materialRow.material)
+              .ilike('nombre', materialRow.nombre)
               .maybeSingle();
+
+            const existing = existingByName;
+            wasExisting = !!existing;
 
             if (existing) {
               // Actualizar existente
+              console.log(`Material existente encontrado: ${materialRow.nombre} (ID: ${existing.id}), actualizando...`);
               const updateData: any = {
                 nombre: materialRow.nombre,
-                stock_minimo: materialRow.stock_minimo,
-                costo_kilo_usd: materialRow.costo_kilo_usd || 0,
+                material: materialRow.material, // Actualizar también el campo material
+                stock_minimo: materialRow.stock_minimo || 0,
+                costo_kilo_usd: costo_kilo_usd,
                 moneda: materialRow.moneda,
-                valor_dolar: materialRow.valor_dolar || 1,
+                valor_dolar: valor_dolar,
               };
               
               // Si se proporciona cantidad, actualizarla
@@ -236,24 +322,37 @@ export function BulkImportStockModal({ onClose, onSuccess, importType }: BulkImp
                 updateData.kg = materialRow.kg;
               }
               
-              await supabase
+              const { error: updateError } = await supabase
                 .from('stock_materials')
                 .update(updateData)
                 .eq('id', existing.id);
+
+              if (updateError) {
+                console.error(`Error actualizando ${materialRow.nombre}:`, updateError);
+                throw new Error(`Error al actualizar ${materialRow.nombre}: ${updateError.message}`);
+              }
+              console.log(`✓ Material actualizado: ${materialRow.nombre}`);
             } else {
               // Crear nuevo
-              await supabase
+              console.log(`Creando nuevo material: ${materialRow.nombre}`);
+              const { error: insertError } = await supabase
                 .from('stock_materials')
                 .insert({
                   tenant_id: tenantId,
                   nombre: materialRow.nombre,
                   material: materialRow.material,
-                  kg: materialRow.kg !== undefined ? materialRow.kg : 0, // Usar cantidad importada o 0 por defecto
-                  costo_kilo_usd: materialRow.costo_kilo_usd || 0,
-                  valor_dolar: materialRow.valor_dolar || 1,
-                  moneda: materialRow.moneda,
-                  stock_minimo: materialRow.stock_minimo,
+                  kg: materialRow.kg !== undefined && materialRow.kg !== null ? materialRow.kg : 0,
+                  costo_kilo_usd: costo_kilo_usd,
+                  valor_dolar: valor_dolar,
+                  moneda: materialRow.moneda || 'ARS',
+                  stock_minimo: materialRow.stock_minimo || 0,
                 });
+
+              if (insertError) {
+                console.error(`Error creando ${materialRow.nombre}:`, insertError);
+                throw new Error(`Error al crear ${materialRow.nombre}: ${insertError.message}`);
+              }
+              console.log(`✓ Material creado: ${materialRow.nombre}`);
             }
           } else if (importType === 'products') {
             const productRow = row as ProductImportRow;
@@ -335,17 +434,25 @@ export function BulkImportStockModal({ onClose, onSuccess, importType }: BulkImp
           }
 
           imported++;
+          const action = wasExisting ? 'actualizado' : 'creado';
+          const itemName = row.nombre || (row as any).material || 'Sin nombre';
+          console.log(`✓ ${action}: ${itemName}`);
         } catch (error: any) {
           errors++;
-          const itemName = row.nombre || 'Sin nombre';
-          errorDetails.push(`${itemName}: ${error.message}`);
+          const itemName = row.nombre || row.material || 'Sin nombre';
+          const errorMsg = error.message || String(error);
+          errorDetails.push(`${itemName}: ${errorMsg}`);
+          console.error(`✗ Error en ${itemName}:`, error);
         }
       }
 
       setImportResults({ imported, errors, errorDetails });
+      const totalInExcel = rowsToProcess.length;
+      const successCount = imported - errors;
       setResultMessage(
-        `Importación completada: ${imported} items importados${errors > 0 ? `, ${errors} errores` : ''}`
+        `Importación completada: ${successCount} items procesados exitosamente de ${totalInExcel} filas en el Excel${errors > 0 ? `. ${errors} con errores` : ''}`
       );
+      console.log(`Resumen final: ${totalInExcel} filas en Excel, ${imported} procesadas, ${successCount} exitosas, ${errors} errores`);
 
       if (imported > 0) {
         setTimeout(() => {

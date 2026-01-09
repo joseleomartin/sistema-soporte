@@ -103,3 +103,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- - Para probar manualmente: SELECT send_hours_reminder_emails();
 -- ==================================================================
 
+
+
+
+
+
+
+
+
+
