@@ -23,6 +23,9 @@ export function MetricsModule() {
     start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
   });
+  // Estados temporales para los campos de fecha (para evitar actualizaciones mientras se escribe)
+  const [tempStartDate, setTempStartDate] = useState(dateRange.start);
+  const [tempEndDate, setTempEndDate] = useState(dateRange.end);
   const [showModal, setShowModal] = useState<string | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
   
@@ -60,6 +63,12 @@ export function MetricsModule() {
       loadMetrics();
     }
   }, [tenantId, dateRange]);
+
+  // Sincronizar estados temporales cuando dateRange cambia externamente
+  useEffect(() => {
+    setTempStartDate(dateRange.start);
+    setTempEndDate(dateRange.end);
+  }, [dateRange.start, dateRange.end]);
 
   // Guardar configuración en localStorage cuando cambie
   useEffect(() => {
@@ -265,15 +274,61 @@ export function MetricsModule() {
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Rango de fechas:</label>
           <input
             type="date"
-            value={dateRange.start}
-            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+            value={tempStartDate}
+            onChange={(e) => {
+              // Solo actualizar el estado temporal mientras se escribe
+              setTempStartDate(e.target.value);
+            }}
+            onBlur={(e) => {
+              // Actualizar el estado real solo cuando el usuario termine de escribir
+              const newDate = e.target.value;
+              if (newDate !== dateRange.start && newDate) {
+                setDateRange({ ...dateRange, start: newDate });
+              } else if (!newDate) {
+                // Si se borra, mantener el valor anterior
+                setTempStartDate(dateRange.start);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Si presiona Enter, aplicar el cambio
+              if (e.key === 'Enter') {
+                const newDate = tempStartDate;
+                if (newDate !== dateRange.start && newDate) {
+                  setDateRange({ ...dateRange, start: newDate });
+                }
+                e.currentTarget.blur();
+              }
+            }}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <span className="text-gray-700 dark:text-gray-300">a</span>
           <input
             type="date"
-            value={dateRange.end}
-            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+            value={tempEndDate}
+            onChange={(e) => {
+              // Solo actualizar el estado temporal mientras se escribe
+              setTempEndDate(e.target.value);
+            }}
+            onBlur={(e) => {
+              // Actualizar el estado real solo cuando el usuario termine de escribir
+              const newDate = e.target.value;
+              if (newDate !== dateRange.end && newDate) {
+                setDateRange({ ...dateRange, end: newDate });
+              } else if (!newDate) {
+                // Si se borra, mantener el valor anterior
+                setTempEndDate(dateRange.end);
+              }
+            }}
+            onKeyDown={(e) => {
+              // Si presiona Enter, aplicar el cambio
+              if (e.key === 'Enter') {
+                const newDate = tempEndDate;
+                if (newDate !== dateRange.end && newDate) {
+                  setDateRange({ ...dateRange, end: newDate });
+                }
+                e.currentTarget.blur();
+              }
+            }}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
         </div>

@@ -274,6 +274,7 @@ export function CostsModule() {
           precio_venta: parseFloat(manualFormData.precio_venta) || null,
           cantidad_fabricar: parseInt(manualFormData.cantidad_fabricar) || 0,
           moneda_precio: manualFormData.moneda_precio,
+          estado: 'pendiente' as const, // Todos los productos nuevos se crean como pendientes
         };
 
         const { data: newProduct, error: productError } = await supabase
@@ -529,12 +530,16 @@ export function CostsModule() {
           }
         }
 
-      // Actualizar producto con nuevos valores
+      // Actualizar producto con nuevos valores y establecer fecha de orden de producción
+      // Cuando se envía desde costos a producción, usar fecha actual como fecha de orden
+      const fechaActual = new Date().toISOString();
       await supabase
         .from('products')
         .update({
           precio_venta: item.precio_venta || null,
           cantidad_fabricar: item.cantidad_fabricar,
+          created_at: fechaActual, // Fecha de orden de producción (cuando se envía a producción)
+          updated_at: fechaActual, // Actualizar fecha de modificación
         })
         .eq('id', item.product.id);
 
@@ -586,33 +591,103 @@ export function CostsModule() {
 
       // Registrar métrica de producción
       const productNameForMetric = item.product?.nombre || item.nombre_manual || formatProductName(item.familia || '', item.medida || '', item.caracteristica || '');
-      const productWeight = item.product?.peso_unidad || item.peso_unidad || 0;
-      await supabase.from('production_metrics').insert({
+      
+      // Función auxiliar para validar valores numéricos requeridos
+      // LIMITE: NUMERIC(10,2) = máximo 99,999,999.99
+      const MAX_NUMERIC_VALUE = 99999999.99;
+      
+      const ensureNumber = (value: any, defaultValue: number = 0): number => {
+        if (value === null || value === undefined || isNaN(value) || !isFinite(value)) {
+          return defaultValue;
+        }
+        let num = Number(value);
+        // Limitar el valor al máximo permitido por la base de datos
+        if (Math.abs(num) > MAX_NUMERIC_VALUE) {
+          console.warn(`Valor numérico excede el límite: ${num}, limitando a ${MAX_NUMERIC_VALUE}`);
+          num = num > 0 ? MAX_NUMERIC_VALUE : -MAX_NUMERIC_VALUE;
+        }
+        // Redondear a 2 decimales para campos NUMERIC(10,2)
+        return Math.round(num * 100) / 100;
+      };
+
+      // Función auxiliar para validar valores numéricos opcionales (pueden ser null)
+      const ensureNumberOrNull = (value: any): number | null => {
+        if (value === null || value === undefined) {
+          return null;
+        }
+        let num = Number(value);
+        if (isNaN(num) || !isFinite(num)) {
+          return null;
+        }
+        // Limitar el valor al máximo permitido por la base de datos
+        if (Math.abs(num) > MAX_NUMERIC_VALUE) {
+          console.warn(`Valor numérico excede el límite: ${num}, limitando a ${MAX_NUMERIC_VALUE}`);
+          num = num > 0 ? MAX_NUMERIC_VALUE : -MAX_NUMERIC_VALUE;
+        }
+        // Redondear a 2 decimales para campos NUMERIC(10,2)
+        return Math.round(num * 100) / 100;
+      };
+
+      const productWeight = ensureNumber(item.product?.peso_unidad || item.peso_unidad, 0);
+      const cantidad = ensureNumber(item.cantidad_fabricar, 0);
+      const kgConsumidosValid = ensureNumber(kgConsumidos, 0);
+      const costoTotalMP = ensureNumber(itemCosts.costo_total_mp, 0);
+      const costoMO = ensureNumber(itemCosts.incidencia_mano_obra, 0);
+      const costoProdUnit = ensureNumber(itemCosts.costo_base_unitario, 0);
+      const precioVenta = ensureNumberOrNull(item.precio_venta);
+      const rentabilidadNeta = ensureNumberOrNull(itemCosts.rentabilidad_neta);
+      const rentabilidadTotal = rentabilidadNeta !== null && cantidad > 0
+        ? ensureNumberOrNull(rentabilidadNeta * cantidad)
+        : null;
+
+      // Preparar el objeto de inserción con validación final
+      const metricData = {
         tenant_id: tenantId,
         fecha: new Date().toISOString(),
-        producto: productNameForMetric,
-        cantidad: item.cantidad_fabricar,
+        producto: productNameForMetric || 'Producto sin nombre',
+        cantidad: cantidad,
         peso_unidad: productWeight,
-        kg_consumidos: kgConsumidos,
-        costo_mp: itemCosts.costo_total_mp,
-        costo_mo: itemCosts.incidencia_mano_obra,
-        costo_prod_unit: itemCosts.costo_base_unitario,
-        costo_total_mp: itemCosts.costo_total_mp,
-        precio_venta: item.precio_venta,
-        rentabilidad_neta: itemCosts.rentabilidad_neta,
-        rentabilidad_total: itemCosts.rentabilidad_neta * item.cantidad_fabricar,
-      });
+        kg_consumidos: kgConsumidosValid,
+        costo_mp: costoTotalMP,
+        costo_mo: costoMO,
+        costo_prod_unit: costoProdUnit,
+        costo_total_mp: costoTotalMP,
+        precio_venta: precioVenta,
+        rentabilidad_neta: rentabilidadNeta,
+        rentabilidad_total: rentabilidadTotal,
+      };
 
-      // Eliminar el item de la simulación de costos para que aparezca en Producción
-      await supabase
-        .from('cost_simulation_items')
-        .delete()
-        .eq('id', item.id);
+      // Validación final: asegurar que ningún valor exceda el límite
+      const validatedMetricData: any = {};
+      for (const [key, value] of Object.entries(metricData)) {
+        if (typeof value === 'number') {
+          if (Math.abs(value) > MAX_NUMERIC_VALUE) {
+            console.warn(`Campo ${key} excede el límite: ${value}, limitando a ${MAX_NUMERIC_VALUE}`);
+            validatedMetricData[key] = value > 0 ? MAX_NUMERIC_VALUE : -MAX_NUMERIC_VALUE;
+          } else {
+            validatedMetricData[key] = Math.round(value * 100) / 100;
+          }
+        } else {
+          validatedMetricData[key] = value;
+        }
+      }
 
-      // Remover el item de la lista local
-      setSimulationItems(simulationItems.filter(i => i.id !== item.id));
+      // Log para debug (remover en producción si es necesario)
+      console.log('Insertando métrica de producción:', validatedMetricData);
 
-      alert('Producto enviado a producción exitosamente');
+      const { error: insertError } = await supabase.from('production_metrics').insert(validatedMetricData);
+
+      if (insertError) {
+        console.error('Error al insertar métrica de producción:', insertError);
+        console.error('Datos que se intentaron insertar:', validatedMetricData);
+        throw insertError;
+      }
+
+      // NO eliminar el item de la simulación de costos - debe permanecer visible
+      // El producto permanece en la simulación para futuras referencias y análisis
+      // También aparecerá en el módulo de producción
+
+      alert('Producto enviado a producción exitosamente. El producto permanece en la simulación de costos.');
 
       // Recargar stock y materiales
       const { data: updatedStock } = await supabase
@@ -1598,3 +1673,6 @@ export function CostsModule() {
     </div>
   );
 }
+
+
+

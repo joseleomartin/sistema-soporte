@@ -1041,95 +1041,105 @@ export function ClientsModule() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 py-4">No hay ventas registradas para este cliente</p>
                     ) : (
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                          <thead className="bg-gray-100 dark:bg-gray-600">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Fecha</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Producto</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio Unitario</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Ingreso Neto</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">IVA</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Ganancia</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                            {clientSales.map((sale) => {
-                              const tieneIva = (sale as any).tiene_iva || false;
-                              const ivaPct = (sale as any).iva_pct || 0;
-                              const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
-                              return (
-                                <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                    <div className="flex items-center space-x-1">
-                                      <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                      <span>{new Date(sale.fecha).toLocaleDateString('es-AR')}</span>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                    ${sale.precio_unitario.toFixed(2)} ARS
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                    ${sale.ingreso_neto.toFixed(2)} ARS
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                    {tieneIva ? (
-                                      <span>${ivaMonto.toFixed(2)} ARS ({ivaPct}%)</span>
-                                    ) : (
-                                      <span className="text-gray-400 dark:text-gray-500">Sin IVA</span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
-                                    ${sale.ganancia_total.toFixed(2)} ARS
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                            <thead className="bg-gray-100 dark:bg-gray-600">
+                              <tr>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Fecha</th>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Producto</th>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Cantidad</th>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Precio Unitario</th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Ingreso Neto</th>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">IVA</th>
+                                <th className="px-3 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">TOTAL</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                              {clientSales.map((sale) => {
+                                const tieneIva = (sale as any).tiene_iva || false;
+                                const ivaPct = (sale as any).iva_pct || 0;
+                                const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                                const totalConIva = sale.ingreso_neto + ivaMonto;
+                                return (
+                                  <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                      <div className="flex items-center space-x-1">
+                                        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                                        <span>{new Date(sale.fecha).toLocaleDateString('es-AR')}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                      ${sale.precio_unitario.toFixed(2)} ARS
+                                    </td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900 dark:text-white">
+                                      ${sale.ingreso_neto.toFixed(2)} ARS
+                                    </td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                      {tieneIva ? (
+                                        <span>${ivaMonto.toFixed(2)} ARS ({ivaPct}%)</span>
+                                      ) : (
+                                        <span className="text-gray-400 dark:text-gray-500">Sin IVA</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900 dark:text-white">
+                                      ${totalConIva.toFixed(2)} ARS
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </div>
 
                   {/* Resumen Total */}
-                  {clientSales.length > 0 && (
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-                      <h4 className="text-md font-semibold mb-2 text-gray-900 dark:text-white">Resumen Total</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-600 dark:text-gray-400">Total Ingresos Netos:</p>
-                          <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                            ${clientSales.reduce((sum, s) => sum + s.ingreso_neto, 0).toFixed(2)} ARS
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600 dark:text-gray-400">Total IVA:</p>
-                          <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                            ${clientSales.reduce((sum, s) => {
-                              const tieneIva = (s as any).tiene_iva || false;
-                              const ivaPct = (s as any).iva_pct || 0;
-                              const ivaMonto = tieneIva ? s.ingreso_neto * (ivaPct / 100) : 0;
-                              return sum + ivaMonto;
-                            }, 0).toFixed(2)} ARS
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600 dark:text-gray-400">Total Ganancia:</p>
-                          <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                            ${clientSales.reduce((sum, s) => sum + s.ganancia_total, 0).toFixed(2)} ARS
-                          </p>
-                        </div>
-                        <div className="col-span-2 pt-2 border-t border-blue-200 dark:border-blue-700">
-                          <p className="text-gray-600 dark:text-gray-400">Total Ventas:</p>
-                          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                            {clientSales.length} {clientSales.length === 1 ? 'venta' : 'ventas'}
-                          </p>
+                  {clientSales.length > 0 && (() => {
+                    // Calcular totales incluyendo IVA
+                    const totalIngresosNetos = clientSales.reduce((sum, s) => sum + s.ingreso_neto, 0);
+                    const totalIva = clientSales.reduce((sum, s) => {
+                      const tieneIva = (s as any).tiene_iva || false;
+                      const ivaPct = (s as any).iva_pct || 0;
+                      const ivaMonto = tieneIva ? s.ingreso_neto * (ivaPct / 100) : 0;
+                      return sum + ivaMonto;
+                    }, 0);
+                    const totalGeneral = totalIngresosNetos + totalIva;
+                    
+                    return (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                        <h4 className="text-md font-semibold mb-2 text-gray-900 dark:text-white">Resumen Total</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="text-gray-600 dark:text-gray-400">Total Ingresos Netos:</p>
+                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                              ${totalIngresosNetos.toFixed(2)} ARS
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600 dark:text-gray-400">Total IVA:</p>
+                            <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                              ${totalIva.toFixed(2)} ARS
+                            </p>
+                          </div>
+                          <div className="col-span-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                            <p className="text-gray-600 dark:text-gray-400">Total General (Ingreso Neto + IVA):</p>
+                            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                              ${totalGeneral.toFixed(2)} ARS
+                            </p>
+                          </div>
+                          <div className="col-span-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                            <p className="text-gray-600 dark:text-gray-400">Total Ventas:</p>
+                            <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                              {clientSales.length} {clientSales.length === 1 ? 'venta' : 'ventas'}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -539,6 +539,7 @@ export interface Database {
           iibb_porcentaje: number
           otros_costos: number
           moneda_precio: 'ARS' | 'USD'
+          estado: 'pendiente' | 'completada'
           created_at: string
           updated_at: string
         }
@@ -556,6 +557,7 @@ export interface Database {
           iibb_porcentaje?: number
           otros_costos?: number
           moneda_precio?: 'ARS' | 'USD'
+          estado?: 'pendiente' | 'completada'
           created_at?: string
           updated_at?: string
         }
@@ -573,6 +575,7 @@ export interface Database {
           iibb_porcentaje?: number
           otros_costos?: number
           moneda_precio?: 'ARS' | 'USD'
+          estado?: 'pendiente' | 'completada'
           created_at?: string
           updated_at?: string
         }

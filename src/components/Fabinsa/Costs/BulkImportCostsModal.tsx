@@ -349,6 +349,7 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
                 cantidad_por_hora: row.cantidad_hora,
                 iibb_porcentaje: row.iibb_porcentaje,
                 moneda_precio: row.moneda_precio,
+                estado: 'pendiente', // Todos los productos nuevos se crean como pendientes
               })
               .select('id')
               .single();

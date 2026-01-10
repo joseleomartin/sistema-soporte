@@ -278,6 +278,8 @@ export function SalesModule() {
       precio_final: 0,
       ingreso_bruto: 0,
       ingreso_neto: 0,
+      iva_monto: 0,
+      total_con_iva: 0,
       ganancia_un: 0,
       ganancia_total: 0,
     });
@@ -987,49 +989,94 @@ export function SalesModule() {
                 <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4">
                   <h4 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">Productos en la Venta ({saleItems.length})</h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {saleItems.map((item) => (
-                      <div key={item.id} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium text-gray-900 dark:text-white">{item.producto}</span>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              item.tipo_producto === 'fabricado' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                            }`}>
-                              {item.tipo_producto}
+                    {saleItems.map((item) => {
+                      const ivaMonto = item.tiene_iva ? item.ingreso_neto * (item.iva_pct / 100) : 0;
+                      const totalConIva = item.ingreso_neto + ivaMonto;
+                      return (
+                        <div key={item.id} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-gray-900 dark:text-white">{item.producto}</span>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                item.tipo_producto === 'fabricado' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                              }`}>
+                                {item.tipo_producto}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 space-y-1">
+                              <div>
+                                Cantidad: {item.cantidad} | Precio Unitario: ${item.precio_unitario.toFixed(2)}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span>Ingreso Neto: <span className="font-semibold text-gray-900 dark:text-white">${item.ingreso_neto.toFixed(2)}</span></span>
+                                {item.tiene_iva && (
+                                  <>
+                                    <span className="text-blue-600 dark:text-blue-400">+</span>
+                                    <span>IVA ({item.iva_pct}%): <span className="font-semibold text-blue-600 dark:text-blue-400">${ivaMonto.toFixed(2)}</span></span>
+                                    <span className="text-blue-600 dark:text-blue-400">=</span>
+                                    <span className="font-bold text-green-600 dark:text-green-400">Total: ${totalConIva.toFixed(2)}</span>
+                                  </>
+                                )}
+                                {!item.tiene_iva && (
+                                  <span className="text-xs text-gray-500 dark:text-gray-500 ml-2">(Sin IVA)</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="ml-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 flex-shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600 space-y-2">
+                    {(() => {
+                      const totalIngresoNeto = saleItems.reduce((sum, item) => sum + item.ingreso_neto, 0);
+                      const totalIva = saleItems.reduce((sum, item) => {
+                        const ivaMonto = item.tiene_iva ? item.ingreso_neto * (item.iva_pct / 100) : 0;
+                        return sum + ivaMonto;
+                      }, 0);
+                      const totalConIva = totalIngresoNeto + totalIva;
+                      const totalGanancia = saleItems.reduce((sum, item) => sum + item.ganancia_total, 0);
+                      
+                      return (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Ingreso Neto:</span>
+                            <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                              ${totalIngresoNeto.toFixed(2)} ARS
                             </span>
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Cantidad: {item.cantidad} | Precio: ${item.precio_unitario.toFixed(2)} | Total: ${item.ingreso_neto.toFixed(2)}
-                            {item.tiene_iva && (
-                              <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
-                                (IVA {item.iva_pct}% incluido)
+                          {totalIva > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Total IVA:</span>
+                              <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                                ${totalIva.toFixed(2)} ARS
                               </span>
-                            )}
+                            </div>
+                          )}
+                          {totalIva > 0 && (
+                            <div className="flex justify-between items-center pt-1 border-t border-gray-300 dark:border-gray-600">
+                              <span className="text-sm font-bold text-gray-900 dark:text-white">TOTAL (Ingreso Neto + IVA):</span>
+                              <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                                ${totalConIva.toFixed(2)} ARS
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center pt-1 border-t border-gray-300 dark:border-gray-600">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Ganancia:</span>
+                            <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                              ${totalGanancia.toFixed(2)} ARS
+                            </span>
                           </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(item.id)}
-                          className="ml-2 text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Ingreso Neto:</span>
-                      <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                        ${saleItems.reduce((sum, item) => sum + item.ingreso_neto, 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Ganancia:</span>
-                      <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                        ${saleItems.reduce((sum, item) => sum + item.ganancia_total, 0).toFixed(2)}
-                      </span>
-                    </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -1075,7 +1122,7 @@ export function SalesModule() {
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">C. Unit.</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Ing. Neto</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">IVA</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Ganancia</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Total</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-28">Estado</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-32">Acciones</th>
             </tr>
@@ -1109,7 +1156,8 @@ export function SalesModule() {
                     const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
                     if (!acc[sale.order_id].total_iva) acc[sale.order_id].total_iva = 0;
                     acc[sale.order_id].total_iva += ivaMonto;
-                    acc[sale.order_id].total_ganancia += sale.ganancia_total;
+                    // Total = Ingreso Neto + IVA
+                    acc[sale.order_id].total_ganancia = acc[sale.order_id].total_ingreso_neto + (acc[sale.order_id].total_iva || 0);
                   } else {
                     // Ventas sin order_id (antiguas) se muestran individualmente
                     if (!acc.individual) acc.individual = [];
@@ -1163,7 +1211,7 @@ export function SalesModule() {
                               ${(order.total_iva || 0).toFixed(2)}
                             </td>
                             <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
-                              ${order.total_ganancia.toFixed(2)}
+                              ${((order.total_ingreso_neto || 0) + (order.total_iva || 0)).toFixed(2)}
                             </td>
                             <td className="px-2 py-3 text-sm">
                               <div className="flex flex-col gap-1">
@@ -1173,7 +1221,7 @@ export function SalesModule() {
                                     ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                                     : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                                 }`}>
-                                  {order.items[0]?.estado === 'recibido' ? 'Recibido' : 'Pendiente'}
+                                  {order.items[0]?.estado === 'recibido' ? 'Entregado' : 'Pendiente'}
                                 </span>
                                 {/* Estado de Pago */}
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -1181,7 +1229,7 @@ export function SalesModule() {
                                     ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                                     : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                                 }`}>
-                                  {order.items[0]?.pagado ? 'Pagado' : 'Impago'}
+                                  {order.items[0]?.pagado ? 'Cobrado' : 'Pendiente de cobro'}
                                 </span>
                               </div>
                             </td>
@@ -1195,7 +1243,7 @@ export function SalesModule() {
                                         ? 'bg-orange-600 dark:bg-orange-500 hover:bg-orange-700 dark:hover:bg-orange-600'
                                         : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'
                                     }`}
-                                    title={order.items[0]?.estado === 'recibido' ? 'Marcar como Pendiente' : 'Marcar como Recibido'}
+                                    title={order.items[0]?.estado === 'recibido' ? 'Marcar como Pendiente' : 'Marcar como Entregado'}
                                   >
                                     <CheckCircle className="w-3.5 h-3.5" />
                                   </button>
@@ -1208,7 +1256,7 @@ export function SalesModule() {
                                         ? 'bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600'
                                         : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'
                                     }`}
-                                    title={order.items[0]?.pagado ? 'Marcar como Impago' : 'Marcar como Pagado'}
+                                    title={order.items[0]?.pagado ? 'Marcar como Pendiente de cobro' : 'Marcar como Cobrado'}
                                   >
                                     <DollarSign className="w-3.5 h-3.5" />
                                   </button>
@@ -1293,7 +1341,7 @@ export function SalesModule() {
                                 <td className="px-2 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">${item.costo_unitario.toFixed(2)}</td>
                                 <td className="px-2 py-2 text-sm text-green-600 dark:text-green-400 whitespace-nowrap">${item.ingreso_neto.toFixed(2)}</td>
                                 <td className="px-2 py-2 text-sm text-blue-600 dark:text-blue-400 whitespace-nowrap">${ivaMonto.toFixed(2)}</td>
-                                <td className="px-2 py-2 text-sm text-green-600 dark:text-green-400 whitespace-nowrap">${item.ganancia_total.toFixed(2)}</td>
+                                <td className="px-2 py-2 text-sm text-green-600 dark:text-green-400 whitespace-nowrap">${(item.ingreso_neto + ivaMonto).toFixed(2)}</td>
                                 <td className="px-2 py-2 text-sm"></td>
                                 <td className="px-2 py-2 text-sm"></td>
                               </tr>
@@ -1335,7 +1383,7 @@ export function SalesModule() {
                             ${ivaMonto.toFixed(2)}
                           </td>
                           <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
-                            ${sale.ganancia_total.toFixed(2)}
+                            ${(sale.ingreso_neto + ivaMonto).toFixed(2)}
                           </td>
                           <td className="px-2 py-4 text-sm">
                             <div className="flex flex-col gap-1">
@@ -1345,7 +1393,7 @@ export function SalesModule() {
                                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                                   : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                               }`}>
-                                {(sale as any).estado === 'recibido' ? 'Recibido' : 'Pendiente'}
+                                {(sale as any).estado === 'recibido' ? 'Entregado' : 'Pendiente'}
                               </span>
                               {/* Estado de Pago */}
                               <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -1353,7 +1401,7 @@ export function SalesModule() {
                                   ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                                   : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                               }`}>
-                                {(sale as any).pagado ? 'Pagado' : 'Impago'}
+                                {(sale as any).pagado ? 'Cobrado' : 'Pendiente de cobro'}
                               </span>
                             </div>
                           </td>
@@ -1469,7 +1517,7 @@ export function SalesModule() {
                                     ? 'bg-orange-600 dark:bg-orange-500 hover:bg-orange-700 dark:hover:bg-orange-600'
                                     : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'
                                 }`}
-                                title={(sale as any).estado === 'recibido' ? 'Marcar como Pendiente' : 'Marcar como Recibido'}
+                                title={(sale as any).estado === 'recibido' ? 'Marcar como Pendiente' : 'Marcar como Entregado'}
                               >
                                 <CheckCircle className="w-3.5 h-3.5" />
                               </button>
@@ -1493,7 +1541,7 @@ export function SalesModule() {
                                     ? 'bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600'
                                     : 'bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600'
                                 }`}
-                                title={(sale as any).pagado ? 'Marcar como Impago' : 'Marcar como Pagado'}
+                                title={(sale as any).pagado ? 'Marcar como Pendiente de cobro' : 'Marcar como Cobrado'}
                               >
                                 <DollarSign className="w-3.5 h-3.5" />
                               </button>
