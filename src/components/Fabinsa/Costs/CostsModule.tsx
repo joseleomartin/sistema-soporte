@@ -12,6 +12,8 @@ import { calculateProductCosts, calculateAverageEmployeeHourValue, formatProduct
 import { getAllFIFOPrices } from '../../../lib/fifoCalculations';
 import { BulkImportCostsModal } from './BulkImportCostsModal';
 import { useMobile } from '../../../hooks/useMobile';
+import { ConfirmModal } from '../../Common/ConfirmModal';
+import { AlertModal } from '../../Common/AlertModal';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductMaterial = Database['public']['Tables']['product_materials']['Row'];
@@ -75,12 +77,97 @@ export function CostsModule() {
     descuento_pct: '0',
   });
   const [manualMaterials, setManualMaterials] = useState<Array<{ material_name: string; kg_por_unidad: string }>>([]);
+  
+  // Estados para modales
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type?: 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    onConfirm: () => {},
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (tenantId) {
       loadData();
     }
   }, [tenantId]);
+
+  // Función helper para normalizar nombres de materiales (para comparaciones flexibles)
+  const normalizeMaterialName = useCallback((name: string): string => {
+    if (!name) return '';
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
+  }, []);
+
+  // Función helper para buscar materiales en stock de manera flexible (case-insensitive, busca principalmente en nombre)
+  const findStockMaterial = useCallback((materialName: string): StockMaterial | undefined => {
+    if (!materialName) return undefined;
+    
+    const normalizedName = normalizeMaterialName(materialName);
+    
+    return stockMaterials.find(m => {
+      // Normalizar ambos campos de stock_materials
+      const normalizedMaterial = normalizeMaterialName(m.material || '');
+      const normalizedNombre = normalizeMaterialName(m.nombre || '');
+      
+      // Priorizar búsqueda por nombre (que es lo que se importa), luego por material
+      return normalizedNombre === normalizedName || normalizedMaterial === normalizedName;
+    });
+  }, [stockMaterials, normalizeMaterialName]);
+
+  // Función helper para buscar precios FIFO de manera flexible (prioriza búsqueda por nombre)
+  const findFIFOPrice = useCallback((materialName: string): { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' } | undefined => {
+    if (!materialName) return undefined;
+    
+    const normalizedName = normalizeMaterialName(materialName);
+    
+    // Buscar en fifoMaterialPrices usando comparación flexible
+    for (const [key, value] of Object.entries(fifoMaterialPrices)) {
+      const normalizedKey = normalizeMaterialName(key);
+      if (normalizedKey === normalizedName) {
+        return value;
+      }
+    }
+    
+    // También buscar en stockMaterials para encontrar el material y luego buscar en FIFO
+    // Priorizar búsqueda por nombre (que es lo que se importa)
+    const stockMat = findStockMaterial(materialName);
+    if (stockMat) {
+      // Intentar primero con el nombre, luego con el material
+      const searchKeys = [];
+      if (stockMat.nombre) searchKeys.push(stockMat.nombre);
+      if (stockMat.material && stockMat.material !== stockMat.nombre) searchKeys.push(stockMat.material);
+      
+      for (const searchKey of searchKeys) {
+        const normalizedSearchKey = normalizeMaterialName(searchKey);
+        for (const [key, value] of Object.entries(fifoMaterialPrices)) {
+          if (normalizeMaterialName(key) === normalizedSearchKey) {
+            return value;
+          }
+        }
+      }
+    }
+    
+    return undefined;
+  }, [fifoMaterialPrices, normalizeMaterialName, findStockMaterial]);
 
   const loadData = async () => {
     if (!tenantId) return;
@@ -209,10 +296,12 @@ export function CostsModule() {
         const product = item.product as Product | null;
         if (product) {
           // Usar materiales del mapa en lugar de hacer consulta
+          const itemMaterials = materialsMap[product.id] || [];
+          console.log(`Producto ${product.nombre}: materiales cargados:`, itemMaterials.map(m => ({ material_name: m.material_name, kg_por_unidad: m.kg_por_unidad })));
           loadedItems.push({
             id: item.id,
             product,
-            materials: materialsMap[product.id] || [],
+            materials: itemMaterials,
             precio_venta: item.precio_venta,
             descuento_pct: item.descuento_pct,
             cantidad_fabricar: item.cantidad_fabricar,
@@ -245,18 +334,48 @@ export function CostsModule() {
     const materialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
     
     // Para cada material del item, usar precio FIFO si está disponible, sino usar stock
+    // IMPORTANTE: Aunque el stock sea 0, siempre intentar obtener el último precio disponible
     item.materials.forEach(mat => {
-      if (fifoMaterialPrices[mat.material_name]) {
-        materialPrices[mat.material_name] = fifoMaterialPrices[mat.material_name];
-      } else {
-        // Fallback: usar precio del stock si no hay FIFO disponible
-        const stockMat = stockMaterials.find(m => m.material === mat.material_name);
-        if (stockMat) {
+      // Primero buscar el material en stock (aunque tenga stock 0, el precio debe estar disponible)
+      const stockMat = findStockMaterial(mat.material_name);
+      
+      if (stockMat) {
+        // Si encontramos el material en stock, usar su precio (aunque stock sea 0)
+        // El precio debe estar disponible en costo_kilo_usd
+        if (stockMat.costo_kilo_usd && stockMat.costo_kilo_usd > 0) {
           materialPrices[mat.material_name] = {
+            costo_kilo_usd: stockMat.costo_kilo_usd,
+            valor_dolar: stockMat.valor_dolar || 1,
+            moneda: stockMat.moneda || 'ARS',
+          };
+          console.log(`Material ${mat.material_name}: precio de stock encontrado (stock: ${stockMat.kg} kg)`, {
             costo_kilo_usd: stockMat.costo_kilo_usd,
             valor_dolar: stockMat.valor_dolar,
             moneda: stockMat.moneda,
-          };
+            stock_nombre: stockMat.nombre,
+            stock_material: stockMat.material
+          });
+        } else {
+          // Si el stock no tiene precio, intentar FIFO como fallback
+          console.warn(`Material ${mat.material_name} encontrado pero sin precio en stock. Buscando precio FIFO...`);
+          const fifoPrice = findFIFOPrice(mat.material_name);
+          if (fifoPrice) {
+            materialPrices[mat.material_name] = fifoPrice;
+            console.log(`Material ${mat.material_name}: precio FIFO encontrado como fallback`, fifoPrice);
+          } else {
+            console.warn(`Material ${mat.material_name}: NO se encontró precio ni en stock ni en FIFO`);
+          }
+        }
+      } else {
+        // Si no se encuentra en stock, intentar FIFO como última opción
+        console.warn(`Material ${mat.material_name} no encontrado en stock. Buscando precio FIFO...`);
+        const fifoPrice = findFIFOPrice(mat.material_name);
+        if (fifoPrice) {
+          materialPrices[mat.material_name] = fifoPrice;
+          console.log(`Material ${mat.material_name}: precio FIFO encontrado`, fifoPrice);
+        } else {
+          console.warn(`Material no encontrado ni en stock ni en compras FIFO: ${mat.material_name}`);
+          console.warn(`Materiales disponibles en stock:`, stockMaterials.map(m => ({ nombre: m.nombre, material: m.material, costo_kilo_usd: m.costo_kilo_usd })));
         }
       }
     });
@@ -345,7 +464,7 @@ export function CostsModule() {
       ganancia_total: gananciaTotal,
       rentabilidad_neta: rentabilidadNetaTotal,
     };
-  }, [avgHourValue, fifoMaterialPrices, stockMaterials, tenantId]);
+  }, [avgHourValue, fifoMaterialPrices, stockMaterials, tenantId, findStockMaterial, findFIFOPrice]);
 
   // Memoizar los costos calculados para cada item - Evita recálculos innecesarios
   const itemCostsMap = useMemo(() => {
@@ -364,13 +483,23 @@ export function CostsModule() {
   const handleAddToSimulation = async () => {
     // Solo modo manual
     if (!manualFormData.familia || !manualFormData.cantidad_por_hora) {
-      alert('Complete los campos requeridos: Familia y Cantidad por hora');
+      setAlertModal({
+        isOpen: true,
+        title: 'Campos incompletos',
+        message: 'Complete los campos requeridos: Familia y Cantidad por hora',
+        type: 'warning',
+      });
       return;
     }
 
     // Validar que haya al menos un material
     if (manualMaterials.length === 0) {
-      alert('Debe agregar al menos un material al producto');
+      setAlertModal({
+        isOpen: true,
+        title: 'Materiales requeridos',
+        message: 'Debe agregar al menos un material al producto',
+        type: 'warning',
+      });
       return;
     }
 
@@ -386,7 +515,12 @@ export function CostsModule() {
 
       // Guardar producto en la base de datos
       if (!tenantId) {
-        alert('Error: No se pudo identificar la empresa');
+        setAlertModal({
+          isOpen: true,
+          title: 'Error',
+          message: 'No se pudo identificar la empresa',
+          type: 'error',
+        });
         return;
       }
 
@@ -503,7 +637,12 @@ export function CostsModule() {
         setManualMaterials([]);
       } catch (error: any) {
         console.error('Error guardando producto:', error);
-        alert(`Error al guardar el producto: ${error?.message || 'Error desconocido'}`);
+        setAlertModal({
+          isOpen: true,
+          title: 'Error',
+          message: `Error al guardar el producto: ${error?.message || 'Error desconocido'}`,
+          type: 'error',
+        });
       }
   };
 
@@ -531,11 +670,17 @@ export function CostsModule() {
       cantidad_por_hora: item.product?.cantidad_por_hora || item.cantidad_por_hora || 0,
       otros_costos: (item.product as any)?.otros_costos || item.otros_costos || 0,
     });
-    // Cargar materiales editables
-    setEditMaterials(item.materials.map(m => ({
-      material_name: m.material_name,
-      kg_por_unidad: m.kg_por_unidad,
-    })));
+    // Cargar materiales editables - buscar el material en stock para obtener el valor correcto para el selector
+    setEditMaterials(item.materials.map(m => {
+      // Buscar el material en stock por nombre (que es lo que se importa)
+      const stockMat = findStockMaterial(m.material_name);
+      // Priorizar usar el nombre del stock si existe (ya que es lo que se importa), sino usar material_name original
+      const materialValue = stockMat?.nombre || stockMat?.material || m.material_name;
+      return {
+        material_name: materialValue,
+        kg_por_unidad: m.kg_por_unidad,
+      };
+    }));
   };
 
   const handleSaveItem = async () => {
@@ -598,7 +743,12 @@ export function CostsModule() {
       setSelectedItem(null);
     } catch (error: any) {
       console.error('Error al guardar:', error);
-      alert('Error al guardar los cambios: ' + error.message);
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: `Error al guardar los cambios: ${error.message}`,
+        type: 'error',
+      });
     }
   };
 
@@ -616,18 +766,33 @@ export function CostsModule() {
       setSimulationItems(simulationItems.filter(item => item.id !== id));
     } catch (error: any) {
       console.error('Error removing item:', error);
-      alert(`Error al eliminar: ${error?.message || 'Error desconocido'}`);
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: `Error al eliminar: ${error?.message || 'Error desconocido'}`,
+        type: 'error',
+      });
     }
   };
 
   const sendToProduction = async (item: CostSimulationItem) => {
     if (!tenantId) {
-      alert('Error: No se pudo identificar la empresa');
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: 'No se pudo identificar la empresa',
+        type: 'error',
+      });
       return;
     }
 
     if (!item.product) {
-      alert('Error: Producto no válido');
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: 'Producto no válido',
+        type: 'error',
+      });
       return;
     }
 
@@ -635,31 +800,78 @@ export function CostsModule() {
       // El producto ya está guardado (se guarda al agregar a simulación)
       // Solo necesitamos actualizar el stock y enviar a producción
       
-      // Descontar materiales del stock
+      // Verificar stock antes de proceder
+      const stockWarnings: Array<{ material: string; disponible: number; necesario: number }> = [];
       for (const mat of item.materials) {
-          const stockMat = stockMaterials.find(m => m.material === mat.material_name);
-          if (stockMat) {
-            const kgNecesarios = mat.kg_por_unidad * item.cantidad_fabricar;
-            if (stockMat.kg >= kgNecesarios) {
-              await supabase
-                .from('stock_materials')
-                .update({ kg: stockMat.kg - kgNecesarios })
-                .eq('id', stockMat.id);
-
-              // Registrar movimiento de inventario
-              const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
-              await supabase.from('inventory_movements').insert({
-                tenant_id: tenantId,
-                tipo: 'egreso_mp',
-                item_nombre: mat.material_name,
-                cantidad: kgNecesarios,
-                motivo: `Producción: ${productName}`,
-              });
-            } else {
-              alert(`Advertencia: No hay suficiente stock de ${mat.material_name}. Stock disponible: ${stockMat.kg.toFixed(2)} kg, necesario: ${kgNecesarios.toFixed(2)} kg`);
-            }
+        const stockMat = findStockMaterial(mat.material_name);
+        if (stockMat) {
+          const kgNecesarios = mat.kg_por_unidad * item.cantidad_fabricar;
+          if (stockMat.kg < kgNecesarios) {
+            stockWarnings.push({
+              material: mat.material_name,
+              disponible: stockMat.kg,
+              necesario: kgNecesarios,
+            });
           }
         }
+      }
+
+      // Si hay advertencias de stock, mostrar modal de confirmación
+      if (stockWarnings.length > 0) {
+        const warningMessages = stockWarnings.map(
+          w => `• ${w.material}: Stock disponible: ${w.disponible.toFixed(2)} kg, necesario: ${w.necesario.toFixed(2)} kg`
+        ).join('\n');
+        
+        setConfirmModal({
+          isOpen: true,
+          title: 'Advertencia de Stock',
+          message: `No hay suficiente stock para los siguientes materiales:\n\n${warningMessages}\n\n¿Desea continuar de todos modos?`,
+          type: 'warning',
+          onConfirm: async () => {
+            await proceedWithStockUpdate(item);
+          },
+        });
+        return;
+      }
+
+      // Si no hay advertencias, proceder directamente
+      await proceedWithStockUpdate(item);
+    } catch (error: any) {
+      console.error('Error sending to production:', error);
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: `Error al enviar a producción: ${error?.message || 'Error desconocido'}`,
+        type: 'error',
+      });
+    }
+  };
+
+  const proceedWithStockUpdate = async (item: CostSimulationItem) => {
+    if (!tenantId) return;
+
+    try {
+      // Descontar materiales del stock
+      for (const mat of item.materials) {
+        const stockMat = findStockMaterial(mat.material_name);
+        if (stockMat) {
+          const kgNecesarios = mat.kg_por_unidad * item.cantidad_fabricar;
+          await supabase
+            .from('stock_materials')
+            .update({ kg: Math.max(0, stockMat.kg - kgNecesarios) })
+            .eq('id', stockMat.id);
+
+          // Registrar movimiento de inventario
+          const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
+          await supabase.from('inventory_movements').insert({
+            tenant_id: tenantId,
+            tipo: 'egreso_mp',
+            item_nombre: mat.material_name,
+            cantidad: kgNecesarios,
+            motivo: `Producción: ${productName}`,
+          });
+        }
+      }
 
       // Actualizar producto con nuevos valores y establecer fecha de orden de producción
       // Cuando se envía desde costos a producción, usar fecha actual como fecha de orden
@@ -714,7 +926,7 @@ export function CostsModule() {
       // Calcular kg consumidos (suma de todos los materiales)
       let kgConsumidos = 0;
       item.materials.forEach(mat => {
-        const stockMat = stockMaterials.find(m => m.material === mat.material_name);
+        const stockMat = findStockMaterial(mat.material_name);
         if (stockMat) {
           kgConsumidos += mat.kg_por_unidad * item.cantidad_fabricar;
         }
@@ -818,7 +1030,12 @@ export function CostsModule() {
       // El producto permanece en la simulación para futuras referencias y análisis
       // También aparecerá en el módulo de producción
 
-      alert('Producto enviado a producción exitosamente. El producto permanece en la simulación de costos.');
+      setAlertModal({
+        isOpen: true,
+        title: 'Éxito',
+        message: 'Producto enviado a producción exitosamente. El producto permanece en la simulación de costos.',
+        type: 'success',
+      });
 
       // Recargar stock y materiales
       const { data: updatedStock } = await supabase
@@ -828,7 +1045,12 @@ export function CostsModule() {
       setStockMaterials(updatedStock || []);
     } catch (error: any) {
       console.error('Error sending to production:', error);
-      alert(`Error al enviar a producción: ${error?.message || 'Error desconocido'}`);
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: `Error al enviar a producción: ${error?.message || 'Error desconocido'}`,
+        type: 'error',
+      });
     }
   };
 
@@ -1606,47 +1828,59 @@ export function CostsModule() {
                         Materiales
                       </label>
                       <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {editMaterials.map((mat, idx) => (
-                          <div key={idx} className="flex items-center space-x-2">
-                            <select
-                              value={mat.material_name}
-                              onChange={(e) => {
-                                const updated = [...editMaterials];
-                                updated[idx].material_name = e.target.value;
-                                setEditMaterials(updated);
-                              }}
-                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                            >
-                              <option value="">Seleccione un material</option>
-                              {stockMaterials.map((stockMat) => (
-                                <option key={stockMat.id} value={stockMat.material}>
-                                  {stockMat.material}
-                                </option>
-                              ))}
-                            </select>
-                            <input
-                              type="number"
-                              step="0.00001"
-                              value={mat.kg_por_unidad}
-                              onChange={(e) => {
-                                const updated = [...editMaterials];
-                                updated[idx].kg_por_unidad = parseFloat(e.target.value) || 0;
-                                setEditMaterials(updated);
-                              }}
-                              className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                              placeholder="Kg/unidad"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditMaterials(editMaterials.filter((_, i) => i !== idx));
-                              }}
-                              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
+                        {editMaterials.map((mat, idx) => {
+                          // Buscar el material en stock para determinar si está seleccionado correctamente
+                          const stockMatMatch = findStockMaterial(mat.material_name);
+                          // Priorizar usar el nombre del stock (que es lo que se importa), sino usar material_name original
+                          const selectedValue = stockMatMatch?.nombre || stockMatMatch?.material || mat.material_name;
+                          
+                          return (
+                            <div key={idx} className="flex items-center space-x-2">
+                              <select
+                                value={selectedValue}
+                                onChange={(e) => {
+                                  const updated = [...editMaterials];
+                                  updated[idx].material_name = e.target.value;
+                                  setEditMaterials(updated);
+                                }}
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                              >
+                                <option value="">Seleccione un material</option>
+                                {stockMaterials.map((stockMat) => {
+                                  // Usar el nombre como valor principal (que es lo que se importa)
+                                  const optionValue = stockMat.nombre || stockMat.material;
+                                  const displayText = stockMat.nombre || stockMat.material;
+                                  return (
+                                    <option key={stockMat.id} value={optionValue}>
+                                      {displayText} {stockMat.material && stockMat.material !== stockMat.nombre ? `(${stockMat.material})` : ''}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              <input
+                                type="number"
+                                step="0.00001"
+                                value={mat.kg_por_unidad}
+                                onChange={(e) => {
+                                  const updated = [...editMaterials];
+                                  updated[idx].kg_por_unidad = parseFloat(e.target.value) || 0;
+                                  setEditMaterials(updated);
+                                }}
+                                className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                                placeholder="Kg/unidad"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditMaterials(editMaterials.filter((_, i) => i !== idx));
+                                }}
+                                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
                         <button
                           type="button"
                           onClick={() => {
@@ -1822,6 +2056,25 @@ export function CostsModule() {
           </div>
         );
       })()}
+
+      {/* Modales */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        isLoading={isProcessing}
+      />
     </div>
   );
 }

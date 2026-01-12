@@ -15,6 +15,7 @@ import { BulkImportStockModal } from './BulkImportStockModal';
 
 type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
 type PurchaseProduct = Database['public']['Tables']['purchases_products']['Row'];
+type Sale = Database['public']['Tables']['sales']['Row'];
 type InventoryMovement = Database['public']['Tables']['inventory_movements']['Row'];
 
 type StockMaterial = Database['public']['Tables']['stock_materials']['Row'];
@@ -81,6 +82,7 @@ export function StockModule() {
   const [selectedResaleProduct, setSelectedResaleProduct] = useState<ResaleProduct | null>(null);
   const [showResaleMovementsModal, setShowResaleMovementsModal] = useState(false);
   const [productPurchases, setProductPurchases] = useState<PurchaseProduct[]>([]);
+  const [productSales, setProductSales] = useState<Sale[]>([]);
   const [resaleInventoryMovements, setResaleInventoryMovements] = useState<InventoryMovement[]>([]);
   const [loadingResaleMovements, setLoadingResaleMovements] = useState(false);
 
@@ -93,13 +95,6 @@ export function StockModule() {
   const [receptionQuantities, setReceptionQuantities] = useState<Record<string, Record<string, number>>>({});
   const [loadingReception, setLoadingReception] = useState(false);
   const [receptionFilter, setReceptionFilter] = useState<'all' | 'completed' | 'pending'>('all');
-  
-  // Control de Recepción (Ventas)
-  const [salesReceptionControls, setSalesReceptionControls] = useState<any[]>([]);
-  const [salesReceptionItems, setSalesReceptionItems] = useState<Record<string, any[]>>({});
-  const [salesReceptionQuantities, setSalesReceptionQuantities] = useState<Record<string, Record<string, number>>>({});
-  const [loadingSalesReception, setLoadingSalesReception] = useState(false);
-  const [receptionTypeFilter, setReceptionTypeFilter] = useState<'all' | 'purchases' | 'sales'>('all');
 
   const loadReceptionControls = async () => {
     if (!tenantId) return;
@@ -428,218 +423,12 @@ export function StockModule() {
     }
   };
 
-  const loadSalesReceptionControls = async () => {
-    if (!tenantId) return;
-    setLoadingSalesReception(true);
-    try {
-      // Cargar controles de recepción de ventas
-      const { data: controls, error } = await supabase
-        .from('sales_reception_control')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error al cargar controles de recepción de ventas:', error);
-        throw error;
-      }
-
-      setSalesReceptionControls(controls || []);
-
-      // Cargar items de cada control
-      const itemsMap: Record<string, any[]> = {};
-      const quantitiesMap: Record<string, Record<string, number>> = {};
-
-      for (const control of controls || []) {
-        const { data: items, error: itemsError } = await supabase
-          .from('sales_reception_items')
-          .select('*')
-          .eq('reception_control_id', control.id)
-          .order('created_at', { ascending: true });
-
-        if (itemsError) {
-          console.error('Error al cargar items del control de venta:', control.id, itemsError);
-          throw itemsError;
-        }
-        
-        itemsMap[control.id] = items || [];
-
-        // Inicializar cantidades recibidas
-        const qtyMap: Record<string, number> = {};
-        (items || []).forEach((item: any) => {
-          qtyMap[item.id] = control.estado === 'completado' 
-            ? (item.cantidad_recibida || item.cantidad_esperada)
-            : (item.cantidad_recibida || item.cantidad_esperada);
-        });
-        quantitiesMap[control.id] = qtyMap;
-      }
-
-      setSalesReceptionItems(itemsMap);
-      setSalesReceptionQuantities(quantitiesMap);
-    } catch (error) {
-      console.error('Error loading sales reception controls:', error);
-      // No mostrar alerta si la tabla no existe aún (migración no ejecutada)
-      if (!(error as any).message?.includes('does not exist')) {
-        alert('Error al cargar controles de recepción de ventas. Verifica la consola para más detalles.');
-      }
-    } finally {
-      setLoadingSalesReception(false);
-    }
-  };
-
-  const handleCompleteSalesReception = async (control: any) => {
-    if (!tenantId) return;
-    
-    const items = salesReceptionItems[control.id] || [];
-    const quantities = salesReceptionQuantities[control.id] || {};
-
-    // Validar que todas las cantidades estén ingresadas
-    for (const item of items) {
-      if (!quantities[item.id] || quantities[item.id] <= 0) {
-        alert(`Por favor ingrese la cantidad recibida para ${item.item_nombre}`);
-        return;
-      }
-    }
-
-    if (!confirm('¿Confirmar el control de recepción y actualizar el stock? Esto descontará el stock de los productos.')) {
-      return;
-    }
-
-    try {
-      // Actualizar cantidades recibidas en los items
-      for (const item of items) {
-        const { error: updateError } = await supabase
-          .from('sales_reception_items')
-          .update({ cantidad_recibida: quantities[item.id] })
-          .eq('id', item.id);
-
-        if (updateError) throw updateError;
-      }
-
-      // Cargar la orden de venta para obtener los productos
-      const { data: sales, error: salesError } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('order_id', control.order_id);
-
-      if (salesError) throw salesError;
-
-      // Actualizar stock según el tipo de producto
-      for (const sale of sales || []) {
-        // Buscar el item de recepción correspondiente
-        const receptionItem = items.find((item: any) => item.item_nombre === sale.producto);
-        if (!receptionItem) {
-          console.warn(`No se encontró item de recepción para producto: ${sale.producto}`);
-          continue;
-        }
-
-        const cantidadRecibida = quantities[receptionItem.id] ?? receptionItem.cantidad_recibida ?? receptionItem.cantidad_esperada;
-        
-        if (!cantidadRecibida || cantidadRecibida <= 0) {
-          console.warn(`Cantidad recibida inválida para producto: ${sale.producto}`, cantidadRecibida);
-          continue;
-        }
-
-        if (sale.tipo_producto === 'fabricado') {
-          // Buscar o crear el producto en stock
-          const { data: existingProduct, error: findError } = await supabase
-            .from('stock_products')
-            .select('*')
-            .eq('tenant_id', tenantId)
-            .eq('nombre', sale.producto)
-            .maybeSingle();
-
-          if (findError && findError.code !== 'PGRST116') {
-            console.error('Error buscando producto:', findError);
-            throw findError;
-          }
-
-          if (existingProduct) {
-            // Descontar cantidad recibida del stock
-            const nuevaCantidad = Math.max(0, existingProduct.cantidad - cantidadRecibida);
-            const { error: updateError } = await supabase
-              .from('stock_products')
-              .update({ cantidad: nuevaCantidad })
-              .eq('id', existingProduct.id);
-
-            if (updateError) throw updateError;
-          } else {
-            console.warn(`Producto fabricado no encontrado en stock: ${sale.producto}`);
-          }
-        } else {
-          // Producto de reventa
-          const { data: existingProduct, error: findError } = await supabase
-            .from('resale_products')
-            .select('*')
-            .eq('tenant_id', tenantId)
-            .eq('nombre', sale.producto)
-            .maybeSingle();
-
-          if (findError && findError.code !== 'PGRST116') {
-            console.error('Error buscando producto de reventa:', findError);
-            throw findError;
-          }
-
-          if (existingProduct) {
-            // Descontar cantidad recibida del stock
-            const nuevaCantidad = Math.max(0, existingProduct.cantidad - cantidadRecibida);
-            const { error: updateError } = await supabase
-              .from('resale_products')
-              .update({ cantidad: nuevaCantidad })
-              .eq('id', existingProduct.id);
-
-            if (updateError) throw updateError;
-          } else {
-            console.warn(`Producto de reventa no encontrado en stock: ${sale.producto}`);
-          }
-        }
-
-        // Registrar movimiento de inventario
-        const { error: movementError } = await supabase.from('inventory_movements').insert({
-          tenant_id: tenantId,
-          tipo: sale.tipo_producto === 'fabricado' ? 'egreso_fab' : 'egreso_pr',
-          item_nombre: sale.producto,
-          cantidad: cantidadRecibida,
-          motivo: `Recepción de venta confirmada - Orden ${control.order_id.substring(0, 8)}`,
-        });
-
-        if (movementError) {
-          console.error('Error insertando movimiento de inventario:', movementError);
-          throw movementError;
-        }
-      }
-
-      // Marcar control como completado
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData?.user?.id || null;
-      
-      const { error: completeError } = await supabase
-        .from('sales_reception_control')
-        .update({
-          estado: 'completado',
-          fecha_control: new Date().toISOString(),
-          controlado_por: userId,
-        })
-        .eq('id', control.id);
-
-      if (completeError) throw completeError;
-
-      alert('Control de recepción de venta completado y stock actualizado');
-      await loadSalesReceptionControls();
-      await loadAllStock();
-    } catch (error) {
-      console.error('Error completing sales reception:', error);
-      alert('Error al completar el control de recepción de venta');
-    }
-  };
 
   useEffect(() => {
     if (tenantId) {
       loadAllStock();
       if (activeTab === 'reception') {
         loadReceptionControls();
-        loadSalesReceptionControls();
       }
     }
   }, [tenantId, activeTab]);
@@ -649,11 +438,13 @@ export function StockModule() {
     setLoadingMovements(true);
     try {
       // Cargar compras relacionadas con esta materia prima (incluyendo campos de IVA)
+      // Buscar por nombre o material para mayor compatibilidad
+      const materialSearchTerm = material.nombre || material.material || '';
       const { data: purchases, error: purchasesError } = await supabase
         .from('purchases_materials')
         .select('*, tiene_iva, iva_pct')
         .eq('tenant_id', tenantId)
-        .ilike('material', material.material)
+        .ilike('material', `%${materialSearchTerm}%`)
         .order('fecha', { ascending: false });
 
       if (purchasesError) throw purchasesError;
@@ -697,6 +488,18 @@ export function StockModule() {
 
       if (purchasesError) throw purchasesError;
       setProductPurchases(purchases || []);
+
+      // Cargar ventas relacionadas con este producto de reventa
+      const { data: sales, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('tipo_producto', 'reventa')
+        .ilike('producto', product.nombre)
+        .order('fecha', { ascending: false });
+
+      if (salesError) throw salesError;
+      setProductSales(sales || []);
 
       // Cargar movimientos de inventario relacionados
       const { data: movements, error: movementsError } = await supabase
@@ -1092,7 +895,14 @@ export function StockModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo/kg</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">${mat.costo_kilo_usd.toFixed(2)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            ${mat.costo_kilo_usd.toFixed(2)} {mat.moneda}
+                            {mat.moneda === 'USD' && mat.valor_dolar && (
+                              <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                (${(mat.costo_kilo_usd * mat.valor_dolar).toFixed(2)} ARS)
+                              </span>
+                            )}
+                          </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Moneda</p>
@@ -1194,7 +1004,16 @@ export function StockModule() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {stockMinimo.toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${mat.costo_kilo_usd.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          <div>
+                            ${mat.costo_kilo_usd.toFixed(2)} {mat.moneda}
+                            {mat.moneda === 'USD' && mat.valor_dolar && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                (${(mat.costo_kilo_usd * mat.valor_dolar).toFixed(2)} ARS)
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{mat.moneda}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex justify-end space-x-2">
@@ -1306,7 +1125,7 @@ export function StockModule() {
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)}</td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                       {(() => {
-                                        // Mostrar precio unitario sin IVA
+                                        // Mostrar costo base (sin IVA)
                                         const precioBase = purchase.moneda === 'USD' && purchase.valor_dolar 
                                           ? purchase.precio / purchase.valor_dolar 
                                           : purchase.precio;
@@ -1339,10 +1158,7 @@ export function StockModule() {
                                       )}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                      {(() => {
-                                        // Mostrar total sin IVA
-                                        return `$${purchase.total.toFixed(2)} ARS`;
-                                      })()}
+                                      ${purchase.total.toFixed(2)} ARS
                                     </td>
                                   </tr>
                                 ))}
@@ -1368,35 +1184,95 @@ export function StockModule() {
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Fecha</th>
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Tipo</th>
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad (kg)</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio/kg</th>
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Motivo</th>
                                 </tr>
                               </thead>
                               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {inventoryMovements.map((movement) => (
-                                  <tr key={movement.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                      <div className="flex items-center space-x-1">
-                                        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                        <span>{new Date(movement.created_at).toLocaleDateString('es-AR')}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                      <span className={`px-2 py-1 rounded text-xs ${
-                                        movement.tipo === 'ingreso_mp' 
-                                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
-                                          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                                      }`}>
-                                        {movement.tipo === 'ingreso_mp' ? 'Ingreso' : 'Egreso'}
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                      {movement.cantidad.toFixed(2)}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                                      {movement.motivo || '-'}
-                                    </td>
-                                  </tr>
-                                ))}
+                                {inventoryMovements.map((movement) => {
+                                  // Buscar compra relacionada para obtener el precio
+                                  let relatedPurchase: PurchaseMaterial | undefined;
+                                  
+                                  // Si el motivo contiene "Recepción de compra - Orden", extraer el order_id
+                                  if (movement.motivo && movement.motivo.includes('Recepción de compra - Orden')) {
+                                    const orderIdMatch = movement.motivo.match(/Orden ([a-f0-9-]+)/i);
+                                    if (orderIdMatch) {
+                                      const orderIdPrefix = orderIdMatch[1].substring(0, 8);
+                                      // Buscar compra que coincida con el order_id y el material (por nombre o material)
+                                      relatedPurchase = materialPurchases.find(p => {
+                                        const purchaseOrderId = (p as any).order_id?.substring(0, 8);
+                                        return purchaseOrderId === orderIdPrefix && 
+                                               (p.material === selectedMaterial?.nombre || 
+                                                p.material === selectedMaterial?.material ||
+                                                p.material?.toLowerCase() === selectedMaterial?.nombre?.toLowerCase());
+                                      });
+                                    }
+                                  }
+                                  
+                                  // Si no se encontró por order_id, intentar buscar por fecha y material
+                                  if (!relatedPurchase && movement.tipo === 'ingreso_mp') {
+                                    const movementDate = new Date(movement.created_at).toISOString().split('T')[0];
+                                    relatedPurchase = materialPurchases.find(p => {
+                                      const purchaseDate = new Date(p.fecha).toISOString().split('T')[0];
+                                      return purchaseDate === movementDate && 
+                                             (p.material === selectedMaterial?.nombre || 
+                                              p.material === selectedMaterial?.material ||
+                                              p.material?.toLowerCase() === selectedMaterial?.nombre?.toLowerCase());
+                                    });
+                                  }
+                                  
+                                  return (
+                                    <tr key={movement.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                        <div className="flex items-center space-x-1">
+                                          <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                          <span>{new Date(movement.created_at).toLocaleDateString('es-AR')}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          movement.tipo === 'ingreso_mp' 
+                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                                            : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                        }`}>
+                                          {movement.tipo === 'ingreso_mp' ? 'Ingreso' : 'Egreso'}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        {movement.cantidad.toFixed(2)}
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                        {relatedPurchase ? (
+                                          <div>
+                                            {(() => {
+                                              const precioUnitario = relatedPurchase.moneda === 'USD' && relatedPurchase.valor_dolar 
+                                                ? relatedPurchase.precio / relatedPurchase.valor_dolar 
+                                                : relatedPurchase.precio;
+                                              
+                                              return (
+                                                <div>
+                                                  <div className="font-medium">
+                                                    ${precioUnitario.toFixed(2)} {relatedPurchase.moneda}
+                                                  </div>
+                                                  {relatedPurchase.moneda === 'USD' && relatedPurchase.valor_dolar && (
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                      Dólar: ${relatedPurchase.valor_dolar.toFixed(2)}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              );
+                                            })()}
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400 dark:text-gray-500">-</span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                                        {movement.motivo || '-'}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>
@@ -2122,6 +1998,7 @@ export function StockModule() {
                       setShowResaleMovementsModal(false);
                       setSelectedResaleProduct(null);
                       setProductPurchases([]);
+                      setProductSales([]);
                       setResaleInventoryMovements([]);
                     }}
                     className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -2247,35 +2124,123 @@ export function StockModule() {
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Fecha</th>
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Tipo</th>
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Cantidad</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Precio/Unidad</th>
                                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Motivo</th>
                                 </tr>
                               </thead>
                               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {resaleInventoryMovements.map((movement) => (
-                                  <tr key={movement.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                      <div className="flex items-center space-x-1">
-                                        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                        <span>{new Date(movement.created_at).toLocaleDateString('es-AR')}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                      <span className={`px-2 py-1 rounded text-xs ${
-                                        movement.tipo === 'ingreso_pr' 
-                                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
-                                          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                                      }`}>
-                                        {movement.tipo === 'ingreso_pr' ? 'Ingreso' : 'Egreso'}
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                      {movement.cantidad.toFixed(2)}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                                      {movement.motivo || '-'}
-                                    </td>
-                                  </tr>
-                                ))}
+                                {resaleInventoryMovements.map((movement) => {
+                                  // Buscar compra o venta relacionada para obtener el precio
+                                  let relatedPurchase: PurchaseProduct | undefined;
+                                  let relatedSale: Sale | undefined;
+                                  
+                                  // Si es un ingreso, buscar compra relacionada
+                                  if (movement.tipo === 'ingreso_pr') {
+                                    // Si el motivo contiene "Recepción de compra - Orden", extraer el order_id
+                                    if (movement.motivo && movement.motivo.includes('Recepción de compra - Orden')) {
+                                      const orderIdMatch = movement.motivo.match(/Orden ([a-f0-9-]+)/i);
+                                      if (orderIdMatch) {
+                                        const orderIdPrefix = orderIdMatch[1].substring(0, 8);
+                                        // Buscar compra que coincida con el order_id y el producto
+                                        relatedPurchase = productPurchases.find(p => {
+                                          const purchaseOrderId = (p as any).order_id?.substring(0, 8);
+                                          return purchaseOrderId === orderIdPrefix && 
+                                                 p.producto === selectedResaleProduct?.nombre;
+                                        });
+                                      }
+                                    }
+                                    
+                                    // Si no se encontró por order_id, intentar buscar por fecha y producto
+                                    if (!relatedPurchase) {
+                                      const movementDate = new Date(movement.created_at).toISOString().split('T')[0];
+                                      relatedPurchase = productPurchases.find(p => {
+                                        const purchaseDate = new Date(p.fecha).toISOString().split('T')[0];
+                                        return purchaseDate === movementDate && 
+                                               p.producto === selectedResaleProduct?.nombre;
+                                      });
+                                    }
+                                  }
+                                  
+                                  // Si es un egreso, buscar venta relacionada
+                                  if (movement.tipo === 'egreso_pr') {
+                                    // Si el motivo contiene "Venta recibida - Orden", extraer el order_id
+                                    if (movement.motivo && (movement.motivo.includes('Venta recibida - Orden') || movement.motivo.includes('Recepción de venta'))) {
+                                      const orderIdMatch = movement.motivo.match(/Orden ([a-f0-9-]+)/i);
+                                      if (orderIdMatch) {
+                                        const orderIdPrefix = orderIdMatch[1].substring(0, 8);
+                                        // Buscar venta que coincida con el order_id y el producto
+                                        relatedSale = productSales.find(s => {
+                                          const saleOrderId = s.order_id?.substring(0, 8);
+                                          return saleOrderId === orderIdPrefix && 
+                                                 s.producto === selectedResaleProduct?.nombre;
+                                        });
+                                      }
+                                    }
+                                    
+                                    // Si no se encontró por order_id, intentar buscar por fecha y producto
+                                    if (!relatedSale) {
+                                      const movementDate = new Date(movement.created_at).toISOString().split('T')[0];
+                                      relatedSale = productSales.find(s => {
+                                        const saleDate = new Date(s.fecha).toISOString().split('T')[0];
+                                        return saleDate === movementDate && 
+                                               s.producto === selectedResaleProduct?.nombre &&
+                                               s.cantidad === movement.cantidad;
+                                      });
+                                    }
+                                  }
+                                  
+                                  return (
+                                    <tr key={movement.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                        <div className="flex items-center space-x-1">
+                                          <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                          <span>{new Date(movement.created_at).toLocaleDateString('es-AR')}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                        <span className={`px-2 py-1 rounded text-xs ${
+                                          movement.tipo === 'ingreso_pr' 
+                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                                            : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                        }`}>
+                                          {movement.tipo === 'ingreso_pr' ? 'Ingreso' : 'Egreso'}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                        {movement.cantidad.toFixed(2)}
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                        {relatedPurchase ? (
+                                          <div>
+                                            {(() => {
+                                              const precioUnitario = relatedPurchase.moneda === 'USD' && relatedPurchase.valor_dolar 
+                                                ? relatedPurchase.precio / relatedPurchase.valor_dolar 
+                                                : relatedPurchase.precio;
+                                              
+                                              return (
+                                                <div>
+                                                  <div className="font-medium">
+                                                    ${precioUnitario.toFixed(2)} {relatedPurchase.moneda}
+                                                  </div>
+                                                  {relatedPurchase.moneda === 'USD' && relatedPurchase.valor_dolar && (
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                      Dólar: ${relatedPurchase.valor_dolar.toFixed(2)}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              );
+                                            })()}
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400 dark:text-gray-500">-</span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                                        {movement.motivo || '-'}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>
@@ -2297,39 +2262,6 @@ export function StockModule() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Control de Recepción</h2>
             {/* Filtros */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 mr-4">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Tipo:</span>
-                <button
-                  onClick={() => setReceptionTypeFilter('all')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    receptionTypeFilter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Todas
-                </button>
-                <button
-                  onClick={() => setReceptionTypeFilter('purchases')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    receptionTypeFilter === 'purchases'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Compras
-                </button>
-                <button
-                  onClick={() => setReceptionTypeFilter('sales')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    receptionTypeFilter === 'sales'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Ventas
-                </button>
-              </div>
               <button
                 onClick={() => setReceptionFilter('all')}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -2363,14 +2295,11 @@ export function StockModule() {
             </div>
           </div>
 
-          {loadingReception || loadingSalesReception ? (
+          {loadingReception ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">Cargando controles...</div>
           ) : (() => {
             // Filtrar controles de compras según el filtro seleccionado
             const filteredPurchaseControls = receptionControls.filter((control) => {
-              if (receptionTypeFilter === 'sales') return false; // Ocultar compras si solo se muestran ventas
-              if (receptionTypeFilter === 'purchases') return true; // Mostrar todas las compras
-              if (receptionTypeFilter === 'all') return true; // Mostrar todas si es 'all'
               if (receptionFilter === 'all') return true;
               if (receptionFilter === 'completed') {
                 // Solo mostrar completadas sin diferencias negativas
@@ -2395,35 +2324,7 @@ export function StockModule() {
               return true;
             });
 
-            // Filtrar controles de ventas según el filtro seleccionado
-            const filteredSalesControls = salesReceptionControls.filter((control) => {
-              if (receptionTypeFilter === 'purchases') return false; // Ocultar ventas si solo se muestran compras
-              if (receptionTypeFilter === 'sales') return true; // Mostrar todas las ventas
-              if (receptionTypeFilter === 'all') return true; // Mostrar todas si es 'all'
-              
-              if (receptionFilter === 'all') return true;
-              if (receptionFilter === 'completed') {
-                const items = salesReceptionItems[control.id] || [];
-                const quantities = salesReceptionQuantities[control.id] || {};
-                const hasNegativeDifference = items.some((item: any) => {
-                  const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
-                  return cantidadRecibida < item.cantidad_esperada;
-                });
-                return control.estado === 'completado' && !hasNegativeDifference;
-              }
-              if (receptionFilter === 'pending') {
-                const items = salesReceptionItems[control.id] || [];
-                const quantities = salesReceptionQuantities[control.id] || {};
-                const hasNegativeDifference = items.some((item: any) => {
-                  const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
-                  return cantidadRecibida < item.cantidad_esperada;
-                });
-                return control.estado === 'pendiente' || (control.estado === 'completado' && hasNegativeDifference);
-              }
-              return true;
-            });
-
-            const hasAnyControls = filteredPurchaseControls.length > 0 || filteredSalesControls.length > 0;
+            const hasAnyControls = filteredPurchaseControls.length > 0;
 
             if (!hasAnyControls) {
               return (
@@ -2614,193 +2515,6 @@ export function StockModule() {
                   </div>
                 )}
 
-                {/* Controles de Recepción de Ventas */}
-                {filteredSalesControls.length > 0 && (
-                  <div>
-                    <h3 className="text-md font-semibold mb-3 text-gray-900 dark:text-white">Ventas</h3>
-                    <div className="space-y-4">
-                      {filteredSalesControls.map((control) => {
-                        const items = salesReceptionItems[control.id] || [];
-                        const quantities = salesReceptionQuantities[control.id] || {};
-                        
-                        // Calcular si hay diferencias negativas
-                        const hasNegativeDifference = items.some((item: any) => {
-                          const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
-                          return cantidadRecibida < item.cantidad_esperada;
-                        });
-                        
-                        // Determinar el color del borde según el estado y diferencias
-                        const borderColor = control.estado === 'completado' 
-                          ? (hasNegativeDifference 
-                              ? 'border-red-500 dark:border-red-600' 
-                              : 'border-green-500 dark:border-green-600')
-                          : 'border-gray-200 dark:border-gray-700';
-                        
-                        const bgColor = control.estado === 'completado'
-                          ? (hasNegativeDifference
-                              ? 'bg-red-50 dark:bg-red-900/20'
-                              : 'bg-green-50 dark:bg-green-900/20')
-                          : 'bg-blue-50 dark:bg-blue-900/20';
-
-                        return (
-                          <div key={control.id} className={`bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden border-2 ${borderColor}`}>
-                            <div className={`px-6 py-4 ${bgColor} border-b border-gray-200 dark:border-gray-700`}>
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                      Orden Venta {control.order_id.substring(0, 8)}
-                                    </h3>
-                                    {control.estado === 'completado' && (
-                                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                        hasNegativeDifference
-                                          ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                                          : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                      }`}>
-                                        {hasNegativeDifference ? '⚠ Menor Stock' : '✓ Completado'}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    Fecha recepción: {new Date(control.fecha_recepcion).toLocaleDateString('es-AR')}
-                                    {control.fecha_control && (
-                                      <> | Completado: {new Date(control.fecha_control).toLocaleDateString('es-AR')}</>
-                                    )}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {control.estado === 'pendiente' && (
-                                    <button
-                                      onClick={() => handleCompleteSalesReception(control)}
-                                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
-                                    >
-                                      <Save className="w-4 h-4" />
-                                      <span>Completar Control</span>
-                                    </button>
-                                  )}
-                                  {(control.estado === 'completado' || hasNegativeDifference) && (
-                                    <button
-                                      onClick={() => {
-                                        const element = document.getElementById(`sales-reception-details-${control.id}`);
-                                        if (element) {
-                                          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                        }
-                                      }}
-                                      className={`px-4 py-2 rounded-md flex items-center space-x-2 ${
-                                        hasNegativeDifference
-                                          ? 'bg-red-600 text-white hover:bg-red-700'
-                                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                                      }`}
-                                      title={hasNegativeDifference ? 'Revisar diferencias de stock' : 'Revisar control'}
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                      <span>Revisar</span>
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div id={`sales-reception-details-${control.id}`} className="px-6 py-4">
-                              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                <thead className="bg-gray-50 dark:bg-slate-700">
-                                  <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                      Item
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                      Tipo
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                      Cantidad Esperada
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                      Cantidad Recibida
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                      Diferencia
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                      Unidad
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                  {items.map((item: any) => {
-                                    const cantidadRecibida = quantities[item.id] || item.cantidad_recibida || item.cantidad_esperada;
-                                    const diferencia = cantidadRecibida - item.cantidad_esperada;
-                                    const isNegative = diferencia < 0;
-                                    const isCompleted = control.estado === 'completado';
-
-                                    return (
-                                      <tr key={item.id} className={`hover:bg-gray-50 dark:hover:bg-slate-700 ${
-                                        isCompleted && isNegative ? 'bg-red-50 dark:bg-red-900/10' : 
-                                        isCompleted && !isNegative ? 'bg-green-50 dark:bg-green-900/10' : ''
-                                      }`}>
-                                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                                          {item.item_nombre}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">
-                                          <span className={`px-2 py-1 rounded text-xs ${
-                                            item.tipo_producto === 'fabricado' 
-                                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' 
-                                              : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                          }`}>
-                                            {item.tipo_producto}
-                                          </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                          {item.cantidad_esperada.toFixed(2)} {item.unidad}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                          {isCompleted ? (
-                                            <span className={`text-sm font-medium ${
-                                              isNegative 
-                                                ? 'text-red-600 dark:text-red-400' 
-                                                : 'text-green-600 dark:text-green-400'
-                                            }`}>
-                                              {cantidadRecibida.toFixed(2)} {item.unidad}
-                                            </span>
-                                          ) : (
-                                            <input
-                                              type="number"
-                                              min="0"
-                                              step="0.01"
-                                              value={cantidadRecibida}
-                                              onChange={(e) => {
-                                                const newQuantities = { ...salesReceptionQuantities };
-                                                if (!newQuantities[control.id]) newQuantities[control.id] = {};
-                                                newQuantities[control.id][item.id] = parseFloat(e.target.value) || 0;
-                                                setSalesReceptionQuantities(newQuantities);
-                                              }}
-                                              className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                                            />
-                                          )}
-                                        </td>
-                                        <td className={`px-4 py-3 text-sm font-semibold ${
-                                          diferencia > 0 
-                                            ? 'text-green-600 dark:text-green-400' 
-                                            : diferencia < 0 
-                                            ? 'text-red-600 dark:text-red-400' 
-                                            : 'text-gray-600 dark:text-gray-400'
-                                        }`}>
-                                          {diferencia > 0 ? '+' : ''}{diferencia.toFixed(2)} {item.unidad}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                          {item.unidad}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })()}
