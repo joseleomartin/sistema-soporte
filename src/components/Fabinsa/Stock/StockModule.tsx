@@ -10,6 +10,7 @@ import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { parseProductName } from '../../../lib/fabinsaCalculations';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { useMobile } from '../../../hooks/useMobile';
 import { BulkImportStockModal } from './BulkImportStockModal';
 
 type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
@@ -28,6 +29,7 @@ type TabType = 'materials' | 'products' | 'resale' | 'reception';
 export function StockModule() {
   const { tenantId } = useTenant();
   const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
+  const isMobile = useMobile();
   const [activeTab, setActiveTab] = useState<TabType>('materials');
   
   // Materia Prima
@@ -913,17 +915,17 @@ export function StockModule() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
-        <div className="flex items-center space-x-3 mb-2">
-          <Package className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Stock</h1>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 sm:mb-6">
+        <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
+          <Package className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Stock</h1>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de inventario: Materia Prima, Productos Fabricados, Productos de Reventa</p>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gestión de inventario: Materia Prima, Productos Fabricados, Productos de Reventa</p>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 mb-6">
-        <div className="flex space-x-1">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 mb-4 sm:mb-6">
+        <div className={`flex ${isMobile ? 'overflow-x-auto scrollbar-hide' : 'space-x-1'}`}>
           {[
             { id: 'materials' as TabType, label: 'Materia Prima' },
             { id: 'products' as TabType, label: 'Productos Fabricados' },
@@ -933,7 +935,7 @@ export function StockModule() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`${isMobile ? 'px-3 py-2 text-xs whitespace-nowrap flex-shrink-0' : 'px-4 py-3 text-sm'} font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-600'
@@ -948,30 +950,30 @@ export function StockModule() {
       {/* Materia Prima Tab */}
       {activeTab === 'materials' && (
         <div>
-          <div className="flex justify-between items-center mb-4">
+          <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'} mb-4`}>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Materia Prima</h2>
+              <h2 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-gray-900 dark:text-white`}>Materia Prima</h2>
               {materials.length > 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Total: {materials.length} material{materials.length !== 1 ? 'es' : ''}
                 </p>
               )}
             </div>
-            <div className="flex items-center space-x-2">
+            <div className={`flex ${isMobile ? 'flex-col w-full gap-2' : 'items-center space-x-2'}`}>
               {canCreate('fabinsa-stock') && (
                 <>
                   <button
                     onClick={() => {
                       setShowImportModal(true);
                     }}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors touch-manipulation`}
                   >
                     <Upload className="w-4 h-4" />
                     <span>Importar</span>
                   </button>
                   <button
                     onClick={() => setShowMaterialForm(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors touch-manipulation`}
                   >
                     <Plus className="w-4 h-4" />
                     <span>Agregar</span>
@@ -1040,9 +1042,107 @@ export function StockModule() {
             </div>
           )}
 
-          {/* Materials Table */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          {/* Materials - Mobile Cards View */}
+          {isMobile ? (
+            <div className="space-y-3">
+              {materials.length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+                  No hay materia prima registrada
+                </div>
+              ) : (
+                materials.map((mat) => {
+                  const stockMinimo = mat.stock_minimo || 0;
+                  const stockBajo = mat.kg < stockMinimo;
+                  return (
+                    <div
+                      key={mat.id}
+                      className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 ${
+                        stockBajo ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-transparent'
+                      }`}
+                    >
+                      {/* Header */}
+                      <div className="mb-3">
+                        <button
+                          onClick={() => openMovementsModal(mat)}
+                          className="text-base font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline mb-1"
+                        >
+                          {mat.nombre}
+                        </button>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{mat.material}</p>
+                      </div>
+
+                      {/* Información principal */}
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Cantidad (kg)</p>
+                          <p className={`text-sm font-medium ${
+                            stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {mat.kg.toFixed(2)}
+                            {stockBajo && (
+                              <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">
+                                ⚠ Bajo
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Stock Mínimo (kg)</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{stockMinimo.toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo/kg</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">${mat.costo_kilo_usd.toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Moneda</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{mat.moneda}</p>
+                        </div>
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        {canEdit('fabinsa-stock') && (
+                          <button
+                            onClick={() => {
+                              setEditingMaterial(mat);
+                              setMaterialForm({
+                                nombre: mat.nombre,
+                                material: mat.material,
+                                stock_minimo: (mat.stock_minimo || 0).toString(),
+                              });
+                              setShowMaterialForm(true);
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Editar
+                          </button>
+                        )}
+                        {canDelete('fabinsa-stock') && (
+                          <button
+                            onClick={async () => {
+                              if (confirm('¿Eliminar?')) {
+                                await supabase.from('stock_materials').delete().eq('id', mat.id);
+                                loadAllStock();
+                              }
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            /* Materials Table - Desktop View */
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
@@ -1135,7 +1235,8 @@ export function StockModule() {
                 )}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
 
           {/* Modal de Movimientos */}
           {showMovementsModal && selectedMaterial && (
@@ -1313,23 +1414,23 @@ export function StockModule() {
       {/* Productos Fabricados Tab */}
       {activeTab === 'products' && (
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos Fabricados</h2>
-            <div className="flex items-center space-x-2">
+          <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'} mb-4`}>
+            <h2 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-gray-900 dark:text-white`}>Productos Fabricados</h2>
+            <div className={`flex ${isMobile ? 'flex-col w-full gap-2' : 'items-center space-x-2'}`}>
               {canCreate('fabinsa-stock') && (
                 <>
                   <button
                     onClick={() => {
                       setShowImportModal(true);
                     }}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors touch-manipulation`}
                   >
                     <Upload className="w-4 h-4" />
                     <span>Importar</span>
                   </button>
                   <button
                     onClick={() => setShowProductForm(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors touch-manipulation`}
                   >
                     <Plus className="w-4 h-4" />
                     <span>Agregar</span>
@@ -1419,9 +1520,105 @@ export function StockModule() {
             </div>
           )}
 
-          {/* Products Table */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          {/* Products - Mobile Cards View */}
+          {isMobile ? (
+            <div className="space-y-3">
+              {products.length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+                  No hay productos fabricados registrados
+                </div>
+              ) : (
+                products.map((prod) => {
+                  const stockMinimo = prod.stock_minimo || 0;
+                  const stockBajo = prod.cantidad < stockMinimo;
+                  return (
+                    <div
+                      key={prod.id}
+                      className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 ${
+                        stockBajo ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-transparent'
+                      }`}
+                    >
+                      {/* Header */}
+                      <div className="mb-3">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{prod.nombre}</h3>
+                      </div>
+
+                      {/* Información principal */}
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Cantidad</p>
+                          <p className={`text-sm font-medium ${
+                            stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {prod.cantidad}
+                            {stockBajo && (
+                              <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">
+                                ⚠ Bajo
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Stock Mínimo</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{stockMinimo}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Peso/unidad (kg)</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{prod.peso_unidad.toFixed(5)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo unitario</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {prod.costo_unit_total ? `$${prod.costo_unit_total.toFixed(2)}` : '-'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        {canEdit('fabinsa-stock') && (
+                          <button
+                            onClick={() => {
+                              setEditingProduct(prod);
+                              setProductForm({
+                                nombre: prod.nombre,
+                                cantidad: prod.cantidad.toString(),
+                                peso_unidad: prod.peso_unidad.toString(),
+                                costo_unit_total: prod.costo_unit_total?.toString() || '',
+                                stock_minimo: (prod.stock_minimo || 0).toString(),
+                              });
+                              setShowProductForm(true);
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Editar
+                          </button>
+                        )}
+                        {canDelete('fabinsa-stock') && (
+                          <button
+                            onClick={async () => {
+                              if (confirm('¿Eliminar?')) {
+                                await supabase.from('stock_products').delete().eq('id', prod.id);
+                                loadAllStock();
+                              }
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            /* Products Table - Desktop View */
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
@@ -1509,30 +1706,31 @@ export function StockModule() {
                 )}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Productos de Reventa Tab */}
       {activeTab === 'resale' && (
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos de Reventa</h2>
-            <div className="flex items-center space-x-2">
+          <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'} mb-4`}>
+            <h2 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-gray-900 dark:text-white`}>Productos de Reventa</h2>
+            <div className={`flex ${isMobile ? 'flex-col w-full gap-2' : 'items-center space-x-2'}`}>
               {canCreate('fabinsa-stock') && (
                 <>
                   <button
                     onClick={() => {
                       setShowImportModal(true);
                     }}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors touch-manipulation`}
                   >
                     <Upload className="w-4 h-4" />
                     <span>Importar</span>
                   </button>
                   <button
                     onClick={() => setShowResaleForm(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors touch-manipulation`}
                   >
                     <Plus className="w-4 h-4" />
                     <span>Agregar</span>
@@ -1694,29 +1892,134 @@ export function StockModule() {
             </div>
           )}
 
-          {/* Resale Products Table */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cantidad</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock Mínimo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo unitario</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo final</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Moneda</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {resaleProducts.length === 0 ? (
+          {/* Resale Products - Mobile Cards View */}
+          {isMobile ? (
+            <div className="space-y-3">
+              {resaleProducts.length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+                  No hay productos de reventa registrados
+                </div>
+              ) : (
+                resaleProducts.map((prod) => {
+                  const stockMinimo = prod.stock_minimo || 0;
+                  const stockBajo = prod.cantidad < stockMinimo;
+                  return (
+                    <div
+                      key={prod.id}
+                      className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 ${
+                        stockBajo ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-transparent'
+                      }`}
+                    >
+                      {/* Header */}
+                      <div className="mb-3">
+                        <button
+                          onClick={() => openResaleMovementsModal(prod)}
+                          className="text-base font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline mb-1"
+                        >
+                          {prod.nombre}
+                        </button>
+                      </div>
+
+                      {/* Información principal */}
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Cantidad</p>
+                          <p className={`text-sm font-medium ${
+                            stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {prod.cantidad}
+                            {stockBajo && (
+                              <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">
+                                ⚠ Bajo
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Stock Mínimo</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{stockMinimo}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo unitario</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            ${prod.costo_unitario.toFixed(2)} {prod.moneda}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo final</p>
+                          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                            ${prod.costo_unitario_final.toFixed(2)} ARS
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        {canEdit('fabinsa-stock') && (
+                          <button
+                            onClick={() => {
+                              setEditingResale(prod);
+                              setResaleForm({
+                                nombre: prod.nombre,
+                                cantidad: prod.cantidad.toString(),
+                                costo_unitario: prod.costo_unitario.toString(),
+                                otros_costos: (prod.otros_costos || 0).toString(),
+                                moneda: prod.moneda,
+                                valor_dolar: (prod.valor_dolar || 0).toString(),
+                                stock_minimo: (prod.stock_minimo || 0).toString(),
+                              });
+                              setShowResaleForm(true);
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Editar
+                          </button>
+                        )}
+                        {canDelete('fabinsa-stock') && (
+                          <button
+                            onClick={async () => {
+                              if (confirm('¿Eliminar?')) {
+                                await supabase.from('resale_products').delete().eq('id', prod.id);
+                                loadAllStock();
+                              }
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            /* Resale Products Table - Desktop View */
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                      No hay productos de reventa registrados
-                    </td>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cantidad</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock Mínimo</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo unitario</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Costo final</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Moneda</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Acciones</th>
                   </tr>
-                ) : (
-                  resaleProducts.map((prod) => {
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {resaleProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        No hay productos de reventa registrados
+                      </td>
+                    </tr>
+                  ) : (
+                    resaleProducts.map((prod) => {
                     const stockMinimo = prod.stock_minimo || 0;
                     const stockBajo = prod.cantidad < stockMinimo;
                     return (
@@ -1795,9 +2098,10 @@ export function StockModule() {
                     );
                   })
                 )}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Modal de Movimientos - Productos de Reventa */}
           {showResaleMovementsModal && selectedResaleProduct && (

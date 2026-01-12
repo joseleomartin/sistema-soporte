@@ -3,7 +3,7 @@
  * Simulación de costos y análisis de rentabilidad
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DollarSign, Plus, Trash2, X, Send, Package, ChevronDown, ChevronUp, Upload, Edit, BarChart3, TrendingUp } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
@@ -11,6 +11,7 @@ import { Database } from '../../../lib/database.types';
 import { calculateProductCosts, calculateAverageEmployeeHourValue, formatProductName } from '../../../lib/fabinsaCalculations';
 import { getAllFIFOPrices } from '../../../lib/fifoCalculations';
 import { BulkImportCostsModal } from './BulkImportCostsModal';
+import { useMobile } from '../../../hooks/useMobile';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductMaterial = Database['public']['Tables']['product_materials']['Row'];
@@ -39,6 +40,7 @@ interface CostSimulationItem {
 
 export function CostsModule() {
   const { tenantId } = useTenant();
+  const isMobile = useMobile();
   const [products, setProducts] = useState<Product[]>([]);
   const [productMaterials, setProductMaterials] = useState<Record<string, ProductMaterial[]>>({});
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -129,17 +131,19 @@ export function CostsModule() {
       setEmployees(employeesResult.data || []);
       setStockMaterials(stockResult.data || []);
 
-      // Cargar precios FIFO para todos los materiales disponibles
+      // OPTIMIZACIÓN: Cargar precios FIFO y simulación en paralelo
       const stockMats = stockResult.data || [];
-      const fifoPrices = await getAllFIFOPrices(
-        supabase,
-        tenantId,
-        stockMats.map(m => ({ material: m.material, moneda: m.moneda, valor_dolar: m.valor_dolar }))
-      );
+      const [fifoPrices] = await Promise.all([
+        // Cargar precios FIFO para todos los materiales disponibles
+        getAllFIFOPrices(
+          supabase,
+          tenantId,
+          stockMats.map(m => ({ material: m.material, moneda: m.moneda, valor_dolar: m.valor_dolar }))
+        ),
+        // Cargar o crear simulación activa (no esperamos su resultado aquí, pero lo ejecutamos en paralelo)
+        loadOrCreateSimulation(prods, allMaterials)
+      ]);
       setFifoMaterialPrices(fifoPrices);
-
-      // Cargar o crear simulación activa
-      await loadOrCreateSimulation(prods, allMaterials);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -229,6 +233,133 @@ export function CostsModule() {
       return total + (parseFloat(mat.kg_por_unidad) || 0);
     }, 0);
   };
+
+  // Memoizar el cálculo del valor promedio de hora de empleado
+  const avgHourValue = useMemo(() => {
+    return calculateAverageEmployeeHourValue(employees);
+  }, [employees]);
+
+  // Función interna para calcular costos - Definida temprano para uso en sendToProduction
+  const calculateItemCostsInternal = useCallback((item: CostSimulationItem) => {
+    // Usar precios FIFO (más antiguos primero) en lugar de precios del stock actual
+    const materialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
+    
+    // Para cada material del item, usar precio FIFO si está disponible, sino usar stock
+    item.materials.forEach(mat => {
+      if (fifoMaterialPrices[mat.material_name]) {
+        materialPrices[mat.material_name] = fifoMaterialPrices[mat.material_name];
+      } else {
+        // Fallback: usar precio del stock si no hay FIFO disponible
+        const stockMat = stockMaterials.find(m => m.material === mat.material_name);
+        if (stockMat) {
+          materialPrices[mat.material_name] = {
+            costo_kilo_usd: stockMat.costo_kilo_usd,
+            valor_dolar: stockMat.valor_dolar,
+            moneda: stockMat.moneda,
+          };
+        }
+      }
+    });
+
+    // Create a product object with the simulation values
+    const productForCalculation = item.product ? {
+      ...item.product,
+      cantidad_fabricar: item.cantidad_fabricar,
+      precio_venta: item.precio_venta,
+      iibb_porcentaje: item.product.iibb_porcentaje || 0,
+      otros_costos: (item.product as any).otros_costos || item.otros_costos || 0,
+    } : {
+      id: item.id,
+      tenant_id: tenantId || '',
+      nombre: item.nombre_manual || '',
+      peso_unidad: item.peso_unidad || 0,
+      cantidad_por_hora: item.cantidad_por_hora || 0,
+      cantidad_fabricar: item.cantidad_fabricar,
+      precio_venta: item.precio_venta,
+      iibb_porcentaje: item.iibb_porcentaje || 0,
+      otros_costos: item.otros_costos || 0,
+      moneda_precio: 'ARS' as const,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as Product;
+
+    const costs = calculateProductCosts(
+      productForCalculation,
+      item.materials,
+      materialPrices,
+      avgHourValue
+    );
+
+    const cantidad = item.cantidad_fabricar;
+    const precioVenta = item.precio_venta;
+    const iibbPorcentaje = item.product?.iibb_porcentaje || item.iibb_porcentaje || 0;
+    const descuento = item.descuento_pct / 100;
+    
+    // Calcular valores UNITARIOS (por 1 unidad)
+    // IIBB unitario sobre precio de venta
+    const iibbUnitario = precioVenta * iibbPorcentaje / 100;
+    
+    // Precio después de descontar IIBB
+    const precioNetoIIBB = precioVenta - iibbUnitario;
+    
+    // Precio final unitario después de aplicar descuento sobre el precio neto de IIBB
+    const precioFinalUnitario = precioNetoIIBB * (1 - descuento);
+    
+    // Costos unitarios (ya están calculados en costs)
+    const costoMPUnitario = costs.costo_unitario_mp;
+    const costoMOUnitario = costs.costo_unitario_mano_obra;
+    const otrosCostosUnitario = costs.otros_costos_unitario || 0;
+    const costoTotalUnitario = costs.costo_base_unitario; // MP + MO + Otros Costos
+    
+    // Rentabilidad unitaria
+    const rentabilidadNetaUnitaria = precioFinalUnitario - costoTotalUnitario - iibbUnitario;
+    
+    // Margen unitario
+    const margen = precioFinalUnitario > 0 ? (rentabilidadNetaUnitaria / precioFinalUnitario) * 100 : 0;
+
+    // Valores totales (para el resumen general)
+    const iibbTotal = iibbUnitario * cantidad;
+    const ingresoBruto = precioVenta * cantidad;
+    const ingresoNeto = precioFinalUnitario * cantidad;
+    const costoTotal = costoTotalUnitario * cantidad;
+    const gananciaTotal = rentabilidadNetaUnitaria * cantidad;
+    const rentabilidadNetaTotal = rentabilidadNetaUnitaria * cantidad;
+
+    return {
+      ...costs,
+      // Valores unitarios (para mostrar en tabla)
+      precio_final_unitario: precioFinalUnitario,
+      costo_mp_unitario: costoMPUnitario,
+      costo_mo_unitario: costoMOUnitario,
+      otros_costos_unitario: otrosCostosUnitario,
+      costo_total_unitario: costoTotalUnitario,
+      iibb_unitario: iibbUnitario,
+      rentabilidad_neta_unitaria: rentabilidadNetaUnitaria,
+      margen,
+      // Valores totales (para resumen)
+      precio_final: precioFinalUnitario,
+      ingreso_bruto: ingresoBruto,
+      ingreso_neto: ingresoNeto,
+      iibb_total: iibbTotal,
+      costo_total: costoTotal,
+      ganancia_total: gananciaTotal,
+      rentabilidad_neta: rentabilidadNetaTotal,
+    };
+  }, [avgHourValue, fifoMaterialPrices, stockMaterials, tenantId]);
+
+  // Memoizar los costos calculados para cada item - Evita recálculos innecesarios
+  const itemCostsMap = useMemo(() => {
+    const costsMap: Record<string, ReturnType<typeof calculateItemCostsInternal>> = {};
+    simulationItems.forEach(item => {
+      costsMap[item.id] = calculateItemCostsInternal(item);
+    });
+    return costsMap;
+  }, [simulationItems, calculateItemCostsInternal]);
+
+  // Wrapper memoizado que usa el mapa de costos
+  const calculateItemCosts = useCallback((item: CostSimulationItem) => {
+    return itemCostsMap[item.id] || calculateItemCostsInternal(item);
+  }, [itemCostsMap, calculateItemCostsInternal]);
 
   const handleAddToSimulation = async () => {
     // Solo modo manual
@@ -543,8 +674,8 @@ export function CostsModule() {
         })
         .eq('id', item.product.id);
 
-      // Actualizar stock
-      const itemCosts = calculateItemCosts(item);
+      // Actualizar stock - Usar función interna directamente para evitar dependencias circulares
+      const itemCosts = calculateItemCostsInternal(item);
       const { data: existingStock } = await supabase
         .from('stock_products')
         .select('*')
@@ -701,118 +832,8 @@ export function CostsModule() {
     }
   };
 
-  // Calculate costs for each item in simulation using FIFO
-  const calculateItemCosts = (item: CostSimulationItem) => {
-    const avgHourValue = calculateAverageEmployeeHourValue(employees);
-    
-    // Usar precios FIFO (más antiguos primero) en lugar de precios del stock actual
-    const materialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
-    
-    // Para cada material del item, usar precio FIFO si está disponible, sino usar stock
-    item.materials.forEach(mat => {
-      if (fifoMaterialPrices[mat.material_name]) {
-        materialPrices[mat.material_name] = fifoMaterialPrices[mat.material_name];
-      } else {
-        // Fallback: usar precio del stock si no hay FIFO disponible
-        const stockMat = stockMaterials.find(m => m.material === mat.material_name);
-        if (stockMat) {
-          materialPrices[mat.material_name] = {
-            costo_kilo_usd: stockMat.costo_kilo_usd,
-            valor_dolar: stockMat.valor_dolar,
-            moneda: stockMat.moneda,
-          };
-        }
-      }
-    });
-
-    // Create a product object with the simulation values
-    const productForCalculation = item.product ? {
-      ...item.product,
-      cantidad_fabricar: item.cantidad_fabricar,
-      precio_venta: item.precio_venta,
-      iibb_porcentaje: item.product.iibb_porcentaje || 0,
-      otros_costos: (item.product as any).otros_costos || item.otros_costos || 0,
-    } : {
-      id: item.id,
-      tenant_id: tenantId || '',
-      nombre: item.nombre_manual || '',
-      peso_unidad: item.peso_unidad || 0,
-      cantidad_por_hora: item.cantidad_por_hora || 0,
-      cantidad_fabricar: item.cantidad_fabricar,
-      precio_venta: item.precio_venta,
-      iibb_porcentaje: item.iibb_porcentaje || 0,
-      otros_costos: item.otros_costos || 0,
-      moneda_precio: 'ARS' as const,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as Product;
-
-    const costs = calculateProductCosts(
-      productForCalculation,
-      item.materials,
-      materialPrices,
-      avgHourValue
-    );
-
-    const cantidad = item.cantidad_fabricar;
-    const precioVenta = item.precio_venta;
-    const iibbPorcentaje = item.product?.iibb_porcentaje || item.iibb_porcentaje || 0;
-    const descuento = item.descuento_pct / 100;
-    
-    // Calcular valores UNITARIOS (por 1 unidad)
-    // IIBB unitario sobre precio de venta
-    const iibbUnitario = precioVenta * iibbPorcentaje / 100;
-    
-    // Precio después de descontar IIBB
-    const precioNetoIIBB = precioVenta - iibbUnitario;
-    
-    // Precio final unitario después de aplicar descuento sobre el precio neto de IIBB
-    const precioFinalUnitario = precioNetoIIBB * (1 - descuento);
-    
-    // Costos unitarios (ya están calculados en costs)
-    const costoMPUnitario = costs.costo_unitario_mp;
-    const costoMOUnitario = costs.costo_unitario_mano_obra;
-    const otrosCostosUnitario = costs.otros_costos_unitario || 0;
-    const costoTotalUnitario = costs.costo_base_unitario; // MP + MO + Otros Costos
-    
-    // Rentabilidad unitaria
-    const rentabilidadNetaUnitaria = precioFinalUnitario - costoTotalUnitario - iibbUnitario;
-    
-    // Margen unitario
-    const margen = precioFinalUnitario > 0 ? (rentabilidadNetaUnitaria / precioFinalUnitario) * 100 : 0;
-
-    // Valores totales (para el resumen general)
-    const iibbTotal = iibbUnitario * cantidad;
-    const ingresoBruto = precioVenta * cantidad;
-    const ingresoNeto = precioFinalUnitario * cantidad;
-    const costoTotal = costoTotalUnitario * cantidad;
-    const gananciaTotal = rentabilidadNetaUnitaria * cantidad;
-    const rentabilidadNetaTotal = rentabilidadNetaUnitaria * cantidad;
-
-    return {
-      ...costs,
-      // Valores unitarios (para mostrar en tabla)
-      precio_final_unitario: precioFinalUnitario,
-      costo_mp_unitario: costoMPUnitario,
-      costo_mo_unitario: costoMOUnitario,
-      otros_costos_unitario: otrosCostosUnitario,
-      costo_total_unitario: costoTotalUnitario,
-      iibb_unitario: iibbUnitario,
-      rentabilidad_neta_unitaria: rentabilidadNetaUnitaria,
-      margen,
-      // Valores totales (para resumen)
-      precio_final: precioFinalUnitario,
-      ingreso_bruto: ingresoBruto,
-      ingreso_neto: ingresoNeto,
-      iibb_total: iibbTotal,
-      costo_total: costoTotal,
-      ganancia_total: gananciaTotal,
-      rentabilidad_neta: rentabilidadNetaTotal,
-    };
-  };
-
-  // Calculate costs for simulation
-  const calculateSimulationCosts = () => {
+  // Calculate costs for simulation - Memoizado para evitar recálculos innecesarios
+  const costs = useMemo(() => {
     if (simulationItems.length === 0) return null;
 
     let totalMP = 0;
@@ -826,7 +847,7 @@ export function CostsModule() {
     let totalIngresoNeto = 0;
 
     simulationItems.forEach(item => {
-      const itemCosts = calculateItemCosts(item);
+      const itemCosts = itemCostsMap[item.id] || calculateItemCostsInternal(item);
       totalMP += itemCosts.costo_total_mp;
       totalMO += itemCosts.incidencia_mano_obra;
       totalOtrosCostos += (itemCosts.otros_costos_unitario || 0) * item.cantidad_fabricar;
@@ -850,9 +871,7 @@ export function CostsModule() {
       totalProfit,
       margin: totalIngresoNeto > 0 ? (totalProfit / totalIngresoNeto) * 100 : 0,
     };
-  };
-
-  const costs = calculateSimulationCosts();
+  }, [simulationItems, itemCostsMap, calculateItemCostsInternal]);
 
   if (loading) {
     return (
@@ -865,21 +884,21 @@ export function CostsModule() {
   return (
     <div className="p-2 md:p-4 w-full">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 -mx-2 md:-mx-4 -mt-2 md:-mt-4 mb-4 md:mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-3">
-            <DollarSign className="w-6 h-6 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Costos</h1>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 mb-4 sm:mb-6">
+        <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'} mb-2`}>
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Costos</h1>
           </div>
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors touch-manipulation`}
           >
             <Upload className="w-4 h-4" />
             <span>Importar Masivamente</span>
           </button>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">Simulación de costos y análisis de rentabilidad</p>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Simulación de costos y análisis de rentabilidad</p>
       </div>
 
       {/* Add Product to Simulation - Collapsible */}
@@ -1095,9 +1114,141 @@ export function CostsModule() {
             <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos en Simulación</h2>
             </div>
-            <div className="overflow-x-auto w-full">
-              <div className="w-full">
-                <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
+            {/* Simulation Items - Mobile Cards View */}
+            {isMobile ? (
+              <div className="p-3 space-y-3">
+                {simulationItems.map((item) => {
+                  const itemCosts = itemCostsMap[item.id] || calculateItemCostsInternal(item);
+                  const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
+                  return (
+                    <div
+                      key={item.id}
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700"
+                    >
+                      {/* Header */}
+                      <div className="mb-3">
+                        <div className="flex items-start justify-between mb-1">
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-white flex-1">
+                            {productName}
+                            {item.isManual && (
+                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded">M</span>
+                            )}
+                          </h3>
+                        </div>
+                      </div>
+
+                      {/* Información principal */}
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Cantidad</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{item.cantidad_fabricar}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">P. Venta</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">${item.precio_venta.toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Descuento</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{item.descuento_pct}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">P. Final</p>
+                          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">${itemCosts.precio_final_unitario.toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Costos */}
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mb-3">
+                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Costos</p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">MP</p>
+                            <p className="font-medium text-gray-900 dark:text-white">${itemCosts.costo_mp_unitario.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">MO</p>
+                            <p className="font-medium text-gray-900 dark:text-white">${itemCosts.costo_mo_unitario.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">Otros</p>
+                            <p className="font-medium text-gray-900 dark:text-white">${(itemCosts.otros_costos_unitario || 0).toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">IIBB</p>
+                            <p className="font-medium text-gray-900 dark:text-white">${itemCosts.iibb_unitario.toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex justify-between items-center">
+                            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">C. Total</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">${itemCosts.costo_total_unitario.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rentabilidad */}
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mb-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Rentabilidad</p>
+                            <p className={`text-sm font-semibold ${itemCosts.rentabilidad_neta_unitaria >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              ${itemCosts.rentabilidad_neta_unitaria.toFixed(2)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Margen</p>
+                            <p className={`text-sm font-semibold ${itemCosts.margen >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {itemCosts.margen.toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendToProduction(item);
+                          }}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          title="Enviar a producción"
+                        >
+                          <Send className="w-4 h-4" />
+                          Enviar
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleItemClick(item);
+                          }}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          title="Ver detalles"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromSimulation(item.id);
+                          }}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Simulation Items Table - Desktop View */
+              <div className="overflow-x-auto w-full">
+                <div className="w-full">
+                  <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Producto</th>
@@ -1174,9 +1325,10 @@ export function CostsModule() {
                     );
                   })}
                 </tbody>
-                </table>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Cost Summary */}
@@ -1317,7 +1469,7 @@ export function CostsModule() {
           created_at: new Date().toISOString(),
         }));
 
-        const itemCosts = calculateItemCosts({
+        const itemCosts = calculateItemCostsInternal({
           ...selectedItem,
           precio_venta: editFormData.precio_venta,
           descuento_pct: editFormData.descuento_pct,

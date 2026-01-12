@@ -4,6 +4,7 @@ import { Bell, X, Calendar, MessageSquare, AlertCircle, CheckSquare, Cake, Ticke
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useMobile } from '../../hooks/useMobile';
 
 interface Notification {
   id: string;
@@ -45,6 +46,7 @@ interface NotificationBellProps {
 export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial, onNavigateToTimeTracking, onNavigateToProfessionalNews }: NotificationBellProps) {
   const { profile } = useAuth();
   const { theme } = useTheme();
+  const isMobile = useMobile();
   const isDark = theme === 'dark';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -453,9 +455,9 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
 
       {showDropdown ? createPortal(
         <>
-          {/* Overlay para cerrar al hacer clic fuera - Solo cubre el área del dropdown */}
+          {/* Overlay para cerrar al hacer clic fuera - Adaptado para móviles */}
           <div 
-            className="fixed inset-0 bg-black/20" 
+            className={`fixed inset-0 ${isMobile ? 'bg-black/50' : 'bg-black/20'}`}
             style={{ zIndex: 10000000 }}
             onClick={() => {
               setShowDropdown(false);
@@ -463,42 +465,53 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
             }}
           />
           
-          {/* Dropdown de notificaciones - Se abre directamente desde la campanita, superponiéndose al navbar */}
+          {/* Dropdown de notificaciones - Adaptado para móviles */}
           <div 
-            className="fixed w-[420px] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-slate-700/50 backdrop-blur-xl overflow-hidden"
+            className={`fixed ${isMobile ? 'inset-0 w-full h-full rounded-none' : 'w-[420px] max-w-[calc(100vw-2rem)] rounded-3xl'} bg-white dark:bg-slate-800 shadow-2xl border border-gray-200 dark:border-slate-700/50 backdrop-blur-xl overflow-hidden`}
             style={{
-              top: buttonPosition ? `${buttonPosition.top}px` : '80px',
-              left: buttonPosition ? `${buttonPosition.left}px` : '280px',
-              maxWidth: 'calc(100vw - 2rem)',
-              boxShadow: '0 20px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.5)',
-              animation: 'openFromBell 0.25s ease-out',
-              transformOrigin: buttonPosition && buttonPosition.transformOriginX !== undefined && buttonPosition.transformOriginY !== undefined ? 
-                `${buttonPosition.transformOriginX}px ${buttonPosition.transformOriginY}px` : 
-                '40px 40px',
+              ...(isMobile ? {
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                maxWidth: '100vw',
+                maxHeight: '100vh',
+              } : {
+                top: buttonPosition ? `${buttonPosition.top}px` : '80px',
+                left: buttonPosition ? `${buttonPosition.left}px` : '280px',
+                maxWidth: 'calc(100vw - 2rem)',
+                transformOrigin: buttonPosition && buttonPosition.transformOriginX !== undefined && buttonPosition.transformOriginY !== undefined ? 
+                  `${buttonPosition.transformOriginX}px ${buttonPosition.transformOriginY}px` : 
+                  '40px 40px',
+                animation: 'openFromBell 0.25s ease-out',
+              }),
+              boxShadow: isMobile ? 'none' : '0 20px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.5)',
               zIndex: 10000001, // Por encima del overlay y del navbar (z-40)
             }}
             onClick={(e) => e.stopPropagation()} // Prevenir que el clic en el dropdown lo cierre
           >
             {/* Header con diseño más sutil */}
-            <div className="relative flex items-center justify-between p-5 bg-gradient-to-r from-slate-700 to-slate-600 overflow-hidden border-b border-white/10">
+            <div className={`relative flex items-center justify-between ${isMobile ? 'p-4' : 'p-5'} bg-gradient-to-r from-slate-700 to-slate-600 overflow-hidden border-b border-white/10`}>
               {/* Efecto sutil de brillo */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
               
-              <div className="relative z-10 flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    setShowDropdown(false);
-                    setButtonPosition(null);
-                  }}
-                  className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all duration-200 cursor-pointer"
-                  title="Cerrar notificaciones"
-                >
-                  <Bell className="w-5 h-5 text-white" />
-                </button>
+              <div className="relative z-10 flex items-center gap-2 sm:gap-3">
+                {!isMobile && (
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      setButtonPosition(null);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all duration-200 cursor-pointer touch-manipulation"
+                    title="Cerrar notificaciones"
+                  >
+                    <Bell className="w-5 h-5 text-white" />
+                  </button>
+                )}
                 <div>
-                  <h3 className="font-bold text-lg text-white drop-shadow-lg">Notificaciones</h3>
+                  <h3 className={`font-bold ${isMobile ? 'text-base' : 'text-lg'} text-white drop-shadow-lg`}>Notificaciones</h3>
                   {unreadCount > 0 && (
-                    <p className="text-xs text-white/80 font-medium">{unreadCount} sin leer</p>
+                    <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-white/80 font-medium`}>{unreadCount} sin leer</p>
                   )}
                 </div>
               </div>
@@ -507,7 +520,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className="text-xs text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white/90 font-semibold whitespace-nowrap px-3 py-1.5 rounded-lg bg-white/80 dark:bg-white/20 hover:bg-white dark:hover:bg-white/30 backdrop-blur-sm border border-gray-300 dark:border-white/30 transition-all duration-200 hover:scale-105"
+                    className={`${isMobile ? 'text-xs px-3 py-2' : 'text-xs px-3 py-1.5'} text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white/90 font-semibold whitespace-nowrap rounded-lg bg-white/80 dark:bg-white/20 hover:bg-white dark:hover:bg-white/30 backdrop-blur-sm border border-gray-300 dark:border-white/30 transition-all duration-200 ${isMobile ? 'touch-manipulation' : 'hover:scale-105'}`}
                   >
                     Marcar todas
                   </button>
@@ -517,15 +530,15 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                     setShowDropdown(false);
                     setButtonPosition(null);
                   }}
-                    className="text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white/80 flex-shrink-0 p-2 rounded-lg bg-white/80 dark:bg-white/20 hover:bg-white dark:hover:bg-white/30 backdrop-blur-sm border border-gray-300 dark:border-white/30 transition-all duration-200 hover:scale-110 hover:rotate-90"
+                  className={`text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white/80 flex-shrink-0 ${isMobile ? 'p-3' : 'p-2'} rounded-lg bg-white/80 dark:bg-white/20 hover:bg-white dark:hover:bg-white/30 backdrop-blur-sm border border-gray-300 dark:border-white/30 transition-all duration-200 ${isMobile ? 'touch-manipulation' : 'hover:scale-110 hover:rotate-90'}`}
                 >
-                  <X className="w-4 h-4" />
+                  <X className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
                 </button>
               </div>
             </div>
 
-            {/* Contenido con scroll - Estilo original */}
-            <div className="max-h-[500px] overflow-y-auto notifications-scroll bg-slate-800">
+            {/* Contenido con scroll - Adaptado para móviles */}
+            <div className={`${isMobile ? 'flex-1 overflow-y-auto' : 'max-h-[500px] overflow-y-auto'} notifications-scroll bg-slate-800`}>
               {notifications.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="relative inline-block mb-4">
@@ -538,12 +551,12 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                   <p className="text-gray-400 text-sm mt-1">Todo está al día</p>
                 </div>
               ) : (
-                <div className="p-3 space-y-2">
+                <div className={`${isMobile ? 'p-2' : 'p-3'} space-y-2`}>
                   {notifications.map((notification, index) => (
                     <button
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`group w-full text-left p-4 rounded-2xl border-2 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] relative overflow-hidden ${
+                      className={`group w-full text-left ${isMobile ? 'p-4' : 'p-4'} ${isMobile ? 'rounded-xl' : 'rounded-2xl'} border-2 transition-all duration-300 ${isMobile ? 'active:scale-[0.98] touch-manipulation' : 'hover:shadow-xl hover:scale-[1.02]'} relative overflow-hidden ${
                         !notification.read 
                           ? 'bg-slate-700 border-slate-600/50 shadow-lg' 
                           : 'bg-slate-700/90 backdrop-blur-sm border-slate-600/30 hover:border-slate-500/50 hover:bg-slate-700'
@@ -560,9 +573,9 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                         <div className="absolute top-3 right-3 w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full animate-pulse ring-2 ring-blue-200"></div>
                       )}
                       
-                      <div className="relative flex items-start gap-4">
+                      <div className={`relative flex items-start ${isMobile ? 'gap-3' : 'gap-4'}`}>
                         {/* Icono con fondo decorativo */}
-                        <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 ${
+                        <div className={`flex-shrink-0 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'} ${isMobile ? 'rounded-lg' : 'rounded-xl'} flex items-center justify-center transition-all duration-300 ${isMobile ? '' : 'group-hover:scale-110'} ${
                           !notification.read 
                             ? 'bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30' 
                             : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-purple-100'
@@ -574,7 +587,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <p className={`text-sm font-bold leading-tight ${
+                            <p className={`${isMobile ? 'text-base' : 'text-sm'} font-bold leading-tight ${
                               !notification.read 
                                 ? 'text-white' 
                                 : 'text-gray-200 group-hover:text-white'
@@ -583,7 +596,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                             </p>
                           </div>
                           
-                          <p className={`text-sm mt-2 leading-relaxed line-clamp-2 ${
+                          <p className={`${isMobile ? 'text-sm' : 'text-sm'} mt-2 leading-relaxed ${isMobile ? 'line-clamp-3' : 'line-clamp-2'} ${
                             !notification.read 
                               ? 'text-gray-200' 
                               : 'text-gray-300 group-hover:text-gray-200'
@@ -594,10 +607,10 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                           </p>
                           
                           <div className="flex items-center gap-2 mt-3">
-                            <div className={`w-1.5 h-1.5 rounded-full ${
+                            <div className={`${isMobile ? 'w-2 h-2' : 'w-1.5 h-1.5'} rounded-full ${
                               !notification.read ? 'bg-blue-500' : 'bg-gray-300'
                             }`}></div>
-                            <p className="text-xs font-medium text-gray-400">
+                            <p className={`${isMobile ? 'text-xs' : 'text-xs'} font-medium text-gray-400`}>
                               {new Date(notification.created_at).toLocaleString('es-ES', {
                                 day: 'numeric',
                                 month: 'short',

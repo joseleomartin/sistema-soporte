@@ -11,6 +11,7 @@ import { Database } from '../../../lib/database.types';
 import { formatProductName, parseProductName, calculateProductCosts, calculateAverageEmployeeHourValue } from '../../../lib/fabinsaCalculations';
 import { calculateFIFOPricesForMaterials } from '../../../lib/fifoCalculations';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
+import { useMobile } from '../../../hooks/useMobile';
 import { ConfirmModal } from '../../Common/ConfirmModal';
 import { AlertModal } from '../../Common/AlertModal';
 import { generateOrderPDF, OrderData } from '../../../lib/pdfGenerator';
@@ -25,6 +26,7 @@ type Employee = Database['public']['Tables']['employees']['Row'];
 export function ProductionModule() {
   const { tenantId, tenant } = useTenant();
   const { canCreate, canEdit, canDelete, canPrint } = useDepartmentPermissions();
+  const isMobile = useMobile();
   const [products, setProducts] = useState<Product[]>([]);
   const [materials, setMaterials] = useState<Record<string, ProductMaterial[]>>({});
   const [stockMaterials, setStockMaterials] = useState<StockMaterial[]>([]);
@@ -1082,24 +1084,24 @@ export function ProductionModule() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
-        <div className="flex items-center space-x-3 mb-2">
-          <Factory className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Producción</h1>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 sm:mb-6">
+        <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
+          <Factory className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Producción</h1>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de órdenes de producción. Complete las órdenes para enviarlas al stock de productos fabricados.</p>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gestión de órdenes de producción. Complete las órdenes para enviarlas al stock de productos fabricados.</p>
       </div>
 
       {/* Header with Add Button */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Órdenes de Producción</h2>
-        <div className="flex items-center gap-2">
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'} mb-4 sm:mb-6`}>
+        <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-900 dark:text-white`}>Órdenes de Producción</h2>
+        <div className={`flex ${isMobile ? 'flex-col w-full gap-2' : 'items-center gap-2'}`}>
           {selectedProducts.size > 0 && (
-            <>
+            <div className={`flex ${isMobile ? 'flex-col w-full gap-2' : 'items-center gap-2'}`}>
               {canEdit('fabinsa-production') && (
                 <button
                   onClick={handleCompleteSelected}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors touch-manipulation`}
                 >
                   <CheckCircle className="w-4 h-4" />
                   <span>Completar ({selectedProducts.size})</span>
@@ -1108,7 +1110,7 @@ export function ProductionModule() {
               {canDelete('fabinsa-production') && (
                 <button
                   onClick={handleDeleteSelected}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors touch-manipulation`}
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Eliminar ({selectedProducts.size})</span>
@@ -1116,16 +1118,16 @@ export function ProductionModule() {
               )}
               <button
                 onClick={() => setSelectedProducts(new Set())}
-                className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"
+                className={`${isMobile ? 'w-full px-4 py-3' : 'px-3 py-2'} text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 touch-manipulation`}
               >
                 Cancelar selección
               </button>
-            </>
+            </div>
           )}
           {canCreate('fabinsa-production') && (
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors touch-manipulation`}
             >
               <Plus className="w-4 h-4" />
               <span>Nuevo Producto</span>
@@ -1355,10 +1357,144 @@ export function ProductionModule() {
         </div>
       )}
 
-      {/* Products Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+      {/* Products - Mobile Cards View */}
+      {isMobile ? (
+        <div className="space-y-3">
+          {products.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+              No hay órdenes de producción registradas
+            </div>
+          ) : (
+            products.map((product) => {
+              const costs = calculateProductCost(product);
+              const isSelected = selectedProducts.has(product.id);
+              const fechaOrden = product.created_at 
+                ? new Date(product.created_at).toLocaleDateString('es-AR')
+                : '-';
+              return (
+                <div
+                  key={product.id}
+                  className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-2 ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent'}`}
+                >
+                  {/* Header de la tarjeta */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleProductToggle(product.id)}
+                          className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 touch-manipulation"
+                        />
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                          {product.nombre}
+                        </h3>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Fecha: {fechaOrden}</p>
+                    </div>
+                    <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      (product.estado as any) === 'completada'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                    }`}>
+                      {(product.estado as any) === 'completada' ? 'Completada' : 'Pendiente'}
+                    </span>
+                  </div>
+
+                  {/* Información principal en grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Peso (kg)</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{product.peso_unidad.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Cant. Fabricar</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{product.cantidad_fabricar}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Productividad</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{product.cantidad_por_hora.toFixed(2)} u/h</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo Unit.</p>
+                      <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">${costs.costoTotal.toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  {/* Costos detallados */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mb-3">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Costos</p>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">MP</p>
+                        <p className="font-medium text-gray-900 dark:text-white">${costs.costoMP.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">MO</p>
+                        <p className="font-medium text-gray-900 dark:text-white">${costs.costoMO.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">Otros</p>
+                        <p className="font-medium text-gray-900 dark:text-white">${costs.otrosCostos.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Botones de acción */}
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    {canPrint('fabinsa-production') && (
+                      <button
+                        onClick={() => handlePrintProductionOrder(product)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 touch-manipulation flex-1 min-w-[100px]"
+                        title="Imprimir/Generar PDF"
+                      >
+                        <FileText className="w-4 h-4" />
+                        PDF
+                      </button>
+                    )}
+                    {canEdit('fabinsa-production') && (product.estado as any) !== 'completada' && (
+                      <>
+                        <button
+                          onClick={() => completeProduction(product)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 touch-manipulation flex-1 min-w-[100px]"
+                          title="Completar orden"
+                          disabled={isProcessing}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Completar
+                        </button>
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 touch-manipulation flex-1 min-w-[100px]"
+                          title="Editar"
+                          disabled={isProcessing}
+                        >
+                          <Edit className="w-4 h-4" />
+                          Editar
+                        </button>
+                      </>
+                    )}
+                    {canDelete('fabinsa-production') && (
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 touch-manipulation flex-1 min-w-[100px]"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        /* Products Table - Desktop View */
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="w-[3%] px-2 py-2 text-center">
@@ -1518,7 +1654,8 @@ export function ProductionModule() {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Modales */}
       <ConfirmModal

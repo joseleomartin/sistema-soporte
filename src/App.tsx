@@ -37,11 +37,16 @@ import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
 import { useDepartmentPermissions } from './hooks/useDepartmentPermissions';
+import { useMobile } from './hooks/useMobile';
+import { Menu } from 'lucide-react';
+import { useTheme } from './contexts/ThemeContext';
 
 function MainApp() {
   const { user, profile, loading } = useAuth();
   const { tenant } = useTenant();
   const { canView } = useDepartmentPermissions();
+  const { theme } = useTheme();
+  const isMobile = useMobile();
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedSubforumId, setSelectedSubforumId] = useState<string | null>(null);
@@ -50,6 +55,14 @@ function MainApp() {
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved ? JSON.parse(saved) : false;
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Estado para móviles
+
+  // Cerrar sidebar automáticamente al cambiar de móvil a desktop
+  useEffect(() => {
+    if (!isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
 
   // Definir handlers antes de los hooks usando useCallback para evitar recreaciones
   const handleViewChange = useCallback((view: string) => {
@@ -239,8 +252,24 @@ function MainApp() {
     }
   };
 
+  const isDark = theme === 'dark';
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex">
+      {/* Botón hamburguesa para móviles */}
+      {isMobile && !sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className={`fixed top-4 left-4 z-50 p-2 rounded-lg ${
+            isDark 
+              ? 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-700' 
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+          } shadow-lg transition-colors`}
+          aria-label="Abrir menú"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      )}
       <Sidebar
         currentView={currentView}
         onViewChange={handleViewChange}
@@ -249,10 +278,17 @@ function MainApp() {
         onNavigateToTimeTracking={handleNavigateToTimeTracking}
         onNavigateToSocial={handleNavigateToSocial}
         onNavigateToProfessionalNews={handleNavigateToProfessionalNews}
-        isCollapsed={sidebarCollapsed}
+        isCollapsed={isMobile ? false : sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        isMobile={isMobile}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
-      <main className={`flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+      <main className={`flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 transition-all duration-300 ${
+        isMobile 
+          ? '' 
+          : sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
+      }`}>
         <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' || currentView === 'forums' || currentView === 'fabinsa-suppliers' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
           {renderContent()}
         </div>

@@ -151,38 +151,55 @@ export async function getFIFOUnitPrice(
 
 /**
  * Obtiene el precio FIFO con información completa de la compra más antigua
+ * OPTIMIZADO: Hace ambas consultas en paralelo cuando es posible
  */
 async function getFIFOPriceInfo(
   supabase: any,
   tenantId: string,
   materialName: string
 ): Promise<{ precioARS: number; moneda: 'ARS' | 'USD'; valorDolar: number }> {
-  // Primero, buscar el material en stock_materials por nombre para obtener el campo "material"
-  // porque purchases_materials usa el campo "material", no "nombre"
-  const { data: stockData } = await supabase
-    .from('stock_materials')
-    .select('material, costo_kilo_usd, moneda, valor_dolar')
-    .eq('tenant_id', tenantId)
-    .ilike('nombre', materialName)
-    .limit(1);
+  // OPTIMIZACIÓN: Buscar primero en purchases_materials directamente con el nombre
+  // Si no encuentra, entonces buscar en stock_materials para obtener el campo "material"
+  // Esto reduce consultas innecesarias
+  const [purchasesResult, stockResult] = await Promise.all([
+    // Intentar buscar directamente en purchases_materials con el nombre
+    supabase
+      .from('purchases_materials')
+      .select('precio, moneda, valor_dolar')
+      .eq('tenant_id', tenantId)
+      .ilike('material', materialName)
+      .order('fecha', { ascending: true })
+      .limit(1),
+    // Buscar en stock_materials para obtener el campo "material" y datos de fallback
+    supabase
+      .from('stock_materials')
+      .select('material, costo_kilo_usd, moneda, valor_dolar')
+      .eq('tenant_id', tenantId)
+      .ilike('nombre', materialName)
+      .limit(1)
+  ]);
 
-  let materialField = materialName; // Fallback al nombre si no se encuentra
+  const stockData = stockResult.data;
+  let materialField = materialName;
 
   if (stockData && stockData.length > 0) {
-    // Usar el campo "material" del stock para buscar en purchases_materials
     materialField = stockData[0].material || materialName;
   }
 
-  // Buscar compras por el campo "material"
-  const { data: compras, error } = await supabase
-    .from('purchases_materials')
-    .select('precio, moneda, valor_dolar')
-    .eq('tenant_id', tenantId)
-    .ilike('material', materialField)
-    .order('fecha', { ascending: true }) // Más antigua primero
-    .limit(1);
+  // Si la primera búsqueda no encontró resultados y tenemos un materialField diferente, buscar de nuevo
+  let compras = purchasesResult.data;
+  if ((!compras || compras.length === 0) && materialField !== materialName) {
+    const { data: comprasByField } = await supabase
+      .from('purchases_materials')
+      .select('precio, moneda, valor_dolar')
+      .eq('tenant_id', tenantId)
+      .ilike('material', materialField)
+      .order('fecha', { ascending: true })
+      .limit(1);
+    compras = comprasByField;
+  }
 
-  if (error || !compras || compras.length === 0) {
+  if (!compras || compras.length === 0) {
     // Si no hay compras, obtener del stock como fallback
     if (stockData && stockData.length > 0) {
       const stock = stockData[0];
@@ -237,6 +254,7 @@ export async function calculateFIFOPricesForMaterials(
 /**
  * Obtiene todos los precios FIFO para todos los materiales del stock
  * Útil para precargar todos los precios al inicio
+ * OPTIMIZADO: Consultas en paralelo en lugar de secuenciales
  */
 export async function getAllFIFOPrices(
   supabase: any,
@@ -245,16 +263,28 @@ export async function getAllFIFOPrices(
 ): Promise<Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }>> {
   const materialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
 
-  for (const stockMat of stockMaterials) {
+  // OPTIMIZACIÓN: Hacer todas las consultas en paralelo en lugar de secuencialmente
+  const pricePromises = stockMaterials.map(async (stockMat) => {
     const priceInfo = await getFIFOPriceInfo(supabase, tenantId, stockMat.material);
     const costoKiloUSD = priceInfo.precioARS > 0 ? priceInfo.precioARS / (priceInfo.valorDolar || 1) : 0;
 
-    materialPrices[stockMat.material] = {
-      costo_kilo_usd: costoKiloUSD,
-      valor_dolar: priceInfo.valorDolar,
-      moneda: priceInfo.moneda,
+    return {
+      material: stockMat.material,
+      price: {
+        costo_kilo_usd: costoKiloUSD,
+        valor_dolar: priceInfo.valorDolar,
+        moneda: priceInfo.moneda,
+      }
     };
-  }
+  });
+
+  // Esperar todas las promesas en paralelo
+  const results = await Promise.all(pricePromises);
+  
+  // Construir el objeto de resultados
+  results.forEach(({ material, price }) => {
+    materialPrices[material] = price;
+  });
 
   return materialPrices;
 }

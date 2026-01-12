@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Home, 
   Video, 
@@ -50,6 +50,9 @@ interface SidebarProps {
   onNavigateToProfessionalNews?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  isMobile?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 type SubMenuItem = {
@@ -108,7 +111,7 @@ const menuItems: MenuItem[] = [
   { icon: Settings, label: 'Configuración', view: 'settings', roles: ['admin', 'support', 'user'] },
 ];
 
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking, onNavigateToSocial, onNavigateToProfessionalNews, isCollapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking, onNavigateToSocial, onNavigateToProfessionalNews, isCollapsed = false, onToggleCollapse, isMobile = false, isOpen = true, onClose }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { tenant } = useTenant();
   const { activeJobsCount } = useExtraction();
@@ -276,9 +279,57 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
     return subItems.some(subItem => subItem.view === currentView);
   };
 
+  // Manejar navegación en móviles (cerrar sidebar)
+  const handleViewChange = (view: string) => {
+    onViewChange(view);
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
+  const handleItemClick = (item: MenuItem, hasSubItems: boolean) => {
+    if (hasSubItems && !isSidebarCollapsed) {
+      toggleMenu(item.label);
+    } else if (item.view) {
+      handleViewChange(item.view);
+    } else if (hasSubItems && isSidebarCollapsed) {
+      toggleMenu(item.label);
+      const filteredSubItems = item.subItems?.filter(subItem => {
+        if (!profile || !subItem.roles.includes(profile.role)) return false;
+        if (!canView(subItem.view)) return false;
+        if (visibleModules && visibleModules[subItem.view] === false) return false;
+        return true;
+      }) || [];
+      if (filteredSubItems.length > 0) {
+        handleViewChange(filteredSubItems[0].view);
+      }
+    }
+  };
+
+  const handleSubItemClick = (view: string) => {
+    handleViewChange(view);
+  };
+
+  // En móviles, si está cerrado, no renderizar nada
+  if (isMobile && !isOpen) {
+    return null;
+  }
+
   return (
     <>
-      <aside className={`transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-16' : 'w-64'} ${isDark ? 'bg-slate-800' : 'bg-white'} ${isDark ? 'border-slate-700' : 'border-gray-200'} border-r flex flex-col h-screen fixed left-0 top-0 z-40`}>
+      {/* Backdrop para móviles */}
+      {isMobile && isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      <aside className={`transition-all duration-300 ease-in-out ${
+        isMobile 
+          ? `fixed left-0 top-0 h-screen z-50 ${isOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'w-16' : 'w-64'}`
+          : `${isSidebarCollapsed ? 'w-16' : 'w-64'} fixed left-0 top-0 h-screen z-40`
+      } ${isDark ? 'bg-slate-800' : 'bg-white'} ${isDark ? 'border-slate-700' : 'border-gray-200'} ${!isMobile ? 'border-r' : ''} flex flex-col`}>
         {/* Overlay para prevenir interacciones durante la transición */}
         {isTransitioning && (
           <div className="absolute inset-0 bg-transparent z-50" />
@@ -322,16 +373,16 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                 <NotificationBell 
                   onNavigateToTicket={onNavigateToTicket}
                   onNavigateToCalendar={handleNavigateToCalendar}
-                  onNavigateToTasks={() => onViewChange('tasks')}
+                  onNavigateToTasks={() => handleViewChange('tasks')}
                   onNavigateToForum={onNavigateToForum}
                   onNavigateToSocial={onNavigateToSocial}
                   onNavigateToTimeTracking={onNavigateToTimeTracking}
                   onNavigateToProfessionalNews={onNavigateToProfessionalNews}
                 />
                 <button
-                  onClick={handleToggleCollapse}
+                  onClick={isMobile && onClose ? onClose : handleToggleCollapse}
                   className={`p-1.5 rounded-lg ${isDark ? 'text-white hover:bg-slate-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                  title="Colapsar menú"
+                  title={isMobile ? "Cerrar menú" : "Colapsar menú"}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -371,7 +422,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
         <ul className={`space-y-1 ${isSidebarCollapsed ? 'p-2' : 'p-4'}`}>
           {filteredItems.map((item) => {
           const Icon = item.icon;
-          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const hasSubItems = !!(item.subItems && item.subItems.length > 0);
           const isExpanded = expandedMenus.has(item.label);
           const isActive = item.view ? isViewActive(item.view) : false;
           const hasActiveSubItem = isSubItemActive(item.subItems);
@@ -398,17 +449,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
             <li key={item.label}>
               <button
                 onClick={() => {
-                  if (hasSubItems && !isSidebarCollapsed) {
-                    toggleMenu(item.label);
-                  } else if (item.view) {
-                    onViewChange(item.view);
-                  } else if (hasSubItems && isSidebarCollapsed) {
-                    // Si está colapsado y tiene subitems, expandir y mostrar el primero visible
-                    toggleMenu(item.label);
-                    if (filteredSubItems.length > 0) {
-                      onViewChange(filteredSubItems[0].view);
-                    }
-                  }
+                  handleItemClick(item, !!hasSubItems);
                 }}
                 className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 rounded-lg transition relative ${
                   isMenuActive
@@ -449,7 +490,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                     return (
                       <li key={subItem.view}>
                         <button
-                          onClick={() => onViewChange(subItem.view)}
+                          onClick={() => handleSubItemClick(subItem.view)}
                           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition relative ${
                             isSubActive
                               ? isDark 
