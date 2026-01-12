@@ -1,0 +1,10 @@
+{
+  "name": "sistema-soporte-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install": "cd project && npm install",
+    "build": "cd project && npm run build",
+    "dev": "cd project && npm run dev"
+  }
+}
