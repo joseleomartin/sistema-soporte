@@ -36,6 +36,7 @@ import { SubscriptionManagement } from './components/Subscription/SubscriptionMa
 import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
+import { ResetPassword } from './pages/ResetPassword';
 import { useDepartmentPermissions } from './hooks/useDepartmentPermissions';
 import { useMobile } from './hooks/useMobile';
 import { Menu } from 'lucide-react';
@@ -146,13 +147,18 @@ function MainApp() {
     return <GoogleOAuthCallback />;
   }
 
+  // Si estamos en la ruta de reset-password, mostrar el componente de reset password
+  if (window.location.pathname.includes('reset-password')) {
+    return <ResetPassword />;
+  }
+
   // Si estamos en la ruta de confirmación de email, mostrar el componente de confirmación
   // Supabase puede redirigir con hash fragments (#access_token=...) o con query params
   const isEmailConfirmation = 
     window.location.pathname.includes('confirm-email') || 
-    window.location.hash.includes('access_token') || 
+    (window.location.hash.includes('access_token') && !window.location.pathname.includes('reset-password')) || 
     window.location.hash.includes('type=signup') ||
-    window.location.hash.includes('type=recovery') ||
+    (window.location.hash.includes('type=recovery') && !window.location.pathname.includes('reset-password')) ||
     (window.location.search.includes('token') && window.location.search.includes('type=signup'));
   
   if (isEmailConfirmation) {

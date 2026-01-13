@@ -158,70 +158,78 @@ async function getFIFOPriceInfo(
   tenantId: string,
   materialName: string
 ): Promise<{ precioARS: number; moneda: 'ARS' | 'USD'; valorDolar: number }> {
-  // OPTIMIZACIÓN: Buscar primero en purchases_materials directamente con el nombre
-  // Si no encuentra, entonces buscar en stock_materials para obtener el campo "material"
-  // Esto reduce consultas innecesarias
-  const [purchasesResult, stockResult] = await Promise.all([
-    // Intentar buscar directamente en purchases_materials con el nombre
-    supabase
-      .from('purchases_materials')
-      .select('precio, moneda, valor_dolar')
-      .eq('tenant_id', tenantId)
-      .ilike('material', materialName)
-      .order('fecha', { ascending: true })
-      .limit(1),
-    // Buscar en stock_materials para obtener el campo "material" y datos de fallback
-    supabase
-      .from('stock_materials')
-      .select('material, costo_kilo_usd, moneda, valor_dolar')
-      .eq('tenant_id', tenantId)
-      .ilike('nombre', materialName)
-      .limit(1)
-  ]);
+  // Primero buscar en stock_materials para obtener el campo "material" y el precio
+  // IMPORTANTE: Buscar por nombre (que es lo que se importa) y obtener precio aunque stock sea 0
+  const stockResult = await supabase
+    .from('stock_materials')
+    .select('material, costo_kilo_usd, moneda, valor_dolar, nombre')
+    .eq('tenant_id', tenantId)
+    .ilike('nombre', materialName)
+    .limit(1);
 
   const stockData = stockResult.data;
   let materialField = materialName;
+  let precioStock: { precioARS: number; moneda: 'ARS' | 'USD'; valorDolar: number } | null = null;
 
+  // Si encontramos el material en stock, obtener su precio (aunque stock sea 0)
   if (stockData && stockData.length > 0) {
-    materialField = stockData[0].material || materialName;
-  }
-
-  // Si la primera búsqueda no encontró resultados y tenemos un materialField diferente, buscar de nuevo
-  let compras = purchasesResult.data;
-  if ((!compras || compras.length === 0) && materialField !== materialName) {
-    const { data: comprasByField } = await supabase
-      .from('purchases_materials')
-      .select('precio, moneda, valor_dolar')
-      .eq('tenant_id', tenantId)
-      .ilike('material', materialField)
-      .order('fecha', { ascending: true })
-      .limit(1);
-    compras = comprasByField;
-  }
-
-  if (!compras || compras.length === 0) {
-    // Si no hay compras, obtener del stock como fallback
-    if (stockData && stockData.length > 0) {
-      const stock = stockData[0];
-      const precioARS = stock.moneda === 'USD' 
-        ? stock.costo_kilo_usd * (stock.valor_dolar || 1)
-        : stock.costo_kilo_usd;
-      return {
-        precioARS,
-        moneda: stock.moneda,
+    const stock = stockData[0];
+    materialField = stock.material || materialName;
+    
+    // Obtener precio del stock (aunque sea 0 el stock, el precio debe estar disponible)
+    if (stock.costo_kilo_usd && stock.costo_kilo_usd > 0) {
+      precioStock = {
+        precioARS: stock.moneda === 'USD' 
+          ? stock.costo_kilo_usd * (stock.valor_dolar || 1)
+          : stock.costo_kilo_usd,
+        moneda: stock.moneda || 'ARS',
         valorDolar: stock.valor_dolar || 1,
       };
     }
-    return { precioARS: 0, moneda: 'ARS', valorDolar: 1 };
   }
 
-  const compra = compras[0];
-  // El precio en purchases_materials ya está en ARS (se convierte al guardar)
-  return {
-    precioARS: compra.precio,
-    moneda: compra.moneda || 'ARS',
-    valorDolar: compra.valor_dolar || 1,
-  };
+  // Buscar en compras FIFO (último precio de compra)
+  // Intentar buscar por el campo "material" (que puede ser diferente al nombre)
+  let comprasResult = await supabase
+    .from('purchases_materials')
+    .select('precio, moneda, valor_dolar, fecha')
+    .eq('tenant_id', tenantId)
+    .ilike('material', materialField)
+    .order('fecha', { ascending: false }) // Más reciente primero para obtener el último precio
+    .limit(1);
+
+  let compras = comprasResult.data;
+
+  // Si no encontró compras con el campo "material", intentar con el nombre original
+  if ((!compras || compras.length === 0) && materialField !== materialName) {
+    comprasResult = await supabase
+      .from('purchases_materials')
+      .select('precio, moneda, valor_dolar, fecha')
+      .eq('tenant_id', tenantId)
+      .ilike('material', materialName)
+      .order('fecha', { ascending: false })
+      .limit(1);
+    compras = comprasResult.data;
+  }
+
+  // Priorizar: 1) Último precio de compra (FIFO más reciente), 2) Precio del stock
+  if (compras && compras.length > 0) {
+    const compra = compras[0];
+    return {
+      precioARS: compra.precio,
+      moneda: compra.moneda || 'ARS',
+      valorDolar: compra.valor_dolar || 1,
+    };
+  }
+
+  // Si no hay compras, usar el precio del stock (aunque stock sea 0)
+  if (precioStock && precioStock.precioARS > 0) {
+    return precioStock;
+  }
+
+  // Último fallback: devolver 0 si no se encuentra nada
+  console.warn(`No se encontró precio para material: ${materialName} (materialField: ${materialField})`);
+  return { precioARS: 0, moneda: 'ARS', valorDolar: 1 };
 }
 
 /**

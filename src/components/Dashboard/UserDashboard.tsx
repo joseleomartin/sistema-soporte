@@ -27,7 +27,9 @@ import {
   Ticket,
   Bell,
   Heart,
-  BookOpen
+  BookOpen,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { CreateEventModal } from '../Calendar/CreateEventModal';
 import { EventDetailsModal } from '../Calendar/EventDetailsModal';
@@ -94,6 +96,7 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userVacations, setUserVacations] = useState<any[]>([]);
   const [showVacationModal, setShowVacationModal] = useState(false);
+  const [editingVacation, setEditingVacation] = useState<any | null>(null);
   const [allVacations, setAllVacations] = useState<any[]>([]);
   const [vacationCalendarDate, setVacationCalendarDate] = useState(new Date());
   const [showVacationCalendarModal, setShowVacationCalendarModal] = useState(false);
@@ -210,6 +213,32 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
     } catch (error) {
       console.error('Error loading vacations:', error);
     }
+  };
+
+  const handleDeleteVacation = async (vacationId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta vacación / licencia?')) return;
+
+    if (!profile?.id || !(profile as any)?.tenant_id) return;
+
+    try {
+      const { error } = await supabase
+        .from('vacations')
+        .delete()
+        .eq('id', vacationId)
+        .eq('user_id', profile.id) // Solo puede eliminar sus propias vacaciones
+        .eq('tenant_id', (profile as any).tenant_id);
+
+      if (error) throw error;
+
+      await loadUserVacations();
+    } catch (error: any) {
+      console.error('Error deleting vacation:', error);
+      alert('Error al eliminar la vacación / licencia');
+    }
+  };
+
+  const handleEditVacation = (vacation: any) => {
+    setEditingVacation(vacation);
   };
 
   const loadDashboardData = async () => {
@@ -1560,6 +1589,8 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                     }
                   };
 
+                  const canEdit = vacation.status === 'pending';
+
                   return (
                     <div key={vacation.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                       <div className="flex-1">
@@ -1577,6 +1608,24 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
                           <p className="text-xs text-red-600 mt-1">Razón: {vacation.rejection_reason}</p>
                         )}
                       </div>
+                      {canEdit && (
+                        <div className="flex items-center gap-2 ml-4">
+                          <button
+                            onClick={() => handleEditVacation(vacation)}
+                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVacation(vacation.id)}
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1611,6 +1660,18 @@ export function UserDashboard({ onNavigate }: UserDashboardProps = {}) {
           </div>
         </div>
       </div>
+
+      {/* Modal para editar vacación */}
+      {editingVacation && (
+        <EditVacationModal
+          vacation={editingVacation}
+          onClose={() => setEditingVacation(null)}
+          onSuccess={() => {
+            setEditingVacation(null);
+            loadUserVacations();
+          }}
+        />
+      )}
 
       {/* Modal para crear evento */}
       {showEventModal && (
@@ -2119,6 +2180,160 @@ function CreateVacationModal({ onClose, onSuccess }: {
               className="px-4 py-2 text-gray-900 dark:text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
             >
               {loading ? 'Enviando...' : 'Solicitar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Modal para editar vacación
+function EditVacationModal({ vacation, onClose, onSuccess }: {
+  vacation: any;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { profile } = useAuth();
+  const [type, setType] = useState<'vacation' | 'license'>(vacation.type || 'vacation');
+  const [startDate, setStartDate] = useState(vacation.start_date || '');
+  const [endDate, setEndDate] = useState(vacation.end_date || '');
+  const [reason, setReason] = useState(vacation.reason || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    if (!profile?.id || !(profile as any)?.tenant_id) {
+      setError('No se pudo identificar el usuario o la empresa');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { error: updateError } = await supabase
+        .from('vacations')
+        .update({
+          type: type,
+          start_date: startDate,
+          end_date: endDate,
+          reason: reason || null
+        })
+        .eq('id', vacation.id)
+        .eq('user_id', profile.id) // Solo puede editar sus propias vacaciones
+        .eq('tenant_id', (profile as any).tenant_id);
+
+      if (updateError) throw updateError;
+
+      onSuccess();
+    } catch (err: any) {
+      console.error('Error updating vacation:', err);
+      setError(err.message || 'Error al actualizar la solicitud de vacaciones / licencias');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full p-6">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Editar Vacaciones / Licencias</h3>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Tipo *
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setType('vacation')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  type === 'vacation'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
+                    : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Vacaciones
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('license')}
+                className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                  type === 'license'
+                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium'
+                    : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                Licencia
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Fecha de inicio *
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Fecha de fin *
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              min={startDate || new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Razón (opcional)
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Describe el motivo de tus vacaciones / licencias..."
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              rows={3}
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
         </form>

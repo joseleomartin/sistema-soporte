@@ -288,8 +288,8 @@ export function PurchasesModule() {
     if (!searchTerm) return stockMaterials;
     const term = searchTerm.toLowerCase();
     return stockMaterials.filter(m => 
-      m.material.toLowerCase().includes(term) ||
-      m.nombre.toLowerCase().includes(term)
+      (m.nombre && m.nombre.toLowerCase().includes(term)) ||
+      (m.material && m.material.toLowerCase().includes(term))
     );
   };
 
@@ -1186,12 +1186,12 @@ export function PurchasesModule() {
                               key={material.id}
                               type="button"
                               onClick={() => {
-                                setMaterialForm({ ...materialForm, material: material.material });
+                                setMaterialForm({ ...materialForm, material: material.nombre || material.material });
                                 setShowMaterialDropdown(false);
                               }}
                               className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-600 focus:bg-blue-50 dark:focus:bg-slate-600 focus:outline-none text-gray-900 dark:text-white"
                             >
-                              <div className="font-medium">{material.material}</div>
+                              <div className="font-medium">{material.nombre || material.material}</div>
                               <div className="text-sm text-gray-500 dark:text-gray-400">Stock: {material.kg.toFixed(2)} kg</div>
                             </button>
                           ))}
@@ -1278,6 +1278,9 @@ export function PurchasesModule() {
                                 <div className="font-medium text-gray-900 dark:text-white">{item.material}</div>
                                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                   Cantidad: {item.cantidad.toFixed(2)} kg | Precio: ${item.precio.toFixed(2)} ({item.moneda})
+                                  {item.moneda === 'USD' && item.valor_dolar && (
+                                    <span className="ml-2">| Dólar: ${item.valor_dolar.toFixed(2)}</span>
+                                  )}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
                                   {item.tiene_iva ? (
@@ -1547,6 +1550,11 @@ export function PurchasesModule() {
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">{item.cantidad.toFixed(2)} kg</td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
                                       ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
+                                      {item.moneda === 'USD' && item.valor_dolar && (
+                                        <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                          Dólar: ${item.valor_dolar.toFixed(2)}
+                                        </span>
+                                      )}
                                     </td>
                                     <td className="px-2 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
@@ -1587,6 +1595,11 @@ export function PurchasesModule() {
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad.toFixed(2)} kg</td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
                                 ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                                {purchase.moneda === 'USD' && purchase.valor_dolar && (
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.proveedor}</td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
@@ -1687,6 +1700,11 @@ export function PurchasesModule() {
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad.toFixed(2)} kg</td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
                                 ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                                {purchase.moneda === 'USD' && purchase.valor_dolar && (
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.proveedor}</td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
@@ -1941,6 +1959,9 @@ export function PurchasesModule() {
                                 <div className="font-medium text-gray-900 dark:text-white">{item.producto}</div>
                                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                   Cantidad: {item.cantidad} u | Precio: ${item.precio.toFixed(2)} ({item.moneda})
+                                  {item.moneda === 'USD' && item.valor_dolar && (
+                                    <span className="ml-2">| Dólar: ${item.valor_dolar.toFixed(2)}</span>
+                                  )}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
                                   {item.tiene_iva ? (
@@ -2210,6 +2231,11 @@ export function PurchasesModule() {
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">{item.cantidad} u</td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
                                       ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
+                                      {item.moneda === 'USD' && item.valor_dolar && (
+                                        <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                          Dólar: ${item.valor_dolar.toFixed(2)}
+                                        </span>
+                                      )}
                                     </td>
                                     <td className="px-2 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
@@ -2250,6 +2276,11 @@ export function PurchasesModule() {
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad} u</td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
                               ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                              {purchase.moneda === 'USD' && purchase.valor_dolar && (
+                                <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                </span>
+                              )}
                             </td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.proveedor}</td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
@@ -2353,6 +2384,11 @@ export function PurchasesModule() {
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)} u</td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                 ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                                {purchase.moneda === 'USD' && purchase.valor_dolar && (
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                    Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.proveedor}</td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">

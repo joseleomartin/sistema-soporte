@@ -224,7 +224,7 @@ export function ProductionModule() {
         material: mat.material_name,
         cantidad: mat.kg_por_unidad * (product.cantidad_fabricar || 0),
         precio: (() => {
-          const stockMat = stockMaterials.find(m => m.material === mat.material_name);
+          const stockMat = stockMaterials.find(m => m.nombre === mat.material_name || m.material === mat.material_name);
           if (stockMat) {
             const precioPorKg = stockMat.moneda === 'USD' 
               ? stockMat.costo_kilo_usd * stockMat.valor_dolar
@@ -243,25 +243,95 @@ export function ProductionModule() {
     await generateOrderPDF(orderData);
   };
 
+  // Función helper para normalizar nombres de materiales (para comparaciones flexibles)
+  const normalizeMaterialName = (name: string): string => {
+    if (!name) return '';
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
+  };
+
+  // Función helper para buscar material en stock de manera flexible
+  const findStockMaterial = (materialName: string): StockMaterial | undefined => {
+    if (!materialName) return undefined;
+    
+    const normalizedName = normalizeMaterialName(materialName);
+    
+    return stockMaterials.find(m => {
+      // Normalizar ambos campos de stock_materials
+      const normalizedMaterial = normalizeMaterialName(m.material || '');
+      const normalizedNombre = normalizeMaterialName(m.nombre || '');
+      
+      // Buscar por material (nombre simple) o por nombre (nombre completo)
+      return normalizedMaterial === normalizedName || normalizedNombre === normalizedName;
+    });
+  };
+
   const calculateProductCost = (product: Product): { costoMP: number; costoMO: number; otrosCostos: number; costoTotal: number } => {
     try {
       const productMaterials = materials[product.id] || [];
       const avgHourValue = calculateAverageEmployeeHourValue(employees);
       
-      // Crear mapa de precios de materiales
+      // Crear mapa de precios de materiales con búsqueda flexible
+      // Indexar tanto por material como por nombre para mayor compatibilidad
       const materialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
       stockMaterials.forEach(mat => {
-        materialPrices[mat.material] = {
-          costo_kilo_usd: mat.costo_kilo_usd,
-          valor_dolar: mat.valor_dolar,
-          moneda: mat.moneda,
-        };
+        // Indexar por material (nombre simple)
+        const normalizedMaterial = normalizeMaterialName(mat.material || '');
+        if (normalizedMaterial) {
+          materialPrices[normalizedMaterial] = {
+            costo_kilo_usd: mat.costo_kilo_usd,
+            valor_dolar: mat.valor_dolar,
+            moneda: mat.moneda,
+          };
+        }
+        // También indexar por nombre (nombre completo) si es diferente
+        const normalizedNombre = normalizeMaterialName(mat.nombre || '');
+        if (normalizedNombre && normalizedNombre !== normalizedMaterial) {
+          materialPrices[normalizedNombre] = {
+            costo_kilo_usd: mat.costo_kilo_usd,
+            valor_dolar: mat.valor_dolar,
+            moneda: mat.moneda,
+          };
+        }
+        // También mantener el índice original por si acaso
+        if (mat.material) {
+          materialPrices[mat.material] = {
+            costo_kilo_usd: mat.costo_kilo_usd,
+            valor_dolar: mat.valor_dolar,
+            moneda: mat.moneda,
+          };
+        }
       });
+
+      // Crear un mapa mejorado que busque de manera flexible
+      const flexibleMaterialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
+      
+      // Para cada material del producto, buscar su precio de manera flexible
+      productMaterials.forEach(productMat => {
+        const stockMat = findStockMaterial(productMat.material_name);
+        if (stockMat) {
+          // Usar el nombre normalizado del material del producto como clave
+          const normalizedKey = normalizeMaterialName(productMat.material_name);
+          flexibleMaterialPrices[normalizedKey] = {
+            costo_kilo_usd: stockMat.costo_kilo_usd,
+            valor_dolar: stockMat.valor_dolar,
+            moneda: stockMat.moneda,
+          };
+          // También usar el nombre original por si acaso
+          flexibleMaterialPrices[productMat.material_name] = {
+            costo_kilo_usd: stockMat.costo_kilo_usd,
+            valor_dolar: stockMat.valor_dolar,
+            moneda: stockMat.moneda,
+          };
+        }
+      });
+
+      // Combinar ambos mapas, priorizando el flexible
+      const finalMaterialPrices = { ...materialPrices, ...flexibleMaterialPrices };
 
       const costs = calculateProductCosts(
         product,
         productMaterials,
-        materialPrices,
+        finalMaterialPrices,
         avgHourValue
       );
 
@@ -570,7 +640,7 @@ export function ProductionModule() {
       // Validar stock de materiales y recopilar advertencias
       const materialWarnings: string[] = [];
       for (const mat of productMaterials) {
-        const stockMat = stockMaterials.find(m => m.material === mat.material_name);
+        const stockMat = stockMaterials.find(m => m.nombre === mat.material_name || m.material === mat.material_name);
         if (!stockMat) {
           materialWarnings.push(`Material "${mat.material_name}" no encontrado en el stock`);
         } else {
@@ -639,7 +709,7 @@ export function ProductionModule() {
 
       // Descontar materiales del stock (solo si hay stock disponible)
       for (const mat of productMaterials) {
-        const stockMat = stockMaterials.find(m => m.material === mat.material_name);
+        const stockMat = stockMaterials.find(m => m.nombre === mat.material_name || m.material === mat.material_name);
         if (stockMat) {
           const kgNecesarios = mat.kg_por_unidad * cantidad;
           // Solo descontar si hay stock suficiente, sino usar lo disponible o 0
@@ -1297,8 +1367,8 @@ export function ProductionModule() {
                       >
                         <option value="">Seleccione un material</option>
                         {stockMaterials.map((mat) => (
-                          <option key={mat.id} value={mat.material}>
-                            {mat.material} (Stock: {mat.kg.toFixed(2)} kg)
+                          <option key={mat.id} value={mat.nombre || mat.material}>
+                            {mat.nombre || mat.material} (Stock: {mat.kg.toFixed(2)} kg)
                           </option>
                         ))}
                       </select>
@@ -1709,7 +1779,8 @@ export function ProductionModule() {
               ) : (
                 <div className="space-y-3">
                   {stockMaterials.map((mat) => {
-                    const isSelected = selectedMaterials.has(mat.material);
+                    const materialKey = mat.nombre || mat.material;
+                    const isSelected = selectedMaterials.has(materialKey);
                     return (
                       <div
                         key={mat.id}
@@ -1723,13 +1794,13 @@ export function ProductionModule() {
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => handleMaterialToggle(mat.material)}
+                            onChange={() => handleMaterialToggle(materialKey)}
                             className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                           />
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
                               <label className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer">
-                                {mat.material}
+                                {mat.nombre || mat.material}
                               </label>
                               <span className="text-xs text-gray-500 dark:text-gray-400">
                                 Stock: {mat.kg.toFixed(2)} kg

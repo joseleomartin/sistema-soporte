@@ -724,10 +724,12 @@ export function SalesModule() {
 
       {/* Sales Form */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Nueva Venta</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Nueva Venta</h3>
+            </div>
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Tipo de Producto *</label>
                 <select
@@ -786,7 +788,7 @@ export function SalesModule() {
                   />
                   <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
                   {showClientDropdown && getFilteredClients(formData.cliente).length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto sales-scroll">
                       {getFilteredClients(formData.cliente).map((client) => (
                         <button
                           key={client.id}
@@ -990,7 +992,7 @@ export function SalesModule() {
               {saleItems.length > 0 && (
                 <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4">
                   <h4 className="text-sm font-semibold mb-3 text-gray-900 dark:text-white">Productos en la Venta ({saleItems.length})</h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-2 sales-scroll">
                     {saleItems.map((item) => {
                       const ivaMonto = item.tiene_iva ? item.ingreso_neto * (item.iva_pct / 100) : 0;
                       const totalConIva = item.ingreso_neto + ivaMonto;
@@ -1082,29 +1084,34 @@ export function SalesModule() {
                   </div>
                 </div>
               )}
-
-              <div className="flex justify-end space-x-3">
-                <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  Cancelar
-                </button>
-                {saleItems.length > 0 ? (
-                  <button 
-                    type="submit" 
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-lg"
-                  >
-                    ✓ Registrar Venta ({saleItems.length} producto{saleItems.length > 1 ? 's' : ''})
-                  </button>
-                ) : (
-                  <button 
-                    type="button" 
-                    disabled
-                    className="px-4 py-2 bg-gray-400 text-gray-200 rounded-md cursor-not-allowed"
-                  >
-                    Agregue al menos un producto
-                  </button>
-                )}
-              </div>
             </form>
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3 flex-shrink-0 bg-white dark:bg-gray-800">
+              <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Cancelar
+              </button>
+              {saleItems.length > 0 ? (
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const form = document.querySelector('form');
+                    if (form) {
+                      form.requestSubmit();
+                    }
+                  }}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold shadow-lg"
+                >
+                  ✓ Registrar Venta ({saleItems.length} producto{saleItems.length > 1 ? 's' : ''})
+                </button>
+              ) : (
+                <button 
+                  type="button" 
+                  disabled
+                  className="px-4 py-2 bg-gray-400 text-gray-200 rounded-md cursor-not-allowed"
+                >
+                  Agregue al menos un producto
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
