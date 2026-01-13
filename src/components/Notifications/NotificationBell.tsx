@@ -467,7 +467,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
           
           {/* Dropdown de notificaciones - Adaptado para móviles */}
           <div 
-            className={`fixed ${isMobile ? 'inset-0 w-full h-full rounded-none' : 'w-[420px] max-w-[calc(100vw-2rem)] rounded-3xl'} bg-white dark:bg-slate-800 shadow-2xl border border-gray-200 dark:border-slate-700/50 backdrop-blur-xl overflow-hidden`}
+            className={`fixed ${isMobile ? 'inset-0 w-full h-full rounded-none' : 'w-[340px] max-w-[calc(100vw-2rem)] rounded-3xl'} bg-white dark:bg-slate-800 shadow-2xl border border-gray-200 dark:border-slate-700/50 backdrop-blur-xl overflow-hidden`}
             style={{
               ...(isMobile ? {
                 top: 0,
@@ -491,7 +491,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
             onClick={(e) => e.stopPropagation()} // Prevenir que el clic en el dropdown lo cierre
           >
             {/* Header con diseño más sutil */}
-            <div className={`relative flex items-center justify-between ${isMobile ? 'p-4' : 'p-5'} bg-gradient-to-r from-slate-700 to-slate-600 overflow-hidden border-b border-white/10`}>
+            <div className={`relative flex items-center justify-between ${isMobile ? 'p-4' : 'p-4'} bg-gradient-to-r from-slate-700 to-slate-600 overflow-hidden border-b border-white/10`}>
               {/* Efecto sutil de brillo */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
               
@@ -509,7 +509,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                   </button>
                 )}
                 <div>
-                  <h3 className={`font-bold ${isMobile ? 'text-base' : 'text-lg'} text-white drop-shadow-lg`}>Notificaciones</h3>
+                  <h3 className={`font-bold ${isMobile ? 'text-base' : 'text-base'} text-white drop-shadow-lg`}>Notificaciones</h3>
                   {unreadCount > 0 && (
                     <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-white/80 font-medium`}>{unreadCount} sin leer</p>
                   )}
@@ -538,7 +538,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
             </div>
 
             {/* Contenido con scroll - Adaptado para móviles */}
-            <div className={`${isMobile ? 'flex-1 overflow-y-auto' : 'max-h-[500px] overflow-y-auto'} notifications-scroll bg-slate-800`}>
+            <div className={`${isMobile ? 'flex-1 overflow-y-auto' : 'max-h-[400px] overflow-y-auto'} notifications-scroll bg-slate-800`}>
               {notifications.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="relative inline-block mb-4">
@@ -551,12 +551,12 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                   <p className="text-gray-400 text-sm mt-1">Todo está al día</p>
                 </div>
               ) : (
-                <div className={`${isMobile ? 'p-2' : 'p-3'} space-y-2`}>
+                <div className={`${isMobile ? 'p-2' : 'p-2'} space-y-2`}>
                   {notifications.map((notification, index) => (
                     <button
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`group w-full text-left ${isMobile ? 'p-4' : 'p-4'} ${isMobile ? 'rounded-xl' : 'rounded-2xl'} border-2 transition-all duration-300 ${isMobile ? 'active:scale-[0.98] touch-manipulation' : 'hover:shadow-xl hover:scale-[1.02]'} relative overflow-hidden ${
+                      className={`group w-full text-left ${isMobile ? 'p-3' : 'p-3'} ${isMobile ? 'rounded-xl' : 'rounded-xl'} border-2 transition-all duration-300 ${isMobile ? 'active:scale-[0.98] touch-manipulation' : 'hover:shadow-xl hover:scale-[1.02]'} relative overflow-hidden ${
                         !notification.read 
                           ? 'bg-slate-700 border-slate-600/50 shadow-lg' 
                           : 'bg-slate-700/90 backdrop-blur-sm border-slate-600/30 hover:border-slate-500/50 hover:bg-slate-700'

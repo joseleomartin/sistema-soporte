@@ -4,10 +4,11 @@
  */
 
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Package, DollarSign, Users, Factory, ShoppingCart, Percent, Activity, X, Settings } from 'lucide-react';
+import { BarChart3, TrendingUp, Package, DollarSign, Users, Factory, ShoppingCart, Percent, Activity, X, Settings, Download } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
+import { writeFile, utils } from 'xlsx';
 
 type ProductionMetric = Database['public']['Tables']['production_metrics']['Row'];
 type Sale = Database['public']['Tables']['sales']['Row'];
@@ -211,6 +212,123 @@ export function MetricsModule() {
     total: totalCostProduction,
   };
 
+  // Export to Excel function
+  const exportToExcel = () => {
+    const wb = utils.book_new();
+    
+    // Hoja 1: Resumen de Métricas
+    const summaryData = [
+      ['Métrica', 'Valor'],
+      ['Kg Consumidos', totalKgConsumed.toFixed(2)],
+      ['Costo Total MP', `$${totalCostMP.toFixed(2)}`],
+      ['Costo Total MO', `$${totalCostMO.toFixed(2)}`],
+      ['Costo Total Producción', `$${totalCostProduction.toFixed(2)}`],
+      ['Unidades Producidas', totalUnitsProduced],
+      ['Unidades Vendidas', totalUnitsSold],
+      ['Ingresos Netos', `$${totalRevenue.toFixed(2)}`],
+      ['Ganancia Total', `$${totalProfit.toFixed(2)}`],
+      ['Margen de Ganancia', `${profitMargin.toFixed(2)}%`],
+      ['Ganancia Promedio/Unidad', `$${avgProfitPerUnit.toFixed(2)}`],
+      ['Ingreso Promedio/Venta', `$${avgRevenuePerSale.toFixed(2)}`],
+      ['Rentabilidad Media', `$${avgRentabilidad.toFixed(2)}`],
+      ['Rentabilidad Media %', `${avgRentabilidadPercent.toFixed(2)}%`],
+      ['Total Ventas', sales.length],
+      ['Período', `${dateRange.start} a ${dateRange.end}`],
+    ];
+    const ws1 = utils.aoa_to_sheet(summaryData);
+    utils.book_append_sheet(wb, ws1, 'Resumen');
+
+    // Hoja 2: Detalle de Ventas
+    const salesData = [
+      ['Fecha', 'Producto', 'Cantidad', 'Cliente', 'Ingreso Neto', 'Ganancia Total', 'Precio Unitario', 'IVA', 'Descuento', 'IIBB']
+    ];
+    sales.forEach(sale => {
+      salesData.push([
+        new Date(sale.fecha).toLocaleDateString('es-AR'),
+        sale.producto,
+        sale.cantidad,
+        sale.cliente || 'N/A',
+        sale.ingreso_neto.toFixed(2),
+        sale.ganancia_total.toFixed(2),
+        (sale.ingreso_neto / sale.cantidad).toFixed(2),
+        sale.tiene_iva ? `${sale.iva_pct}%` : 'Sin IVA',
+        sale.descuento_pct ? `${sale.descuento_pct}%` : '0%',
+        sale.iib_pct ? `${sale.iib_pct}%` : '0%',
+      ]);
+    });
+    const ws2 = utils.aoa_to_sheet(salesData);
+    utils.book_append_sheet(wb, ws2, 'Ventas');
+
+    // Hoja 3: Ingresos por Producto
+    const revenueByProductData = [
+      ['Producto', 'Ingreso Neto']
+    ];
+    Object.entries(salesByProduct)
+      .sort(([, a], [, b]) => b - a)
+      .forEach(([producto, ingreso]) => {
+        revenueByProductData.push([producto, ingreso.toFixed(2)]);
+      });
+    const ws3 = utils.aoa_to_sheet(revenueByProductData);
+    utils.book_append_sheet(wb, ws3, 'Ingresos por Producto');
+
+    // Hoja 4: Ganancia por Producto
+    const profitByProductData = [
+      ['Producto', 'Ganancia Total']
+    ];
+    Object.entries(profitByProduct)
+      .sort(([, a], [, b]) => b - a)
+      .forEach(([producto, ganancia]) => {
+        profitByProductData.push([producto, ganancia.toFixed(2)]);
+      });
+    const ws4 = utils.aoa_to_sheet(profitByProductData);
+    utils.book_append_sheet(wb, ws4, 'Ganancia por Producto');
+
+    // Hoja 5: Métricas de Producción
+    const productionData = [
+      ['Fecha', 'Producto', 'Cantidad', 'Kg Consumidos', 'Costo MP', 'Costo MO']
+    ];
+    productionMetrics.forEach(metric => {
+      productionData.push([
+        new Date(metric.fecha).toLocaleDateString('es-AR'),
+        metric.producto,
+        metric.cantidad,
+        metric.kg_consumidos.toFixed(2),
+        metric.costo_mp.toFixed(2),
+        metric.costo_mo.toFixed(2),
+      ]);
+    });
+    const ws5 = utils.aoa_to_sheet(productionData);
+    utils.book_append_sheet(wb, ws5, 'Producción');
+
+    // Hoja 6: Ingresos por Fecha
+    const revenueByDateData = [
+      ['Fecha', 'Ingreso Neto']
+    ];
+    Object.entries(revenueByDate)
+      .sort(([a], [b]) => new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime())
+      .forEach(([fecha, ingreso]) => {
+        revenueByDateData.push([fecha, ingreso.toFixed(2)]);
+      });
+    const ws6 = utils.aoa_to_sheet(revenueByDateData);
+    utils.book_append_sheet(wb, ws6, 'Ingresos por Fecha');
+
+    // Hoja 7: Ganancia por Fecha
+    const profitByDateData = [
+      ['Fecha', 'Ganancia Total']
+    ];
+    Object.entries(profitByDate)
+      .sort(([a], [b]) => new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime())
+      .forEach(([fecha, ganancia]) => {
+        profitByDateData.push([fecha, ganancia.toFixed(2)]);
+      });
+    const ws7 = utils.aoa_to_sheet(profitByDateData);
+    utils.book_append_sheet(wb, ws7, 'Ganancia por Fecha');
+
+    // Generar nombre de archivo con fecha
+    const fileName = `metricas_${dateRange.start}_${dateRange.end}.xlsx`;
+    writeFile(wb, fileName);
+  };
+
   // Helper function to render bar chart
   const renderBarChart = (data: Record<string, number>, maxValue: number, color: string) => {
     const entries = Object.entries(data).slice(0, 10); // Top 10
@@ -256,14 +374,24 @@ export function MetricsModule() {
             <BarChart3 className="w-6 h-6 text-blue-600" />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Métricas</h1>
           </div>
-          <button
-            onClick={() => setShowConfigModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-            title="Configurar métricas visibles"
-          >
-            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Configurar</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={exportToExcel}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              title="Exportar métricas a Excel"
+            >
+              <Download className="w-5 h-5" />
+              <span className="text-sm font-medium">Exportar Excel</span>
+            </button>
+            <button
+              onClick={() => setShowConfigModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              title="Configurar métricas visibles"
+            >
+              <Settings className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Configurar</span>
+            </button>
+          </div>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-300">Reportes y análisis de producción, ventas e inventario</p>
       </div>

@@ -864,29 +864,26 @@ export function ClientsModule() {
 
       {/* Clients Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
-        <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 min-w-[600px] md:min-w-[700px] lg:min-w-[900px]">
+        <div className="overflow-x-auto w-full sales-scroll">
+          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 min-w-[800px]">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[140px] sm:min-w-[150px]">
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                   Nombre
                 </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell min-w-[130px] lg:min-w-[140px]">
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                   Razón Social
                 </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[110px] lg:min-w-[120px]">
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                   CUIT
                 </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell min-w-[110px] md:min-w-[120px]">
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                   Teléfono
                 </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[160px] lg:min-w-[180px]">
+                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                   Email
                 </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden 2xl:table-cell min-w-[90px] lg:min-w-[100px]">
-                  Provincia
-                </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[90px] md:min-w-[100px]">
+                <th className="px-3 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                   Acciones
                 </th>
               </tr>
@@ -909,7 +906,7 @@ export function ClientsModule() {
                 if (filteredClients.length === 0) {
                   return (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         {searchTerm ? 'No se encontraron clientes que coincidan con la búsqueda' : 'No hay clientes registrados'}
                       </td>
                     </tr>
@@ -918,47 +915,36 @@ export function ClientsModule() {
 
                 return filteredClients.map((client) => (
                   <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4">
+                    <td className="px-3 sm:px-4 py-3 sm:py-4">
                       <button
                         onClick={() => openSalesHistoryModal(client)}
-                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline truncate block w-full text-left"
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline truncate block w-full text-left max-w-[150px]"
                         title={client.nombre}
                       >
                         {client.nombre}
                       </button>
-                      {/* Información adicional en móviles */}
-                      <div className="md:hidden mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
-                        {client.telefono && <div className="truncate">📞 {client.telefono}</div>}
-                        {client.email && <div className="truncate">✉️ {client.email}</div>}
-                        {client.razon_social && <div className="truncate">🏢 {client.razon_social}</div>}
-                      </div>
                     </td>
-                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
-                      <div className="truncate" title={client.razon_social || ''}>
+                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="truncate max-w-[150px]" title={client.razon_social || ''}>
                         {client.razon_social || '-'}
                       </div>
                     </td>
-                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
-                      <div className="truncate" title={client.cuit || ''}>
+                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="truncate max-w-[120px]" title={client.cuit || ''}>
                         {client.cuit || '-'}
                       </div>
                     </td>
-                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
-                      <div className="truncate" title={client.telefono || ''}>
+                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="truncate max-w-[120px]" title={client.telefono || ''}>
                         {client.telefono || '-'}
                       </div>
                     </td>
-                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
-                      <div className="truncate" title={client.email || ''}>
+                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="truncate max-w-[200px]" title={client.email || ''}>
                         {client.email || '-'}
                       </div>
                     </td>
-                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden 2xl:table-cell">
-                      <div className="truncate" title={client.provincia || ''}>
-                        {client.provincia || '-'}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4 text-right text-sm font-medium">
+                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-right text-sm font-medium">
                       <div className="flex justify-end space-x-1 sm:space-x-2 flex-shrink-0">
                         <button
                           onClick={() => openDocumentsModal(client)}
