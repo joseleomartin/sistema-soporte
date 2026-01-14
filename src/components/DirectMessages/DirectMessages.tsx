@@ -487,38 +487,78 @@ export function DirectMessages() {
                     <p className="text-xs sm:text-sm mt-1">Envía el primer mensaje</p>
                   </div>
                 ) : (
-                  messages.map((msg) => {
+                  messages.map((msg, index) => {
                     const isMine = msg.sender_id === profile?.id;
+                    const msgDate = new Date(msg.created_at);
+                    const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at) : null;
+                    
+                    // Determinar si mostrar separador de fecha
+                    const shouldShowDateSeparator = !prevMsgDate || 
+                      msgDate.toDateString() !== prevMsgDate.toDateString();
+                    
+                    // Formatear fecha del separador
+                    const formatDateSeparator = (date: Date) => {
+                      const today = new Date();
+                      const yesterday = new Date(today);
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      
+                      if (date.toDateString() === today.toDateString()) {
+                        return 'Hoy';
+                      } else if (date.toDateString() === yesterday.toDateString()) {
+                        return 'Ayer';
+                      } else {
+                        const todayYear = today.getFullYear();
+                        const dateYear = date.getFullYear();
+                        return date.toLocaleDateString('es-ES', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          ...(dateYear !== todayYear && { year: 'numeric' })
+                        });
+                      }
+                    };
+                    
                     return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-                      >
+                      <>
+                        {shouldShowDateSeparator && (
+                          <div className="flex justify-center my-4">
+                            <div className="bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded-full">
+                              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                                {formatDateSeparator(msgDate)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                         <div
-                          className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg ${
-                            isMine
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white'
-                          }`}
+                          key={msg.id}
+                          className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                         >
-                          <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.message}</p>
-                          <p
-                            className={`text-[10px] sm:text-xs mt-1 ${
-                              isMine ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                          <div
+                            className={`max-w-[75%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg ${
+                              isMine
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 dark:bg-slate-700 text-gray-900 dark:text-white'
                             }`}
                           >
-                            {new Date(msg.created_at).toLocaleString('es-ES', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                            {!isMine && !msg.is_read && (
-                              <span className="ml-2">●</span>
-                            )}
-                          </p>
+                            <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                            <p
+                              className={`text-[10px] sm:text-xs mt-1 ${
+                                isMine ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                              }`}
+                            >
+                              {new Date(msg.created_at).toLocaleString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                              {!isMine && !msg.is_read && (
+                                <span className="ml-2">●</span>
+                              )}
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      </>
                     );
                   })
                 )}

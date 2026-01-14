@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase';
 import { GoogleDriveFolderSelector } from './GoogleDriveFolderSelector';
 import { GoogleDriveViewer } from './GoogleDriveViewer';
 import { DriveFolder } from '../../lib/googleDriveAPI';
-import { startGoogleAuth, isAuthenticated } from '../../lib/googleAuthRedirect';
 
 interface FileAttachment {
   id: string;
@@ -34,42 +33,11 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
   const [driveFolderName, setDriveFolderName] = useState<string | null>(null);
   const [driveFolderLink, setDriveFolderLink] = useState<string | null>(null);
   const [loadingDriveMapping, setLoadingDriveMapping] = useState(true);
-  const [driveAuthenticated, setDriveAuthenticated] = useState(false);
-  const [loadingDriveAuth, setLoadingDriveAuth] = useState(false);
 
   useEffect(() => {
     loadFiles();
     loadDriveMapping();
   }, [subforumId]);
-
-  useEffect(() => {
-    // Verificar autenticación de Google Drive cuando se cambia a la pestaña "drive"
-    if (activeTab === 'drive') {
-      const checkAuth = async () => {
-        try {
-          const hasAuth = isAuthenticated();
-          setDriveAuthenticated(hasAuth);
-        } catch (error) {
-          console.error('Error verificando autenticación:', error);
-          setDriveAuthenticated(false);
-        }
-      };
-      checkAuth();
-      
-      // También verificar periódicamente si el usuario regresó de la autenticación
-      const interval = setInterval(() => {
-        if (activeTab === 'drive' && !driveAuthenticated) {
-          const hasAuth = isAuthenticated();
-          if (hasAuth) {
-            setDriveAuthenticated(true);
-            clearInterval(interval);
-          }
-        }
-      }, 1000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [activeTab, driveAuthenticated]);
 
   const loadDriveMapping = async () => {
     try {
@@ -337,7 +305,7 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
               }`}
             >
               <Folder className="w-4 h-4 inline mr-2" />
-              Google Drive del Cliente
+              Google Drive
             </button>
           </div>
 
@@ -465,66 +433,25 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
             </div>
           )}
             </>
-          ) : activeTab === 'drive' ? (
+          ) : (
             <>
               {loadingDriveMapping ? (
                 <div className="flex items-center justify-center h-64">
                   <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                 </div>
               ) : driveFolderId ? (
-                <div className="space-y-4">
-                  {/* Botón para conectar cuenta personal si no está autenticado */}
-                  {!driveAuthenticated && (
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Folder className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Conecta tu cuenta de Google Drive</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Necesitas autenticarte para acceder a la carpeta del cliente</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              setLoadingDriveAuth(true);
-                              await startGoogleAuth();
-                            } catch (error: any) {
-                              console.error('Error al autenticar:', error);
-                              alert(`Error al autenticar: ${error?.message || 'Error desconocido'}`);
-                              setLoadingDriveAuth(false);
-                            }
-                          }}
-                          disabled={loadingDriveAuth}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                          <Folder className="w-4 h-4" />
-                          {loadingDriveAuth ? 'Conectando...' : 'Conectar mi cuenta'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {driveAuthenticated ? (
-                    <GoogleDriveViewer
-                      folderId={driveFolderId}
-                      folderName={driveFolderName || undefined}
-                      webViewLink={driveFolderLink || undefined}
-                      onError={(err) => {
-                        setError(err);
-                        // Si hay error, permitir seleccionar nueva carpeta
-                        setDriveFolderId(null);
-                        setDriveFolderName(null);
-                        setDriveFolderLink(null);
-                      }}
-                    />
-                  ) : (
-                    <div className="text-center py-8">
-                      <Folder className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                      <p className="text-gray-600 dark:text-gray-300">Conecta tu cuenta de Google Drive para ver los archivos</p>
-                    </div>
-                  )}
-                </div>
+                <GoogleDriveViewer
+                  folderId={driveFolderId}
+                  folderName={driveFolderName || undefined}
+                  webViewLink={driveFolderLink || undefined}
+                  onError={(err) => {
+                    setError(err);
+                    // Si hay error, permitir seleccionar nueva carpeta
+                    setDriveFolderId(null);
+                    setDriveFolderName(null);
+                    setDriveFolderLink(null);
+                  }}
+                />
               ) : (
                 <GoogleDriveFolderSelector
                   clientName={subforumName}
@@ -533,7 +460,7 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
                 />
               )}
             </>
-          ) : null}
+          )}
         </div>
 
         {/* Footer */}

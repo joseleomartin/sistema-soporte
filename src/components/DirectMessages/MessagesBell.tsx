@@ -1713,13 +1713,52 @@ export function MessagesBell() {
             </div>
                   </div>
                 ) : (
-                  messages.map((msg) => {
+                  messages.map((msg, index) => {
                     const isMine = msg.sender_id === profile?.id;
+                    const msgDate = new Date(msg.created_at);
+                    const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at) : null;
+                    
+                    // Determinar si mostrar separador de fecha
+                    const shouldShowDateSeparator = !prevMsgDate || 
+                      msgDate.toDateString() !== prevMsgDate.toDateString();
+                    
+                    // Formatear fecha del separador
+                    const formatDateSeparator = (date: Date) => {
+                      const today = new Date();
+                      const yesterday = new Date(today);
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      
+                      if (date.toDateString() === today.toDateString()) {
+                        return 'Hoy';
+                      } else if (date.toDateString() === yesterday.toDateString()) {
+                        return 'Ayer';
+                      } else {
+                        const todayYear = today.getFullYear();
+                        const dateYear = date.getFullYear();
+                        return date.toLocaleDateString('es-ES', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          ...(dateYear !== todayYear && { year: 'numeric' })
+                        });
+                      }
+                    };
+                    
                     return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isMine ? 'justify-end' : 'justify-start'} group gap-2`}
-                      >
+                      <>
+                        {shouldShowDateSeparator && (
+                          <div className="flex justify-center my-4">
+                            <div className="bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded-full">
+                              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                                {formatDateSeparator(msgDate)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        <div
+                          key={msg.id}
+                          className={`flex ${isMine ? 'justify-end' : 'justify-start'} group gap-2`}
+                        >
                         {isMine && (
                           <div className="flex flex-col items-start gap-1 flex-shrink-0 pt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {editingMessage === msg.id ? (
@@ -1849,6 +1888,7 @@ export function MessagesBell() {
                           </p>
                         </div>
                       </div>
+                      </>
                     );
                   })
                 )}

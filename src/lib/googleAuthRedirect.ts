@@ -19,12 +19,7 @@ async function getGoogleClientId(): Promise<string> {
   // Intentar obtener del backend primero (si está configurado)
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   
-  // Verificar si hay VITE_GOOGLE_CLIENT_ID configurado directamente
-  const directClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  
-  // Si hay Client ID directo Y backend configurado, intentar backend primero pero con timeout corto
-  if (backendUrl && !directClientId) {
-    // Solo intentar backend si NO hay Client ID directo configurado
+  if (backendUrl) {
     try {
       // Headers para evitar la página de interceptación de ngrok
       const headers: HeadersInit = {
@@ -38,17 +33,10 @@ async function getGoogleClientId(): Promise<string> {
         headers['User-Agent'] = 'Mozilla/5.0';
       }
       
-      // Usar AbortController para timeout de 3 segundos
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      
       const response = await fetch(`${backendUrl}/api/google/client-id`, {
         method: 'GET',
         headers,
-        signal: controller.signal,
       });
-      
-      clearTimeout(timeoutId);
       
       if (response.ok) {
         const contentType = response.headers.get('content-type');
@@ -60,10 +48,10 @@ async function getGoogleClientId(): Promise<string> {
             console.log('✅ Client ID completo (para verificar):', data.client_id);
             
             // Validar que sea el Client ID correcto
-            if (data.client_id !== '398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com') {
+            if (data.client_id !== '355638125084-lecv3ob03pj367159gpd41r5qm773439.apps.googleusercontent.com') {
               console.error('❌ ADVERTENCIA: El Client ID del backend NO coincide con el esperado');
               console.error('❌ Client ID recibido:', data.client_id);
-              console.error('❌ Client ID esperado: 398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com');
+              console.error('❌ Client ID esperado: 355638125084-lecv3ob03pj367159gpd41r5qm773439.apps.googleusercontent.com');
               console.error('❌ Verifica que el backend tenga el Client ID correcto configurado');
             }
             
@@ -74,29 +62,18 @@ async function getGoogleClientId(): Promise<string> {
           const text = await response.text();
           console.warn('⚠️ El backend devolvió HTML en lugar de JSON. URL:', `${backendUrl}/api/google/client-id`);
           console.warn('⚠️ Respuesta:', text.substring(0, 200));
-          console.warn('⚠️ Usando VITE_GOOGLE_CLIENT_ID como fallback...');
         }
       } else {
         // El backend respondió con un error HTTP
         const errorText = await response.text().catch(() => 'Error desconocido');
         console.warn(`⚠️ El backend respondió con error ${response.status}:`, errorText.substring(0, 200));
         console.warn('⚠️ Verifica que el backend esté corriendo y que las credenciales estén configuradas');
-        console.warn('⚠️ Usando VITE_GOOGLE_CLIENT_ID como fallback...');
       }
     } catch (error: any) {
-      // Si es timeout o error de red, usar fallback
-      if (error.name === 'AbortError') {
-        console.warn('⚠️ Timeout al obtener Client ID del backend (3s). Usando VITE_GOOGLE_CLIENT_ID como fallback...');
-      } else {
-        console.warn('⚠️ No se pudo obtener Client ID del backend:', error.message);
-        console.warn('⚠️ URL intentada:', `${backendUrl}/api/google/client-id`);
-        console.warn('⚠️ Verifica que VITE_BACKEND_URL esté correctamente configurado y que el backend esté accesible');
-        console.warn('⚠️ Usando VITE_GOOGLE_CLIENT_ID como fallback...');
-      }
+      console.warn('⚠️ No se pudo obtener Client ID del backend:', error.message);
+      console.warn('⚠️ URL intentada:', `${backendUrl}/api/google/client-id`);
+      console.warn('⚠️ Verifica que VITE_BACKEND_URL esté correctamente configurado y que el backend esté accesible');
     }
-  } else if (backendUrl && directClientId) {
-    // Si ambos están configurados, preferir el directo (más rápido y confiable)
-    console.log('ℹ️ Tanto VITE_BACKEND_URL como VITE_GOOGLE_CLIENT_ID están configurados. Usando VITE_GOOGLE_CLIENT_ID directamente.');
   }
 
   // Fallback: usar variable de entorno del frontend

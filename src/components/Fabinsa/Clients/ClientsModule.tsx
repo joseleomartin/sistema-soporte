@@ -13,7 +13,6 @@ import { Database } from '../../../lib/database.types';
 import { GoogleDriveFolderSelector } from '../../Forums/GoogleDriveFolderSelector';
 import { GoogleDriveViewer } from '../../Forums/GoogleDriveViewer';
 import { DriveFolder } from '../../../lib/googleDriveAPI';
-import { startGoogleAuth, isAuthenticated, getAccessToken } from '../../../lib/googleAuthRedirect';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { BulkImportClientsModal } from './BulkImportClientsModal';
 
@@ -53,8 +52,6 @@ export function ClientsModule() {
   const [driveFolderLink, setDriveFolderLink] = useState<string | null>(null);
   const [loadingDriveMapping, setLoadingDriveMapping] = useState(false);
   const [activeTab, setActiveTab] = useState<'files' | 'drive'>('files');
-  const [driveAuthenticated, setDriveAuthenticated] = useState(false);
-  const [loadingDriveAuth, setLoadingDriveAuth] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 
   // Modal de historial de ventas
@@ -83,35 +80,6 @@ export function ClientsModule() {
       loadClients();
     }
   }, [tenantId]);
-
-  useEffect(() => {
-    // Verificar autenticación de Google Drive cuando se cambia a la pestaña "drive"
-    if (activeTab === 'drive') {
-      const checkAuth = async () => {
-        try {
-          const hasAuth = isAuthenticated();
-          setDriveAuthenticated(hasAuth);
-        } catch (error) {
-          console.error('Error verificando autenticación:', error);
-          setDriveAuthenticated(false);
-        }
-      };
-      checkAuth();
-      
-      // También verificar periódicamente si el usuario regresó de la autenticación
-      const interval = setInterval(() => {
-        if (activeTab === 'drive' && !driveAuthenticated) {
-          const hasAuth = isAuthenticated();
-          if (hasAuth) {
-            setDriveAuthenticated(true);
-            clearInterval(interval);
-          }
-        }
-      }, 1000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [activeTab, driveAuthenticated]);
 
   const loadClients = async () => {
     if (!tenantId) return;
@@ -741,7 +709,7 @@ export function ClientsModule() {
                       : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
-                  Google Drive del Cliente
+                  Google Drive
                 </button>
               </div>
             </div>
@@ -851,70 +819,29 @@ export function ClientsModule() {
                     </div>
                   ) : driveFolderId ? (
                     <div className="space-y-4">
-                      {/* Botón para conectar cuenta personal si no está autenticado */}
-                      {!driveAuthenticated && (
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <Folder className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Conecta tu cuenta de Google Drive</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">Necesitas autenticarte para acceder a la carpeta del cliente</p>
-                              </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Folder className="w-6 h-6 text-blue-600" />
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-white">{driveFolderName}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300">Carpeta de Google Drive vinculada</p>
                             </div>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  setLoadingDriveAuth(true);
-                                  await startGoogleAuth();
-                                } catch (error: any) {
-                                  console.error('Error al autenticar:', error);
-                                  alert(`Error al autenticar: ${error?.message || 'Error desconocido'}`);
-                                  setLoadingDriveAuth(false);
-                                }
-                              }}
-                              disabled={loadingDriveAuth}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          </div>
+                          {driveFolderLink && (
+                            <a
+                              href={driveFolderLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                             >
-                              <Folder className="w-4 h-4" />
-                              {loadingDriveAuth ? 'Conectando...' : 'Conectar mi cuenta'}
-                            </button>
-                          </div>
+                              <ExternalLink className="w-4 h-4" />
+                              <span>Abrir en Drive</span>
+                            </a>
+                          )}
                         </div>
-                      )}
-                      
-                      {driveAuthenticated ? (
-                        <div className="space-y-4">
-                          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <Folder className="w-6 h-6 text-blue-600" />
-                                <div>
-                                  <p className="font-medium text-gray-900 dark:text-white">{driveFolderName}</p>
-                                  <p className="text-sm text-gray-600 dark:text-gray-300">Carpeta de Google Drive vinculada</p>
-                                </div>
-                              </div>
-                              {driveFolderLink && (
-                                <a
-                                  href={driveFolderLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                  <span>Abrir en Drive</span>
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                          <GoogleDriveViewer folderId={driveFolderId} folderName={driveFolderName || undefined} />
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <Folder className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                          <p className="text-gray-600 dark:text-gray-300 mb-4">Conecta tu cuenta de Google Drive para ver los archivos</p>
-                        </div>
-                      )}
+                      </div>
+                      <GoogleDriveViewer folderId={driveFolderId} />
                     </div>
                   ) : (
                     <div className="text-center py-8">
@@ -922,8 +849,8 @@ export function ClientsModule() {
                       <p className="text-gray-600 dark:text-gray-300 mb-4">No hay carpeta de Google Drive vinculada</p>
                       {profile && (profile.role === 'admin' || profile.role === 'support') && (
                         <GoogleDriveFolderSelector
-                          clientName={selectedClient?.nombre || 'Cliente'}
                           onSelectFolder={handleSelectDriveFolder}
+                          currentFolderId={null}
                         />
                       )}
                     </div>
