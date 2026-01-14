@@ -659,6 +659,7 @@ export function ProductionModule() {
           message: `Se encontraron los siguientes problemas:\n\n${materialWarnings.join('\n')}\n\n¿Desea continuar de todos modos?`,
           type: 'warning',
           onConfirm: async () => {
+            setConfirmModal({ ...confirmModal, isOpen: false });
             await proceedWithProduction(product, materialWarnings);
           },
         });

@@ -103,6 +103,15 @@ export function CostsModule() {
     type: 'warning',
     onConfirm: () => {},
   });
+  const [quantityModal, setQuantityModal] = useState<{
+    isOpen: boolean;
+    item: CostSimulationItem | null;
+    quantity: string;
+  }>({
+    isOpen: false,
+    item: null,
+    quantity: '',
+  });
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
@@ -796,16 +805,43 @@ export function CostsModule() {
       return;
     }
 
+    // Mostrar modal para solicitar cantidad a producir
+    setQuantityModal({
+      isOpen: true,
+      item: item,
+      quantity: item.cantidad_fabricar.toString(),
+    });
+  };
+
+  const handleQuantityConfirm = async () => {
+    const quantity = parseFloat(quantityModal.quantity);
+    
+    if (!quantityModal.item || isNaN(quantity) || quantity <= 0) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: 'Por favor ingrese una cantidad válida mayor a 0',
+        type: 'error',
+      });
+      return;
+    }
+
+    // Cerrar modal de cantidad
+    setQuantityModal({ ...quantityModal, isOpen: false });
+
+    // Crear una copia del item con la cantidad especificada
+    const itemWithQuantity: CostSimulationItem = {
+      ...quantityModal.item,
+      cantidad_fabricar: quantity,
+    };
+
     try {
-      // El producto ya está guardado (se guarda al agregar a simulación)
-      // Solo necesitamos actualizar el stock y enviar a producción
-      
       // Verificar stock antes de proceder
       const stockWarnings: Array<{ material: string; disponible: number; necesario: number }> = [];
-      for (const mat of item.materials) {
+      for (const mat of itemWithQuantity.materials) {
         const stockMat = findStockMaterial(mat.material_name);
         if (stockMat) {
-          const kgNecesarios = mat.kg_por_unidad * item.cantidad_fabricar;
+          const kgNecesarios = mat.kg_por_unidad * itemWithQuantity.cantidad_fabricar;
           if (stockMat.kg < kgNecesarios) {
             stockWarnings.push({
               material: mat.material_name,
@@ -828,14 +864,15 @@ export function CostsModule() {
           message: `No hay suficiente stock para los siguientes materiales:\n\n${warningMessages}\n\n¿Desea continuar de todos modos?`,
           type: 'warning',
           onConfirm: async () => {
-            await proceedWithStockUpdate(item);
+            setConfirmModal({ ...confirmModal, isOpen: false });
+            await proceedWithStockUpdate(itemWithQuantity);
           },
         });
         return;
       }
 
       // Si no hay advertencias, proceder directamente
-      await proceedWithStockUpdate(item);
+      await proceedWithStockUpdate(itemWithQuantity);
     } catch (error: any) {
       console.error('Error sending to production:', error);
       setAlertModal({
@@ -1175,9 +1212,9 @@ export function CostsModule() {
                   />
                 </div>
               </div>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Precio de venta</label>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Precio de venta</label>
                 <div className="flex space-x-2">
                   <input
                     type="number"
@@ -1195,18 +1232,9 @@ export function CostsModule() {
                     <option value="USD">USD</option>
                   </select>
                 </div>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Cantidad a fabricar</label>
-                <input
-                  type="number"
-                  value={manualFormData.cantidad_fabricar}
-                  onChange={(e) => setManualFormData({ ...manualFormData, cantidad_fabricar: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Cantidad por hora *</label>
                 <input
@@ -1362,10 +1390,6 @@ export function CostsModule() {
                       {/* Información principal */}
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Cantidad</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{item.cantidad_fabricar}</p>
-                        </div>
-                        <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">P. Venta</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">${item.precio_venta.toFixed(2)}</p>
                         </div>
@@ -1474,7 +1498,6 @@ export function CostsModule() {
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Producto</th>
-                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Cant.</th>
                     <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">P. Venta</th>
                     <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Desc.</th>
                     <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">P. Final</th>
@@ -1504,7 +1527,6 @@ export function CostsModule() {
                             <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/30 px-1 py-0.5 rounded">M</span>
                           )}
                         </td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs text-center text-gray-900 dark:text-white">{item.cantidad_fabricar}</td>
                         <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${item.precio_venta.toFixed(2)}</td>
                         <td className="px-2 py-2 whitespace-nowrap text-xs text-center text-gray-900 dark:text-white">{item.descuento_pct}%</td>
                         <td className="px-2 py-2 whitespace-nowrap text-xs font-semibold text-right text-gray-900 dark:text-white">${itemCosts.precio_final_unitario.toFixed(2)}</td>
@@ -1769,19 +1791,6 @@ export function CostsModule() {
 
                     <div>
                       <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                        Cantidad a Fabricar
-                      </label>
-                      <input
-                        type="number"
-                        step="1"
-                        value={editFormData.cantidad_fabricar}
-                        onChange={(e) => setEditFormData({ ...editFormData, cantidad_fabricar: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                         IIBB (%)
                       </label>
                       <input
@@ -1952,27 +1961,6 @@ export function CostsModule() {
                       </div>
                     </div>
 
-                    {/* Métricas Totales */}
-                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Totales (Cantidad: {cantidad})</h4>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="text-gray-600 dark:text-gray-400">Ingreso Neto:</span>
-                          <span className="ml-2 font-semibold text-green-600 dark:text-green-400">${ingresoNeto.toFixed(2)}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600 dark:text-gray-400">Costo Total:</span>
-                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${costoTotal.toFixed(2)}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-gray-600 dark:text-gray-400">Rentabilidad Total:</span>
-                          <span className={`ml-2 font-semibold text-lg ${rentabilidadTotal >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            ${rentabilidadTotal.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Distribución de Costos */}
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Distribución de Costos</h4>
@@ -2075,6 +2063,70 @@ export function CostsModule() {
         type={confirmModal.type}
         isLoading={isProcessing}
       />
+
+      {/* Modal de Cantidad a Producir */}
+      {quantityModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center shadow-sm">
+                  <Package className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Cantidad a Producir
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    Ingrese la cantidad de unidades que desea producir:
+                  </p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Cantidad
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      value={quantityModal.quantity}
+                      onChange={(e) => setQuantityModal({ ...quantityModal, quantity: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Ingrese la cantidad"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleQuantityConfirm();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={() => setQuantityModal({ ...quantityModal, isOpen: false })}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setQuantityModal({ ...quantityModal, isOpen: false })}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleQuantityConfirm}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors shadow-sm hover:shadow-md"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

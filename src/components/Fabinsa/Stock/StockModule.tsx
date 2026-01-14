@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Package, Plus, Edit, Trash2, Save, X, Upload, Download, History, Calendar, DollarSign, Truck, Eye } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Save, X, Upload, Download, History, Calendar, DollarSign, Truck } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -41,6 +41,10 @@ export function StockModule() {
     nombre: '',
     material: '',
     stock_minimo: '',
+    kg: '',
+    costo_kilo_usd: '',
+    moneda: 'ARS' as 'ARS' | 'USD',
+    valor_dolar: '',
   });
 
   // Productos Fabricados
@@ -572,14 +576,18 @@ export function StockModule() {
     if (!tenantId) return;
 
     try {
+      const kgValue = materialForm.kg ? parseFloat(materialForm.kg) : 0;
+      const costoKiloUsdValue = materialForm.costo_kilo_usd ? parseFloat(materialForm.costo_kilo_usd) : 0;
+      const valorDolarValue = materialForm.valor_dolar ? parseFloat(materialForm.valor_dolar) : (editingMaterial?.valor_dolar || 1);
+
       const data: StockMaterialInsert = {
         tenant_id: tenantId,
         nombre: materialForm.nombre,
         material: materialForm.material,
-        kg: 0, // Se actualiza automáticamente con las compras
-        costo_kilo_usd: 0, // Se actualiza automáticamente con las compras
-        valor_dolar: 1,
-        moneda: 'ARS',
+        kg: kgValue,
+        costo_kilo_usd: costoKiloUsdValue,
+        valor_dolar: valorDolarValue,
+        moneda: materialForm.moneda,
         stock_minimo: materialForm.stock_minimo ? parseFloat(materialForm.stock_minimo) : 0,
       };
 
@@ -602,6 +610,10 @@ export function StockModule() {
       nombre: '',
       material: '',
       stock_minimo: '',
+      kg: '',
+      costo_kilo_usd: '',
+      moneda: 'ARS',
+      valor_dolar: '',
     });
     setEditingMaterial(null);
     setShowMaterialForm(false);
@@ -821,17 +833,70 @@ export function StockModule() {
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Stock Mínimo (kg)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={materialForm.stock_minimo}
-                      onChange={(e) => setMaterialForm({ ...materialForm, stock_minimo: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="Cantidad mínima de stock en kilos"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Cantidad (kg) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={materialForm.kg}
+                        onChange={(e) => setMaterialForm({ ...materialForm, kg: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Cantidad de stock en kilos"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Stock Mínimo (kg)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={materialForm.stock_minimo}
+                        onChange={(e) => setMaterialForm({ ...materialForm, stock_minimo: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Cantidad mínima de stock en kilos"
+                      />
+                    </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Costo por kg *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={materialForm.costo_kilo_usd}
+                        onChange={(e) => setMaterialForm({ ...materialForm, costo_kilo_usd: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Costo por kilogramo"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Moneda *</label>
+                      <select
+                        required
+                        value={materialForm.moneda}
+                        onChange={(e) => setMaterialForm({ ...materialForm, moneda: e.target.value as 'ARS' | 'USD' })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      >
+                        <option value="ARS">ARS</option>
+                        <option value="USD">USD</option>
+                      </select>
+                    </div>
+                  </div>
+                  {materialForm.moneda === 'USD' && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Valor del Dólar</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={materialForm.valor_dolar}
+                        onChange={(e) => setMaterialForm({ ...materialForm, valor_dolar: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Valor del dólar al momento de la compra"
+                      />
+                    </div>
+                  )}
                   <div className="flex justify-end space-x-3">
                     <button type="button" onClick={resetMaterialForm} className="px-4 py-2 border rounded-md">
                       Cancelar
@@ -920,6 +985,10 @@ export function StockModule() {
                                 nombre: mat.nombre,
                                 material: mat.material,
                                 stock_minimo: (mat.stock_minimo || 0).toString(),
+                                kg: mat.kg.toString(),
+                                costo_kilo_usd: mat.costo_kilo_usd.toString(),
+                                moneda: mat.moneda,
+                                valor_dolar: mat.valor_dolar.toString(),
                               });
                               setShowMaterialForm(true);
                             }}
@@ -1025,6 +1094,10 @@ export function StockModule() {
                                   nombre: mat.nombre,
                                   material: mat.material,
                                   stock_minimo: (mat.stock_minimo || 0).toString(),
+                                  kg: mat.kg.toString(),
+                                  costo_kilo_usd: mat.costo_kilo_usd.toString(),
+                                  moneda: mat.moneda,
+                                  valor_dolar: mat.valor_dolar.toString(),
                                 });
                                 setShowMaterialForm(true);
                               }}
@@ -2405,26 +2478,6 @@ export function StockModule() {
                             >
                               <Save className="w-4 h-4" />
                               <span>Completar Control</span>
-                            </button>
-                          )}
-                          {(control.estado === 'completado' || hasNegativeDifference) && (
-                            <button
-                              onClick={() => {
-                                // Scroll a la sección de detalles o mostrar modal de revisión
-                                const element = document.getElementById(`reception-details-${control.id}`);
-                                if (element) {
-                                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                }
-                              }}
-                              className={`px-4 py-2 rounded-md flex items-center space-x-2 ${
-                                hasNegativeDifference
-                                  ? 'bg-red-600 text-white hover:bg-red-700'
-                                  : 'bg-blue-600 text-white hover:bg-blue-700'
-                              }`}
-                              title={hasNegativeDifference ? 'Revisar diferencias de stock' : 'Revisar control'}
-                            >
-                              <Eye className="w-4 h-4" />
-                              <span>Revisar</span>
                             </button>
                           )}
                         </div>
