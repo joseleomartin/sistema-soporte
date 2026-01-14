@@ -236,32 +236,6 @@ export async function startGoogleAuth(): Promise<void> {
     });
     console.log('   5. Guarda los cambios y espera 1-2 minutos');
     console.log('');
-  } else {
-    console.log('⚠️ IMPORTANTE: Si recibes error "The OAuth client was not found" (Error 401: invalid_client):');
-    console.log('   Este error significa que el Client ID no existe en Google Cloud Console.');
-    console.log('');
-    console.log('   🔧 SOLUCIÓN:');
-    console.log('   1. Ve a: https://console.cloud.google.com/apis/credentials');
-    console.log('   2. Busca el Client ID:', clientId);
-    console.log('   3. Si NO existe:');
-    console.log('      - Crea uno nuevo de tipo "Aplicación web"');
-    console.log('      - Copia el nuevo Client ID');
-    console.log('      - Actualiza VITE_GOOGLE_CLIENT_ID en Vercel con el nuevo Client ID');
-    console.log('   4. Si SÍ existe:');
-    console.log('      - Haz clic en el Client ID');
-    console.log('      - En "URI de redirección autorizados", agrega:', redirectUri);
-    console.log('      - También agrega URLs de desarrollo local (si las usas):');
-    getRedirectUris().slice(1).forEach((uri) => {
-      console.log(`        • ${uri}`);
-    });
-    console.log('      - En "Orígenes JavaScript autorizados", agrega:', window.location.origin);
-    console.log('      - También agrega orígenes de desarrollo local (si los usas):');
-    getJavaScriptOrigins().slice(1).forEach((origin) => {
-      console.log(`        • ${origin}`);
-    });
-    console.log('      - Guarda los cambios');
-    console.log('   5. Espera 1-2 minutos y vuelve a intentar');
-    console.log('');
   }
   
   // Redirigir a Google
@@ -321,17 +295,7 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
           if (error.error === 'invalid_grant') {
             errorMessage = 'El código de autorización es inválido o expiró. Por favor, intenta autenticarte nuevamente.';
           } else if (error.error === 'invalid_client') {
-            const clientId = await getGoogleClientId().catch(() => 'NO CONFIGURADO');
-            errorMessage = `El Client ID no existe en Google Cloud Console.\n\n` +
-              `Client ID usado: ${clientId}\n\n` +
-              `SOLUCIÓN:\n` +
-              `1. Ve a: https://console.cloud.google.com/apis/credentials\n` +
-              `2. Proyecto: EMAGROUP\n` +
-              `3. Verifica que el Client ID '${clientId}' exista\n` +
-              `4. Si NO existe, créalo de tipo "Aplicación web"\n` +
-              `5. Agrega esta URL en "URI de redirección autorizados": ${redirectUri}\n` +
-              `6. Agrega este origen en "Orígenes JavaScript autorizados": ${window.location.origin}\n\n` +
-              `Ver archivo: backend/SOLUCION_OAUTH_CLIENT_NOT_FOUND_PASO_A_PASO.md para más detalles.`;
+            errorMessage = 'Error de autenticación con Google. Por favor, contacta al administrador del sistema.';
           } else if (error.error === 'redirect_uri_mismatch') {
             errorMessage = `La URL de redirección no coincide. Verifica que ${redirectUri} esté configurada en Google Cloud Console.`;
           }
@@ -541,18 +505,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
           
           if (isInvalidClient) {
             // El Client ID no existe en Google Cloud Console
-            const clientId = await getGoogleClientId().catch(() => 'NO CONFIGURADO');
-            throw new Error(
-              `El Client ID no existe en Google Cloud Console.\n\n` +
-              `Client ID usado: ${clientId}\n\n` +
-              `SOLUCIÓN:\n` +
-              `1. Ve a: https://console.cloud.google.com/apis/credentials\n` +
-              `2. Proyecto: EMAGROUP\n` +
-              `3. Verifica que el Client ID '${clientId}' exista\n` +
-              `4. Si NO existe, créalo de tipo "Aplicación web"\n` +
-              `5. Actualiza el script 8-iniciar-todo-ngrok.bat con el nuevo Client ID y Secret\n\n` +
-              `Ver archivo: backend/SOLUCION_OAUTH_CLIENT_NOT_FOUND_PASO_A_PASO.md para más detalles.`
-            );
+            throw new Error('Error de autenticación con Google. Por favor, contacta al administrador del sistema.');
           }
           
           // Si es otro error 401, intentar método directo como fallback solo si VITE_GOOGLE_CLIENT_SECRET está disponible
