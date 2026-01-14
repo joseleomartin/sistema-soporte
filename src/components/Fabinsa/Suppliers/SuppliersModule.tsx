@@ -1002,6 +1002,7 @@ export function SuppliersModule() {
                                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Moneda</th>
                                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">IVA</th>
                                 <th className="px-3 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Total</th>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Estado</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -1010,6 +1011,8 @@ export function SuppliersModule() {
                                 const ivaPct = (purchase as any).iva_pct || 0;
                                 const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
                                 const totalConIva = purchase.total + ivaMonto;
+                                const estado = (purchase as any).estado || 'pendiente';
+                                const pagado = (purchase as any).pagado || false;
                                 return (
                                   <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -1053,6 +1056,24 @@ export function SuppliersModule() {
                                     <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900 dark:text-white">
                                       ${totalConIva.toFixed(2)} ARS
                                     </td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm">
+                                      <div className="flex flex-col gap-1">
+                                        {estado === 'recibido' && (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 inline-block w-fit">
+                                            Recibido
+                                          </span>
+                                        )}
+                                        {pagado ? (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 inline-block w-fit">
+                                            Pagado
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 inline-block w-fit">
+                                            Impago
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
                                   </tr>
                                 );
                               })}
@@ -1087,6 +1108,7 @@ export function SuppliersModule() {
                                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Moneda</th>
                                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">IVA</th>
                                 <th className="px-3 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Total</th>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Estado</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -1095,6 +1117,8 @@ export function SuppliersModule() {
                                 const ivaPct = (purchase as any).iva_pct || 0;
                                 const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
                                 const totalConIva = purchase.total + ivaMonto;
+                                const estado = (purchase as any).estado || 'pendiente';
+                                const pagado = (purchase as any).pagado || false;
                                 return (
                                   <tr key={purchase.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -1137,6 +1161,24 @@ export function SuppliersModule() {
                                     </td>
                                     <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900 dark:text-white">
                                       ${totalConIva.toFixed(2)} ARS
+                                    </td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm">
+                                      <div className="flex flex-col gap-1">
+                                        {estado === 'recibido' && (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 inline-block w-fit">
+                                            Recibido
+                                          </span>
+                                        )}
+                                        {pagado ? (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 inline-block w-fit">
+                                            Pagado
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 inline-block w-fit">
+                                            Impago
+                                          </span>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
                                 );

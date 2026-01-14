@@ -1038,6 +1038,7 @@ export function ClientsModule() {
                                 <th className="px-3 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Ingreso Neto</th>
                                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">IVA</th>
                                 <th className="px-3 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">TOTAL</th>
+                                <th className="px-3 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase whitespace-nowrap">Estado</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -1046,6 +1047,8 @@ export function ClientsModule() {
                                 const ivaPct = (sale as any).iva_pct || 0;
                                 const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
                                 const totalConIva = sale.ingreso_neto + ivaMonto;
+                                const estado = (sale as any).estado || 'pendiente';
+                                const pagado = (sale as any).pagado || false;
                                 return (
                                   <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -1071,6 +1074,24 @@ export function ClientsModule() {
                                     </td>
                                     <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900 dark:text-white">
                                       ${totalConIva.toFixed(2)} ARS
+                                    </td>
+                                    <td className="px-3 py-3 whitespace-nowrap text-sm">
+                                      <div className="flex flex-col gap-1">
+                                        {estado === 'recibido' && (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 inline-block w-fit">
+                                            Entregado
+                                          </span>
+                                        )}
+                                        {pagado ? (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 inline-block w-fit">
+                                            Cobrado
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 inline-block w-fit">
+                                            Impago
+                                          </span>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
                                 );
