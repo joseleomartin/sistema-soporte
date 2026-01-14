@@ -326,7 +326,7 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
               `Client ID usado: ${clientId}\n\n` +
               `SOLUCIÓN:\n` +
               `1. Ve a: https://console.cloud.google.com/apis/credentials\n` +
-              `2. Proyecto: silken-tape-478614-b6\n` +
+              `2. Proyecto: EMAGROUP\n` +
               `3. Verifica que el Client ID '${clientId}' exista\n` +
               `4. Si NO existe, créalo de tipo "Aplicación web"\n` +
               `5. Agrega esta URL en "URI de redirección autorizados": ${redirectUri}\n` +
@@ -547,7 +547,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
               `Client ID usado: ${clientId}\n\n` +
               `SOLUCIÓN:\n` +
               `1. Ve a: https://console.cloud.google.com/apis/credentials\n` +
-              `2. Proyecto: silken-tape-478614-b6\n` +
+              `2. Proyecto: EMAGROUP\n` +
               `3. Verifica que el Client ID '${clientId}' exista\n` +
               `4. Si NO existe, créalo de tipo "Aplicación web"\n` +
               `5. Actualiza el script 8-iniciar-todo-ngrok.bat con el nuevo Client ID y Secret\n\n` +

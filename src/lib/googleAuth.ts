@@ -71,7 +71,7 @@ if (typeof window !== 'undefined') {
     console.error('❌ VITE_GOOGLE_CLIENT_ID no está configurada en las variables de entorno.');
     console.log('📝 Instrucciones para solucionar:');
     console.log('1. Verifica que el archivo .env existe en: project/.env');
-    console.log('2. El archivo debe contener exactamente: VITE_GOOGLE_CLIENT_ID=398160017868-eern5joi9v6nchki4srfk88otdd9vfj1.apps.googleusercontent.com');
+    console.log('2. El archivo debe contener exactamente: VITE_GOOGLE_CLIENT_ID=355638125084-lecv3ob03pj367159gpd41r5qm773439.apps.googleusercontent.com');
     console.log('3. NO debe haber espacios alrededor del signo =');
     console.log('4. NO debe haber comillas alrededor del valor');
     console.log('5. REINICIA el servidor de desarrollo completamente:');
@@ -82,7 +82,7 @@ if (typeof window !== 'undefined') {
     console.log('');
     console.log('💡 Solución temporal (solo para pruebas):');
     console.log('   Ejecuta en la consola del navegador:');
-    console.log('   localStorage.setItem("GOOGLE_CLIENT_ID", "398160017868-eern5joi9v6nchki4srfk88otdd9vfj1.apps.googleusercontent.com");');
+    console.log('   localStorage.setItem("GOOGLE_CLIENT_ID", "355638125084-lecv3ob03pj367159gpd41r5qm773439.apps.googleusercontent.com");');
     console.log('   Luego recarga la página (F5)');
   } else {
     console.log('✅ Client ID configurado correctamente:', GOOGLE_CLIENT_ID.substring(0, 30) + '...');

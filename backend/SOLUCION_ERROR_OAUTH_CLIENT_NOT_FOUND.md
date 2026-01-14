@@ -45,11 +45,11 @@ Este error ocurre porque:
 ### PASO 2: Ir a Google Cloud Console
 
 1. Ve a: https://console.cloud.google.com/
-2. Selecciona el proyecto: **silken-tape-478614-b6**
+2. Selecciona el proyecto: **EMAGROUP**
 3. Ve a **"APIs y servicios"** → **"Credenciales"**
 4. Busca y haz clic en el Client ID:
    ```
-   398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com
+   355638125084-lecv3ob03pj367159gpd41r5qm773439.apps.googleusercontent.com
    ```
 
 ---

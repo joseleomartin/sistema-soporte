@@ -15,14 +15,14 @@ Este error significa que **Google no puede encontrar el Client ID** que estás i
 
 ### PASO 1: Verificar el Client ID que estás usando
 
-**En el script `8-iniciar-todo-ngrok.bat` (línea 59):**
+**En el script `8-iniciar-todo-ngrok.bat` (línea 60):**
 ```
-set GOOGLE_CLIENT_ID=398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com
+set GOOGLE_CLIENT_ID=355638125084-lecv3ob03pj367159gpd41r5qm773439.apps.googleusercontent.com
 ```
 
 **Anota este Client ID completo:**
 ```
-398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleusercontent.com
+355638125084-lecv3ob03pj367159gpd41r5qm773439.apps.googleusercontent.com
 ```
 
 ---
@@ -47,10 +47,10 @@ set GOOGLE_CLIENT_ID=398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve.apps.googleus
 ### PASO 3: Ir a Google Cloud Console
 
 1. Ve a: **https://console.cloud.google.com/**
-2. **Selecciona el proyecto:** `silken-tape-478614-b6`
+2. **Selecciona el proyecto:** `EMAGROUP`
    - Si no ves este proyecto, verifica que estés usando la cuenta correcta de Google
 3. Ve a **"APIs y servicios"** → **"Credenciales"**
-4. **Busca el Client ID:** `398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve`
+4. **Busca el Client ID:** `355638125084-lecv3ob03pj367159gpd41r5qm773439`
 
 ---
 

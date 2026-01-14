@@ -13,7 +13,7 @@ El error "OAuth client was not found" (401: invalid_client) puede ocurrir si:
 ### PASO 1: Ir a Google Cloud Console
 
 1. Ve a: https://console.cloud.google.com/apis/credentials
-2. Proyecto: **silken-tape-478614-b6**
+2. Proyecto: **EMAGROUP**
 3. Busca el Client ID configurado en tu script
 4. **Haz clic en el Client ID** para ver sus detalles
 

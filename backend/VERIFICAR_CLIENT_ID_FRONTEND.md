@@ -41,7 +41,7 @@ O:
 ### PASO 3: Verificar en Google Cloud Console
 
 1. Ve a: https://console.cloud.google.com/apis/credentials
-2. Proyecto: **silken-tape-478614-b6**
+2. Proyecto: **EMAGROUP**
 3. Busca el Client ID que copiaste en el PASO 2
 
 **Si NO encuentras el Client ID:**

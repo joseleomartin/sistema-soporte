@@ -5,8 +5,8 @@
 ### PASO 1: Ir a Google Cloud Console
 
 1. Ve a: https://console.cloud.google.com/apis/credentials
-2. Selecciona el proyecto: **silken-tape-478614-b6**
-3. Busca y haz clic en el Client ID: `398160017868-h2ue67f8o1g6hahkofcqf43i2ra9abve`
+2. Selecciona el proyecto: **EMAGROUP**
+3. Busca y haz clic en el Client ID: `355638125084-lecv3ob03pj367159gpd41r5qm773439`
 
 ### PASO 2: Crear Nuevo Client Secret
 

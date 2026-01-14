@@ -13,7 +13,7 @@ El error "The OAuth client was not found" (Error 401: invalid_client) indica que
 ### PASO 1: Ir a Google Cloud Console
 
 1. Ve a: https://console.cloud.google.com/apis/credentials
-2. **Selecciona el proyecto:** `silken-tape-478614-b6`
+2. **Selecciona el proyecto:** `EMAGROUP`
    - Si no ves este proyecto, haz clic en el selector de proyectos (arriba a la izquierda) y selecciónalo
 
 ### PASO 2: Buscar el Client ID
@@ -113,7 +113,7 @@ Si el Client ID existe pero el error persiste:
 ## 🎯 Resumen de Verificación
 
 **Checklist:**
-- [ ] El proyecto `silken-tape-478614-b6` está seleccionado en Google Cloud Console
+- [ ] El proyecto `EMAGROUP` está seleccionado en Google Cloud Console
 - [ ] El Client ID `TU_CLIENT_ID_AQUI` existe
 - [ ] El Client ID es de tipo "Aplicación web"
 - [ ] El Client ID está habilitado (no deshabilitado)

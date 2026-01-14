@@ -101,7 +101,7 @@ El error "401: invalid_client" puede deberse a varias razones:
 ### Paso 4: Verificar en Google Cloud Console
 
 1. Ve a: https://console.cloud.google.com/apis/credentials
-2. Proyecto: **silken-tape-478614-b6**
+2. Proyecto: **EMAGROUP**
 3. Busca el Client ID configurado en tu script
 4. Verifica:
    - ✅ Tipo: "Aplicación web"
