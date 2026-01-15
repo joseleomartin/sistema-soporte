@@ -1636,56 +1636,6 @@ export function CostsModule() {
             )}
           </div>
 
-          {/* Cost Summary */}
-          {costs && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-6 text-gray-900 dark:text-white">Resumen General de Costos</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-6">
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Materia Prima</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${formatNumber(costs.totalMP)}</p>
-                </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Mano de Obra</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">${formatNumber(costs.totalMO)}</p>
-                </div>
-                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Otros Costos</p>
-                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">${formatNumber(costs.totalOtrosCostos || 0)}</p>
-                </div>
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total IIBB</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">${formatNumber(costs.totalIIBB)}</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Costo Total Producción</p>
-                  <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">${formatNumber(costs.totalProduction)}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Ingreso Bruto</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">${formatNumber(costs.totalIngresoBruto)}</p>
-                </div>
-                <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Ingreso Neto</p>
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-400">${formatNumber(costs.totalIngresoNeto)}</p>
-                </div>
-                <div className={`p-4 rounded-lg ${costs.totalProfit >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Rentabilidad Neta</p>
-                  <p className={`text-2xl font-bold ${costs.totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    ${formatNumber(costs.totalProfit)}
-                  </p>
-                </div>
-                <div className={`p-4 rounded-lg ${costs.margin >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Margen de Ganancia</p>
-                  <p className={`text-2xl font-bold ${costs.margin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {formatNumber(costs.margin)}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       )}
 
