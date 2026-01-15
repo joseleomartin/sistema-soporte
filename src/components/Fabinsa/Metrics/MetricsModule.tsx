@@ -10,6 +10,14 @@ import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { writeFile, utils } from 'xlsx';
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
 type ProductionMetric = Database['public']['Tables']['production_metrics']['Row'];
 type Sale = Database['public']['Tables']['sales']['Row'];
 type InventoryMovement = Database['public']['Tables']['inventory_movements']['Row'];
@@ -155,15 +163,22 @@ export function MetricsModule() {
   const avgProfitPerUnit = totalUnitsSold > 0 ? totalProfit / totalUnitsSold : 0;
   const avgRevenuePerSale = sales.length > 0 ? totalRevenue / sales.length : 0;
   
+  // Calcular costo total de productos vendidos (usando costo_unitario de las ventas)
+  // Esto funciona tanto para productos fabricados como de reventa
+  const totalCostSold = sales.reduce((sum, s) => sum + (s.costo_unitario * s.cantidad), 0);
+  
   // Calcular rentabilidad media basada en todas las ventas
   // Rentabilidad media = promedio de ganancia_total de todas las ventas
   const avgRentabilidad = sales.length > 0
     ? sales.reduce((sum, s) => sum + s.ganancia_total, 0) / sales.length
     : 0;
   
-  // Calcular rentabilidad media en porcentaje sobre el costo total de producción
-  // Rentabilidad % = (Ganancia Total / Costo Total de Producción) * 100
-  const avgRentabilidadPercent = totalCostProduction > 0
+  // Calcular rentabilidad media en porcentaje sobre el costo total de productos vendidos
+  // Rentabilidad % = (Ganancia Total / Costo Total de Productos Vendidos) * 100
+  // Si no hay costo de productos vendidos, usar el costo de producción como fallback
+  const avgRentabilidadPercent = totalCostSold > 0
+    ? (totalProfit / totalCostSold) * 100
+    : totalCostProduction > 0
     ? (totalProfit / totalCostProduction) * 100
     : 0;
 
@@ -219,19 +234,19 @@ export function MetricsModule() {
     // Hoja 1: Resumen de Métricas
     const summaryData = [
       ['Métrica', 'Valor'],
-      ['Kg Consumidos', totalKgConsumed.toFixed(2)],
-      ['Costo Total MP', `$${totalCostMP.toFixed(2)}`],
-      ['Costo Total MO', `$${totalCostMO.toFixed(2)}`],
-      ['Costo Total Producción', `$${totalCostProduction.toFixed(2)}`],
+      ['Kg Consumidos', formatNumber(totalKgConsumed)],
+      ['Costo Total MP', `$${formatNumber(totalCostMP)}`],
+      ['Costo Total MO', `$${formatNumber(totalCostMO)}`],
+      ['Costo Total Producción', `$${formatNumber(totalCostProduction)}`],
       ['Unidades Producidas', totalUnitsProduced],
       ['Unidades Vendidas', totalUnitsSold],
-      ['Ingresos Netos', `$${totalRevenue.toFixed(2)}`],
-      ['Ganancia Total', `$${totalProfit.toFixed(2)}`],
-      ['Margen de Ganancia', `${profitMargin.toFixed(2)}%`],
-      ['Ganancia Promedio/Unidad', `$${avgProfitPerUnit.toFixed(2)}`],
-      ['Ingreso Promedio/Venta', `$${avgRevenuePerSale.toFixed(2)}`],
-      ['Rentabilidad Media', `$${avgRentabilidad.toFixed(2)}`],
-      ['Rentabilidad Media %', `${avgRentabilidadPercent.toFixed(2)}%`],
+      ['Ingresos Netos', `$${formatNumber(totalRevenue)}`],
+      ['Ganancia Total', `$${formatNumber(totalProfit)}`],
+      ['Margen de Ganancia', `${formatNumber(profitMargin)}%`],
+      ['Ganancia Promedio/Unidad', `$${formatNumber(avgProfitPerUnit)}`],
+      ['Ingreso Promedio/Venta', `$${formatNumber(avgRevenuePerSale)}`],
+      ['Rentabilidad Media', `$${formatNumber(avgRentabilidad)}`],
+      ['Rentabilidad Media %', `${formatNumber(avgRentabilidadPercent)}%`],
       ['Total Ventas', sales.length],
       ['Período', `${dateRange.start} a ${dateRange.end}`],
     ];
@@ -248,9 +263,9 @@ export function MetricsModule() {
         sale.producto,
         sale.cantidad,
         sale.cliente || 'N/A',
-        sale.ingreso_neto.toFixed(2),
-        sale.ganancia_total.toFixed(2),
-        (sale.ingreso_neto / sale.cantidad).toFixed(2),
+        formatNumber(sale.ingreso_neto),
+        formatNumber(sale.ganancia_total),
+        formatNumber(sale.ingreso_neto / sale.cantidad),
         sale.tiene_iva ? `${sale.iva_pct}%` : 'Sin IVA',
         sale.descuento_pct ? `${sale.descuento_pct}%` : '0%',
         sale.iib_pct ? `${sale.iib_pct}%` : '0%',
@@ -266,7 +281,7 @@ export function MetricsModule() {
     Object.entries(salesByProduct)
       .sort(([, a], [, b]) => b - a)
       .forEach(([producto, ingreso]) => {
-        revenueByProductData.push([producto, ingreso.toFixed(2)]);
+        revenueByProductData.push([producto, formatNumber(ingreso)]);
       });
     const ws3 = utils.aoa_to_sheet(revenueByProductData);
     utils.book_append_sheet(wb, ws3, 'Ingresos por Producto');
@@ -278,7 +293,7 @@ export function MetricsModule() {
     Object.entries(profitByProduct)
       .sort(([, a], [, b]) => b - a)
       .forEach(([producto, ganancia]) => {
-        profitByProductData.push([producto, ganancia.toFixed(2)]);
+        profitByProductData.push([producto, formatNumber(ganancia)]);
       });
     const ws4 = utils.aoa_to_sheet(profitByProductData);
     utils.book_append_sheet(wb, ws4, 'Ganancia por Producto');
@@ -292,9 +307,9 @@ export function MetricsModule() {
         new Date(metric.fecha).toLocaleDateString('es-AR'),
         metric.producto,
         metric.cantidad,
-        metric.kg_consumidos.toFixed(2),
-        metric.costo_mp.toFixed(2),
-        metric.costo_mo.toFixed(2),
+        formatNumber(metric.kg_consumidos),
+        formatNumber(metric.costo_mp),
+        formatNumber(metric.costo_mo),
       ]);
     });
     const ws5 = utils.aoa_to_sheet(productionData);
@@ -307,7 +322,7 @@ export function MetricsModule() {
     Object.entries(revenueByDate)
       .sort(([a], [b]) => new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime())
       .forEach(([fecha, ingreso]) => {
-        revenueByDateData.push([fecha, ingreso.toFixed(2)]);
+        revenueByDateData.push([fecha, formatNumber(ingreso)]);
       });
     const ws6 = utils.aoa_to_sheet(revenueByDateData);
     utils.book_append_sheet(wb, ws6, 'Ingresos por Fecha');
@@ -319,7 +334,7 @@ export function MetricsModule() {
     Object.entries(profitByDate)
       .sort(([a], [b]) => new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime())
       .forEach(([fecha, ganancia]) => {
-        profitByDateData.push([fecha, ganancia.toFixed(2)]);
+        profitByDateData.push([fecha, formatNumber(ganancia)]);
       });
     const ws7 = utils.aoa_to_sheet(profitByDateData);
     utils.book_append_sheet(wb, ws7, 'Ganancia por Fecha');
@@ -341,7 +356,7 @@ export function MetricsModule() {
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-gray-600 dark:text-gray-300 truncate">{key}</div>
                 <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                  {typeof value === 'number' && value.toFixed ? value.toFixed(2) : value}
+                  {typeof value === 'number' ? formatNumber(value) : value}
                 </div>
               </div>
               <div className="flex-1 h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -472,7 +487,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Kg Consumidos</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalKgConsumed.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(totalKgConsumed)}</p>
             </div>
             <Package className="w-8 h-8 text-blue-600" />
           </div>
@@ -487,7 +502,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Costo Total MP</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalCostMP.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">${formatNumber(totalCostMP)}</p>
             </div>
             <Package className="w-8 h-8 text-orange-600" />
           </div>
@@ -502,7 +517,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Costo Total MO</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalCostMO.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">${formatNumber(totalCostMO)}</p>
             </div>
             <Users className="w-8 h-8 text-purple-600" />
           </div>
@@ -517,7 +532,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Costo Total Producción</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">${totalCostProduction.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">${formatNumber(totalCostProduction)}</p>
             </div>
             <Factory className="w-8 h-8 text-indigo-600" />
           </div>
@@ -562,7 +577,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Ingresos Netos</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">${totalRevenue.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">${formatNumber(totalRevenue)}</p>
             </div>
             <DollarSign className="w-8 h-8 text-green-600" />
           </div>
@@ -577,7 +592,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Ganancia Total</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">${totalProfit.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">${formatNumber(totalProfit)}</p>
             </div>
             <TrendingUp className="w-8 h-8 text-green-600" />
           </div>
@@ -592,7 +607,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Margen de Ganancia</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{profitMargin.toFixed(2)}%</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatNumber(profitMargin)}%</p>
             </div>
             <Percent className="w-8 h-8 text-green-600" />
           </div>
@@ -607,7 +622,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Ganancia Promedio/Unidad</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">${avgProfitPerUnit.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">${formatNumber(avgProfitPerUnit)}</p>
             </div>
             <TrendingUp className="w-8 h-8 text-green-600" />
           </div>
@@ -622,7 +637,7 @@ export function MetricsModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Ingreso Promedio/Venta</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">${avgRevenuePerSale.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">${formatNumber(avgRevenuePerSale)}</p>
             </div>
             <DollarSign className="w-8 h-8 text-green-600" />
           </div>
@@ -638,10 +653,10 @@ export function MetricsModule() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Rentabilidad Media</p>
               <p className={`text-2xl font-bold ${avgRentabilidad >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                ${avgRentabilidad.toFixed(2)}
+                ${formatNumber(avgRentabilidad)}
               </p>
               <p className={`text-sm font-medium ${avgRentabilidadPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {avgRentabilidadPercent.toFixed(2)}%
+                {formatNumber(avgRentabilidadPercent)}%
               </p>
             </div>
             <TrendingUp className={`w-8 h-8 ${avgRentabilidad >= 0 ? 'text-green-600' : 'text-red-600'}`} />
@@ -705,22 +720,22 @@ export function MetricsModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Kg Consumidos</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{metric.kg_consumidos.toFixed(2)} kg</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{formatNumber(metric.kg_consumidos)} kg</p>
                         </div>
                       </div>
                       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo MP</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">${metric.costo_mp.toFixed(2)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">${formatNumber(metric.costo_mp)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo MO</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">${metric.costo_mo.toFixed(2)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">${formatNumber(metric.costo_mo)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo Total</p>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                            ${(metric.costo_mp + metric.costo_mo).toFixed(2)}
+                            ${formatNumber(metric.costo_mp + metric.costo_mo)}
                           </p>
                         </div>
                       </div>
@@ -778,16 +793,16 @@ export function MetricsModule() {
                       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600 grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingreso Neto</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${sale.ingreso_neto.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${sale.ganancia_total.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ganancia_total)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Precio Unitario</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            ${(sale.ingreso_neto / sale.cantidad).toFixed(2)}
+                            ${formatNumber(sale.ingreso_neto / sale.cantidad)}
                           </p>
                         </div>
                       </div>
@@ -806,7 +821,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Detalle de Ventas</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: {sales.length} ventas | Ingresos: ${totalRevenue.toFixed(2)} | Ganancia: ${totalProfit.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: {sales.length} ventas | Ingresos: ${formatNumber(totalRevenue)} | Ganancia: ${formatNumber(totalProfit)}</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -834,7 +849,7 @@ export function MetricsModule() {
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-gray-600 dark:text-gray-400">Total</p>
-                          <p className="text-lg font-bold text-green-600 dark:text-green-400">${sale.ingreso_neto.toFixed(2)}</p>
+                          <p className="text-lg font-bold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto)}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -855,16 +870,16 @@ export function MetricsModule() {
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Precio Unitario</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            ${(sale.ingreso_neto / sale.cantidad).toFixed(2)}
+                            ${formatNumber(sale.ingreso_neto / sale.cantidad)}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingreso Neto</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${sale.ingreso_neto.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${sale.ganancia_total.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ganancia_total)}</p>
                         </div>
                       </div>
                     </div>
@@ -883,7 +898,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Kg Consumidos - Detalle</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: {totalKgConsumed.toFixed(2)} kg</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: {formatNumber(totalKgConsumed)} kg</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -905,9 +920,9 @@ export function MetricsModule() {
                         .map(([producto, kg]) => (
                           <div key={producto} className="bg-white dark:bg-slate-600 rounded p-3">
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{producto}</p>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{kg.toFixed(2)} kg</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatNumber(kg)} kg</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {((kg / totalKgConsumed) * 100).toFixed(1)}% del total
+                              {formatNumber((kg / totalKgConsumed) * 100)}% del total
                             </p>
                           </div>
                         ))}
@@ -930,7 +945,7 @@ export function MetricsModule() {
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Kg Consumidos</p>
-                            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{metric.kg_consumidos.toFixed(2)} kg</p>
+                            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{formatNumber(metric.kg_consumidos)} kg</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Unidades Producidas</p>
@@ -954,7 +969,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Costo Total Materia Prima - Detalle</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${totalCostMP.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${formatNumber(totalCostMP)}</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -983,12 +998,12 @@ export function MetricsModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo MP</p>
-                          <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">${metric.costo_mp.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">${formatNumber(metric.costo_mp)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% del Total</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {totalCostMP > 0 ? ((metric.costo_mp / totalCostMP) * 100).toFixed(1) : '0.0'}%
+                            {totalCostMP > 0 ? formatNumber((metric.costo_mp / totalCostMP) * 100) : '0,00'}%
                           </p>
                         </div>
                       </div>
@@ -1008,7 +1023,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Costo Total Mano de Obra - Detalle</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${totalCostMO.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${formatNumber(totalCostMO)}</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -1037,12 +1052,12 @@ export function MetricsModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo MO</p>
-                          <p className="text-sm font-semibold text-purple-600 dark:text-purple-400">${metric.costo_mo.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-purple-600 dark:text-purple-400">${formatNumber(metric.costo_mo)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% del Total</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {totalCostMO > 0 ? ((metric.costo_mo / totalCostMO) * 100).toFixed(1) : '0.0'}%
+                            {totalCostMO > 0 ? formatNumber((metric.costo_mo / totalCostMO) * 100) : '0,00'}%
                           </p>
                         </div>
                       </div>
@@ -1062,7 +1077,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Costo Total Producción - Detalle</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${totalCostProduction.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${formatNumber(totalCostProduction)}</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -1077,15 +1092,15 @@ export function MetricsModule() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Materia Prima</span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">${totalCostMP.toFixed(2)}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">${formatNumber(totalCostMP)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Mano de Obra</span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">${totalCostMO.toFixed(2)}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">${formatNumber(totalCostMO)}</span>
                   </div>
                   <div className="pt-3 border-t border-gray-300 dark:border-gray-600 flex justify-between items-center">
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">Total</span>
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">${totalCostProduction.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">${formatNumber(totalCostProduction)}</span>
                   </div>
                 </div>
               </div>
@@ -1111,15 +1126,15 @@ export function MetricsModule() {
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo MP</p>
-                            <p className="text-sm font-medium text-orange-600 dark:text-orange-400">${metric.costo_mp.toFixed(2)}</p>
+                            <p className="text-sm font-medium text-orange-600 dark:text-orange-400">${formatNumber(metric.costo_mp)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo MO</p>
-                            <p className="text-sm font-medium text-purple-600 dark:text-purple-400">${metric.costo_mo.toFixed(2)}</p>
+                            <p className="text-sm font-medium text-purple-600 dark:text-purple-400">${formatNumber(metric.costo_mo)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo Total</p>
-                            <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">${costoTotal.toFixed(2)}</p>
+                            <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">${formatNumber(costoTotal)}</p>
                           </div>
                         </div>
                       </div>
@@ -1139,7 +1154,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Ingresos Netos - Detalle</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${totalRevenue.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${formatNumber(totalRevenue)}</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -1168,12 +1183,12 @@ export function MetricsModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingreso Neto</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${sale.ingreso_neto.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% del Total</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {totalRevenue > 0 ? ((sale.ingreso_neto / totalRevenue) * 100).toFixed(1) : '0.0'}%
+                            {totalRevenue > 0 ? formatNumber((sale.ingreso_neto / totalRevenue) * 100) : '0,00'}%
                           </p>
                         </div>
                       </div>
@@ -1193,7 +1208,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Ganancia Total - Detalle</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${totalProfit.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: ${formatNumber(totalProfit)}</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -1222,12 +1237,12 @@ export function MetricsModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${sale.ganancia_total.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ganancia_total)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% del Total</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {totalProfit > 0 ? ((sale.ganancia_total / totalProfit) * 100).toFixed(1) : '0.0'}%
+                            {totalProfit > 0 ? formatNumber((sale.ganancia_total / totalProfit) * 100) : '0,00'}%
                           </p>
                         </div>
                       </div>
@@ -1247,7 +1262,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Margen de Ganancia - Análisis</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Margen: {profitMargin.toFixed(2)}%</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Margen: {formatNumber(profitMargin)}%</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -1262,19 +1277,19 @@ export function MetricsModule() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingresos Totales</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">${totalRevenue.toFixed(2)}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">${formatNumber(totalRevenue)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia Total</p>
-                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">${totalProfit.toFixed(2)}</p>
+                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(totalProfit)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costos Totales</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">${totalCostProduction.toFixed(2)}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">${formatNumber(totalCostProduction)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Margen de Ganancia</p>
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400">{profitMargin.toFixed(2)}%</p>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400">{formatNumber(profitMargin)}%</p>
                   </div>
                 </div>
               </div>
@@ -1300,11 +1315,11 @@ export function MetricsModule() {
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Margen</p>
-                            <p className="text-sm font-semibold text-green-600 dark:text-green-400">{margenVenta.toFixed(2)}%</p>
+                            <p className="text-sm font-semibold text-green-600 dark:text-green-400">{formatNumber(margenVenta)}%</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia</p>
-                            <p className="text-sm font-medium text-green-600 dark:text-green-400">${sale.ganancia_total.toFixed(2)}</p>
+                            <p className="text-sm font-medium text-green-600 dark:text-green-400">${formatNumber(sale.ganancia_total)}</p>
                           </div>
                         </div>
                       </div>
@@ -1324,7 +1339,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Ganancia Promedio por Unidad - Análisis</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Promedio: ${avgProfitPerUnit.toFixed(2)} por unidad</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Promedio: ${formatNumber(avgProfitPerUnit)} por unidad</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -1339,7 +1354,7 @@ export function MetricsModule() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia Total</p>
-                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">${totalProfit.toFixed(2)}</p>
+                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(totalProfit)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Unidades Vendidas</p>
@@ -1347,7 +1362,7 @@ export function MetricsModule() {
                   </div>
                   <div className="col-span-2">
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia Promedio/Unidad</p>
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400">${avgProfitPerUnit.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400">${formatNumber(avgProfitPerUnit)}</p>
                   </div>
                 </div>
               </div>
@@ -1373,7 +1388,7 @@ export function MetricsModule() {
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia/Unidad</p>
-                            <p className="text-sm font-semibold text-green-600 dark:text-green-400">${gananciaPorUnidad.toFixed(2)}</p>
+                            <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(gananciaPorUnidad)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Cantidad</p>
@@ -1398,7 +1413,7 @@ export function MetricsModule() {
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Rentabilidad Media - Análisis</h3>
                 <p className={`text-sm mt-1 ${avgRentabilidad >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  Promedio: ${avgRentabilidad.toFixed(2)} ({avgRentabilidadPercent.toFixed(2)}%)
+                  Promedio: ${formatNumber(avgRentabilidad)} ({formatNumber(avgRentabilidadPercent)}%)
                 </p>
               </div>
               <button
@@ -1415,17 +1430,17 @@ export function MetricsModule() {
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Rentabilidad Media (por venta)</p>
                     <p className={`text-lg font-bold ${avgRentabilidad >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      ${avgRentabilidad.toFixed(2)}
+                      ${formatNumber(avgRentabilidad)}
                     </p>
                     <p className={`text-sm font-medium ${avgRentabilidadPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {avgRentabilidadPercent.toFixed(2)}%
+                      {formatNumber(avgRentabilidadPercent)}%
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Ventas</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{sales.length}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Ganancia Total: ${totalProfit.toFixed(2)}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Costo Producción: ${totalCostProduction.toFixed(2)}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Ganancia Total: ${formatNumber(totalProfit)}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Costo Producción: ${formatNumber(totalCostProduction)}</p>
                   </div>
                 </div>
               </div>
@@ -1498,14 +1513,14 @@ export function MetricsModule() {
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-gray-600 dark:text-gray-400">Rentabilidad Total</span>
                                     <span className={`text-sm font-bold ${item.gananciaTotal >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                      ${item.gananciaTotal.toFixed(2)}
+                                      ${formatNumber(item.gananciaTotal)}
                                     </span>
                                   </div>
                                   {item.costoTotal > 0 && (
                                     <div className="flex justify-between items-center">
                                       <span className="text-xs text-gray-600 dark:text-gray-400">Rentabilidad %</span>
                                       <span className={`text-sm font-semibold ${item.rentabilidadPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                        {item.rentabilidadPercent.toFixed(2)}%
+                                        {formatNumber(item.rentabilidadPercent)}%
                                       </span>
                                     </div>
                                   )}
@@ -1520,7 +1535,7 @@ export function MetricsModule() {
                                   <div className="flex justify-between items-center">
                                     <span className="text-xs text-gray-600 dark:text-gray-400">Rentabilidad Promedio</span>
                                     <span className={`text-sm font-medium ${item.gananciaPromedio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                      ${item.gananciaPromedio.toFixed(2)}
+                                      ${formatNumber(item.gananciaPromedio)}
                                     </span>
                                   </div>
                                 </div>
@@ -1569,17 +1584,17 @@ export function MetricsModule() {
                               <div>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Costo Estimado</p>
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                  ${costoVenta > 0 ? costoVenta.toFixed(2) : 'N/A'}
+                                  ${costoVenta > 0 ? formatNumber(costoVenta) : 'N/A'}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Rentabilidad</p>
                                 <p className={`text-sm font-semibold ${rentabilidadVenta >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                  ${rentabilidadVenta.toFixed(2)}
+                                  ${formatNumber(rentabilidadVenta)}
                                 </p>
                                 {costoVenta > 0 && (
                                   <p className={`text-xs font-medium ${rentabilidadPercentVenta >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                    {rentabilidadPercentVenta.toFixed(2)}%
+                                    {formatNumber(rentabilidadPercentVenta)}%
                                   </p>
                                 )}
                               </div>
@@ -1588,14 +1603,14 @@ export function MetricsModule() {
                               <div>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Diferencia vs Media ($)</p>
                                 <p className={`text-sm font-medium ${(rentabilidadVenta - avgRentabilidad) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                  ${(rentabilidadVenta - avgRentabilidad).toFixed(2)}
+                                  ${formatNumber(rentabilidadVenta - avgRentabilidad)}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Diferencia vs Media (%)</p>
                                 {costoVenta > 0 && (
                                   <p className={`text-sm font-medium ${(rentabilidadPercentVenta - avgRentabilidadPercent) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                    {(rentabilidadPercentVenta - avgRentabilidadPercent).toFixed(2)}%
+                                    {formatNumber(rentabilidadPercentVenta - avgRentabilidadPercent)}%
                                   </p>
                                 )}
                               </div>
@@ -1619,7 +1634,7 @@ export function MetricsModule() {
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Ingreso Promedio por Venta - Análisis</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Promedio: ${avgRevenuePerSale.toFixed(2)} por venta</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Promedio: ${formatNumber(avgRevenuePerSale)} por venta</p>
               </div>
               <button
                 onClick={() => setShowModal(null)}
@@ -1634,7 +1649,7 @@ export function MetricsModule() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingresos Totales</p>
-                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">${totalRevenue.toFixed(2)}</p>
+                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(totalRevenue)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Ventas</p>
@@ -1642,7 +1657,7 @@ export function MetricsModule() {
                   </div>
                   <div className="col-span-2">
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingreso Promedio/Venta</p>
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400">${avgRevenuePerSale.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400">${formatNumber(avgRevenuePerSale)}</p>
                   </div>
                 </div>
               </div>
@@ -1666,12 +1681,12 @@ export function MetricsModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingreso</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${sale.ingreso_neto.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Diferencia vs Promedio</p>
                           <p className={`text-sm font-medium ${sale.ingreso_neto >= avgRevenuePerSale ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            ${(sale.ingreso_neto - avgRevenuePerSale).toFixed(2)}
+                            ${formatNumber(sale.ingreso_neto - avgRevenuePerSale)}
                           </p>
                         </div>
                       </div>

@@ -14,6 +14,14 @@ import { useMobile } from '../../../hooks/useMobile';
 import { generateOrderPDF, OrderData } from '../../../lib/pdfGenerator';
 import { AlertModal } from '../../Common/AlertModal';
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
 type Sale = Database['public']['Tables']['sales']['Row'];
 type SaleInsert = Database['public']['Tables']['sales']['Insert'];
 type StockProduct = Database['public']['Tables']['stock_products']['Row'];
@@ -873,7 +881,7 @@ export function SalesModule() {
                           const prod = resaleProducts.find(p => p.nombre === formData.producto);
                           unitCost = prod?.costo_unitario_final || 0;
                         }
-                        return unitCost.toFixed(2);
+                        return formatNumber(unitCost);
                       })()}
                     </span>
                   </div>
@@ -948,36 +956,36 @@ export function SalesModule() {
                             const prod = resaleProducts.find(p => p.nombre === formData.producto);
                             unitCost = prod?.costo_unitario_final || 0;
                           }
-                          return unitCost.toFixed(2);
+                          return formatNumber(unitCost);
                         })()}
                       </span>
                     </div>
                     <div>
                       <span className="text-gray-600 dark:text-gray-300">Precio Final:</span>
-                      <span className="ml-2 font-semibold text-gray-900 dark:text-white">${calculatedValues.precio_final.toFixed(2)}</span>
+                      <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(calculatedValues.precio_final)}</span>
                     </div>
                     <div>
                       <span className="text-gray-600 dark:text-gray-300">Ingreso Bruto:</span>
-                      <span className="ml-2 font-semibold text-gray-900 dark:text-white">${calculatedValues.ingreso_bruto.toFixed(2)}</span>
+                      <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(calculatedValues.ingreso_bruto)}</span>
                     </div>
                     <div>
                       <span className="text-gray-600 dark:text-gray-300">Ingreso Neto:</span>
                       <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
-                        ${calculatedValues.ingreso_neto.toFixed(2)}
+                        ${formatNumber(calculatedValues.ingreso_neto)}
                       </span>
                     </div>
                     {formData.tiene_iva && (
                       <div>
                         <span className="text-gray-600 dark:text-gray-300">IVA ({formData.iva_pct}%):</span>
                         <span className="ml-2 font-semibold text-blue-600 dark:text-blue-400">
-                          ${calculatedValues.iva_monto?.toFixed(2) || '0.00'}
+                          ${calculatedValues.iva_monto ? formatNumber(calculatedValues.iva_monto) : '0,00'}
                         </span>
                       </div>
                     )}
                     <div>
                       <span className="text-gray-600 dark:text-gray-300">Ganancia Total:</span>
                       <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
-                        ${calculatedValues.ganancia_total.toFixed(2)}
+                        ${formatNumber(calculatedValues.ganancia_total)}
                       </span>
                     </div>
                   </div>
@@ -1026,16 +1034,16 @@ export function SalesModule() {
                             </div>
                             <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 space-y-1">
                               <div>
-                                Cantidad: {item.cantidad} | Precio Unitario: ${item.precio_unitario.toFixed(2)}
+                                Cantidad: {item.cantidad} | Precio Unitario: ${formatNumber(item.precio_unitario)}
                               </div>
                               <div className="flex items-center space-x-2">
-                                <span>Ingreso Neto: <span className="font-semibold text-gray-900 dark:text-white">${item.ingreso_neto.toFixed(2)}</span></span>
+                                <span>Ingreso Neto: <span className="font-semibold text-gray-900 dark:text-white">${formatNumber(item.ingreso_neto)}</span></span>
                                 {item.tiene_iva && (
                                   <>
                                     <span className="text-blue-600 dark:text-blue-400">+</span>
-                                    <span>IVA ({item.iva_pct}%): <span className="font-semibold text-blue-600 dark:text-blue-400">${ivaMonto.toFixed(2)}</span></span>
+                                    <span>IVA ({item.iva_pct}%): <span className="font-semibold text-blue-600 dark:text-blue-400">${formatNumber(ivaMonto)}</span></span>
                                     <span className="text-blue-600 dark:text-blue-400">=</span>
-                                    <span className="font-bold text-green-600 dark:text-green-400">Total: ${totalConIva.toFixed(2)}</span>
+                                    <span className="font-bold text-green-600 dark:text-green-400">Total: ${formatNumber(totalConIva)}</span>
                                   </>
                                 )}
                                 {!item.tiene_iva && (
@@ -1070,14 +1078,14 @@ export function SalesModule() {
                           <div className="flex justify-between items-center">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Ingreso Neto:</span>
                             <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                              ${totalIngresoNeto.toFixed(2)} ARS
+                              ${formatNumber(totalIngresoNeto)} ARS
                             </span>
                           </div>
                           {totalIva > 0 && (
                             <div className="flex justify-between items-center">
                               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Total IVA:</span>
                               <span className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                                ${totalIva.toFixed(2)} ARS
+                                ${formatNumber(totalIva)} ARS
                               </span>
                             </div>
                           )}
@@ -1085,14 +1093,14 @@ export function SalesModule() {
                             <div className="flex justify-between items-center pt-1 border-t border-gray-300 dark:border-gray-600">
                               <span className="text-sm font-bold text-gray-900 dark:text-white">TOTAL (Ingreso Neto + IVA):</span>
                               <span className="text-xl font-bold text-green-600 dark:text-green-400">
-                                ${totalConIva.toFixed(2)} ARS
+                                ${formatNumber(totalConIva)} ARS
                               </span>
                             </div>
                           )}
                           <div className="flex justify-between items-center pt-1 border-t border-gray-300 dark:border-gray-600">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Ganancia:</span>
                             <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                              ${totalGanancia.toFixed(2)} ARS
+                              ${formatNumber(totalGanancia)} ARS
                             </span>
                           </div>
                         </>
@@ -1214,16 +1222,16 @@ export function SalesModule() {
                         <div className="grid grid-cols-2 gap-2 mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded">
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">Ing. Neto</p>
-                            <p className="text-sm font-semibold text-green-600 dark:text-green-400">${order.total_ingreso_neto.toFixed(2)}</p>
+                            <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(order.total_ingreso_neto)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400">IVA</p>
-                            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">${(order.total_iva || 0).toFixed(2)}</p>
+                            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">${formatNumber(order.total_iva || 0)}</p>
                           </div>
                           <div className="col-span-2 border-t border-gray-300 dark:border-gray-600 pt-2 mt-2">
                             <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
                             <p className="text-base font-bold text-green-600 dark:text-green-400">
-                              ${((order.total_ingreso_neto || 0) + (order.total_iva || 0)).toFixed(2)}
+                              ${formatNumber((order.total_ingreso_neto || 0) + (order.total_iva || 0))}
                             </p>
                           </div>
                         </div>
@@ -1274,25 +1282,25 @@ export function SalesModule() {
                                     </div>
                                     <div>
                                       <p className="text-gray-500 dark:text-gray-400">P. Unit.</p>
-                                      <p className="font-medium text-gray-900 dark:text-white">${item.precio_unitario.toFixed(2)}</p>
+                                      <p className="font-medium text-gray-900 dark:text-white">${formatNumber(item.precio_unitario)}</p>
                                     </div>
                                     <div>
                                       <p className="text-gray-500 dark:text-gray-400">C. Unit.</p>
-                                      <p className="font-medium text-gray-900 dark:text-white">${item.costo_unitario.toFixed(2)}</p>
+                                      <p className="font-medium text-gray-900 dark:text-white">${formatNumber(item.costo_unitario)}</p>
                                     </div>
                                     <div>
                                       <p className="text-gray-500 dark:text-gray-400">Ing. Neto</p>
-                                      <p className="font-semibold text-green-600 dark:text-green-400">${item.ingreso_neto.toFixed(2)}</p>
+                                      <p className="font-semibold text-green-600 dark:text-green-400">${formatNumber(item.ingreso_neto)}</p>
                                     </div>
                                     {tieneIva && (
                                       <>
                                         <div>
                                           <p className="text-gray-500 dark:text-gray-400">IVA</p>
-                                          <p className="font-semibold text-blue-600 dark:text-blue-400">${ivaMonto.toFixed(2)}</p>
+                                          <p className="font-semibold text-blue-600 dark:text-blue-400">${formatNumber(ivaMonto)}</p>
                                         </div>
                                         <div>
                                           <p className="text-gray-500 dark:text-gray-400">Total</p>
-                                          <p className="font-bold text-green-600 dark:text-green-400">${(item.ingreso_neto + ivaMonto).toFixed(2)}</p>
+                                          <p className="font-bold text-green-600 dark:text-green-400">${formatNumber(item.ingreso_neto + ivaMonto)}</p>
                                         </div>
                                       </>
                                     )}
@@ -1427,11 +1435,11 @@ export function SalesModule() {
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">P. Unit.</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">${sale.precio_unitario.toFixed(2)}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">${formatNumber(sale.precio_unitario)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">C. Unit.</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">${sale.costo_unitario.toFixed(2)}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">${formatNumber(sale.costo_unitario)}</p>
                           </div>
                         </div>
 
@@ -1440,17 +1448,17 @@ export function SalesModule() {
                           <div className="space-y-1 text-xs">
                             <div className="flex justify-between">
                               <span className="text-gray-500 dark:text-gray-400">Ing. Neto</span>
-                              <span className="font-semibold text-green-600 dark:text-green-400">${sale.ingreso_neto.toFixed(2)}</span>
+                              <span className="font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto)}</span>
                             </div>
                             {tieneIva && (
                               <div className="flex justify-between">
                                 <span className="text-gray-500 dark:text-gray-400">IVA ({ivaPct}%)</span>
-                                <span className="font-semibold text-blue-600 dark:text-blue-400">${ivaMonto.toFixed(2)}</span>
+                                <span className="font-semibold text-blue-600 dark:text-blue-400">${formatNumber(ivaMonto)}</span>
                               </div>
                             )}
                             <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700">
                               <span className="font-bold text-gray-900 dark:text-white">Total</span>
-                              <span className="font-bold text-green-600 dark:text-green-400">${(sale.ingreso_neto + ivaMonto).toFixed(2)}</span>
+                              <span className="font-bold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto + ivaMonto)}</span>
                             </div>
                           </div>
                         </div>
@@ -1640,13 +1648,13 @@ export function SalesModule() {
                               Total
                             </td>
                             <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
-                              ${order.total_ingreso_neto.toFixed(2)}
+                              ${formatNumber(order.total_ingreso_neto)}
                             </td>
                             <td className="px-2 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                              ${(order.total_iva || 0).toFixed(2)}
+                              ${formatNumber(order.total_iva || 0)}
                             </td>
                             <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
-                              ${((order.total_ingreso_neto || 0) + (order.total_iva || 0)).toFixed(2)}
+                              ${formatNumber((order.total_ingreso_neto || 0) + (order.total_iva || 0))}
                             </td>
                             <td className="px-2 py-3 text-sm">
                               <div className="flex flex-col gap-1">
@@ -1772,11 +1780,11 @@ export function SalesModule() {
                                   </span>
                                 </td>
                                 <td className="px-2 py-2 text-sm text-gray-900 dark:text-white whitespace-nowrap">{item.cantidad}</td>
-                                <td className="px-2 py-2 text-sm text-gray-900 dark:text-white whitespace-nowrap">${item.precio_unitario.toFixed(2)}</td>
-                                <td className="px-2 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">${item.costo_unitario.toFixed(2)}</td>
-                                <td className="px-2 py-2 text-sm text-green-600 dark:text-green-400 whitespace-nowrap">${item.ingreso_neto.toFixed(2)}</td>
-                                <td className="px-2 py-2 text-sm text-blue-600 dark:text-blue-400 whitespace-nowrap">${ivaMonto.toFixed(2)}</td>
-                                <td className="px-2 py-2 text-sm text-green-600 dark:text-green-400 whitespace-nowrap">${(item.ingreso_neto + ivaMonto).toFixed(2)}</td>
+                                <td className="px-2 py-2 text-sm text-gray-900 dark:text-white whitespace-nowrap">${formatNumber(item.precio_unitario)}</td>
+                                <td className="px-2 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">${formatNumber(item.costo_unitario)}</td>
+                                <td className="px-2 py-2 text-sm text-green-600 dark:text-green-400 whitespace-nowrap">${formatNumber(item.ingreso_neto)}</td>
+                                <td className="px-2 py-2 text-sm text-blue-600 dark:text-blue-400 whitespace-nowrap">${formatNumber(ivaMonto)}</td>
+                                <td className="px-2 py-2 text-sm text-green-600 dark:text-green-400 whitespace-nowrap">${formatNumber(item.ingreso_neto + ivaMonto)}</td>
                                 <td className="px-2 py-2 text-sm"></td>
                                 <td className="px-2 py-2 text-sm"></td>
                               </tr>
@@ -1807,18 +1815,18 @@ export function SalesModule() {
                             </span>
                           </td>
                           <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${sale.precio_unitario.toFixed(2)}</td>
+                          <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${formatNumber(sale.precio_unitario)}</td>
                           <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
-                            ${sale.costo_unitario.toFixed(2)}
+                            ${formatNumber(sale.costo_unitario)}
                           </td>
                           <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
-                            ${sale.ingreso_neto.toFixed(2)}
+                            ${formatNumber(sale.ingreso_neto)}
                           </td>
                           <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
-                            ${ivaMonto.toFixed(2)}
+                            ${formatNumber(ivaMonto)}
                           </td>
                           <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
-                            ${(sale.ingreso_neto + ivaMonto).toFixed(2)}
+                            ${formatNumber(sale.ingreso_neto + ivaMonto)}
                           </td>
                           <td className="px-2 py-4 text-sm">
                             <div className="flex flex-col gap-1">

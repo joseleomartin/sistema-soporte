@@ -16,6 +16,14 @@ import { DriveFolder } from '../../../lib/googleDriveAPI';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { BulkImportClientsModal } from './BulkImportClientsModal';
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
 type Client = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
 type ClientDocument = Database['public']['Tables']['client_documents']['Row'];
@@ -1060,20 +1068,20 @@ export function ClientsModule() {
                                     <td className="px-3 py-3 text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</td>
                                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
                                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                      ${sale.precio_unitario.toFixed(2)} ARS
+                                      ${formatNumber(sale.precio_unitario)} ARS
                                     </td>
                                     <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900 dark:text-white">
-                                      ${sale.ingreso_neto.toFixed(2)} ARS
+                                      ${formatNumber(sale.ingreso_neto)} ARS
                                     </td>
                                     <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
                                       {tieneIva ? (
-                                        <span>${ivaMonto.toFixed(2)} ARS ({ivaPct}%)</span>
+                                        <span>${formatNumber(ivaMonto)} ARS ({ivaPct}%)</span>
                                       ) : (
                                         <span className="text-gray-400 dark:text-gray-500">Sin IVA</span>
                                       )}
                                     </td>
                                     <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-right text-gray-900 dark:text-white">
-                                      ${totalConIva.toFixed(2)} ARS
+                                      ${formatNumber(totalConIva)} ARS
                                     </td>
                                     <td className="px-3 py-3 whitespace-nowrap text-sm">
                                       <div className="flex flex-col gap-1">
@@ -1122,19 +1130,19 @@ export function ClientsModule() {
                           <div>
                             <p className="text-gray-600 dark:text-gray-400">Total Ingresos Netos:</p>
                             <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                              ${totalIngresosNetos.toFixed(2)} ARS
+                              ${formatNumber(totalIngresosNetos)} ARS
                             </p>
                           </div>
                           <div>
                             <p className="text-gray-600 dark:text-gray-400">Total IVA:</p>
                             <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                              ${totalIva.toFixed(2)} ARS
+                              ${formatNumber(totalIva)} ARS
                             </p>
                           </div>
                           <div className="col-span-2 pt-2 border-t border-blue-200 dark:border-blue-700">
                             <p className="text-gray-600 dark:text-gray-400">Total General (Ingreso Neto + IVA):</p>
                             <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                              ${totalGeneral.toFixed(2)} ARS
+                              ${formatNumber(totalGeneral)} ARS
                             </p>
                           </div>
                           <div className="col-span-2 pt-2 border-t border-blue-200 dark:border-blue-700">

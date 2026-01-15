@@ -13,6 +13,22 @@ import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermission
 import { useMobile } from '../../../hooks/useMobile';
 import { BulkImportStockModal } from './BulkImportStockModal';
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+// Función para formatear números con más decimales (para peso_unidad)
+const formatNumberDecimals = (value: number, decimals: number = 5): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+};
+
 type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
 type PurchaseProduct = Database['public']['Tables']['purchases_products']['Row'];
 type Sale = Database['public']['Tables']['sales']['Row'];
@@ -946,7 +962,7 @@ export function StockModule() {
                           <p className={`text-sm font-medium ${
                             stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
                           }`}>
-                            {mat.kg.toFixed(2)}
+                            {formatNumber(mat.kg)}
                             {stockBajo && (
                               <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">
                                 ⚠ Bajo
@@ -956,15 +972,15 @@ export function StockModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Stock Mínimo (kg)</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{stockMinimo.toFixed(2)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{formatNumber(stockMinimo)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo/kg</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            ${mat.costo_kilo_usd.toFixed(2)} {mat.moneda}
+                            ${formatNumber(mat.costo_kilo_usd)} {mat.moneda}
                             {mat.moneda === 'USD' && mat.valor_dolar && (
                               <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                (${(mat.costo_kilo_usd * mat.valor_dolar).toFixed(2)} ARS)
+                                (${formatNumber(mat.costo_kilo_usd * mat.valor_dolar)} ARS)
                               </span>
                             )}
                           </p>
@@ -1063,7 +1079,7 @@ export function StockModule() {
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
                           stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
                         }`}>
-                          {mat.kg.toFixed(2)}
+                          {formatNumber(mat.kg)}
                           {stockBajo && (
                             <span className="ml-2 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded">
                               ⚠ Bajo
@@ -1071,14 +1087,14 @@ export function StockModule() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {stockMinimo.toFixed(2)}
+                          {formatNumber(stockMinimo)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           <div>
-                            ${mat.costo_kilo_usd.toFixed(2)} {mat.moneda}
+                            ${formatNumber(mat.costo_kilo_usd)} {mat.moneda}
                             {mat.moneda === 'USD' && mat.valor_dolar && (
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                (${(mat.costo_kilo_usd * mat.valor_dolar).toFixed(2)} ARS)
+                                (${formatNumber(mat.costo_kilo_usd * mat.valor_dolar)} ARS)
                               </div>
                             )}
                           </div>
@@ -1195,7 +1211,7 @@ export function StockModule() {
                                       </div>
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.proveedor}</td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)}</td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatNumber(purchase.cantidad)}</td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                       {(() => {
                                         // Mostrar costo base (sin IVA)
@@ -1206,12 +1222,12 @@ export function StockModule() {
                                         return purchase.moneda === 'USD' && purchase.valor_dolar ? (
                                           <div className="flex items-center space-x-1">
                                             <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                            <span>${precioBase.toFixed(2)} USD</span>
+                                            <span>${formatNumber(precioBase)} USD</span>
                                           </div>
                                         ) : (
                                           <div className="flex items-center space-x-1">
                                             <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                            <span>${precioBase.toFixed(2)} ARS</span>
+                                            <span>${formatNumber(precioBase)} ARS</span>
                                           </div>
                                         );
                                       })()}
@@ -1226,12 +1242,12 @@ export function StockModule() {
                                       </span>
                                       {purchase.moneda === 'USD' && purchase.valor_dolar && (
                                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                          Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                          Dólar: ${formatNumber(purchase.valor_dolar)}
                                         </div>
                                       )}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                      ${purchase.total.toFixed(2)} ARS
+                                      ${formatNumber(purchase.total)} ARS
                                     </td>
                                   </tr>
                                 ))}
@@ -1312,7 +1328,7 @@ export function StockModule() {
                                         </span>
                                       </td>
                                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                        {movement.cantidad.toFixed(2)}
+                                        {formatNumber(movement.cantidad)}
                                       </td>
                                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                         {relatedPurchase ? (
@@ -1325,11 +1341,11 @@ export function StockModule() {
                                               return (
                                                 <div>
                                                   <div className="font-medium">
-                                                    ${precioUnitario.toFixed(2)} {relatedPurchase.moneda}
+                                                    ${formatNumber(precioUnitario)} {relatedPurchase.moneda}
                                                   </div>
                                                   {relatedPurchase.moneda === 'USD' && relatedPurchase.valor_dolar && (
                                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                      Dólar: ${relatedPurchase.valor_dolar.toFixed(2)}
+                                                      Dólar: ${formatNumber(relatedPurchase.valor_dolar)}
                                                     </div>
                                                   )}
                                                 </div>
@@ -1513,12 +1529,12 @@ export function StockModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Peso/unidad (kg)</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{prod.peso_unidad.toFixed(5)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{formatNumberDecimals(prod.peso_unidad, 5)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo unitario</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {prod.costo_unit_total ? `$${prod.costo_unit_total.toFixed(2)}` : '-'}
+                            {prod.costo_unit_total ? `$${formatNumber(prod.costo_unit_total)}` : '-'}
                           </p>
                         </div>
                       </div>
@@ -1610,9 +1626,9 @@ export function StockModule() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {stockMinimo}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.peso_unidad.toFixed(5)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatNumberDecimals(prod.peso_unidad, 5)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {prod.costo_unit_total ? `$${prod.costo_unit_total.toFixed(2)}` : '-'}
+                          {prod.costo_unit_total ? `$${formatNumber(prod.costo_unit_total)}` : '-'}
                         </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <div className="flex justify-end space-x-2">
@@ -1778,20 +1794,20 @@ export function StockModule() {
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">Costo Unitario:</span>
                           <span className="font-medium text-gray-900 dark:text-white">
-                            ${parseFloat(resaleForm.costo_unitario || '0').toFixed(2)} {resaleForm.moneda}
+                            ${formatNumber(parseFloat(resaleForm.costo_unitario || '0'))} {resaleForm.moneda}
                           </span>
                         </div>
                         {resaleForm.moneda === 'USD' && resaleForm.valor_dolar && (
                           <div className="flex justify-between text-gray-600 dark:text-gray-400">
                             <span>× Valor Dólar:</span>
-                            <span>${parseFloat(resaleForm.valor_dolar).toFixed(2)}</span>
+                            <span>${formatNumber(parseFloat(resaleForm.valor_dolar))}</span>
                           </div>
                         )}
                         {resaleForm.moneda === 'USD' && resaleForm.valor_dolar && (
                           <div className="flex justify-between">
                             <span className="text-gray-600 dark:text-gray-400">Costo Unitario en Pesos:</span>
                             <span className="font-medium text-gray-900 dark:text-white">
-                              ${(parseFloat(resaleForm.costo_unitario || '0') * parseFloat(resaleForm.valor_dolar)).toFixed(2)} ARS
+                              ${formatNumber(parseFloat(resaleForm.costo_unitario || '0') * parseFloat(resaleForm.valor_dolar))} ARS
                             </span>
                           </div>
                         )}
@@ -1799,19 +1815,19 @@ export function StockModule() {
                           <div className="flex justify-between">
                             <span className="text-gray-600 dark:text-gray-400">Otros Costos:</span>
                             <span className="font-medium text-gray-900 dark:text-white">
-                              ${parseFloat(resaleForm.otros_costos || '0').toFixed(2)} ARS
+                              ${formatNumber(parseFloat(resaleForm.otros_costos || '0'))} ARS
                             </span>
                           </div>
                         )}
                         <div className="flex justify-between pt-2 border-t border-blue-200 dark:border-blue-800">
                           <span className="font-semibold text-gray-900 dark:text-white">Costo Final:</span>
                           <span className="font-bold text-blue-600 dark:text-blue-400">
-                            ${(
+                            ${formatNumber((
                               (resaleForm.moneda === 'USD' && resaleForm.valor_dolar
                                 ? parseFloat(resaleForm.costo_unitario || '0') * parseFloat(resaleForm.valor_dolar)
                                 : parseFloat(resaleForm.costo_unitario || '0')
                               ) + parseFloat(resaleForm.otros_costos || '0')
-                            ).toFixed(2)} ARS
+                            ))} ARS
                           </span>
                         </div>
                       </div>
@@ -1891,13 +1907,13 @@ export function StockModule() {
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo unitario</p>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            ${prod.costo_unitario.toFixed(2)} {prod.moneda}
+                            ${formatNumber(prod.costo_unitario)} {prod.moneda}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Costo final</p>
                           <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                            ${prod.costo_unitario_final.toFixed(2)} ARS
+                            ${formatNumber(prod.costo_unitario_final)} ARS
                           </p>
                         </div>
                       </div>
@@ -2000,10 +2016,10 @@ export function StockModule() {
                           {stockMinimo}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          ${prod.costo_unitario.toFixed(2)} {prod.moneda}
+                          ${formatNumber(prod.costo_unitario)} {prod.moneda}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-semibold">
-                          ${prod.costo_unitario_final.toFixed(2)} ARS
+                          ${formatNumber(prod.costo_unitario_final)} ARS
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.moneda}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -2133,11 +2149,11 @@ export function StockModule() {
                                           <div className="flex flex-col space-y-1">
                                             <div className="flex items-center space-x-1">
                                               <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                              <span>${precioConIva.toFixed(2)} USD</span>
+                                              <span>${formatNumber(precioConIva)} USD</span>
                                             </div>
                                             {tieneIva && (
                                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                (Base: ${precioBase.toFixed(2)} + IVA {ivaPct}%)
+                                                (Base: ${formatNumber(precioBase)} + IVA {ivaPct}%)
                                               </div>
                                             )}
                                           </div>
@@ -2145,11 +2161,11 @@ export function StockModule() {
                                           <div className="flex flex-col space-y-1">
                                             <div className="flex items-center space-x-1">
                                               <DollarSign className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                              <span>${precioConIva.toFixed(2)} ARS</span>
+                                              <span>${formatNumber(precioConIva)} ARS</span>
                                             </div>
                                             {tieneIva && (
                                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                (Base: ${precioBase.toFixed(2)} + IVA {ivaPct}%)
+                                                (Base: ${formatNumber(precioBase)} + IVA {ivaPct}%)
                                               </div>
                                             )}
                                           </div>
@@ -2166,12 +2182,12 @@ export function StockModule() {
                                       </span>
                                       {purchase.moneda === 'USD' && purchase.valor_dolar && (
                                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                          Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                          Dólar: ${formatNumber(purchase.valor_dolar)}
                                         </div>
                                       )}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                                      ${purchase.total.toFixed(2)} ARS
+                                      ${formatNumber(purchase.total)} ARS
                                     </td>
                                   </tr>
                                 ))}
@@ -2280,7 +2296,7 @@ export function StockModule() {
                                         </span>
                                       </td>
                                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                        {movement.cantidad.toFixed(2)}
+                                        {formatNumber(movement.cantidad)}
                                       </td>
                                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                         {relatedPurchase ? (
@@ -2293,11 +2309,11 @@ export function StockModule() {
                                               return (
                                                 <div>
                                                   <div className="font-medium">
-                                                    ${precioUnitario.toFixed(2)} {relatedPurchase.moneda}
+                                                    ${formatNumber(precioUnitario)} {relatedPurchase.moneda}
                                                   </div>
                                                   {relatedPurchase.moneda === 'USD' && relatedPurchase.valor_dolar && (
                                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                      Dólar: ${relatedPurchase.valor_dolar.toFixed(2)}
+                                                      Dólar: ${formatNumber(relatedPurchase.valor_dolar)}
                                                     </div>
                                                   )}
                                                 </div>
@@ -2521,7 +2537,7 @@ export function StockModule() {
                                   {item.item_nombre}
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                  {item.cantidad_esperada.toFixed(2)} {item.unidad}
+                                  {formatNumber(item.cantidad_esperada)} {item.unidad}
                                 </td>
                                 <td className="px-4 py-3">
                                   {isCompleted ? (
@@ -2530,7 +2546,7 @@ export function StockModule() {
                                         ? 'text-red-600 dark:text-red-400' 
                                         : 'text-green-600 dark:text-green-400'
                                     }`}>
-                                      {cantidadRecibida.toFixed(2)} {item.unidad}
+                                      {formatNumber(cantidadRecibida)} {item.unidad}
                                     </span>
                                   ) : (
                                     <input
@@ -2550,7 +2566,7 @@ export function StockModule() {
                                     ? 'text-red-600 dark:text-red-400' 
                                     : 'text-gray-600 dark:text-gray-400'
                                 }`}>
-                                  {diferencia > 0 ? '+' : ''}{diferencia.toFixed(2)} {item.unidad}
+                                  {diferencia > 0 ? '+' : ''}{formatNumber(diferencia)} {item.unidad}
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                                   {item.unidad}

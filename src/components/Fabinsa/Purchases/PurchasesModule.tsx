@@ -11,6 +11,14 @@ import { Database } from '../../../lib/database.types';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { generateOrderPDF, OrderData } from '../../../lib/pdfGenerator';
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
 type PurchaseMaterial = Database['public']['Tables']['purchases_materials']['Row'];
 type PurchaseMaterialInsert = Database['public']['Tables']['purchases_materials']['Insert'];
 type PurchaseProduct = Database['public']['Tables']['purchases_products']['Row'];
@@ -1192,7 +1200,7 @@ export function PurchasesModule() {
                               className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-600 focus:bg-blue-50 dark:focus:bg-slate-600 focus:outline-none text-gray-900 dark:text-white"
                             >
                               <div className="font-medium">{material.nombre || material.material}</div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">Stock: {material.kg.toFixed(2)} kg</div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">Stock: {formatNumber(material.kg)} kg</div>
                             </button>
                           ))}
                         </div>
@@ -1277,18 +1285,18 @@ export function PurchasesModule() {
                               <div className="flex-1">
                                 <div className="font-medium text-gray-900 dark:text-white">{item.material}</div>
                                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                  Cantidad: {item.cantidad.toFixed(2)} kg | Precio: ${item.precio.toFixed(2)} ({item.moneda})
+                                  Cantidad: {formatNumber(item.cantidad)} kg | Precio: ${formatNumber(item.precio)} ({item.moneda})
                                   {item.moneda === 'USD' && item.valor_dolar && (
-                                    <span className="ml-2">| Dólar: ${item.valor_dolar.toFixed(2)}</span>
+                                    <span className="ml-2">| Dólar: ${formatNumber(item.valor_dolar)}</span>
                                   )}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
                                   {item.tiene_iva ? (
                                     <>
-                                      Subtotal: ${item.total.toFixed(2)} | IVA ({item.iva_pct}%): ${((item.total_con_iva || item.total) - item.total).toFixed(2)} | Total: ${(item.total_con_iva || item.total).toFixed(2)}
+                                      Subtotal: ${formatNumber(item.total)} | IVA ({item.iva_pct}%): ${formatNumber((item.total_con_iva || item.total) - item.total)} | Total: ${formatNumber(item.total_con_iva || item.total)}
                                     </>
                                   ) : (
-                                    <>Total: ${item.total.toFixed(2)}</>
+                                    <>Total: ${formatNumber(item.total)}</>
                                   )}
                                 </div>
                               </div>
@@ -1333,7 +1341,7 @@ export function PurchasesModule() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Total Compra:</span>
                           <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            ${materialItems.reduce((sum, item) => sum + (item.tiene_iva ? (item.total_con_iva || item.total) : item.total), 0).toFixed(2)}
+                            ${formatNumber(materialItems.reduce((sum, item) => sum + (item.tiene_iva ? (item.total_con_iva || item.total) : item.total), 0))}
                           </span>
                         </div>
                       </div>
@@ -1444,13 +1452,13 @@ export function PurchasesModule() {
                                   {order.tiene_iva ? `${order.iva_pct}%` : 'Sin IVA'}
                                 </td>
                                 <td className="px-2 py-3 text-sm font-semibold text-gray-900 dark:text-white text-xs">
-                                  ${order.total_iva.toFixed(2)}
+                                  ${formatNumber(order.total_iva)}
                                 </td>
                                 <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
-                                  ${order.subtotal_sin_iva.toFixed(2)}
+                                  ${formatNumber(order.subtotal_sin_iva)}
                                 </td>
                                 <td className="px-2 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                                  ${order.total_compra.toFixed(2)}
+                                  ${formatNumber(order.total_compra)}
                                 </td>
                                 <td className="px-2 py-3 text-sm">
                                   <div className="flex flex-col gap-1">
@@ -1547,12 +1555,12 @@ export function PurchasesModule() {
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white pl-6 text-xs">
                                       • {item.material}
                                     </td>
-                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">{item.cantidad.toFixed(2)} kg</td>
+                                    <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">{formatNumber(item.cantidad)} kg</td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
-                                      ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
+                                      ${formatNumber(precioUnitarioMostrar)} ({item.moneda})
                                       {item.moneda === 'USD' && item.valor_dolar && (
                                         <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                          Dólar: ${item.valor_dolar.toFixed(2)}
+                                          Dólar: ${formatNumber(item.valor_dolar)}
                                         </span>
                                       )}
                                     </td>
@@ -1561,13 +1569,13 @@ export function PurchasesModule() {
                                       {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
                                     </td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
-                                      ${ivaMonto.toFixed(2)}
+                                      ${formatNumber(ivaMonto)}
                                     </td>
                                     <td className="px-2 py-2 text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
-                                      ${totalSinIva.toFixed(2)}
+                                      ${formatNumber(totalSinIva)}
                                     </td>
                                     <td className="px-2 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                                      ${totalConIva.toFixed(2)}
+                                      ${formatNumber(totalConIva)}
                                     </td>
                                     <td className="px-2 py-2 text-sm"></td>
                                     <td className="px-2 py-2 text-sm"></td>
@@ -1592,12 +1600,12 @@ export function PurchasesModule() {
                                 {new Date(purchase.fecha).toLocaleDateString('es-AR')}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.material}</td>
-                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad.toFixed(2)} kg</td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{formatNumber(purchase.cantidad)} kg</td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
-                                ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                                ${formatNumber(purchase.precio)} ({purchase.moneda})
                                 {purchase.moneda === 'USD' && purchase.valor_dolar && (
                                   <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                    Dólar: ${formatNumber(purchase.valor_dolar)}
                                   </span>
                                 )}
                               </td>
@@ -1606,13 +1614,13 @@ export function PurchasesModule() {
                                 {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white text-xs">
-                                ${ivaMonto.toFixed(2)}
+                                ${formatNumber(ivaMonto)}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
-                                ${totalSinIva.toFixed(2)}
+                                ${formatNumber(totalSinIva)}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                                ${totalConIva.toFixed(2)}
+                                ${formatNumber(totalConIva)}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm">
                                 <div className="flex flex-col gap-1">
@@ -1697,12 +1705,12 @@ export function PurchasesModule() {
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
                                 {purchase.material}
                               </td>
-                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad.toFixed(2)} kg</td>
+                              <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{formatNumber(purchase.cantidad)} kg</td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
-                                ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                                ${formatNumber(purchase.precio)} ({purchase.moneda})
                                 {purchase.moneda === 'USD' && purchase.valor_dolar && (
                                   <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                    Dólar: ${formatNumber(purchase.valor_dolar)}
                                   </span>
                                 )}
                               </td>
@@ -1711,13 +1719,13 @@ export function PurchasesModule() {
                                 {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
-                                ${ivaMonto.toFixed(2)}
+                                ${formatNumber(ivaMonto)}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
-                                ${totalSinIva.toFixed(2)}
+                                ${formatNumber(totalSinIva)}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                                ${totalConIva.toFixed(2)}
+                                ${formatNumber(totalConIva)}
                               </td>
                               <td className="px-2 py-3 whitespace-nowrap text-sm">
                                 <div className="flex flex-col gap-1">
@@ -1958,18 +1966,18 @@ export function PurchasesModule() {
                               <div className="flex-1">
                                 <div className="font-medium text-gray-900 dark:text-white">{item.producto}</div>
                                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                  Cantidad: {item.cantidad} u | Precio: ${item.precio.toFixed(2)} ({item.moneda})
+                                  Cantidad: {item.cantidad} u | Precio: ${formatNumber(item.precio)} ({item.moneda})
                                   {item.moneda === 'USD' && item.valor_dolar && (
-                                    <span className="ml-2">| Dólar: ${item.valor_dolar.toFixed(2)}</span>
+                                    <span className="ml-2">| Dólar: ${formatNumber(item.valor_dolar)}</span>
                                   )}
                                 </div>
                                 <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
                                   {item.tiene_iva ? (
                                     <>
-                                      Subtotal: ${item.total.toFixed(2)} | IVA ({item.iva_pct}%): ${((item.total_con_iva || item.total) - item.total).toFixed(2)} | Total: ${(item.total_con_iva || item.total).toFixed(2)}
+                                      Subtotal: ${formatNumber(item.total)} | IVA ({item.iva_pct}%): ${formatNumber((item.total_con_iva || item.total) - item.total)} | Total: ${formatNumber(item.total_con_iva || item.total)}
                                     </>
                                   ) : (
-                                    <>Total: ${item.total.toFixed(2)}</>
+                                    <>Total: ${formatNumber(item.total)}</>
                                   )}
                                 </div>
                               </div>
@@ -2014,7 +2022,7 @@ export function PurchasesModule() {
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium text-gray-900 dark:text-white">Total Compra:</span>
                           <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            ${productItems.reduce((sum, item) => sum + (item.tiene_iva ? (item.total_con_iva || item.total) : item.total), 0).toFixed(2)}
+                            ${formatNumber(productItems.reduce((sum, item) => sum + (item.tiene_iva ? (item.total_con_iva || item.total) : item.total), 0))}
                           </span>
                         </div>
                       </div>
@@ -2125,13 +2133,13 @@ export function PurchasesModule() {
                                   {order.tiene_iva ? `${order.iva_pct}%` : 'Sin IVA'}
                                 </td>
                                 <td className="px-2 py-3 text-sm font-semibold text-gray-900 dark:text-white text-xs">
-                                  ${order.total_iva.toFixed(2)}
+                                  ${formatNumber(order.total_iva)}
                                 </td>
                                 <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
-                                  ${order.subtotal_sin_iva.toFixed(2)}
+                                  ${formatNumber(order.subtotal_sin_iva)}
                                 </td>
                                 <td className="px-2 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                                  ${order.total_compra.toFixed(2)}
+                                  ${formatNumber(order.total_compra)}
                                 </td>
                                 <td className="px-2 py-3 text-sm">
                                   <div className="flex flex-col gap-1">
@@ -2230,10 +2238,10 @@ export function PurchasesModule() {
                                     </td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">{item.cantidad} u</td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
-                                      ${precioUnitarioMostrar.toFixed(2)} ({item.moneda})
+                                      ${formatNumber(precioUnitarioMostrar)} ({item.moneda})
                                       {item.moneda === 'USD' && item.valor_dolar && (
                                         <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                          Dólar: ${item.valor_dolar.toFixed(2)}
+                                          Dólar: ${formatNumber(item.valor_dolar)}
                                         </span>
                                       )}
                                     </td>
@@ -2242,13 +2250,13 @@ export function PurchasesModule() {
                                       {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
                                     </td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
-                                      ${ivaMonto.toFixed(2)}
+                                      ${formatNumber(ivaMonto)}
                                     </td>
                                     <td className="px-2 py-2 text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
-                                      ${totalSinIva.toFixed(2)}
+                                      ${formatNumber(totalSinIva)}
                                     </td>
                                     <td className="px-2 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                                      ${totalConIva.toFixed(2)}
+                                      ${formatNumber(totalConIva)}
                                     </td>
                                     <td className="px-2 py-2 text-sm"></td>
                                     <td className="px-2 py-2 text-sm"></td>
@@ -2275,10 +2283,10 @@ export function PurchasesModule() {
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.producto}</td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad} u</td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
-                              ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                              ${formatNumber(purchase.precio)} ({purchase.moneda})
                               {purchase.moneda === 'USD' && purchase.valor_dolar && (
                                 <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                  Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                  Dólar: ${formatNumber(purchase.valor_dolar)}
                                 </span>
                               )}
                             </td>
@@ -2287,13 +2295,13 @@ export function PurchasesModule() {
                               {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
                             </td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white text-xs">
-                              ${ivaMonto.toFixed(2)}
+                              ${formatNumber(ivaMonto)}
                             </td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400 text-xs">
-                              ${totalSinIva.toFixed(2)}
+                              ${formatNumber(totalSinIva)}
                             </td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                              ${totalConIva.toFixed(2)}
+                              ${formatNumber(totalConIva)}
                             </td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm">
                               <div className="flex flex-col gap-1">
@@ -2381,12 +2389,12 @@ export function PurchasesModule() {
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                                 {purchase.producto}
                               </td>
-                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{purchase.cantidad.toFixed(2)} u</td>
+                              <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatNumber(purchase.cantidad)} u</td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                ${purchase.precio.toFixed(2)} ({purchase.moneda})
+                                ${formatNumber(purchase.precio)} ({purchase.moneda})
                                 {purchase.moneda === 'USD' && purchase.valor_dolar && (
                                   <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    Dólar: ${purchase.valor_dolar.toFixed(2)}
+                                    Dólar: ${formatNumber(purchase.valor_dolar)}
                                   </span>
                                 )}
                               </td>
@@ -2395,13 +2403,13 @@ export function PurchasesModule() {
                                 {tieneIva ? `${ivaPct}%` : 'Sin IVA'}
                               </td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                ${ivaMonto.toFixed(2)}
+                                ${formatNumber(ivaMonto)}
                               </td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
-                                ${totalSinIva.toFixed(2)}
+                                ${formatNumber(totalSinIva)}
                               </td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                ${totalConIva.toFixed(2)}
+                                ${formatNumber(totalConIva)}
                               </td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm">
                                 <div className="flex flex-col gap-1">
