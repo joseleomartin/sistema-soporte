@@ -20,14 +20,6 @@ const formatNumber = (value: number): string => {
   }).format(value);
 };
 
-// Función para formatear números con más decimales (5)
-const formatNumberDecimals = (value: number, decimals: number = 5): string => {
-  return new Intl.NumberFormat('es-AR', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(value);
-};
-
 // Función para formatear porcentajes
 const formatPercent = (value: number): string => {
   return new Intl.NumberFormat('es-AR', {
@@ -523,7 +515,7 @@ export function EmployeesModule() {
                       ${formatNumber(employee.valor_hora)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {empMetrics ? `$${formatNumberDecimals(empMetrics.valor_hora_ajustado, 5)}` : '-'}
+                      {empMetrics ? `$${formatNumber(empMetrics.valor_hora_ajustado)}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {empMetrics ? formatNumber(empMetrics.horas_productivas) : '-'}
