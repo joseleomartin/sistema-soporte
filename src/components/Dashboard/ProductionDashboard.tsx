@@ -946,4 +946,3 @@ function EditVacationModal({ vacation, onClose, onSuccess }: {
     </div>
   );
 }
-
