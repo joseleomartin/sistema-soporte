@@ -12,6 +12,30 @@ import { calculateEmployeeMetrics, EmployeeMetrics } from '../../../lib/fabinsaC
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { BulkImportEmployeesModal } from './BulkImportEmployeesModal';
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+// Función para formatear números con más decimales (5)
+const formatNumberDecimals = (value: number, decimals: number = 5): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+};
+
+// Función para formatear porcentajes
+const formatPercent = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
 type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = Database['public']['Tables']['employees']['Insert'];
 
@@ -496,16 +520,16 @@ export function EmployeesModule() {
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{employee.nombre}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      ${employee.valor_hora.toFixed(2)}
+                      ${formatNumber(employee.valor_hora)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {empMetrics ? `$${empMetrics.valor_hora_ajustado.toFixed(5)}` : '-'}
+                      {empMetrics ? `$${formatNumberDecimals(empMetrics.valor_hora_ajustado, 5)}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {empMetrics ? empMetrics.horas_productivas.toFixed(2) : '-'}
+                      {empMetrics ? formatNumber(empMetrics.horas_productivas) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {empMetrics ? `${empMetrics.indice_ajustado.toFixed(2)}%` : '-'}
+                      {empMetrics ? `${formatPercent(empMetrics.indice_ajustado)}%` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
