@@ -298,7 +298,6 @@ export async function generateOrderPDF(order: OrderData) {
       return [
         item.material || '-',
         item.cantidad.toString(),
-        item.precio ? `$${item.precio.toFixed(2)}` : '-',
       ];
     }
   });
@@ -308,7 +307,7 @@ export async function generateOrderPDF(order: OrderData) {
       ? ['Producto', 'Tipo', 'Cantidad', 'Precio Unit.']
       : order.tipo === 'compra'
       ? ['Material/Producto', 'Cantidad', 'Precio', 'Moneda', 'Total']
-      : ['Material', 'Cantidad (kg)', 'Costo'];
+      : ['Material', 'Cantidad (kg)'];
 
   autoTable(doc, {
     startY: yPos,
@@ -342,18 +341,6 @@ export async function generateOrderPDF(order: OrderData) {
     // Producción
     if (order.cantidad_fabricar !== undefined) {
       doc.text(`Cantidad a Fabricar: ${order.cantidad_fabricar} unidades`, margin, yPos);
-      yPos += 7;
-    }
-    if (order.costo_mp !== undefined) {
-      doc.text(`Costo Materia Prima: $${order.costo_mp.toFixed(2)}`, margin, yPos);
-      yPos += 7;
-    }
-    if (order.costo_mo !== undefined) {
-      doc.text(`Costo Mano de Obra: $${order.costo_mo.toFixed(2)}`, margin, yPos);
-      yPos += 7;
-    }
-    if (order.costo_total !== undefined) {
-      doc.text(`Costo Total: $${order.costo_total.toFixed(2)}`, margin, yPos);
     }
   }
 
