@@ -12,6 +12,7 @@ import { calculateSaleValues } from '../../../lib/fabinsaCalculations';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { useMobile } from '../../../hooks/useMobile';
 import { generateOrderPDF, OrderData } from '../../../lib/pdfGenerator';
+import { AlertModal } from '../../Common/AlertModal';
 
 type Sale = Database['public']['Tables']['sales']['Row'];
 type SaleInsert = Database['public']['Tables']['sales']['Insert'];
@@ -55,6 +56,17 @@ export function SalesModule() {
   const clientInputRef = useRef<HTMLInputElement>(null);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
   
   const [formData, setFormData] = useState({
     producto: '',
@@ -234,7 +246,12 @@ export function SalesModule() {
     // Verificar si ya existe el producto en la lista
     const existingItem = saleItems.find(item => item.producto === formData.producto && item.tipo_producto === productType);
     if (existingItem) {
-      alert('Este producto ya está en la lista. Elimínelo primero si desea cambiarlo.');
+      setAlertModal({
+        isOpen: true,
+        title: 'Producto Duplicado',
+        message: 'Este producto ya está en la lista de venta. Elimínelo primero si desea modificarlo o agregarlo nuevamente.',
+        type: 'warning',
+      });
       return;
     }
 
@@ -2029,6 +2046,15 @@ export function SalesModule() {
         </div>
       </div>
       )}
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+      />
     </div>
   );
 }

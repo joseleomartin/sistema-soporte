@@ -910,18 +910,63 @@ export function CostsModule() {
         }
       }
 
-      // Actualizar producto con nuevos valores y establecer fecha de orden de producción
-      // Cuando se envía desde costos a producción, usar fecha actual como fecha de orden
+      // Crear una nueva orden de producción (en lugar de actualizar la existente)
+      // Esto permite enviar el mismo item múltiples veces a producción
       const fechaActual = new Date().toISOString();
-      await supabase
+      
+      // Validar que el producto existe
+      if (!item.product) {
+        throw new Error('Producto no válido');
+      }
+      
+      // Obtener los datos del producto base
+      const productBase = item.product;
+      
+      // Crear nueva orden de producción con los datos del item
+      const newProductData: Database['public']['Tables']['products']['Insert'] = {
+        tenant_id: tenantId,
+        nombre: productBase.nombre,
+        familia: productBase.familia,
+        medida: productBase.medida,
+        caracteristica: productBase.caracteristica,
+        peso_unidad: productBase.peso_unidad,
+        precio_venta: item.precio_venta || null,
+        cantidad_fabricar: item.cantidad_fabricar,
+        cantidad_por_hora: productBase.cantidad_por_hora,
+        iibb_porcentaje: productBase.iibb_porcentaje,
+        otros_costos: productBase.otros_costos,
+        moneda_precio: productBase.moneda_precio,
+        estado: 'pendiente', // Nueva orden siempre comienza como pendiente
+        created_at: fechaActual, // Fecha de orden de producción
+        updated_at: fechaActual,
+      };
+
+      const { data: newProduct, error: productError } = await supabase
         .from('products')
-        .update({
-          precio_venta: item.precio_venta || null,
-          cantidad_fabricar: item.cantidad_fabricar,
-          created_at: fechaActual, // Fecha de orden de producción (cuando se envía a producción)
-          updated_at: fechaActual, // Actualizar fecha de modificación
-        })
-        .eq('id', item.product.id);
+        .insert(newProductData)
+        .select()
+        .single();
+
+      if (productError) {
+        throw productError;
+      }
+
+      // Copiar los materiales del producto original a la nueva orden
+      if (item.materials && item.materials.length > 0) {
+        const materialsData: Database['public']['Tables']['product_materials']['Insert'][] = item.materials.map(mat => ({
+          product_id: newProduct.id,
+          material_name: mat.material_name,
+          kg_por_unidad: mat.kg_por_unidad,
+        }));
+
+        const { error: materialsError } = await supabase
+          .from('product_materials')
+          .insert(materialsData);
+
+        if (materialsError) {
+          throw materialsError;
+        }
+      }
 
       // Actualizar stock - Usar función interna directamente para evitar dependencias circulares
       const itemCosts = calculateItemCostsInternal(item);
