@@ -15,6 +15,22 @@ import { useMobile } from '../../../hooks/useMobile';
 import { ConfirmModal } from '../../Common/ConfirmModal';
 import { AlertModal } from '../../Common/AlertModal';
 
+// Función para formatear números con separadores de miles
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+// Función para formatear porcentajes con 1 decimal
+const formatPercent = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+};
+
 type Product = Database['public']['Tables']['products']['Row'];
 type ProductMaterial = Database['public']['Tables']['product_materials']['Row'];
 type Employee = Database['public']['Tables']['employees']['Row'];
@@ -855,7 +871,7 @@ export function CostsModule() {
       // Si hay advertencias de stock, mostrar modal de confirmación
       if (stockWarnings.length > 0) {
         const warningMessages = stockWarnings.map(
-          w => `• ${w.material}: Stock disponible: ${w.disponible.toFixed(2)} kg, necesario: ${w.necesario.toFixed(2)} kg`
+          w => `• ${w.material}: Stock disponible: ${formatNumber(w.disponible)} kg, necesario: ${formatNumber(w.necesario)} kg`
         ).join('\n');
         
         setConfirmModal({
@@ -1342,7 +1358,7 @@ export function CostsModule() {
                 <div className="flex items-center gap-3">
                   {manualMaterials.length > 0 && (
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      Peso total: <strong>{calculatePesoUnidad().toFixed(5)} kg/unidad</strong>
+                      Peso total: <strong>{new Intl.NumberFormat('es-AR', { minimumFractionDigits: 5, maximumFractionDigits: 5 }).format(calculatePesoUnidad())} kg/unidad</strong>
                     </span>
                   )}
                   <button
@@ -1370,7 +1386,7 @@ export function CostsModule() {
                           <option value="">Seleccione un material</option>
                           {stockMaterials.map((stockMat) => (
                             <option key={stockMat.id} value={stockMat.material}>
-                              {stockMat.material} (Stock: {stockMat.kg.toFixed(2)} kg)
+                              {stockMat.material} (Stock: {formatNumber(stockMat.kg)} kg)
                             </option>
                           ))}
                         </select>
@@ -1436,7 +1452,7 @@ export function CostsModule() {
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">P. Venta</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">${item.precio_venta.toFixed(2)}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">${formatNumber(item.precio_venta)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Descuento</p>
@@ -1444,7 +1460,7 @@ export function CostsModule() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">P. Final</p>
-                          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">${itemCosts.precio_final_unitario.toFixed(2)}</p>
+                          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">${formatNumber(itemCosts.precio_final_unitario)}</p>
                         </div>
                       </div>
 
@@ -1454,25 +1470,25 @@ export function CostsModule() {
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <p className="text-gray-500 dark:text-gray-400">MP</p>
-                            <p className="font-medium text-gray-900 dark:text-white">${itemCosts.costo_mp_unitario.toFixed(2)}</p>
+                            <p className="font-medium text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_mp_unitario)}</p>
                           </div>
                           <div>
                             <p className="text-gray-500 dark:text-gray-400">MO</p>
-                            <p className="font-medium text-gray-900 dark:text-white">${itemCosts.costo_mo_unitario.toFixed(2)}</p>
+                            <p className="font-medium text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_mo_unitario)}</p>
                           </div>
                           <div>
                             <p className="text-gray-500 dark:text-gray-400">Otros</p>
-                            <p className="font-medium text-gray-900 dark:text-white">${(itemCosts.otros_costos_unitario || 0).toFixed(2)}</p>
+                            <p className="font-medium text-gray-900 dark:text-white">${formatNumber(itemCosts.otros_costos_unitario || 0)}</p>
                           </div>
                           <div>
                             <p className="text-gray-500 dark:text-gray-400">IIBB</p>
-                            <p className="font-medium text-gray-900 dark:text-white">${itemCosts.iibb_unitario.toFixed(2)}</p>
+                            <p className="font-medium text-gray-900 dark:text-white">${formatNumber(itemCosts.iibb_unitario)}</p>
                           </div>
                         </div>
                         <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                           <div className="flex justify-between items-center">
                             <p className="text-xs font-medium text-gray-700 dark:text-gray-300">C. Total</p>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">${itemCosts.costo_total_unitario.toFixed(2)}</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_total_unitario)}</p>
                           </div>
                         </div>
                       </div>
@@ -1483,13 +1499,13 @@ export function CostsModule() {
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Rentabilidad</p>
                             <p className={`text-sm font-semibold ${itemCosts.rentabilidad_neta_unitaria >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              ${itemCosts.rentabilidad_neta_unitaria.toFixed(2)}
+                              ${formatNumber(itemCosts.rentabilidad_neta_unitaria)}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Margen</p>
                             <p className={`text-sm font-semibold ${itemCosts.margen >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              {itemCosts.margen.toFixed(1)}%
+                              {formatPercent(itemCosts.margen)}%
                             </p>
                           </div>
                         </div>
@@ -1572,19 +1588,19 @@ export function CostsModule() {
                             <span className="ml-1 text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/30 px-1 py-0.5 rounded">M</span>
                           )}
                         </td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${item.precio_venta.toFixed(2)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${formatNumber(item.precio_venta)}</td>
                         <td className="px-2 py-2 whitespace-nowrap text-xs text-center text-gray-900 dark:text-white">{item.descuento_pct}%</td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs font-semibold text-right text-gray-900 dark:text-white">${itemCosts.precio_final_unitario.toFixed(2)}</td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${itemCosts.costo_mp_unitario.toFixed(2)}</td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${itemCosts.costo_mo_unitario.toFixed(2)}</td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${(itemCosts.otros_costos_unitario || 0).toFixed(2)}</td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${itemCosts.iibb_unitario.toFixed(2)}</td>
-                        <td className="px-2 py-2 whitespace-nowrap text-xs font-semibold text-right text-gray-900 dark:text-white">${itemCosts.costo_total_unitario.toFixed(2)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs font-semibold text-right text-gray-900 dark:text-white">${formatNumber(itemCosts.precio_final_unitario)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_mp_unitario)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_mo_unitario)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${formatNumber(itemCosts.otros_costos_unitario || 0)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-right text-gray-900 dark:text-white">${formatNumber(itemCosts.iibb_unitario)}</td>
+                        <td className="px-2 py-2 whitespace-nowrap text-xs font-semibold text-right text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_total_unitario)}</td>
                         <td className={`px-2 py-2 whitespace-nowrap text-xs font-semibold text-right ${itemCosts.rentabilidad_neta_unitaria >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          ${itemCosts.rentabilidad_neta_unitaria.toFixed(2)}
+                          ${formatNumber(itemCosts.rentabilidad_neta_unitaria)}
                         </td>
                         <td className={`px-2 py-2 whitespace-nowrap text-xs font-semibold text-center ${itemCosts.margen >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {itemCosts.margen.toFixed(1)}%
+                          {formatPercent(itemCosts.margen)}%
                         </td>
                         <td className="px-2 py-2 whitespace-nowrap text-center text-xs" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-center items-center space-x-1">
@@ -1627,44 +1643,44 @@ export function CostsModule() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-6">
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Materia Prima</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${costs.totalMP.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${formatNumber(costs.totalMP)}</p>
                 </div>
                 <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Mano de Obra</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">${costs.totalMO.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">${formatNumber(costs.totalMO)}</p>
                 </div>
                 <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Otros Costos</p>
-                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">${(costs.totalOtrosCostos || 0).toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">${formatNumber(costs.totalOtrosCostos || 0)}</p>
                 </div>
                 <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Total IIBB</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">${costs.totalIIBB.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">${formatNumber(costs.totalIIBB)}</p>
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Costo Total Producción</p>
-                  <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">${costs.totalProduction.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">${formatNumber(costs.totalProduction)}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Ingreso Bruto</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">${costs.totalIngresoBruto.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">${formatNumber(costs.totalIngresoBruto)}</p>
                 </div>
                 <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Ingreso Neto</p>
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-400">${costs.totalIngresoNeto.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-400">${formatNumber(costs.totalIngresoNeto)}</p>
                 </div>
                 <div className={`p-4 rounded-lg ${costs.totalProfit >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Rentabilidad Neta</p>
                   <p className={`text-2xl font-bold ${costs.totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    ${costs.totalProfit.toFixed(2)}
+                    ${formatNumber(costs.totalProfit)}
                   </p>
                 </div>
                 <div className={`p-4 rounded-lg ${costs.margin >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Margen de Ganancia</p>
                   <p className={`text-2xl font-bold ${costs.margin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {costs.margin.toFixed(2)}%
+                    {formatNumber(costs.margin)}%
                   </p>
                 </div>
               </div>
@@ -1679,7 +1695,7 @@ export function CostsModule() {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600 dark:text-gray-300">Materia Prima</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">${costs.totalMP.toFixed(2)} ({(costs.totalMP / costs.totalProduction * 100).toFixed(1)}%)</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">${formatNumber(costs.totalMP)} ({formatPercent(costs.totalMP / costs.totalProduction * 100)}%)</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                     <div 
@@ -1691,7 +1707,7 @@ export function CostsModule() {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600 dark:text-gray-300">Mano de Obra</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">${costs.totalMO.toFixed(2)} ({(costs.totalMO / costs.totalProduction * 100).toFixed(1)}%)</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">${formatNumber(costs.totalMO)} ({formatPercent(costs.totalMO / costs.totalProduction * 100)}%)</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                     <div 
@@ -1703,7 +1719,7 @@ export function CostsModule() {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600 dark:text-gray-300">Otros Costos</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">${(costs.totalOtrosCostos || 0).toFixed(2)} ({((costs.totalOtrosCostos || 0) / costs.totalProduction * 100).toFixed(1)}%)</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">${formatNumber(costs.totalOtrosCostos || 0)} ({formatPercent((costs.totalOtrosCostos || 0) / costs.totalProduction * 100)}%)</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                     <div 
@@ -1715,7 +1731,7 @@ export function CostsModule() {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600 dark:text-gray-300">IIBB</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">${costs.totalIIBB.toFixed(2)} ({(costs.totalIIBB / costs.totalProduction * 100).toFixed(1)}%)</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">${formatNumber(costs.totalIIBB)} ({formatPercent(costs.totalIIBB / costs.totalProduction * 100)}%)</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                     <div 
@@ -1969,38 +1985,38 @@ export function CostsModule() {
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
                           <span className="text-gray-600 dark:text-gray-400">Precio Final:</span>
-                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${precioFinalUnitario.toFixed(2)}</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(precioFinalUnitario)}</span>
                         </div>
                         <div>
                           <span className="text-gray-600 dark:text-gray-400">Costo MP:</span>
-                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${itemCosts.costo_mp_unitario.toFixed(2)}</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_mp_unitario)}</span>
                         </div>
                         <div>
                           <span className="text-gray-600 dark:text-gray-400">Costo MO:</span>
-                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${itemCosts.costo_mo_unitario.toFixed(2)}</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_mo_unitario)}</span>
                         </div>
                         <div>
                           <span className="text-gray-600 dark:text-gray-400">Otros Costos:</span>
-                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${(itemCosts.otros_costos_unitario || 0).toFixed(2)}</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(itemCosts.otros_costos_unitario || 0)}</span>
                         </div>
                         <div>
                           <span className="text-gray-600 dark:text-gray-400">IIBB:</span>
-                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${iibbUnitario.toFixed(2)}</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(iibbUnitario)}</span>
                         </div>
                         <div>
                           <span className="text-gray-600 dark:text-gray-400">Costo Total:</span>
-                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${itemCosts.costo_total_unitario.toFixed(2)}</span>
+                          <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(itemCosts.costo_total_unitario)}</span>
                         </div>
                         <div>
                           <span className="text-gray-600 dark:text-gray-400">Rentabilidad:</span>
                           <span className={`ml-2 font-semibold ${rentabilidadNetaUnitaria >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            ${rentabilidadNetaUnitaria.toFixed(2)}
+                            ${formatNumber(rentabilidadNetaUnitaria)}
                           </span>
                         </div>
                         <div className="col-span-2">
                           <span className="text-gray-600 dark:text-gray-400">Margen:</span>
                           <span className={`ml-2 font-semibold ${margen >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            {margen.toFixed(2)}%
+                            {formatNumber(margen)}%
                           </span>
                         </div>
                       </div>
@@ -2014,7 +2030,7 @@ export function CostsModule() {
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-gray-600 dark:text-gray-400">Materia Prima</span>
                             <span className="font-semibold text-gray-900 dark:text-white">
-                              ${itemCosts.costo_mp_unitario.toFixed(2)} ({itemCosts.costo_total_unitario > 0 ? ((itemCosts.costo_mp_unitario / itemCosts.costo_total_unitario) * 100).toFixed(1) : 0}%)
+                              ${formatNumber(itemCosts.costo_mp_unitario)} ({itemCosts.costo_total_unitario > 0 ? formatPercent((itemCosts.costo_mp_unitario / itemCosts.costo_total_unitario) * 100) : '0,0'}%)
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
@@ -2028,7 +2044,7 @@ export function CostsModule() {
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-gray-600 dark:text-gray-400">Mano de Obra</span>
                             <span className="font-semibold text-gray-900 dark:text-white">
-                              ${itemCosts.costo_mo_unitario.toFixed(2)} ({itemCosts.costo_total_unitario > 0 ? ((itemCosts.costo_mo_unitario / itemCosts.costo_total_unitario) * 100).toFixed(1) : 0}%)
+                              ${formatNumber(itemCosts.costo_mo_unitario)} ({itemCosts.costo_total_unitario > 0 ? formatPercent((itemCosts.costo_mo_unitario / itemCosts.costo_total_unitario) * 100) : '0,0'}%)
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
@@ -2042,7 +2058,7 @@ export function CostsModule() {
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-gray-600 dark:text-gray-400">Otros Costos</span>
                             <span className="font-semibold text-gray-900 dark:text-white">
-                              ${(itemCosts.otros_costos_unitario || 0).toFixed(2)} ({itemCosts.costo_total_unitario > 0 ? (((itemCosts.otros_costos_unitario || 0) / itemCosts.costo_total_unitario) * 100).toFixed(1) : 0}%)
+                              ${formatNumber(itemCosts.otros_costos_unitario || 0)} ({itemCosts.costo_total_unitario > 0 ? formatPercent(((itemCosts.otros_costos_unitario || 0) / itemCosts.costo_total_unitario) * 100) : '0,0'}%)
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
@@ -2056,7 +2072,7 @@ export function CostsModule() {
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-gray-600 dark:text-gray-400">IIBB</span>
                             <span className="font-semibold text-gray-900 dark:text-white">
-                              ${iibbUnitario.toFixed(2)} ({precioFinalUnitario > 0 ? ((iibbUnitario / precioFinalUnitario) * 100).toFixed(1) : 0}%)
+                              ${formatNumber(iibbUnitario)} ({precioFinalUnitario > 0 ? formatPercent((iibbUnitario / precioFinalUnitario) * 100) : '0,0'}%)
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
