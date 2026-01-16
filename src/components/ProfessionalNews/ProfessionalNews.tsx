@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, ExternalLink, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import { useDepartmentPermissions } from '../../hooks/useDepartmentPermissions';
 
 type ProfessionalNewsItem = {
@@ -24,6 +25,7 @@ type FormState = {
 
 export function ProfessionalNews() {
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
   const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
   const [items, setItems] = useState<ProfessionalNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +91,10 @@ export function ProfessionalNews() {
       let data: ProfessionalNewsItem | null = null;
       let error;
 
+      if (!tenantId) {
+        throw new Error('No se pudo identificar el tenant. Por favor, recarga la página.');
+      }
+
       if (editingItem) {
         const result = await supabase
           .from('professional_news')
@@ -98,6 +104,7 @@ export function ProfessionalNews() {
             url: form.url,
             image_url: form.image_url || null,
             tags: tagsArray.length ? tagsArray : null,
+            tenant_id: tenantId,
           })
           .eq('id', editingItem.id)
           .select('*')
@@ -114,6 +121,7 @@ export function ProfessionalNews() {
             image_url: form.image_url || null,
             tags: tagsArray.length ? tagsArray : null,
             created_by: createdBy,
+            tenant_id: tenantId,
           })
           .select('*')
           .maybeSingle();
