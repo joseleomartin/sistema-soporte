@@ -33,7 +33,7 @@ export function ProfileSettings() {
     { key: 'meetings', label: 'Sala de Reuniones', icon: Video, category: 'main' },
     { key: 'departments', label: 'Áreas', icon: Layers, category: 'personas' },
     { key: 'internal-policies', label: 'Onboarding y Políticas Internas', icon: FileText, category: 'personas' },
-    { key: 'library', label: 'Bibliotecas y Cursos', icon: BookOpen, category: 'personas' },
+    { key: 'library', label: 'Recursos', icon: BookOpen, category: 'personas' },
     { key: 'professional-news', label: 'Novedades Profesionales', icon: Briefcase, category: 'personas' },
     { key: 'vacations', label: 'Vacaciones y Licencias', icon: Calendar, category: 'personas' },
     { key: 'social', label: 'Social', icon: Heart, category: 'personas' },

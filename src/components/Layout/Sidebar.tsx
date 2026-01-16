@@ -80,7 +80,7 @@ const menuItems: MenuItem[] = [
     subItems: [
       { icon: Layers, label: 'Áreas', view: 'departments', roles: ['admin', 'support', 'user'] },
       { icon: FileText, label: 'Onboarding y Políticas Internas', view: 'internal-policies', roles: ['admin', 'support', 'user'] },
-      { icon: BookOpen, label: 'Bibliotecas y Cursos', view: 'library', roles: ['admin', 'support', 'user'] },
+      { icon: BookOpen, label: 'Recursos', view: 'library', roles: ['admin', 'support', 'user'] },
       { icon: Briefcase, label: 'Novedades Profesionales', view: 'professional-news', roles: ['admin', 'support', 'user'] },
       { icon: Calendar, label: 'Vacaciones y Licencias', view: 'vacations', roles: ['admin', 'support', 'user'] },
       { icon: Heart, label: 'Social', view: 'social', roles: ['admin', 'support', 'user'] },

@@ -636,7 +636,7 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
       subItems: [
         { view: 'departments', label: 'Áreas' },
         { view: 'internal-policies', label: 'Onboarding y Políticas Internas' },
-        { view: 'library', label: 'Bibliotecas y Cursos' },
+        { view: 'library', label: 'Recursos' },
         { view: 'professional-news', label: 'Novedades Profesionales' },
         { view: 'vacations', label: 'Vacaciones y Licencias' },
         { view: 'social', label: 'Social' },
