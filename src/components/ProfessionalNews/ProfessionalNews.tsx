@@ -30,6 +30,7 @@ export function ProfessionalNews() {
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<ProfessionalNewsItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>({
     title: '',
     description: '',
@@ -140,8 +141,12 @@ export function ProfessionalNews() {
       });
       setEditingItem(null);
       setShowForm(false);
-    } catch (error) {
+      setError(null);
+    } catch (error: any) {
       console.error('Error al guardar novedad profesional:', error);
+      const errorMessage = error?.message || error?.details || error?.hint || 'Error desconocido al guardar la novedad profesional';
+      setError(errorMessage);
+      alert(`Error al guardar novedad profesional: ${errorMessage}`);
     } finally {
       setSubmitting(false);
     }
@@ -220,6 +225,11 @@ export function ProfessionalNews() {
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             {editingItem ? 'Editar novedad profesional' : 'Agregar novedad profesional'}
           </h2>
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+              <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div>
@@ -302,6 +312,7 @@ export function ProfessionalNews() {
                 onClick={() => {
                   setShowForm(false);
                   setEditingItem(null);
+                  setError(null);
                   setForm({
                     title: '',
                     description: '',
