@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Upload, FileText, Image, File, X as XIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 
 interface Course {
   id: string;
@@ -27,6 +28,7 @@ interface CreateCourseModalProps {
 
 export function CreateCourseModal({ course, type = 'course', folderId, onClose, onSuccess }: CreateCourseModalProps) {
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -181,6 +183,11 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
       return;
     }
 
+    if (!tenantId) {
+      setError('No se pudo identificar el tenant. Por favor, recarga la página.');
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -235,6 +242,7 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
 
       if (course) {
         // Actualizar curso existente
+        courseData.tenant_id = tenantId;
         const { error: updateError } = await supabase
           .from('library_courses')
           .update(courseData)
@@ -244,6 +252,7 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
       } else {
         // Crear nuevo curso
         courseData.created_by = profile.id;
+        courseData.tenant_id = tenantId;
         const { error: insertError } = await supabase
           .from('library_courses')
           .insert([courseData]);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, FolderPlus, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 
 interface CreateFolderModalProps {
   type: 'course' | 'document';
@@ -11,6 +12,7 @@ interface CreateFolderModalProps {
 
 export function CreateFolderModal({ type, onClose, onSuccess }: CreateFolderModalProps) {
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,11 @@ export function CreateFolderModal({ type, onClose, onSuccess }: CreateFolderModa
       return;
     }
 
+    if (!tenantId) {
+      setError('No se pudo identificar el tenant. Por favor, recarga la página.');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
@@ -36,6 +43,7 @@ export function CreateFolderModal({ type, onClose, onSuccess }: CreateFolderModa
           description: description.trim() || null,
           type: type,
           created_by: profile.id,
+          tenant_id: tenantId,
         });
 
       if (insertError) throw insertError;
