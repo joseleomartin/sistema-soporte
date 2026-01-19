@@ -1060,6 +1060,287 @@ export function SalesModule() {
       const fecha = new Date().toISOString();
       const cliente = formData.cliente || null;
       
+      // Si estamos editando una orden existente
+      if (editingOrder) {
+        const existingOrderId = editingOrder.order_id;
+        const existingOrderNumber = editingOrder.items?.[0]?.order_number;
+        
+        // Verificar si la orden estaba marcada como recibida
+        const wasReceived = editingOrder.items?.some((item: any) => item.estado === 'recibido');
+        
+        // Si estaba recibida, restaurar el stock antes de eliminar las ventas
+        if (wasReceived) {
+          // Cargar todas las ventas de la orden
+          const { data: oldSales, error: oldSalesError } = await supabase
+            .from('sales')
+            .select('*')
+            .eq('order_id', existingOrderId)
+            .eq('tenant_id', tenantId);
+          
+          if (oldSalesError) throw oldSalesError;
+          
+          // Restaurar stock para cada venta antigua
+          for (const oldSale of oldSales || []) {
+            if (oldSale.tipo_producto === 'fabricado') {
+              // Restaurar producto
+              const { data: prod } = await supabase
+                .from('stock_products')
+                .select('*')
+                .eq('tenant_id', tenantId)
+                .eq('nombre', oldSale.producto)
+                .limit(1);
+              
+              if (prod && prod.length > 0) {
+                await supabase
+                  .from('stock_products')
+                  .update({ cantidad: prod[0].cantidad + oldSale.cantidad })
+                  .eq('id', prod[0].id);
+              }
+              
+              // Restaurar materiales
+              const product = products.find(p => p.nombre === oldSale.producto);
+              if (product) {
+                const productMats = productMaterials[product.id] || [];
+                for (const mat of productMats) {
+                  const kgNecesarios = (mat.kg_por_unidad || 0) * oldSale.cantidad;
+                  if (kgNecesarios > 0) {
+                    let { data: stockMat } = await supabase
+                      .from('stock_materials')
+                      .select('*')
+                      .eq('tenant_id', tenantId)
+                      .ilike('nombre', mat.material_name)
+                      .limit(1);
+                    
+                    if (!stockMat || stockMat.length === 0) {
+                      const { data: stockMatByMaterial } = await supabase
+                        .from('stock_materials')
+                        .select('*')
+                        .eq('tenant_id', tenantId)
+                        .ilike('material', mat.material_name)
+                        .limit(1);
+                      stockMat = stockMatByMaterial;
+                    }
+                    
+                    if (stockMat && stockMat.length > 0) {
+                      await supabase
+                        .from('stock_materials')
+                        .update({ kg: (stockMat[0].kg || 0) + kgNecesarios })
+                        .eq('id', stockMat[0].id);
+                    }
+                  }
+                }
+              }
+            } else {
+              // Restaurar producto de reventa
+              const { data: prod } = await supabase
+                .from('resale_products')
+                .select('*')
+                .eq('tenant_id', tenantId)
+                .eq('nombre', oldSale.producto)
+                .limit(1);
+              
+              if (prod && prod.length > 0) {
+                await supabase
+                  .from('resale_products')
+                  .update({ cantidad: prod[0].cantidad + oldSale.cantidad })
+                  .eq('id', prod[0].id);
+              }
+            }
+          }
+        }
+        
+        // Eliminar todas las ventas de la orden existente
+        const { error: deleteError } = await supabase
+          .from('sales')
+          .delete()
+          .eq('order_id', existingOrderId)
+          .eq('tenant_id', tenantId);
+        
+        if (deleteError) throw deleteError;
+        
+        // Usar el order_id y order_number existentes
+        const orderId = existingOrderId;
+        const orderNumber = existingOrderNumber || 1;
+        
+        // Crear nuevos registros de venta con los datos actualizados
+        for (const item of saleItems) {
+          const saleDataBase: SaleInsert & { order_id?: string; order_number?: number } = {
+            tenant_id: tenantId,
+            fecha: editingOrder.fecha || fecha, // Mantener la fecha original
+            producto: item.producto,
+            tipo_producto: item.tipo_producto,
+            cantidad: item.cantidad,
+            precio_unitario: item.precio_unitario,
+            descuento_pct: item.descuento_pct,
+            iib_pct: item.iib_pct,
+            precio_final: item.precio_final,
+            costo_unitario: item.costo_unitario,
+            ingreso_bruto: item.ingreso_bruto,
+            ingreso_neto: item.ingreso_neto,
+            ganancia_un: item.ganancia_un,
+            ganancia_total: item.ganancia_total,
+            stock_antes: item.stock_antes,
+            stock_despues: item.stock_despues,
+            cliente,
+            order_id: orderId,
+            order_number: orderNumber,
+          };
+
+          const saleData: any = { ...saleDataBase };
+          saleData.tiene_iva = item.tiene_iva;
+          saleData.iva_pct = item.iva_pct;
+          saleData.estado = wasReceived ? 'recibido' : 'pendiente'; // Mantener el estado original
+          saleData.pagado = formData.pagado;
+
+          const { error: insertError } = await supabase.from('sales').insert(saleData);
+          
+          if (insertError) {
+            const errorMsg = insertError.message || String(insertError);
+            if (errorMsg.includes('tiene_iva') || errorMsg.includes('iva_pct') || errorMsg.includes('estado') || errorMsg.includes('pagado') || errorMsg.includes('column') || errorMsg.includes('does not exist')) {
+              console.warn('Algunos campos no encontrados, guardando sin ellos:', insertError);
+              const { error: retryError } = await supabase.from('sales').insert(saleDataBase);
+              if (retryError) {
+                throw new Error(`Error al guardar venta: ${retryError.message}`);
+              }
+            } else {
+              throw new Error(`Error al guardar venta: ${errorMsg}`);
+            }
+          }
+        }
+        
+        // Si estaba recibida, volver a descontar el stock con los nuevos valores
+        if (wasReceived) {
+          // Cargar las nuevas ventas
+          const { data: newSales, error: newSalesError } = await supabase
+            .from('sales')
+            .select('*')
+            .eq('order_id', orderId)
+            .eq('tenant_id', tenantId);
+          
+          if (newSalesError) throw newSalesError;
+          
+          // Descontar stock para cada nueva venta
+          for (const sale of newSales || []) {
+            if (sale.tipo_producto === 'fabricado') {
+              // Descontar producto
+              const { data: prod, error: findError } = await supabase
+                .from('stock_products')
+                .select('*')
+                .eq('tenant_id', tenantId)
+                .eq('nombre', sale.producto)
+                .limit(1);
+
+              if (findError) throw findError;
+
+              if (prod && prod.length > 0) {
+                const currentStock = prod[0].cantidad || 0;
+                const newStock = currentStock - sale.cantidad;
+                await supabase
+                  .from('stock_products')
+                  .update({ cantidad: newStock })
+                  .eq('id', prod[0].id);
+              } else {
+                await supabase
+                  .from('stock_products')
+                  .insert({
+                    tenant_id: tenantId,
+                    nombre: sale.producto,
+                    cantidad: -sale.cantidad,
+                    peso_unidad: 0,
+                    costo_unit_total: sale.costo_unitario || null,
+                  });
+              }
+              
+              // Descontar materiales
+              const product = products.find(p => p.nombre === sale.producto);
+              if (product) {
+                const productMats = productMaterials[product.id] || [];
+                for (const mat of productMats) {
+                  const kgNecesarios = (mat.kg_por_unidad || 0) * sale.cantidad;
+                  if (kgNecesarios > 0) {
+                    let { data: stockMat } = await supabase
+                      .from('stock_materials')
+                      .select('*')
+                      .eq('tenant_id', tenantId)
+                      .ilike('nombre', mat.material_name)
+                      .limit(1);
+
+                    if (!stockMat || stockMat.length === 0) {
+                      const { data: stockMatByMaterial } = await supabase
+                        .from('stock_materials')
+                        .select('*')
+                        .eq('tenant_id', tenantId)
+                        .ilike('material', mat.material_name)
+                        .limit(1);
+                      stockMat = stockMatByMaterial;
+                    }
+
+                    if (stockMat && stockMat.length > 0) {
+                      const currentKg = stockMat[0].kg || 0;
+                      const newKg = currentKg - kgNecesarios;
+                      await supabase
+                        .from('stock_materials')
+                        .update({ kg: newKg })
+                        .eq('id', stockMat[0].id);
+                    } else {
+                      await supabase
+                        .from('stock_materials')
+                        .insert({
+                          tenant_id: tenantId,
+                          nombre: mat.material_name,
+                          material: mat.material_name,
+                          kg: -kgNecesarios,
+                          costo_kilo_usd: 0,
+                          valor_dolar: 1,
+                          moneda: 'ARS',
+                        });
+                    }
+                  }
+                }
+              }
+            } else {
+              // Descontar producto de reventa
+              const { data: prod, error: findError } = await supabase
+                .from('resale_products')
+                .select('*')
+                .eq('tenant_id', tenantId)
+                .eq('nombre', sale.producto)
+                .limit(1);
+
+              if (findError) throw findError;
+
+              if (prod && prod.length > 0) {
+                const currentStock = prod[0].cantidad || 0;
+                const newStock = currentStock - sale.cantidad;
+                await supabase
+                  .from('resale_products')
+                  .update({ cantidad: newStock })
+                  .eq('id', prod[0].id);
+              } else {
+                await supabase
+                  .from('resale_products')
+                  .insert({
+                    tenant_id: tenantId,
+                    nombre: sale.producto,
+                    cantidad: -sale.cantidad,
+                    costo_unitario: sale.costo_unitario || 0,
+                    otros_costos: 0,
+                    costo_unitario_final: sale.costo_unitario || 0,
+                    moneda: 'ARS',
+                  });
+              }
+            }
+          }
+        }
+        
+        resetForm();
+        setEditingOrder(null);
+        await loadData();
+        alert('Orden actualizada exitosamente');
+        return;
+      }
+      
+      // Si es una nueva orden, crear normalmente
       // Obtener el siguiente número de orden secuencial
       const { data: orderNumberData, error: orderNumberError } = await supabase
         .rpc('get_next_order_number', { p_tenant_id: tenantId });
