@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, Trash2, ChevronDown, X, Printer, FileText, CheckCircle, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, ChevronDown, X, Printer, FileText, CheckCircle, DollarSign, Pencil } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -27,6 +27,7 @@ type SaleInsert = Database['public']['Tables']['sales']['Insert'];
 type StockProduct = Database['public']['Tables']['stock_products']['Row'];
 type ResaleProduct = Database['public']['Tables']['resale_products']['Row'];
 type Client = Database['public']['Tables']['clients']['Row'];
+type Product = Database['public']['Tables']['products']['Row'];
 
 interface SaleItem {
   id: string;
@@ -56,9 +57,11 @@ export function SalesModule() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [fabricatedProducts, setFabricatedProducts] = useState<StockProduct[]>([]);
   const [resaleProducts, setResaleProducts] = useState<ResaleProduct[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<any | null>(null);
   const [productType, setProductType] = useState<'fabricado' | 'reventa'>('fabricado');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const clientInputRef = useRef<HTMLInputElement>(null);
@@ -96,6 +99,7 @@ export function SalesModule() {
     total_con_iva: 0,
     ganancia_un: 0,
     ganancia_total: 0,
+    margen_pct: 0,
   });
 
   useEffect(() => {
@@ -128,10 +132,13 @@ export function SalesModule() {
       // Calcular IVA como porcentaje del ingreso neto
       const ivaMonto = tieneIva ? values.ingreso_neto * (ivaPct / 100) : 0;
       const totalConIva = values.ingreso_neto + ivaMonto;
+      // Calcular margen en porcentaje: (Ganancia Total / Ingreso Neto) * 100
+      const margenPct = values.ingreso_neto > 0 ? (values.ganancia_total / values.ingreso_neto) * 100 : 0;
       setCalculatedValues({
         ...values,
         iva_monto: ivaMonto,
         total_con_iva: totalConIva,
+        margen_pct: margenPct,
       });
     }
   }, [formData, productType, fabricatedProducts, resaleProducts]);
@@ -177,6 +184,17 @@ export function SalesModule() {
         console.error('Error loading resale products:', resaleError);
       } else {
         setResaleProducts(resale || []);
+      }
+
+      // Load products from costs module to get precio_venta
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      if (productsError) {
+        console.error('Error loading products:', productsError);
+      } else {
+        setProducts(productsData || []);
       }
 
       // Load clients
@@ -309,6 +327,7 @@ export function SalesModule() {
       total_con_iva: 0,
       ganancia_un: 0,
       ganancia_total: 0,
+      margen_pct: 0,
     });
   };
 
@@ -499,6 +518,76 @@ export function SalesModule() {
     }
   };
 
+  const handleEditOrder = (order: any) => {
+    if (!order || !order.items || order.items.length === 0) return;
+    
+    // Cargar el primer item de la orden en el formulario
+    const firstItem = order.items[0];
+    
+    // Determinar el tipo de producto
+    const tipo = firstItem.tipo_producto;
+    setProductType(tipo);
+    
+    // Cargar los datos en el formulario
+    setFormData({
+      producto: firstItem.producto,
+      cantidad: firstItem.cantidad.toString(),
+      precio_unitario: firstItem.precio_unitario.toString(),
+      descuento_pct: firstItem.descuento_pct?.toString() || '0',
+      iib_pct: firstItem.iib_pct?.toString() || '0',
+      tiene_iva: (firstItem as any).tiene_iva || false,
+      iva_pct: ((firstItem as any).iva_pct || 21).toString(),
+      cliente: order.cliente || '',
+      pagado: firstItem.pagado || false,
+    });
+    
+    // Cargar todos los items de la orden en saleItems
+    const items: SaleItem[] = order.items.map((item: any) => {
+      // Obtener el stock actual del producto
+      let stockId = '';
+      let stockAntes = 0;
+      
+      if (tipo === 'fabricado') {
+        const prod = fabricatedProducts.find(p => p.nombre === item.producto);
+        if (prod) {
+          stockId = prod.id;
+          stockAntes = prod.cantidad;
+        }
+      } else {
+        const prod = resaleProducts.find(p => p.nombre === item.producto);
+        if (prod) {
+          stockId = prod.id;
+          stockAntes = prod.cantidad;
+        }
+      }
+      
+      return {
+        id: item.id,
+        producto: item.producto,
+        tipo_producto: item.tipo_producto,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+        descuento_pct: item.descuento_pct || 0,
+        iib_pct: item.iib_pct || 0,
+        tiene_iva: (item as any).tiene_iva || false,
+        iva_pct: (item as any).iva_pct || 21,
+        costo_unitario: item.costo_unitario,
+        precio_final: item.precio_final,
+        ingreso_bruto: item.ingreso_bruto,
+        ingreso_neto: item.ingreso_neto,
+        ganancia_un: item.ganancia_un,
+        ganancia_total: item.ganancia_total,
+        stock_antes: stockAntes,
+        stock_despues: stockAntes - item.cantidad,
+        stockId: stockId,
+      };
+    });
+    
+    setSaleItems(items);
+    setEditingOrder(order);
+    setShowForm(true);
+  };
+
   const handlePrintOrder = async (order: any) => {
     // Cargar datos completos del cliente si está disponible
     let clienteData = null;
@@ -535,6 +624,7 @@ export function SalesModule() {
       cliente: order.cliente,
       clienteData: clienteData || undefined,
       order_id: order.order_id,
+      order_number: order.items && order.items.length > 0 ? order.items[0].order_number : undefined,
       items: order.items.map((item: any) => ({
         producto: item.producto,
         tipo: item.tipo_producto,
@@ -587,6 +677,8 @@ export function SalesModule() {
       fecha: sale.fecha,
       cliente: sale.cliente,
       clienteData: clienteData || undefined,
+      order_id: sale.order_id,
+      order_number: sale.order_number,
       items: [{
         producto: sale.producto,
         tipo: sale.tipo_producto,
@@ -617,13 +709,24 @@ export function SalesModule() {
       const fecha = new Date().toISOString();
       const cliente = formData.cliente || null;
       
+      // Obtener el siguiente número de orden secuencial
+      const { data: orderNumberData, error: orderNumberError } = await supabase
+        .rpc('get_next_order_number', { p_tenant_id: tenantId });
+      
+      if (orderNumberError) {
+        console.error('Error obteniendo número de orden:', orderNumberError);
+        throw new Error('Error al generar número de orden');
+      }
+      
+      const orderNumber = orderNumberData || 1;
+      
       // Generar un order_id único para agrupar todos los productos de esta venta
       const orderId = crypto.randomUUID();
 
       // Crear registros de venta para cada producto con el mismo order_id
       for (const item of saleItems) {
         // Construir el objeto de datos base
-        const saleDataBase: SaleInsert & { order_id?: string } = {
+        const saleDataBase: SaleInsert & { order_id?: string; order_number?: number } = {
           tenant_id: tenantId,
           fecha,
           producto: item.producto,
@@ -642,6 +745,7 @@ export function SalesModule() {
           stock_despues: item.stock_despues,
           cliente,
           order_id: orderId,
+          order_number: orderNumber,
         };
 
         // Intentar agregar campos de IVA, estado y pagado si están disponibles
@@ -673,8 +777,9 @@ export function SalesModule() {
       }
 
       resetForm();
+      setEditingOrder(null);
       await loadData();
-      alert('Venta registrada exitosamente');
+      alert(editingOrder ? 'Orden actualizada exitosamente' : 'Venta registrada exitosamente');
     } catch (error: any) {
       console.error('Error saving sale:', error);
       const errorMessage = error?.message || String(error);
@@ -706,8 +811,10 @@ export function SalesModule() {
       total_con_iva: 0,
       ganancia_un: 0,
       ganancia_total: 0,
+      margen_pct: 0,
     });
     setSaleItems([]);
+    setEditingOrder(null);
     setShowForm(false);
     setShowClientDropdown(false);
   };
@@ -752,7 +859,9 @@ export function SalesModule() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Nueva Venta</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {editingOrder ? 'Editar Orden de Venta' : 'Nueva Venta'}
+              </h3>
             </div>
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
               <div>
@@ -760,8 +869,20 @@ export function SalesModule() {
                 <select
                   value={productType}
                   onChange={(e) => {
-                    setProductType(e.target.value as 'fabricado' | 'reventa');
-                    setFormData({ ...formData, producto: '' });
+                    const newType = e.target.value as 'fabricado' | 'reventa';
+                    setProductType(newType);
+                    // Si hay un producto seleccionado, buscar su precio de venta
+                    if (formData.producto) {
+                      const product = products.find(p => p.nombre === formData.producto);
+                      const precioVenta = product?.precio_venta;
+                      setFormData({ 
+                        ...formData, 
+                        producto: formData.producto,
+                        precio_unitario: precioVenta ? precioVenta.toString() : formData.precio_unitario
+                      });
+                    } else {
+                      setFormData({ ...formData, producto: '' });
+                    }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
@@ -777,7 +898,18 @@ export function SalesModule() {
                 <select
                   required={saleItems.length === 0}
                   value={formData.producto}
-                  onChange={(e) => setFormData({ ...formData, producto: e.target.value })}
+                  onChange={(e) => {
+                    const selectedProductName = e.target.value;
+                    // Buscar el precio de venta del producto en la tabla products
+                    const product = products.find(p => p.nombre === selectedProductName);
+                    const precioVenta = product?.precio_venta;
+                    
+                    setFormData({ 
+                      ...formData, 
+                      producto: selectedProductName,
+                      precio_unitario: precioVenta ? precioVenta.toString() : formData.precio_unitario
+                    });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Seleccione un producto</option>
@@ -988,6 +1120,12 @@ export function SalesModule() {
                         ${formatNumber(calculatedValues.ganancia_total)}
                       </span>
                     </div>
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-300">Margen (%):</span>
+                      <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
+                        {calculatedValues.margen_pct.toFixed(2)}%
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1156,6 +1294,7 @@ export function SalesModule() {
                   if (!acc[sale.order_id]) {
                     acc[sale.order_id] = {
                       order_id: sale.order_id,
+                      order_number: sale.order_number,
                       fecha: sale.fecha,
                       cliente: sale.cliente,
                       items: [],
@@ -1339,6 +1478,16 @@ export function SalesModule() {
                             >
                               <DollarSign className="w-4 h-4" />
                               {order.items[0]?.pagado ? 'Pendiente' : 'Cobrado'}
+                            </button>
+                          )}
+                          {canEdit('fabinsa-sales') && (
+                            <button
+                              onClick={() => handleEditOrder(order)}
+                              className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 touch-manipulation flex-1 min-w-[100px]"
+                              title="Editar Orden"
+                            >
+                              <Pencil className="w-4 h-4" />
+                              Editar
                             </button>
                           )}
                           {canPrint('fabinsa-sales') && (
@@ -1702,6 +1851,15 @@ export function SalesModule() {
                                     title={order.items[0]?.pagado ? 'Marcar como Pendiente de cobro' : 'Marcar como Cobrado'}
                                   >
                                     <DollarSign className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {canEdit('fabinsa-sales') && (
+                                  <button
+                                    onClick={() => handleEditOrder(order)}
+                                    className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors flex-shrink-0"
+                                    title="Editar Orden"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
                                   </button>
                                 )}
                                 {canPrint('fabinsa-sales') && (

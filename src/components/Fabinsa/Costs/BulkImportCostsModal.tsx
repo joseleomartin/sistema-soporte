@@ -10,6 +10,7 @@ interface BulkImportCostsModalProps {
 }
 
 interface CostImportRow {
+  codigo_producto?: string;
   familia: string;
   medida: string;
   caracteristica: string;
@@ -58,6 +59,7 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
           // Verificar columnas requeridas
           const requiredColumns = ['Familia', 'Medida', 'Característica', 'Precio_Venta', 'Moneda_Precio', 
                                    'Cantidad_Fabricar', 'Cantidad_Hora', 'IIBB_Porcentaje', 'Precio_Dolar'];
+          // Código_Producto es opcional
           
           const firstRow = jsonData[0];
           const missingColumns = requiredColumns.filter(col => !(col in firstRow));
@@ -156,6 +158,7 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
             }
 
             // Parsear valores
+            const codigo_producto = String(row['Código_Producto'] || row['Codigo_Producto'] || row['Código'] || row['Codigo'] || '').trim() || undefined;
             const familia = String(row['Familia'] || '').trim();
             const medida = String(row['Medida'] || '').trim();
             const caracteristica = String(row['Característica'] || '').trim();
@@ -220,6 +223,7 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
             }
 
             rows.push({
+              codigo_producto,
               familia,
               medida,
               caracteristica,
@@ -307,27 +311,52 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
           // Crear o buscar producto (para simulación de costos)
           const productName = `${row.familia} - ${row.medida} - ${row.caracteristica}`;
           
-          // Buscar producto existente
-          const { data: existingProduct } = await supabase
-            .from('products')
-            .select('id')
-            .eq('tenant_id', tenantId)
-            .ilike('nombre', productName)
-            .maybeSingle();
+          // Buscar producto existente por código o nombre
+          let existingProduct = null;
+          if (row.codigo_producto) {
+            const { data } = await supabase
+              .from('products')
+              .select('id')
+              .eq('tenant_id', tenantId)
+              .eq('codigo_producto', row.codigo_producto)
+              .maybeSingle();
+            existingProduct = data;
+          }
+          
+          // Si no se encontró por código, buscar por nombre
+          if (!existingProduct) {
+            const { data } = await supabase
+              .from('products')
+              .select('id')
+              .eq('tenant_id', tenantId)
+              .ilike('nombre', productName)
+              .maybeSingle();
+            existingProduct = data;
+          }
 
           let productId: string;
 
           if (existingProduct) {
             productId = existingProduct.id;
-            // Actualizar producto existente con datos de la simulación
+            // Calcular peso unidad (suma de materiales)
+            const peso_unidad = row.materiales.reduce((sum, m) => sum + m.kg_por_unidad, 0);
+            
+            // Actualizar producto existente con todos los datos de la simulación
             await supabase
               .from('products')
               .update({
+                codigo_producto: row.codigo_producto || null,
+                nombre: productName,
+                familia: row.familia,
+                medida: row.medida,
+                caracteristica: row.caracteristica,
+                peso_unidad: peso_unidad,
                 precio_venta: row.precio_venta || null,
                 cantidad_fabricar: row.cantidad_fabricar,
                 cantidad_por_hora: row.cantidad_hora,
                 iibb_porcentaje: row.iibb_porcentaje,
                 moneda_precio: row.moneda_precio,
+                otros_costos: 0, // Se puede agregar al Excel si es necesario
               })
               .eq('id', productId);
           } else {
@@ -340,6 +369,7 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
               .insert({
                 tenant_id: tenantId,
                 nombre: productName,
+                codigo_producto: row.codigo_producto || null,
                 familia: row.familia,
                 medida: row.medida,
                 caracteristica: row.caracteristica,
@@ -412,16 +442,36 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
             simulationId = newSim.id;
           }
 
-          // Agregar item a la simulación
-          await supabase
+          // Verificar si ya existe un item de simulación para este producto
+          const { data: existingSimulationItem } = await supabase
             .from('cost_simulation_items')
-            .insert({
-              simulation_id: simulationId,
-              product_id: productId,
-              precio_venta: row.precio_venta,
-              descuento_pct: 0,
-              cantidad_fabricar: row.cantidad_fabricar,
-            });
+            .select('id')
+            .eq('simulation_id', simulationId)
+            .eq('product_id', productId)
+            .maybeSingle();
+
+          if (existingSimulationItem) {
+            // Actualizar item de simulación existente
+            await supabase
+              .from('cost_simulation_items')
+              .update({
+                precio_venta: row.precio_venta,
+                descuento_pct: 0,
+                cantidad_fabricar: row.cantidad_fabricar,
+              })
+              .eq('id', existingSimulationItem.id);
+          } else {
+            // Agregar nuevo item a la simulación
+            await supabase
+              .from('cost_simulation_items')
+              .insert({
+                simulation_id: simulationId,
+                product_id: productId,
+                precio_venta: row.precio_venta,
+                descuento_pct: 0,
+                cantidad_fabricar: row.cantidad_fabricar,
+              });
+          }
 
           imported++;
         } catch (error: any) {
@@ -452,6 +502,7 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
     // Crear datos de ejemplo para la plantilla
     const templateData = [
       {
+        'Código_Producto': 'PROD-001',
         'Familia': 'Ejemplo',
         'Medida': '100x50',
         'Característica': 'Estándar',
@@ -497,6 +548,7 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
               <li>El archivo debe ser Excel (.xlsx o .xls)</li>
               <li>Debe contener las columnas: Familia, Medida, Característica, Precio_Venta, Moneda_Precio, Cantidad_Fabricar, Cantidad_Hora, IIBB_Porcentaje, Precio_Dolar</li>
+              <li>Código_Producto es opcional pero recomendado para identificación única</li>
               <li>Los materiales deben estar en columnas como: Material_1_Nombre, Material_1_Cantidad, Material_1_Precio, Material_1_Moneda</li>
               <li>Puede descargar la plantilla de ejemplo haciendo clic en el botón de abajo</li>
             </ul>

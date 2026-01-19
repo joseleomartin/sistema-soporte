@@ -83,11 +83,14 @@ export function CreateCourseModal({ course, type = 'course', folderId, onClose, 
   }, [course, type, folderId]);
 
   const fetchFolders = async () => {
+    if (!tenantId) return;
+    
     try {
       const { data, error } = await supabase
         .from('library_folders')
         .select('id, name')
         .eq('type', type)
+        .eq('tenant_id', tenantId)
         .order('name', { ascending: true });
 
       if (error) throw error;

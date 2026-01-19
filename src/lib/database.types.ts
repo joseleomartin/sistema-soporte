@@ -529,6 +529,7 @@ export interface Database {
           id: string
           tenant_id: string
           nombre: string
+          codigo_producto: string | null
           familia: string | null
           medida: string | null
           caracteristica: string | null
@@ -547,6 +548,7 @@ export interface Database {
           id?: string
           tenant_id: string
           nombre: string
+          codigo_producto?: string | null
           familia?: string | null
           medida?: string | null
           caracteristica?: string | null
@@ -565,6 +567,7 @@ export interface Database {
           id?: string
           tenant_id?: string
           nombre?: string
+          codigo_producto?: string | null
           familia?: string | null
           medida?: string | null
           caracteristica?: string | null
@@ -714,6 +717,7 @@ export interface Database {
           id: string
           tenant_id: string
           nombre: string
+          codigo_producto: string | null
           cantidad: number
           peso_unidad: number
           costo_unit_total: number | null
@@ -725,6 +729,7 @@ export interface Database {
           id?: string
           tenant_id: string
           nombre: string
+          codigo_producto?: string | null
           cantidad?: number
           peso_unidad: number
           costo_unit_total?: number | null
@@ -736,6 +741,7 @@ export interface Database {
           id?: string
           tenant_id?: string
           nombre?: string
+          codigo_producto?: string | null
           cantidad?: number
           peso_unidad?: number
           costo_unit_total?: number | null
@@ -749,6 +755,7 @@ export interface Database {
           id: string
           tenant_id: string
           nombre: string
+          codigo_producto: string | null
           cantidad: number
           costo_unitario: number
           otros_costos: number
@@ -763,6 +770,7 @@ export interface Database {
           id?: string
           tenant_id: string
           nombre: string
+          codigo_producto?: string | null
           cantidad?: number
           costo_unitario: number
           otros_costos?: number
@@ -777,6 +785,7 @@ export interface Database {
           id?: string
           tenant_id?: string
           nombre?: string
+          codigo_producto?: string | null
           cantidad?: number
           costo_unitario?: number
           otros_costos?: number
@@ -809,6 +818,7 @@ export interface Database {
           stock_despues: number
           cliente: string | null
           order_id: string | null
+          order_number: number | null
           created_at: string
         }
         Insert: {
@@ -823,6 +833,7 @@ export interface Database {
           iib_pct?: number
           cliente?: string | null
           order_id?: string | null
+          order_number?: number | null
           precio_final: number
           costo_unitario: number
           ingreso_bruto: number
@@ -844,6 +855,7 @@ export interface Database {
           descuento_pct?: number
           iib_pct?: number
           cliente?: string | null
+          order_number?: number | null
           precio_final?: number
           costo_unitario?: number
           ingreso_bruto?: number

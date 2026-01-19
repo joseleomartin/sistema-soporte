@@ -48,6 +48,7 @@ interface CostSimulationItem {
   medida?: string;
   caracteristica?: string;
   nombre_manual?: string;
+  codigo_producto?: string;
   peso_unidad?: number;
   cantidad_por_hora?: number;
   iibb_porcentaje?: number;
@@ -71,6 +72,7 @@ export function CostsModule() {
   const [currentSimulationId, setCurrentSimulationId] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<CostSimulationItem | null>(null);
   const [editFormData, setEditFormData] = useState({
+    codigo_producto: '',
     precio_venta: 0,
     descuento_pct: 0,
     cantidad_fabricar: 0,
@@ -81,6 +83,7 @@ export function CostsModule() {
   const [editMaterials, setEditMaterials] = useState<Array<{ material_name: string; kg_por_unidad: number }>>([]);
   // Form data for manual product
   const [manualFormData, setManualFormData] = useState({
+    codigo_producto: '',
     familia: '',
     medida: '',
     caracteristica: '',
@@ -554,6 +557,7 @@ export function CostsModule() {
         const productData = {
           tenant_id: tenantId,
           nombre,
+          codigo_producto: manualFormData.codigo_producto || null,
           familia: manualFormData.familia || null,
           medida: manualFormData.medida || null,
           caracteristica: manualFormData.caracteristica || null,
@@ -648,6 +652,7 @@ export function CostsModule() {
         setProducts(updatedProds || []);
         
         setManualFormData({
+          codigo_producto: '',
           familia: '',
           medida: '',
           caracteristica: '',
@@ -688,6 +693,7 @@ export function CostsModule() {
   const handleItemClick = (item: CostSimulationItem) => {
     setSelectedItem(item);
     setEditFormData({
+      codigo_producto: item.product?.codigo_producto || item.codigo_producto || '',
       precio_venta: item.precio_venta,
       descuento_pct: item.descuento_pct,
       cantidad_fabricar: item.cantidad_fabricar,
@@ -717,6 +723,7 @@ export function CostsModule() {
         await supabase
           .from('products')
           .update({
+            codigo_producto: editFormData.codigo_producto || null,
             precio_venta: editFormData.precio_venta || null,
             cantidad_fabricar: editFormData.cantidad_fabricar,
             cantidad_por_hora: editFormData.cantidad_por_hora || null,
@@ -926,10 +933,6 @@ export function CostsModule() {
         }
       }
 
-      // Crear una nueva orden de producción (en lugar de actualizar la existente)
-      // Esto permite enviar el mismo item múltiples veces a producción
-      const fechaActual = new Date().toISOString();
-      
       // Validar que el producto existe
       if (!item.product) {
         throw new Error('Producto no válido');
@@ -937,50 +940,131 @@ export function CostsModule() {
       
       // Obtener los datos del producto base
       const productBase = item.product;
+      const fechaActual = new Date().toISOString();
       
-      // Crear nueva orden de producción con los datos del item
-      const newProductData: Database['public']['Tables']['products']['Insert'] = {
-        tenant_id: tenantId,
-        nombre: productBase.nombre,
-        familia: productBase.familia,
-        medida: productBase.medida,
-        caracteristica: productBase.caracteristica,
-        peso_unidad: productBase.peso_unidad,
-        precio_venta: item.precio_venta || null,
-        cantidad_fabricar: item.cantidad_fabricar,
-        cantidad_por_hora: productBase.cantidad_por_hora,
-        iibb_porcentaje: productBase.iibb_porcentaje,
-        otros_costos: productBase.otros_costos,
-        moneda_precio: productBase.moneda_precio,
-        estado: 'pendiente', // Nueva orden siempre comienza como pendiente
-        created_at: fechaActual, // Fecha de orden de producción
-        updated_at: fechaActual,
-      };
-
-      const { data: newProduct, error: productError } = await supabase
-        .from('products')
-        .insert(newProductData)
-        .select()
-        .single();
-
-      if (productError) {
-        throw productError;
+      // Verificar si ya existe una orden pendiente para este producto
+      // Buscar por código si existe, sino por nombre
+      let existingOrder = null;
+      
+      if (productBase.codigo_producto) {
+        const { data: orderByCode } = await supabase
+          .from('products')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('codigo_producto', productBase.codigo_producto)
+          .eq('estado', 'pendiente')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        existingOrder = orderByCode;
       }
-
-      // Copiar los materiales del producto original a la nueva orden
-      if (item.materials && item.materials.length > 0) {
-        const materialsData: Database['public']['Tables']['product_materials']['Insert'][] = item.materials.map(mat => ({
-          product_id: newProduct.id,
-          material_name: mat.material_name,
-          kg_por_unidad: mat.kg_por_unidad,
-        }));
-
-        const { error: materialsError } = await supabase
+      
+      // Si no se encontró por código, buscar por nombre
+      if (!existingOrder) {
+        const { data: orderByName } = await supabase
+          .from('products')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .ilike('nombre', productBase.nombre)
+          .eq('estado', 'pendiente')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        existingOrder = orderByName;
+      }
+      
+      let productId: string;
+      
+      if (existingOrder) {
+        // Actualizar orden existente
+        productId = existingOrder.id;
+        
+        const updateData: Database['public']['Tables']['products']['Update'] = {
+          cantidad_fabricar: item.cantidad_fabricar,
+          precio_venta: item.precio_venta || null,
+          updated_at: fechaActual,
+        };
+        
+        const { error: updateError } = await supabase
+          .from('products')
+          .update(updateData)
+          .eq('id', productId);
+        
+        if (updateError) {
+          throw updateError;
+        }
+        
+        // Eliminar materiales existentes y agregar los nuevos
+        await supabase
           .from('product_materials')
-          .insert(materialsData);
+          .delete()
+          .eq('product_id', productId);
+        
+        if (item.materials && item.materials.length > 0) {
+          const materialsData: Database['public']['Tables']['product_materials']['Insert'][] = item.materials.map(mat => ({
+            product_id: productId,
+            material_name: mat.material_name,
+            kg_por_unidad: mat.kg_por_unidad,
+          }));
 
-        if (materialsError) {
-          throw materialsError;
+          const { error: materialsError } = await supabase
+            .from('product_materials')
+            .insert(materialsData);
+
+          if (materialsError) {
+            throw materialsError;
+          }
+        }
+      } else {
+        // Crear nueva orden de producción
+        const newProductData: Database['public']['Tables']['products']['Insert'] = {
+          tenant_id: tenantId,
+          nombre: productBase.nombre,
+          codigo_producto: productBase.codigo_producto || null,
+          familia: productBase.familia,
+          medida: productBase.medida,
+          caracteristica: productBase.caracteristica,
+          peso_unidad: productBase.peso_unidad,
+          precio_venta: item.precio_venta || null,
+          cantidad_fabricar: item.cantidad_fabricar,
+          cantidad_por_hora: productBase.cantidad_por_hora,
+          iibb_porcentaje: productBase.iibb_porcentaje,
+          otros_costos: productBase.otros_costos,
+          moneda_precio: productBase.moneda_precio,
+          estado: 'pendiente', // Nueva orden siempre comienza como pendiente
+          created_at: fechaActual, // Fecha de orden de producción
+          updated_at: fechaActual,
+        };
+
+        const { data: newProduct, error: productError } = await supabase
+          .from('products')
+          .insert(newProductData)
+          .select()
+          .single();
+
+        if (productError) {
+          throw productError;
+        }
+        
+        productId = newProduct.id;
+
+        // Copiar los materiales del producto original a la nueva orden
+        if (item.materials && item.materials.length > 0) {
+          const materialsData: Database['public']['Tables']['product_materials']['Insert'][] = item.materials.map(mat => ({
+            product_id: productId,
+            material_name: mat.material_name,
+            kg_por_unidad: mat.kg_por_unidad,
+          }));
+
+          const { error: materialsError } = await supabase
+            .from('product_materials')
+            .insert(materialsData);
+
+          if (materialsError) {
+            throw materialsError;
+          }
         }
       }
 
@@ -1005,6 +1089,7 @@ export function CostsModule() {
         await supabase.from('stock_products').insert({
           tenant_id: tenantId,
           nombre: item.product.nombre,
+          codigo_producto: item.product.codigo_producto || null,
           cantidad: item.cantidad_fabricar,
           peso_unidad: item.product.peso_unidad,
           costo_unit_total: itemCosts.costo_base_unitario,
@@ -1243,7 +1328,17 @@ export function CostsModule() {
         {showAddForm && (
           <div className="px-4 md:px-6 pb-4 md:pb-6 border-t border-gray-200 dark:border-gray-700 pt-4">
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Código Producto</label>
+                  <input
+                    type="text"
+                    value={manualFormData.codigo_producto}
+                    onChange={(e) => setManualFormData({ ...manualFormData, codigo_producto: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono"
+                    placeholder="Ej: PROD-001"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Familia *</label>
                   <input
@@ -1431,6 +1526,7 @@ export function CostsModule() {
                 {simulationItems.map((item) => {
                   const itemCosts = itemCostsMap[item.id] || calculateItemCostsInternal(item);
                   const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
+                  const codigoProducto = item.product?.codigo_producto || item.codigo_producto || '-';
                   return (
                     <div
                       key={item.id}
@@ -1439,12 +1535,15 @@ export function CostsModule() {
                       {/* Header */}
                       <div className="mb-3">
                         <div className="flex items-start justify-between mb-1">
-                          <h3 className="text-base font-semibold text-gray-900 dark:text-white flex-1">
-                            {productName}
-                            {item.isManual && (
-                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded">M</span>
-                            )}
-                          </h3>
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mb-1">Código: {codigoProducto}</p>
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                              {productName}
+                              {item.isManual && (
+                                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded">M</span>
+                              )}
+                            </h3>
+                          </div>
                         </div>
                       </div>
 
@@ -1558,6 +1657,7 @@ export function CostsModule() {
                   <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
+                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Código</th>
                     <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Producto</th>
                     <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">P. Venta</th>
                     <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Desc.</th>
@@ -1576,12 +1676,16 @@ export function CostsModule() {
                   {simulationItems.map((item) => {
                     const itemCosts = calculateItemCosts(item);
                     const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
+                    const codigoProducto = item.product?.codigo_producto || item.codigo_producto || '-';
                     return (
                       <tr 
                         key={item.id} 
                         className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                         onClick={() => handleItemClick(item)}
                       >
+                        <td className="px-2 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-400 font-mono">
+                          {codigoProducto}
+                        </td>
                         <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-white max-w-xs truncate" title={productName}>
                           {productName}
                           {item.isManual && (
@@ -1630,9 +1734,9 @@ export function CostsModule() {
                     );
                   })}
                 </tbody>
-                  </table>
-                </div>
-              </div>
+              </table>
+            </div>
+          </div>
             )}
           </div>
 
@@ -1716,6 +1820,19 @@ export function CostsModule() {
                       <Edit className="w-5 h-5 mr-2" />
                       Editar Valores
                     </h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        Código de Producto
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.codigo_producto}
+                        onChange={(e) => setEditFormData({ ...editFormData, codigo_producto: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        placeholder="Ej: PROD-001"
+                      />
+                    </div>
                     
                     <div>
                       <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">

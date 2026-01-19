@@ -38,6 +38,7 @@ export interface OrderData {
   clienteData?: ClientData;
   proveedor?: string;
   order_id?: string;
+  order_number?: number;
   items: OrderItem[];
   total_ingreso_neto?: number;
   total_ganancia?: number;
@@ -162,7 +163,13 @@ export async function generateOrderPDF(order: OrderData) {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   
-  if (order.order_id) {
+  if (order.order_number !== undefined) {
+    // Mostrar número secuencial formateado (001, 002, etc.)
+    const orderNumberFormatted = String(order.order_number).padStart(3, '0');
+    doc.text(`Número de Orden: ${orderNumberFormatted}`, margin, yPos);
+    yPos += 7;
+  } else if (order.order_id) {
+    // Fallback al order_id si no hay order_number (para compatibilidad)
     doc.text(`Número de Orden: ${order.order_id}`, margin, yPos);
     yPos += 7;
   }
@@ -276,7 +283,6 @@ export async function generateOrderPDF(order: OrderData) {
     if (order.tipo === 'venta') {
       return [
         item.producto || '-',
-        item.tipo || '-',
         item.cantidad.toString(),
         item.precio_unitario ? `$${item.precio_unitario.toFixed(2)}` : '-',
       ];
@@ -304,7 +310,7 @@ export async function generateOrderPDF(order: OrderData) {
 
   const headers = 
     order.tipo === 'venta'
-      ? ['Producto', 'Tipo', 'Cantidad', 'Precio Unit.']
+      ? ['Producto', 'Cantidad', 'Precio Unit.']
       : order.tipo === 'compra'
       ? ['Material/Producto', 'Cantidad', 'Precio', 'Moneda', 'Total']
       : ['Material', 'Cantidad (kg)'];

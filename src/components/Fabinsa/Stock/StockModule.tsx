@@ -68,6 +68,7 @@ export function StockModule() {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<StockProduct | null>(null);
   const [productForm, setProductForm] = useState({
+    codigo_producto: '',
     nombre: '',
     cantidad: '',
     peso_unidad: '',
@@ -80,6 +81,7 @@ export function StockModule() {
   const [showResaleForm, setShowResaleForm] = useState(false);
   const [editingResale, setEditingResale] = useState<ResaleProduct | null>(null);
   const [resaleForm, setResaleForm] = useState({
+    codigo_producto: '',
     nombre: '',
     cantidad: '',
     costo_unitario: '',
@@ -643,6 +645,7 @@ export function StockModule() {
     try {
       const data: StockProductInsert = {
         tenant_id: tenantId,
+        codigo_producto: productForm.codigo_producto || null,
         nombre: productForm.nombre,
         cantidad: parseInt(productForm.cantidad),
         peso_unidad: parseFloat(productForm.peso_unidad),
@@ -666,6 +669,7 @@ export function StockModule() {
 
   const resetProductForm = () => {
     setProductForm({
+      codigo_producto: '',
       nombre: '',
       cantidad: '',
       peso_unidad: '',
@@ -697,6 +701,7 @@ export function StockModule() {
 
       const data: ResaleProductInsert = {
         tenant_id: tenantId,
+        codigo_producto: resaleForm.codigo_producto || null,
         nombre: resaleForm.nombre,
         cantidad: parseInt(resaleForm.cantidad),
         costo_unitario,
@@ -723,6 +728,7 @@ export function StockModule() {
 
   const resetResaleForm = () => {
     setResaleForm({
+      codigo_producto: '',
       nombre: '',
       cantidad: '',
       costo_unitario: '',
@@ -1419,6 +1425,16 @@ export function StockModule() {
                 </div>
                 <form onSubmit={handleProductSubmit} className="space-y-4">
                   <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Código Producto</label>
+                    <input
+                      type="text"
+                      value={productForm.codigo_producto}
+                      onChange={(e) => setProductForm({ ...productForm, codigo_producto: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono"
+                      placeholder="Ej: PROD-001"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Nombre *</label>
                     <input
                       type="text"
@@ -1505,6 +1521,7 @@ export function StockModule() {
                     >
                       {/* Header */}
                       <div className="mb-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mb-1">Código: {prod.codigo_producto || '-'}</p>
                         <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{prod.nombre}</h3>
                       </div>
 
@@ -1546,6 +1563,7 @@ export function StockModule() {
                             onClick={() => {
                               setEditingProduct(prod);
                               setProductForm({
+                                codigo_producto: prod.codigo_producto || '',
                                 nombre: prod.nombre,
                                 cantidad: prod.cantidad.toString(),
                                 peso_unidad: prod.peso_unidad.toString(),
@@ -1586,6 +1604,7 @@ export function StockModule() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Código</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cantidad</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock Mínimo</th>
@@ -1597,7 +1616,7 @@ export function StockModule() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       No hay productos fabricados registrados
                     </td>
                   </tr>
@@ -1612,6 +1631,9 @@ export function StockModule() {
                           stockBajo ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500' : ''
                         }`}
                       >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-mono">
+                          {prod.codigo_producto || '-'}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{prod.nombre}</td>
                         <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
                           stockBajo ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'
@@ -1637,6 +1659,7 @@ export function StockModule() {
                               onClick={() => {
                                 setEditingProduct(prod);
                                 setProductForm({
+                                  codigo_producto: prod.codigo_producto || '',
                                   nombre: prod.nombre,
                                   cantidad: prod.cantidad.toString(),
                                   peso_unidad: prod.peso_unidad.toString(),
@@ -1718,6 +1741,16 @@ export function StockModule() {
                   </button>
                 </div>
                 <form onSubmit={handleResaleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Código Producto</label>
+                    <input
+                      type="text"
+                      value={resaleForm.codigo_producto}
+                      onChange={(e) => setResaleForm({ ...resaleForm, codigo_producto: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono"
+                      placeholder="Ej: PROD-001"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Nombre *</label>
                     <input
@@ -1877,6 +1910,7 @@ export function StockModule() {
                     >
                       {/* Header */}
                       <div className="mb-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mb-1">Código: {prod.codigo_producto || '-'}</p>
                         <button
                           onClick={() => openResaleMovementsModal(prod)}
                           className="text-base font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline mb-1"
@@ -1925,6 +1959,7 @@ export function StockModule() {
                             onClick={() => {
                               setEditingResale(prod);
                               setResaleForm({
+                                codigo_producto: prod.codigo_producto || '',
                                 nombre: prod.nombre,
                                 cantidad: prod.cantidad.toString(),
                                 costo_unitario: prod.costo_unitario.toString(),
@@ -1967,6 +2002,7 @@ export function StockModule() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Código</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Cantidad</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Stock Mínimo</th>
@@ -1979,7 +2015,7 @@ export function StockModule() {
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {resaleProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         No hay productos de reventa registrados
                       </td>
                     </tr>
@@ -1994,6 +2030,9 @@ export function StockModule() {
                           stockBajo ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500' : ''
                         }`}
                       >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-mono">
+                          {prod.codigo_producto || '-'}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
                             onClick={() => openResaleMovementsModal(prod)}
@@ -2029,6 +2068,7 @@ export function StockModule() {
                               onClick={() => {
                                 setEditingResale(prod);
                                 setResaleForm({
+                                  codigo_producto: prod.codigo_producto || '',
                                   nombre: prod.nombre,
                                   cantidad: prod.cantidad.toString(),
                                   costo_unitario: prod.costo_unitario.toString(),

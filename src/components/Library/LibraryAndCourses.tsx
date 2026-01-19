@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, BookOpen, Edit, Trash2, Play, Loader2, FileText, GraduationCap, Folder, FolderOpen, ArrowLeft, FolderPlus, ExternalLink, Download, Eye, Image, File as FileIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import { CourseCard } from './CourseCard';
 import { CreateCourseModal } from './CreateCourseModal';
 import { CourseDetailModal } from './CourseDetailModal';
@@ -50,6 +51,7 @@ interface Folder {
 
 export function LibraryAndCourses() {
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
   const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
   const [activeTab, setActiveTab] = useState<'courses' | 'library'>('courses');
   const [courses, setCourses] = useState<Course[]>([]);
@@ -200,6 +202,11 @@ export function LibraryAndCourses() {
   };
 
   const fetchAll = async () => {
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -214,6 +221,7 @@ export function LibraryAndCourses() {
           )
         `)
         .eq('type', activeTab === 'courses' ? 'course' : 'document')
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
 
       if (foldersError) throw foldersError;
@@ -229,6 +237,7 @@ export function LibraryAndCourses() {
           )
         `)
         .eq('type', activeTab === 'courses' ? 'course' : 'document')
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -275,7 +284,8 @@ export function LibraryAndCourses() {
             const { count } = await supabase
               .from('library_courses')
               .select('*', { count: 'exact', head: true })
-              .eq('folder_id', folder.id);
+              .eq('folder_id', folder.id)
+              .eq('tenant_id', tenantId);
             
             return {
               ...folder,
@@ -295,7 +305,7 @@ export function LibraryAndCourses() {
   };
 
   const fetchFolderItems = async () => {
-    if (!selectedFolder) return;
+    if (!selectedFolder || !tenantId) return;
 
     try {
       const { data, error } = await supabase
@@ -308,6 +318,7 @@ export function LibraryAndCourses() {
           )
         `)
         .eq('folder_id', selectedFolder.id)
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -64,6 +64,7 @@ export function PurchasesModule() {
   const [materialPurchases, setMaterialPurchases] = useState<PurchaseMaterial[]>([]);
   const [showMaterialForm, setShowMaterialForm] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<PurchaseMaterial | null>(null);
+  const [editingMaterialOrder, setEditingMaterialOrder] = useState<any | null>(null);
   const [materialItems, setMaterialItems] = useState<MaterialItem[]>([]);
   const [materialForm, setMaterialForm] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -79,6 +80,7 @@ export function PurchasesModule() {
   const [productPurchases, setProductPurchases] = useState<PurchaseProduct[]>([]);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<PurchaseProduct | null>(null);
+  const [editingProductOrder, setEditingProductOrder] = useState<any | null>(null);
   const [productItems, setProductItems] = useState<ProductItem[]>([]);
   const [productForm, setProductForm] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -506,6 +508,92 @@ export function PurchasesModule() {
     await generateOrderPDF(orderData);
   };
 
+  const handleEditMaterialOrder = (order: any) => {
+    if (!order || !order.items || order.items.length === 0) return;
+    
+    const firstItem = order.items[0];
+    const fechaLocal = new Date(firstItem.fecha);
+    const fechaStr = fechaLocal.toISOString().split('T')[0];
+    
+    setMaterialForm({
+      fecha: fechaStr,
+      material: '',
+      cantidad: '',
+      precio: '',
+      proveedor: firstItem.proveedor || '',
+      moneda: firstItem.moneda || 'ARS',
+      valor_dolar: firstItem.valor_dolar?.toString() || '',
+    });
+    
+    const items: MaterialItem[] = order.items.map((item: any) => {
+      const precioUnitario = item.moneda === 'USD' && item.valor_dolar 
+        ? item.precio / item.valor_dolar 
+        : item.precio;
+      
+      return {
+        id: item.id,
+        material: item.material,
+        cantidad: item.cantidad,
+        precio: precioUnitario,
+        moneda: item.moneda || 'ARS',
+        valor_dolar: item.valor_dolar || 1,
+        precioARS: item.precio,
+        tiene_iva: (item as any).tiene_iva || false,
+        iva_pct: (item as any).iva_pct || 21,
+        total: item.total,
+        total_con_iva: (item as any).total_con_iva,
+      };
+    });
+    
+    setMaterialItems(items);
+    setEditingMaterialOrder(order);
+    setShowMaterialForm(true);
+    setActiveTab('materials');
+  };
+
+  const handleEditProductOrder = (order: any) => {
+    if (!order || !order.items || order.items.length === 0) return;
+    
+    const firstItem = order.items[0];
+    const fechaLocal = new Date(firstItem.fecha);
+    const fechaStr = fechaLocal.toISOString().split('T')[0];
+    
+    setProductForm({
+      fecha: fechaStr,
+      producto: '',
+      cantidad: '',
+      precio: '',
+      proveedor: firstItem.proveedor || '',
+      moneda: firstItem.moneda || 'ARS',
+      valor_dolar: firstItem.valor_dolar?.toString() || '',
+    });
+    
+    const items: ProductItem[] = order.items.map((item: any) => {
+      const precioUnitario = item.moneda === 'USD' && item.valor_dolar 
+        ? item.precio / item.valor_dolar 
+        : item.precio;
+      
+      return {
+        id: item.id,
+        producto: item.producto,
+        cantidad: item.cantidad,
+        precio: precioUnitario,
+        moneda: item.moneda || 'ARS',
+        valor_dolar: item.valor_dolar || 1,
+        precioARS: item.precio,
+        tiene_iva: (item as any).tiene_iva || false,
+        iva_pct: (item as any).iva_pct || 21,
+        total: item.total,
+        total_con_iva: (item as any).total_con_iva,
+      };
+    });
+    
+    setProductItems(items);
+    setEditingProductOrder(order);
+    setShowProductForm(true);
+    setActiveTab('products');
+  };
+
   const handleMaterialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantId) return;
@@ -526,8 +614,16 @@ export function PurchasesModule() {
       const fecha = fechaLocal.toISOString();
       const proveedor = materialForm.proveedor;
       
-      // Generar un order_id único para agrupar todos los materiales de esta compra
-      const orderId = crypto.randomUUID();
+      // Si estamos editando, eliminar la orden antigua
+      if (editingMaterialOrder) {
+        await supabase
+          .from('purchases_materials')
+          .delete()
+          .eq('order_id', editingMaterialOrder.order_id);
+      }
+      
+      // Usar el order_id existente si estamos editando, o crear uno nuevo
+      const orderId = editingMaterialOrder?.order_id || crypto.randomUUID();
 
       // Crear registros de compra para cada material con el mismo order_id
       for (const item of materialItems) {
@@ -558,7 +654,9 @@ export function PurchasesModule() {
       }
 
       resetMaterialForm();
+      setEditingMaterialOrder(null);
       loadPurchases();
+      alert(editingMaterialOrder ? 'Orden actualizada exitosamente' : 'Compra registrada exitosamente');
     } catch (error: any) {
       console.error('Error saving purchase:', error);
       const errorMessage = error?.message || 'Error al guardar la compra';
@@ -680,8 +778,16 @@ export function PurchasesModule() {
       const fecha = fechaLocal.toISOString();
       const proveedor = productForm.proveedor;
       
-      // Generar un order_id único para agrupar todos los productos de esta compra
-      const orderId = crypto.randomUUID();
+      // Si estamos editando, eliminar la orden antigua
+      if (editingProductOrder) {
+        await supabase
+          .from('purchases_products')
+          .delete()
+          .eq('order_id', editingProductOrder.order_id);
+      }
+      
+      // Usar el order_id existente si estamos editando, o crear uno nuevo
+      const orderId = editingProductOrder?.order_id || crypto.randomUUID();
 
       // Crear registros de compra para cada producto con el mismo order_id
       for (const item of productItems) {
@@ -707,7 +813,9 @@ export function PurchasesModule() {
       }
 
       resetProductForm();
+      setEditingProductOrder(null);
       loadPurchases();
+      alert(editingProductOrder ? 'Orden actualizada exitosamente' : 'Compra registrada exitosamente');
     } catch (error: any) {
       console.error('Error saving purchase:', error);
       const errorMessage = error?.message || 'Error al guardar la compra';
@@ -1012,6 +1120,7 @@ export function PurchasesModule() {
     });
     setMaterialItems([]);
     setEditingMaterial(null);
+    setEditingMaterialOrder(null);
     setShowMaterialForm(false);
   };
 
@@ -1027,6 +1136,7 @@ export function PurchasesModule() {
     });
     setProductItems([]);
     setEditingProduct(null);
+    setEditingProductOrder(null);
     setShowProductForm(false);
   };
 
@@ -1093,7 +1203,7 @@ export function PurchasesModule() {
               <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {editingMaterial ? 'Editar Compra' : 'Nueva Compra de Materia Prima'}
+                    {editingMaterialOrder ? 'Editar Orden de Compra' : editingMaterial ? 'Editar Compra' : 'Nueva Compra de Materia Prima'}
                   </h3>
                   <button onClick={resetMaterialForm} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                     <X className="w-5 h-5" />
@@ -1809,7 +1919,7 @@ export function PurchasesModule() {
               <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {editingProduct ? 'Editar Compra' : 'Nueva Compra de Producto'}
+                    {editingProductOrder ? 'Editar Orden de Compra' : editingProduct ? 'Editar Compra' : 'Nueva Compra de Producto'}
                   </h3>
                   <button onClick={resetProductForm} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                     <X className="w-5 h-5" />
@@ -2187,6 +2297,15 @@ export function PurchasesModule() {
                                         title={order.pagado ? 'Marcar como Impago' : 'Marcar como Pagado'}
                                       >
                                         <DollarSign className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    {canEdit('fabinsa-purchases') && (
+                                      <button
+                                        onClick={() => handleEditProductOrder(order)}
+                                        className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors flex-shrink-0"
+                                        title="Editar Orden"
+                                      >
+                                        <Edit className="w-3.5 h-3.5" />
                                       </button>
                                     )}
                                     {canPrint('fabinsa-purchases') && (

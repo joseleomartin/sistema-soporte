@@ -1461,6 +1461,7 @@ export function ProductionModule() {
                           {product.nombre}
                         </h3>
                       </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mb-1">Código: {product.codigo_producto || '-'}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Fecha: {fechaOrden}</p>
                     </div>
                     <span className={`ml-2 flex-shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1579,7 +1580,10 @@ export function ProductionModule() {
                 <th className="w-[10%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                   Fecha
                 </th>
-                <th className="w-[20%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-[8%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Código
+                </th>
+                <th className="w-[18%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Nombre
                 </th>
                 <th className="w-[8%] px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -1614,7 +1618,7 @@ export function ProductionModule() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-2 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={13} className="px-2 py-4 text-center text-gray-500 dark:text-gray-400">
                     No hay órdenes de producción registradas
                   </td>
                 </tr>
@@ -1640,6 +1644,9 @@ export function ProductionModule() {
                       </td>
                       <td className="px-2 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {fechaOrden}
+                      </td>
+                      <td className="px-2 py-3 text-xs text-gray-600 dark:text-gray-400 font-mono">
+                        {product.codigo_producto || '-'}
                       </td>
                       <td className="px-2 py-3">
                         <div className="text-xs font-medium text-gray-900 dark:text-white break-words" title={product.nombre}>
