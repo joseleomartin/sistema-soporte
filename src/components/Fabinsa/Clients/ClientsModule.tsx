@@ -15,6 +15,7 @@ import { GoogleDriveViewer } from '../../Forums/GoogleDriveViewer';
 import { DriveFolder } from '../../../lib/googleDriveAPI';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { BulkImportClientsModal } from './BulkImportClientsModal';
+import { writeFile, utils } from 'xlsx';
 
 // Función para formatear números con separadores de miles
 const formatNumber = (value: number): string => {
@@ -264,6 +265,74 @@ export function ClientsModule() {
     setSelectedClientForSales(client);
     setShowSalesHistoryModal(true);
     await loadClientSales(client);
+  };
+
+  // Función para exportar historial de ventas a Excel
+  const exportSalesHistoryToExcel = () => {
+    if (!selectedClientForSales || clientSales.length === 0) return;
+
+    const wb = utils.book_new();
+    
+    // Calcular totales
+    const totalIngresosNetos = clientSales.reduce((sum, s) => sum + s.ingreso_neto, 0);
+    const totalIva = clientSales.reduce((sum, s) => {
+      const tieneIva = (s as any).tiene_iva || false;
+      const ivaPct = (s as any).iva_pct || 0;
+      const ivaMonto = tieneIva ? s.ingreso_neto * (ivaPct / 100) : 0;
+      return sum + ivaMonto;
+    }, 0);
+    const totalGeneral = totalIngresosNetos + totalIva;
+
+    // Hoja 1: Detalle de Ventas
+    const salesData = [
+      ['Fecha', 'Producto', 'Cantidad', 'Precio Unitario', 'Ingreso Neto', 'IVA %', 'IVA Monto', 'Total', 'Estado', 'Pagado']
+    ];
+    
+    clientSales.forEach(sale => {
+      const tieneIva = (sale as any).tiene_iva || false;
+      const ivaPct = (sale as any).iva_pct || 0;
+      const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+      const totalConIva = sale.ingreso_neto + ivaMonto;
+      const estado = (sale as any).estado || 'pendiente';
+      const pagado = (sale as any).pagado || false;
+      
+      salesData.push([
+        new Date(sale.fecha).toLocaleDateString('es-AR'),
+        sale.producto,
+        sale.cantidad,
+        formatNumber(sale.precio_unitario),
+        formatNumber(sale.ingreso_neto),
+        tieneIva ? `${ivaPct}%` : 'Sin IVA',
+        formatNumber(ivaMonto),
+        formatNumber(totalConIva),
+        estado === 'recibido' ? 'Entregado' : 'Pendiente',
+        pagado ? 'Cobrado' : 'Impago',
+      ]);
+    });
+    
+    const ws1 = utils.aoa_to_sheet(salesData);
+    utils.book_append_sheet(wb, ws1, 'Ventas');
+
+    // Hoja 2: Resumen
+    const summaryData = [
+      ['Cliente', selectedClientForSales.nombre],
+      ['Razón Social', selectedClientForSales.razon_social || ''],
+      ['CUIT', selectedClientForSales.cuit || ''],
+      ['', ''],
+      ['Resumen de Ventas', ''],
+      ['Total Ventas', clientSales.length],
+      ['Total Ingresos Netos', formatNumber(totalIngresosNetos)],
+      ['Total IVA', formatNumber(totalIva)],
+      ['Total General (Ingreso Neto + IVA)', formatNumber(totalGeneral)],
+    ];
+    
+    const ws2 = utils.aoa_to_sheet(summaryData);
+    utils.book_append_sheet(wb, ws2, 'Resumen');
+
+    // Generar nombre de archivo
+    const clientName = selectedClientForSales.nombre.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const fileName = `historial_ventas_${clientName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    writeFile(wb, fileName);
   };
 
   const loadDocuments = async (clientId: string) => {
@@ -1003,16 +1072,28 @@ export function ClientsModule() {
                   Ventas realizadas a este cliente
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setShowSalesHistoryModal(false);
-                  setSelectedClientForSales(null);
-                  setClientSales([]);
-                }}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                {clientSales.length > 0 && (
+                  <button
+                    onClick={exportSalesHistoryToExcel}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                    title="Exportar a Excel"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Exportar Excel</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowSalesHistoryModal(false);
+                    setSelectedClientForSales(null);
+                    setClientSales([]);
+                  }}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">

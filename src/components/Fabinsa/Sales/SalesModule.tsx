@@ -8,7 +8,7 @@ import { ShoppingCart, Plus, Trash2, ChevronDown, X, Printer, FileText, CheckCir
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
-import { calculateSaleValues } from '../../../lib/fabinsaCalculations';
+import { calculateSaleValues, calculateProductCosts, calculateAverageEmployeeHourValue } from '../../../lib/fabinsaCalculations';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { useMobile } from '../../../hooks/useMobile';
 import { generateOrderPDF, OrderData } from '../../../lib/pdfGenerator';
@@ -28,6 +28,9 @@ type StockProduct = Database['public']['Tables']['stock_products']['Row'];
 type ResaleProduct = Database['public']['Tables']['resale_products']['Row'];
 type Client = Database['public']['Tables']['clients']['Row'];
 type Product = Database['public']['Tables']['products']['Row'];
+type ProductMaterial = Database['public']['Tables']['product_materials']['Row'];
+type StockMaterial = Database['public']['Tables']['stock_materials']['Row'];
+type Employee = Database['public']['Tables']['employees']['Row'];
 
 interface SaleItem {
   id: string;
@@ -59,6 +62,9 @@ export function SalesModule() {
   const [resaleProducts, setResaleProducts] = useState<ResaleProduct[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [productMaterials, setProductMaterials] = useState<Record<string, ProductMaterial[]>>({});
+  const [stockMaterials, setStockMaterials] = useState<StockMaterial[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any | null>(null);
@@ -102,6 +108,8 @@ export function SalesModule() {
     margen_pct: 0,
   });
 
+  const [productUnitCost, setProductUnitCost] = useState<number | null>(null);
+
   useEffect(() => {
     if (tenantId) {
       loadData();
@@ -110,7 +118,7 @@ export function SalesModule() {
 
   useEffect(() => {
     // Recalcular valores cuando cambian los inputs
-    if (formData.precio_unitario && formData.cantidad) {
+    if (formData.precio_unitario && formData.cantidad && formData.producto) {
       const precio = parseFloat(formData.precio_unitario);
       const cantidad = parseInt(formData.cantidad);
       const iibPct = parseFloat(formData.iib_pct) || 0;
@@ -122,10 +130,64 @@ export function SalesModule() {
       let unitCost = 0;
       if (productType === 'fabricado') {
         const prod = fabricatedProducts.find(p => p.nombre === formData.producto);
-        unitCost = prod?.costo_unit_total || 0;
+        if (prod) {
+          // Si el producto viene de costos, usar el costo calculado si está disponible
+          if (prod.id && typeof prod.id === 'string' && prod.id.startsWith('cost-')) {
+            // Si ya tenemos el costo calculado, usarlo; si no, calcularlo
+            if (productUnitCost !== null) {
+              unitCost = productUnitCost;
+            } else {
+              // Calcular costo desde costos de forma asíncrona
+              calculateProductCostFromCosts(formData.producto).then(cost => {
+                setProductUnitCost(cost); // Almacenar el costo calculado
+                const values = calculateSaleValues(precio, cantidad, iibPct, discountPct, cost, tieneIva, ivaPct);
+                const ivaMonto = tieneIva ? values.ingreso_neto * (ivaPct / 100) : 0;
+                const totalConIva = values.ingreso_neto + ivaMonto;
+                const margenPct = values.ingreso_neto > 0 ? (values.ganancia_total / values.ingreso_neto) * 100 : 0;
+                setCalculatedValues({
+                  ...values,
+                  iva_monto: ivaMonto,
+                  total_con_iva: totalConIva,
+                  margen_pct: margenPct,
+                });
+              });
+              return; // Salir temprano, los valores se actualizarán en el then
+            }
+          } else {
+            unitCost = prod.costo_unit_total || 0;
+            setProductUnitCost(null); // Limpiar costo calculado si viene de stock
+          }
+        }
       } else {
         const prod = resaleProducts.find(p => p.nombre === formData.producto);
-        unitCost = prod?.costo_unitario_final || 0;
+        if (prod) {
+          // Si el producto viene de costos, usar el costo calculado si está disponible
+          if (prod.id && typeof prod.id === 'string' && prod.id.startsWith('cost-')) {
+            // Si ya tenemos el costo calculado, usarlo; si no, calcularlo
+            if (productUnitCost !== null) {
+              unitCost = productUnitCost;
+            } else {
+              // Calcular costo desde costos de forma asíncrona
+              calculateProductCostFromCosts(formData.producto).then(cost => {
+                setProductUnitCost(cost); // Almacenar el costo calculado
+                const values = calculateSaleValues(precio, cantidad, iibPct, discountPct, cost, tieneIva, ivaPct);
+                const ivaMonto = tieneIva ? values.ingreso_neto * (ivaPct / 100) : 0;
+                const totalConIva = values.ingreso_neto + ivaMonto;
+                const margenPct = values.ingreso_neto > 0 ? (values.ganancia_total / values.ingreso_neto) * 100 : 0;
+                setCalculatedValues({
+                  ...values,
+                  iva_monto: ivaMonto,
+                  total_con_iva: totalConIva,
+                  margen_pct: margenPct,
+                });
+              });
+              return; // Salir temprano, los valores se actualizarán en el then
+            }
+          } else {
+            unitCost = prod.costo_unitario_final || 0;
+            setProductUnitCost(null); // Limpiar costo calculado si viene de stock
+          }
+        }
       }
 
       const values = calculateSaleValues(precio, cantidad, iibPct, discountPct, unitCost, tieneIva, ivaPct);
@@ -141,7 +203,7 @@ export function SalesModule() {
         margen_pct: margenPct,
       });
     }
-  }, [formData, productType, fabricatedProducts, resaleProducts]);
+  }, [formData, productType, fabricatedProducts, resaleProducts, products, productMaterials, stockMaterials, employees, productUnitCost]);
 
   const loadData = async () => {
     if (!tenantId) return;
@@ -162,31 +224,7 @@ export function SalesModule() {
         setSales(salesData || []);
       }
 
-      // Load stock products
-      const { data: prods, error: prodsError } = await supabase
-        .from('stock_products')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .gt('cantidad', 0);
-      if (prodsError) {
-        console.error('Error loading stock products:', prodsError);
-      } else {
-        setFabricatedProducts(prods || []);
-      }
-
-      // Load resale products
-      const { data: resale, error: resaleError } = await supabase
-        .from('resale_products')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .gt('cantidad', 0);
-      if (resaleError) {
-        console.error('Error loading resale products:', resaleError);
-      } else {
-        setResaleProducts(resale || []);
-      }
-
-      // Load products from costs module to get precio_venta
+      // Load products from costs module to get precio_venta (cargar primero para usarlo después)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
@@ -195,6 +233,65 @@ export function SalesModule() {
         console.error('Error loading products:', productsError);
       } else {
         setProducts(productsData || []);
+      }
+
+      // Load stock products (sin filtrar por cantidad > 0 para permitir stock negativo)
+      const { data: prods, error: prodsError } = await supabase
+        .from('stock_products')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      if (prodsError) {
+        console.error('Error loading stock products:', prodsError);
+      } else {
+        // Combinar productos de stock con productos de costos que no estén en stock
+        const stockProductNames = new Set((prods || []).map(p => p.nombre));
+        const productsFromCosts: StockProduct[] = (productsData || [])
+          .filter(p => !stockProductNames.has(p.nombre))
+          .map(p => ({
+            id: `cost-${p.id}`, // Prefijo para identificar que viene de costos
+            tenant_id: p.tenant_id,
+            nombre: p.nombre,
+            codigo_producto: p.codigo_producto || null,
+            cantidad: 0, // Producto sin stock
+            peso_unidad: 0,
+            costo_unit_total: null,
+            stock_minimo: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as StockProduct));
+        
+        setFabricatedProducts([...(prods || []), ...productsFromCosts]);
+      }
+
+      // Load resale products (sin filtrar por cantidad > 0 para permitir stock negativo)
+      const { data: resale, error: resaleError } = await supabase
+        .from('resale_products')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      if (resaleError) {
+        console.error('Error loading resale products:', resaleError);
+      } else {
+        // Combinar productos de reventa de stock con productos de costos que no estén en stock de reventa
+        const resaleProductNames = new Set((resale || []).map(p => p.nombre));
+        const productsFromCostsForResale: ResaleProduct[] = (productsData || [])
+          .filter(p => !resaleProductNames.has(p.nombre))
+          .map(p => ({
+            id: `cost-${p.id}`, // Prefijo para identificar que viene de costos
+            tenant_id: p.tenant_id,
+            nombre: p.nombre,
+            codigo_producto: p.codigo_producto || null,
+            cantidad: 0, // Producto sin stock
+            costo_unitario: 0,
+            otros_costos: 0,
+            costo_unitario_final: 0,
+            moneda: 'ARS' as const,
+            valor_dolar: null,
+            stock_minimo: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as ResaleProduct));
+        
+        setResaleProducts([...(resale || []), ...productsFromCostsForResale]);
       }
 
       // Load clients
@@ -207,6 +304,37 @@ export function SalesModule() {
         console.error('Error loading clients:', clientsError);
       } else {
         setClients(clientsData || []);
+      }
+
+      // Load product materials and employees for cost calculation
+      const productIds = (productsData || []).map(p => p.id);
+      if (productIds.length > 0) {
+        const [materialsResult, employeesResult, stockMaterialsResult] = await Promise.all([
+          supabase
+            .from('product_materials')
+            .select('*')
+            .in('product_id', productIds),
+          supabase
+            .from('employees')
+            .select('*')
+            .eq('tenant_id', tenantId),
+          supabase
+            .from('stock_materials')
+            .select('*')
+            .eq('tenant_id', tenantId),
+        ]);
+
+        const allMaterials = materialsResult.data || [];
+        const materialsMap: Record<string, ProductMaterial[]> = {};
+        for (const mat of allMaterials) {
+          if (!materialsMap[mat.product_id]) {
+            materialsMap[mat.product_id] = [];
+          }
+          materialsMap[mat.product_id].push(mat);
+        }
+        setProductMaterials(materialsMap);
+        setEmployees(employeesResult.data || []);
+        setStockMaterials(stockMaterialsResult.data || []);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -226,7 +354,58 @@ export function SalesModule() {
     );
   };
 
-  const handleAddProduct = () => {
+  // Función para calcular el costo unitario de un producto desde costos
+  const calculateProductCostFromCosts = async (productName: string): Promise<number> => {
+    try {
+      // Buscar el producto en la tabla de costos
+      const product = products.find(p => p.nombre === productName);
+      if (!product) return 0;
+
+      // Obtener materiales del producto
+      const productMats = productMaterials[product.id] || [];
+      if (productMats.length === 0) return 0;
+
+      // Calcular valor promedio de hora de empleados
+      const avgHourValue = calculateAverageEmployeeHourValue(employees);
+
+      // Crear mapa de precios de materiales
+      const materialPrices: Record<string, { costo_kilo_usd: number; valor_dolar: number; moneda: 'ARS' | 'USD' }> = {};
+      
+      for (const mat of productMats) {
+        const stockMat = stockMaterials.find(sm => 
+          sm.nombre.toLowerCase() === mat.material_name.toLowerCase() ||
+          sm.material?.toLowerCase() === mat.material_name.toLowerCase()
+        );
+        
+        if (stockMat) {
+          materialPrices[mat.material_name] = {
+            costo_kilo_usd: stockMat.costo_kilo_usd || 0,
+            valor_dolar: stockMat.valor_dolar || 1,
+            moneda: stockMat.moneda || 'ARS',
+          };
+        }
+      }
+
+      // Calcular costos del producto
+      const costs = calculateProductCosts(
+        product,
+        productMats,
+        materialPrices,
+        avgHourValue
+      );
+
+      // Obtener otros costos del producto
+      const otrosCostos = (product as any).otros_costos || 0;
+
+      // Retornar costo total unitario (MP + MO + Otros Costos)
+      return costs.costo_base_unitario + otrosCostos;
+    } catch (error) {
+      console.error('Error calculando costo del producto desde costos:', error);
+      return 0;
+    }
+  };
+
+  const handleAddProduct = async () => {
     if (!formData.producto || !formData.cantidad || !formData.precio_unitario) {
       alert('Complete todos los campos requeridos');
       return;
@@ -250,24 +429,37 @@ export function SalesModule() {
         alert('Producto no encontrado');
         return;
       }
-      stockActual = prod.cantidad;
-      unitCost = prod.costo_unit_total || 0;
-      stockId = prod.id;
+      stockActual = prod.cantidad || 0;
+      
+      // Si el producto viene de costos (id con prefijo "cost-"), calcular costo desde costos
+      if (prod.id && typeof prod.id === 'string' && prod.id.startsWith('cost-')) {
+        stockId = ''; // No tiene registro en stock_products aún
+        // Calcular el costo desde la tabla de costos
+        unitCost = await calculateProductCostFromCosts(formData.producto);
+      } else {
+        stockId = prod.id || '';
+        unitCost = prod.costo_unit_total || 0;
+      }
     } else {
       const prod = resaleProducts.find(p => p.nombre === formData.producto);
       if (!prod) {
         alert('Producto no encontrado');
         return;
       }
-      stockActual = prod.cantidad;
-      unitCost = prod.costo_unitario_final;
-      stockId = prod.id;
+      stockActual = prod.cantidad || 0;
+      
+      // Si el producto viene de costos (id con prefijo "cost-"), calcular costo desde costos
+      if (prod.id && typeof prod.id === 'string' && prod.id.startsWith('cost-')) {
+        stockId = ''; // No tiene registro en resale_products aún
+        // Calcular el costo desde la tabla de costos
+        unitCost = await calculateProductCostFromCosts(formData.producto);
+      } else {
+        stockId = prod.id;
+        unitCost = prod.costo_unitario_final || 0;
+      }
     }
 
-    if (cantidad > stockActual) {
-      alert(`Stock insuficiente. Disponible: ${stockActual}`);
-      return;
-    }
+    // Permitir stock negativo - eliminamos la validación de stock insuficiente
 
     // Verificar si ya existe el producto en la lista
     const existingItem = saleItems.find(item => item.producto === formData.producto && item.tipo_producto === productType);
@@ -378,30 +570,42 @@ export function SalesModule() {
             if (findError) throw findError;
 
             if (prod && prod.length > 0) {
-              const currentStock = prod[0].cantidad;
-              if (currentStock < sale.cantidad) {
-                alert(`No hay suficiente stock de ${sale.producto}. Stock disponible: ${currentStock}, requerido: ${sale.cantidad}`);
-                return;
-              }
+              const currentStock = prod[0].cantidad || 0;
+              // Permitir stock negativo - eliminamos la validación de stock insuficiente
+              const newStock = currentStock - sale.cantidad;
 
               const { error: updateError } = await supabase
                 .from('stock_products')
-                .update({ cantidad: currentStock - sale.cantidad })
+                .update({ cantidad: newStock })
                 .eq('id', prod[0].id);
 
               if (updateError) throw updateError;
-
-              // Registrar movimiento de inventario
-              await supabase.from('inventory_movements').insert({
-                tenant_id: tenantId,
-                tipo: 'egreso_fab',
-                item_nombre: sale.producto,
-                cantidad: sale.cantidad,
-                motivo: `Venta recibida - Orden ${orderId.substring(0, 8)}`,
-              });
             } else {
-              console.warn(`Producto fabricado no encontrado en stock: ${sale.producto}`);
+              // Si el producto no existe en stock, crearlo con stock negativo
+              const { error: insertError } = await supabase
+                .from('stock_products')
+                .insert({
+                  tenant_id: tenantId,
+                  nombre: sale.producto,
+                  cantidad: -sale.cantidad, // Stock negativo
+                  peso_unidad: 0,
+                  costo_unit_total: sale.costo_unitario || null,
+                });
+              
+              if (insertError) {
+                console.error('Error creando producto en stock:', insertError);
+                // No lanzar error, solo registrar
+              }
             }
+
+            // Registrar movimiento de inventario
+            await supabase.from('inventory_movements').insert({
+              tenant_id: tenantId,
+              tipo: 'egreso_fab',
+              item_nombre: sale.producto,
+              cantidad: sale.cantidad,
+              motivo: `Venta recibida - Orden ${orderId.substring(0, 8)}`,
+            });
           } else {
             // Producto de reventa
             const { data: prod, error: findError } = await supabase
@@ -414,30 +618,44 @@ export function SalesModule() {
             if (findError) throw findError;
 
             if (prod && prod.length > 0) {
-              const currentStock = prod[0].cantidad;
-              if (currentStock < sale.cantidad) {
-                alert(`No hay suficiente stock de ${sale.producto}. Stock disponible: ${currentStock}, requerido: ${sale.cantidad}`);
-                return;
-              }
+              const currentStock = prod[0].cantidad || 0;
+              // Permitir stock negativo - eliminamos la validación de stock insuficiente
+              const newStock = currentStock - sale.cantidad;
 
               const { error: updateError } = await supabase
                 .from('resale_products')
-                .update({ cantidad: currentStock - sale.cantidad })
+                .update({ cantidad: newStock })
                 .eq('id', prod[0].id);
 
               if (updateError) throw updateError;
-
-              // Registrar movimiento de inventario
-              await supabase.from('inventory_movements').insert({
-                tenant_id: tenantId,
-                tipo: 'egreso_pr',
-                item_nombre: sale.producto,
-                cantidad: sale.cantidad,
-                motivo: `Venta recibida - Orden ${orderId.substring(0, 8)}`,
-              });
             } else {
-              console.warn(`Producto de reventa no encontrado en stock: ${sale.producto}`);
+              // Si el producto no existe en stock, crearlo con stock negativo
+              const { error: insertError } = await supabase
+                .from('resale_products')
+                .insert({
+                  tenant_id: tenantId,
+                  nombre: sale.producto,
+                  cantidad: -sale.cantidad, // Stock negativo
+                  costo_unitario: sale.costo_unitario || 0,
+                  otros_costos: 0,
+                  costo_unitario_final: sale.costo_unitario || 0,
+                  moneda: 'ARS',
+                });
+              
+              if (insertError) {
+                console.error('Error creando producto de reventa en stock:', insertError);
+                // No lanzar error, solo registrar
+              }
             }
+
+            // Registrar movimiento de inventario
+            await supabase.from('inventory_movements').insert({
+              tenant_id: tenantId,
+              tipo: 'egreso_pr',
+              item_nombre: sale.producto,
+              cantidad: sale.cantidad,
+              motivo: `Venta recibida - Orden ${orderId.substring(0, 8)}`,
+            });
           }
         }
       } else if (newStatus === 'pendiente') {
@@ -816,6 +1034,7 @@ export function SalesModule() {
     setSaleItems([]);
     setEditingOrder(null);
     setShowForm(false);
+    setProductUnitCost(null);
     setShowClientDropdown(false);
   };
 
@@ -898,7 +1117,7 @@ export function SalesModule() {
                 <select
                   required={saleItems.length === 0}
                   value={formData.producto}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const selectedProductName = e.target.value;
                     // Buscar el precio de venta del producto en la tabla products
                     const product = products.find(p => p.nombre === selectedProductName);
@@ -909,13 +1128,34 @@ export function SalesModule() {
                       producto: selectedProductName,
                       precio_unitario: precioVenta ? precioVenta.toString() : formData.precio_unitario
                     });
+
+                    // Verificar si viene de costos y calcular el costo (tanto para fabricados como reventa)
+                    if (selectedProductName) {
+                      let prod;
+                      if (productType === 'fabricado') {
+                        prod = fabricatedProducts.find(p => p.nombre === selectedProductName);
+                      } else {
+                        prod = resaleProducts.find(p => p.nombre === selectedProductName);
+                      }
+                      
+                      if (prod && prod.id && typeof prod.id === 'string' && prod.id.startsWith('cost-')) {
+                        // Calcular costo desde costos
+                        const cost = await calculateProductCostFromCosts(selectedProductName);
+                        setProductUnitCost(cost);
+                      } else {
+                        // Si viene de stock, usar el costo del stock
+                        setProductUnitCost(null);
+                      }
+                    } else {
+                      setProductUnitCost(null);
+                    }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Seleccione un producto</option>
                   {availableProducts.map((prod) => (
                     <option key={prod.id} value={prod.nombre}>
-                      {prod.nombre} (Stock: {prod.cantidad})
+                      {prod.nombre} {prod.cantidad !== undefined ? `(Stock: ${prod.cantidad})` : '(Sin stock)'}
                     </option>
                   ))}
                 </select>
@@ -1005,6 +1245,12 @@ export function SalesModule() {
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Costo Unitario del Producto:</span>
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
                       ${(() => {
+                        // Si tenemos un costo calculado almacenado, usarlo
+                        if (productUnitCost !== null) {
+                          return formatNumber(productUnitCost);
+                        }
+                        
+                        // Si no, buscar en stock
                         let unitCost = 0;
                         if (productType === 'fabricado') {
                           const prod = fabricatedProducts.find(p => p.nombre === formData.producto);
@@ -1080,6 +1326,12 @@ export function SalesModule() {
                       <span className="text-gray-600 dark:text-gray-300">Costo Unitario:</span>
                       <span className="ml-2 font-semibold text-gray-700 dark:text-white">
                         ${(() => {
+                          // Si tenemos un costo calculado almacenado, usarlo
+                          if (productUnitCost !== null) {
+                            return formatNumber(productUnitCost);
+                          }
+                          
+                          // Si no, buscar en stock
                           let unitCost = 0;
                           if (productType === 'fabricado') {
                             const prod = fabricatedProducts.find(p => p.nombre === formData.producto);
