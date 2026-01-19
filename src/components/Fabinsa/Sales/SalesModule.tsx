@@ -598,7 +598,98 @@ export function SalesModule() {
               }
             }
 
-            // Registrar movimiento de inventario
+            // Descontar materiales del producto fabricado
+            // Buscar el producto en la tabla de costos para obtener sus materiales
+            const product = products.find(p => p.nombre === sale.producto);
+            if (product) {
+              const productMats = productMaterials[product.id] || [];
+              
+              for (const mat of productMats) {
+                const kgNecesarios = (mat.kg_por_unidad || 0) * sale.cantidad;
+                
+                if (kgNecesarios > 0) {
+                  // Buscar el material en stock_materials
+                  // Primero buscar por nombre
+                  let { data: stockMat, error: matFindError } = await supabase
+                    .from('stock_materials')
+                    .select('*')
+                    .eq('tenant_id', tenantId)
+                    .ilike('nombre', mat.material_name)
+                    .limit(1);
+
+                  // Si no se encuentra por nombre, buscar por campo material
+                  if (!stockMat || stockMat.length === 0) {
+                    const { data: stockMatByMaterial, error: matFindError2 } = await supabase
+                      .from('stock_materials')
+                      .select('*')
+                      .eq('tenant_id', tenantId)
+                      .ilike('material', mat.material_name)
+                      .limit(1);
+                    
+                    if (!matFindError2) {
+                      stockMat = stockMatByMaterial;
+                      matFindError = matFindError2;
+                    }
+                  }
+
+                  if (matFindError) {
+                    console.error(`Error buscando material ${mat.material_name}:`, matFindError);
+                    continue;
+                  }
+
+                  if (stockMat && stockMat.length > 0) {
+                    const currentKg = stockMat[0].kg || 0;
+                    const newKg = currentKg - kgNecesarios; // Permitir stock negativo
+
+                    const { error: matUpdateError } = await supabase
+                      .from('stock_materials')
+                      .update({ kg: newKg })
+                      .eq('id', stockMat[0].id);
+
+                    if (matUpdateError) {
+                      console.error(`Error actualizando material ${mat.material_name}:`, matUpdateError);
+                    } else {
+                      // Registrar movimiento de inventario del material
+                      await supabase.from('inventory_movements').insert({
+                        tenant_id: tenantId,
+                        tipo: 'egreso_mp',
+                        item_nombre: mat.material_name,
+                        cantidad: kgNecesarios,
+                        motivo: `Venta recibida - ${sale.producto} - Orden ${orderId.substring(0, 8)}`,
+                      });
+                    }
+                  } else {
+                    // Si el material no existe en stock, crearlo con stock negativo
+                    const { error: matInsertError } = await supabase
+                      .from('stock_materials')
+                      .insert({
+                        tenant_id: tenantId,
+                        nombre: mat.material_name,
+                        material: mat.material_name,
+                        kg: -kgNecesarios, // Stock negativo
+                        costo_kilo_usd: 0,
+                        valor_dolar: 1,
+                        moneda: 'ARS',
+                      });
+                    
+                    if (matInsertError) {
+                      console.error(`Error creando material ${mat.material_name} en stock:`, matInsertError);
+                    } else {
+                      // Registrar movimiento de inventario del material
+                      await supabase.from('inventory_movements').insert({
+                        tenant_id: tenantId,
+                        tipo: 'egreso_mp',
+                        item_nombre: mat.material_name,
+                        cantidad: kgNecesarios,
+                        motivo: `Venta recibida - ${sale.producto} - Orden ${orderId.substring(0, 8)}`,
+                      });
+                    }
+                  }
+                }
+              }
+            }
+
+            // Registrar movimiento de inventario del producto
             await supabase.from('inventory_movements').insert({
               tenant_id: tenantId,
               tipo: 'egreso_fab',
@@ -684,6 +775,48 @@ export function SalesModule() {
                   .from('stock_products')
                   .update({ cantidad: prod[0].cantidad + sale.cantidad })
                   .eq('id', prod[0].id);
+              }
+
+              // Restaurar materiales del producto fabricado
+              const product = products.find(p => p.nombre === sale.producto);
+              if (product) {
+                const productMats = productMaterials[product.id] || [];
+                
+                for (const mat of productMats) {
+                  const kgNecesarios = (mat.kg_por_unidad || 0) * sale.cantidad;
+                  
+                  if (kgNecesarios > 0) {
+                    // Buscar el material en stock_materials
+                    let { data: stockMat } = await supabase
+                      .from('stock_materials')
+                      .select('*')
+                      .eq('tenant_id', tenantId)
+                      .ilike('nombre', mat.material_name)
+                      .limit(1);
+
+                    // Si no se encuentra por nombre, buscar por campo material
+                    if (!stockMat || stockMat.length === 0) {
+                      const { data: stockMatByMaterial } = await supabase
+                        .from('stock_materials')
+                        .select('*')
+                        .eq('tenant_id', tenantId)
+                        .ilike('material', mat.material_name)
+                        .limit(1);
+                      
+                      stockMat = stockMatByMaterial;
+                    }
+
+                    if (stockMat && stockMat.length > 0) {
+                      const currentKg = stockMat[0].kg || 0;
+                      const newKg = currentKg + kgNecesarios; // Restaurar el stock
+
+                      await supabase
+                        .from('stock_materials')
+                        .update({ kg: newKg })
+                        .eq('id', stockMat[0].id);
+                    }
+                  }
+                }
               }
             } else {
               const { data: prod } = await supabase

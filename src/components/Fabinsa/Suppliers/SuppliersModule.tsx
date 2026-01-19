@@ -14,6 +14,15 @@ import { GoogleDriveViewer } from '../../Forums/GoogleDriveViewer';
 import { DriveFolder } from '../../../lib/googleDriveAPI';
 import { useDepartmentPermissions } from '../../../hooks/useDepartmentPermissions';
 import { BulkImportSuppliersModal } from './BulkImportSuppliersModal';
+import { writeFile, utils } from 'xlsx';
+
+// Función para formatear números con separadores de miles
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
 
 type Supplier = Database['public']['Tables']['suppliers']['Row'];
 type SupplierInsert = Database['public']['Tables']['suppliers']['Insert'];
@@ -136,6 +145,129 @@ export function SuppliersModule() {
     setSelectedSupplierForOrders(supplier);
     setShowOrdersModal(true);
     await loadSupplierOrders(supplier);
+  };
+
+  // Función para exportar historial de compras a Excel
+  const exportPurchasesHistoryToExcel = () => {
+    if (!selectedSupplierForOrders || (supplierMaterialPurchases.length === 0 && supplierProductPurchases.length === 0)) return;
+
+    const wb = utils.book_new();
+    
+    // Calcular totales
+    const totalMateriales = supplierMaterialPurchases.reduce((sum, p) => {
+      const tieneIva = (p as any).tiene_iva || false;
+      const ivaPct = (p as any).iva_pct || 0;
+      const ivaMonto = tieneIva ? p.total * (ivaPct / 100) : 0;
+      return sum + p.total + ivaMonto;
+    }, 0);
+    
+    const totalProductos = supplierProductPurchases.reduce((sum, p) => {
+      const tieneIva = (p as any).tiene_iva || false;
+      const ivaPct = (p as any).iva_pct || 0;
+      const ivaMonto = tieneIva ? p.total * (ivaPct / 100) : 0;
+      return sum + p.total + ivaMonto;
+    }, 0);
+    
+    const totalGeneral = totalMateriales + totalProductos;
+
+    // Hoja 1: Compras de Materiales
+    if (supplierMaterialPurchases.length > 0) {
+      const materialsData = [
+        ['Fecha', 'Material', 'Cantidad (kg)', 'Precio Unitario', 'Moneda', 'Valor Dólar', 'IVA %', 'IVA Monto', 'Total', 'Total con IVA', 'Estado', 'Pagado']
+      ];
+      
+      supplierMaterialPurchases.forEach(purchase => {
+        const tieneIva = (purchase as any).tiene_iva || false;
+        const ivaPct = (purchase as any).iva_pct || 0;
+        const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
+        const totalConIva = purchase.total + ivaMonto;
+        const estado = (purchase as any).estado || 'pendiente';
+        const pagado = (purchase as any).pagado || false;
+        const precioUnitario = purchase.moneda === 'USD' && purchase.valor_dolar 
+          ? (purchase.precio / purchase.valor_dolar).toFixed(2) 
+          : purchase.precio.toFixed(2);
+        
+        materialsData.push([
+          new Date(purchase.fecha).toLocaleDateString('es-AR'),
+          purchase.material,
+          purchase.cantidad.toFixed(2),
+          precioUnitario,
+          purchase.moneda,
+          purchase.valor_dolar ? purchase.valor_dolar.toFixed(2) : '',
+          tieneIva ? `${ivaPct}%` : 'Sin IVA',
+          formatNumber(ivaMonto),
+          formatNumber(purchase.total),
+          formatNumber(totalConIva),
+          estado === 'recibido' ? 'Recibido' : 'Pendiente',
+          pagado ? 'Pagado' : 'Impago',
+        ]);
+      });
+      
+      const ws1 = utils.aoa_to_sheet(materialsData);
+      utils.book_append_sheet(wb, ws1, 'Compras Materiales');
+    }
+
+    // Hoja 2: Compras de Productos
+    if (supplierProductPurchases.length > 0) {
+      const productsData = [
+        ['Fecha', 'Producto', 'Cantidad', 'Precio Unitario', 'Moneda', 'Valor Dólar', 'IVA %', 'IVA Monto', 'Total', 'Total con IVA', 'Estado', 'Pagado']
+      ];
+      
+      supplierProductPurchases.forEach(purchase => {
+        const tieneIva = (purchase as any).tiene_iva || false;
+        const ivaPct = (purchase as any).iva_pct || 0;
+        const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
+        const totalConIva = purchase.total + ivaMonto;
+        const estado = (purchase as any).estado || 'pendiente';
+        const pagado = (purchase as any).pagado || false;
+        const precioUnitario = purchase.moneda === 'USD' && purchase.valor_dolar 
+          ? (purchase.precio / purchase.valor_dolar).toFixed(2) 
+          : purchase.precio.toFixed(2);
+        
+        productsData.push([
+          new Date(purchase.fecha).toLocaleDateString('es-AR'),
+          purchase.producto,
+          purchase.cantidad,
+          precioUnitario,
+          purchase.moneda,
+          purchase.valor_dolar ? purchase.valor_dolar.toFixed(2) : '',
+          tieneIva ? `${ivaPct}%` : 'Sin IVA',
+          formatNumber(ivaMonto),
+          formatNumber(purchase.total),
+          formatNumber(totalConIva),
+          estado === 'recibido' ? 'Recibido' : 'Pendiente',
+          pagado ? 'Pagado' : 'Impago',
+        ]);
+      });
+      
+      const ws2 = utils.aoa_to_sheet(productsData);
+      utils.book_append_sheet(wb, ws2, 'Compras Productos');
+    }
+
+    // Hoja 3: Resumen
+    const summaryData = [
+      ['Proveedor', selectedSupplierForOrders.nombre],
+      ['Razón Social', selectedSupplierForOrders.razon_social || ''],
+      ['CUIT', selectedSupplierForOrders.cuit || ''],
+      ['', ''],
+      ['Resumen de Compras', ''],
+      ['Total Compras de Materiales', formatNumber(totalMateriales)],
+      ['Total Compras de Productos', formatNumber(totalProductos)],
+      ['Total General', formatNumber(totalGeneral)],
+      ['', ''],
+      ['Cantidad de Compras', ''],
+      ['Compras de Materiales', supplierMaterialPurchases.length],
+      ['Compras de Productos', supplierProductPurchases.length],
+      ['Total de Compras', supplierMaterialPurchases.length + supplierProductPurchases.length],
+    ];
+    
+    const ws3 = utils.aoa_to_sheet(summaryData);
+    utils.book_append_sheet(wb, ws3, 'Resumen');
+
+    // Generar nombre de archivo
+    const supplierName = selectedSupplierForOrders.nombre.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const fileName = `historial_compras_${supplierName}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    writeFile(wb, fileName);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -958,17 +1090,29 @@ export function SuppliersModule() {
                   Compras de materiales y productos realizadas a este proveedor
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setShowOrdersModal(false);
-                  setSelectedSupplierForOrders(null);
-                  setSupplierMaterialPurchases([]);
-                  setSupplierProductPurchases([]);
-                }}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                {(supplierMaterialPurchases.length > 0 || supplierProductPurchases.length > 0) && (
+                  <button
+                    onClick={exportPurchasesHistoryToExcel}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                    title="Exportar a Excel"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Exportar Excel</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowOrdersModal(false);
+                    setSelectedSupplierForOrders(null);
+                    setSupplierMaterialPurchases([]);
+                    setSupplierProductPurchases([]);
+                  }}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
