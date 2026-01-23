@@ -192,6 +192,7 @@ BEGIN
         priority,
         status,
         created_by,
+        tenant_id,
         is_recurring,
         recurrence_pattern,
         recurrence_weekday,
@@ -207,6 +208,7 @@ BEGIN
         NEW.priority,
         'pending',
         NEW.created_by,
+        NEW.tenant_id,
         true,
         NEW.recurrence_pattern,
         NEW.recurrence_weekday,
@@ -216,20 +218,22 @@ BEGIN
       )
       RETURNING id INTO existing_task_id;
 
-      -- Copiar asignaciones de la tarea original
+      -- Copiar asignaciones de la tarea original (INCLUYENDO tenant_id)
       INSERT INTO task_assignments (
         task_id,
         assigned_to_user,
         assigned_to_department,
-        assigned_by
+        assigned_by,
+        tenant_id
       )
       SELECT 
         existing_task_id,
         assigned_to_user,
         assigned_to_department,
-        assigned_by
-      FROM task_assignments
-      WHERE task_id = NEW.id;
+        assigned_by,
+        COALESCE(ta.tenant_id, NEW.tenant_id)
+      FROM task_assignments ta
+      WHERE ta.task_id = NEW.id;
 
       RAISE NOTICE 'Tarea recurrente creada: % (parent_task_id: %)', next_due_date, parent_id;
     END IF;

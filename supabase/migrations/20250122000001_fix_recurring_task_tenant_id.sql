@@ -1,68 +1,10 @@
 -- ============================================
--- MEJORAS AL SISTEMA DE TAREAS
+-- MIGRACIÓN: Corregir tenant_id en tareas recurrentes
 -- ============================================
--- Agrega campos para timer, administrador, tareas recurrentes
--- y hace client_name opcional
--- ============================================
-
--- 1. Agregar completed_at para timer de tareas
+-- Corrige la función create_recurring_task() para incluir tenant_id
 -- ============================================
 
-ALTER TABLE tasks 
-  ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-
--- Trigger para actualizar completed_at cuando se completa la tarea
-CREATE OR REPLACE FUNCTION update_task_completed_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
-    NEW.completed_at = NOW();
-  ELSIF NEW.status != 'completed' AND OLD.status = 'completed' THEN
-    NEW.completed_at = NULL;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_update_task_completed_at ON tasks;
-CREATE TRIGGER trigger_update_task_completed_at
-  BEFORE UPDATE ON tasks
-  FOR EACH ROW
-  EXECUTE FUNCTION update_task_completed_at();
-
--- 2. Hacer client_name opcional
--- ============================================
-
-ALTER TABLE tasks 
-  ALTER COLUMN client_name DROP NOT NULL;
-
--- 3. Agregar task_manager_id (administrador de tarea)
--- ============================================
-
-ALTER TABLE tasks 
-  ADD COLUMN IF NOT EXISTS task_manager_id UUID REFERENCES profiles(id) ON DELETE SET NULL;
-
-CREATE INDEX IF NOT EXISTS idx_tasks_task_manager_id ON tasks(task_manager_id);
-
--- 4. Agregar campos para tareas recurrentes
--- ============================================
-
-ALTER TABLE tasks 
-  ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT false;
-
-ALTER TABLE tasks 
-  ADD COLUMN IF NOT EXISTS recurrence_pattern JSONB DEFAULT '{}'::jsonb;
--- Formato: {type: 'daily'|'weekly'|'monthly', interval: number, end_date: date|null}
-
-ALTER TABLE tasks 
-  ADD COLUMN IF NOT EXISTS parent_task_id UUID REFERENCES tasks(id) ON DELETE CASCADE;
--- Para agrupar tareas recurrentes (la tarea original es el parent)
-
-CREATE INDEX IF NOT EXISTS idx_tasks_parent_task_id ON tasks(parent_task_id);
-
--- 5. Función para crear tareas recurrentes
--- ============================================
-
+-- Actualizar función create_recurring_task() para incluir tenant_id
 CREATE OR REPLACE FUNCTION create_recurring_task()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -72,6 +14,11 @@ DECLARE
   pattern_end_date TIMESTAMPTZ;
   parent_id UUID;
   existing_task_id UUID;
+  target_year INTEGER;
+  target_month INTEGER;
+  calculated_date DATE;
+  original_due_date DATE;
+  original_time TIME;
 BEGIN
   -- Solo procesar si la tarea cambió a 'completed'
   IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
@@ -89,27 +36,54 @@ BEGIN
         ELSE NULL 
       END;
 
+      -- Guardar hora original de la tarea
+      original_due_date := NEW.due_date::DATE;
+      original_time := NEW.due_date::TIME;
+
       -- Calcular próxima fecha según el patrón
-      CASE pattern_type
-        WHEN 'daily' THEN
-          next_due_date := NEW.due_date + (pattern_interval || ' days')::INTERVAL;
-        WHEN 'weekly' THEN
-          next_due_date := NEW.due_date + (pattern_interval || ' weeks')::INTERVAL;
-        WHEN 'monthly' THEN
-          next_due_date := NEW.due_date + (pattern_interval || ' months')::INTERVAL;
-        ELSE
-          -- Patrón no reconocido, no crear tarea
-          RETURN NEW;
-      END CASE;
+      IF pattern_type = 'monthly' AND NEW.recurrence_weekday IS NOT NULL AND NEW.recurrence_week_position IS NOT NULL THEN
+        -- Recurrencia por día de semana específico (ej: primer jueves)
+        -- Calcular el próximo mes
+        target_month := EXTRACT(MONTH FROM original_due_date)::INTEGER + pattern_interval;
+        target_year := EXTRACT(YEAR FROM original_due_date)::INTEGER;
+        
+        -- Ajustar año si el mes excede 12
+        IF target_month > 12 THEN
+          target_month := target_month - 12;
+          target_year := target_year + 1;
+        END IF;
+        
+        -- Calcular la fecha del día específico del mes
+        calculated_date := find_weekday_in_month(
+          target_year,
+          target_month,
+          NEW.recurrence_weekday,
+          NEW.recurrence_week_position
+        );
+        
+        -- Combinar fecha calculada con la hora original
+        next_due_date := (calculated_date::TEXT || ' ' || original_time::TEXT)::TIMESTAMPTZ;
+      ELSE
+        -- Recurrencia normal (daily, weekly, monthly simple)
+        CASE pattern_type
+          WHEN 'daily' THEN
+            next_due_date := NEW.due_date + (pattern_interval || ' days')::INTERVAL;
+          WHEN 'weekly' THEN
+            next_due_date := NEW.due_date + (pattern_interval || ' weeks')::INTERVAL;
+          WHEN 'monthly' THEN
+            next_due_date := NEW.due_date + (pattern_interval || ' months')::INTERVAL;
+          ELSE
+            -- Patrón no reconocido, no crear tarea
+            RETURN NEW;
+        END CASE;
+      END IF;
       
       -- Verificar si ya existe una tarea recurrente con la misma fecha límite calculada para este parent
-      -- Esto evita crear tareas duplicadas cuando se cambia el estado de completed a otro y luego de vuelta a completed
-      -- Verificamos tanto por parent_task_id como por la fecha límite calculada
       SELECT id INTO existing_task_id
       FROM tasks
       WHERE parent_task_id = parent_id
-        AND id != NEW.id  -- Excluir la tarea actual
-        AND due_date = next_due_date  -- Misma fecha límite calculada
+        AND id != NEW.id
+        AND due_date = next_due_date
         AND is_recurring = true
       LIMIT 1;
       
@@ -119,7 +93,7 @@ BEGIN
         RETURN NEW;
       END IF;
       
-      -- También verificar si hay una tarea pendiente o en progreso (por si acaso)
+      -- También verificar si hay una tarea pendiente o en progreso
       SELECT id INTO existing_task_id
       FROM tasks
       WHERE parent_task_id = parent_id
@@ -139,7 +113,12 @@ BEGIN
         RETURN NEW;
       END IF;
 
-      -- Crear nueva tarea recurrente
+      -- Verificar que NEW.tenant_id no sea null
+      IF NEW.tenant_id IS NULL THEN
+        RAISE EXCEPTION 'No se puede crear una tarea recurrente sin tenant_id. La tarea original debe tener tenant_id.';
+      END IF;
+
+      -- Crear nueva tarea recurrente (INCLUYENDO tenant_id)
       INSERT INTO tasks (
         title,
         description,
@@ -151,6 +130,8 @@ BEGIN
         tenant_id,
         is_recurring,
         recurrence_pattern,
+        recurrence_weekday,
+        recurrence_week_position,
         parent_task_id,
         task_manager_id
       )
@@ -165,6 +146,8 @@ BEGIN
         NEW.tenant_id,
         true,
         NEW.recurrence_pattern,
+        NEW.recurrence_weekday,
+        NEW.recurrence_week_position,
         parent_id,
         NEW.task_manager_id
       )
@@ -195,20 +178,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger para crear tareas recurrentes
-DROP TRIGGER IF EXISTS trigger_create_recurring_task ON tasks;
-CREATE TRIGGER trigger_create_recurring_task
-  AFTER UPDATE ON tasks
-  FOR EACH ROW
-  EXECUTE FUNCTION create_recurring_task();
-
 -- ============================================
 -- FIN DEL SCRIPT
 -- ============================================
--- ✅ completed_at agregado con trigger automático
--- ✅ client_name ahora es opcional
--- ✅ task_manager_id agregado
--- ✅ Campos de tareas recurrentes agregados
--- ✅ Función y trigger para tareas recurrentes creados
+-- ✅ Función create_recurring_task() actualizada para incluir tenant_id
+-- ✅ Validación agregada para asegurar que tenant_id no sea null
 -- ============================================
-

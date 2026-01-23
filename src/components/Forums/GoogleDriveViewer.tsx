@@ -228,7 +228,10 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
         }
         
         if (errorMessage.includes('404') || errorMessage.includes('no encontrada') || errorMessage.includes('File not found')) {
-          setError('No se pudo acceder a esta carpeta. Verifica que el ID de la carpeta sea correcto y que tengas permisos para acceder a ella.');
+          setError('No se pudo acceder a esta carpeta. Es posible que la carpeta no exista o que no tengas permisos para acceder a ella desde tu cuenta de Google Drive. Contacta al administrador si crees que deberías tener acceso.');
+        }
+        if (errorMessage.includes('403') || errorMessage.includes('permisos')) {
+          setError('No tienes permisos para acceder a esta carpeta desde tu cuenta de Google Drive. Los permisos se gestionan directamente desde Google Drive. Si crees que deberías tener acceso, contacta al administrador de la carpeta en Google Drive.');
         }
         
         if (errorMessage.includes('Timeout')) {
@@ -438,8 +441,11 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
           {currentFolderName && (
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{currentFolderName}</h3>
           )}
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            Para ver los archivos directamente en la aplicación, necesitas autenticarte con Google Drive.
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Para ver los archivos de esta carpeta, necesitas autenticarte con tu cuenta de Google Drive.
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Cada usuario se autentica con su propia cuenta. El acceso a esta carpeta depende de los permisos configurados en Google Drive.
           </p>
           <div className="flex items-center justify-center gap-3">
             <button
@@ -447,7 +453,7 @@ export function GoogleDriveViewer({ folderId: initialFolderId, folderName: initi
               className="px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition font-medium flex items-center gap-2"
             >
               <FolderOpen className="w-5 h-5" />
-              Autenticar con Google
+              Autenticar con mi cuenta de Google
             </button>
             <button
               onClick={openInDrive}

@@ -114,7 +114,10 @@ export function GoogleDriveFolderSelector({
           Conectar con Google Drive
         </h3>
         <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Necesitas autenticarte con Google para buscar y seleccionar carpetas de Drive
+          Necesitas autenticarte con tu cuenta de Google para configurar la carpeta de Drive que se mostrará a los usuarios.
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+          Esta autenticación es solo para configurar la carpeta. Los usuarios se autenticarán con sus propias cuentas para ver el contenido.
         </p>
         <button
           onClick={handleAuthenticate}

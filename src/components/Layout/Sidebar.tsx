@@ -30,7 +30,12 @@ import {
   Menu,
   X,
   CreditCard,
-  BarChart3
+  BarChart3,
+  Wallet,
+  ArrowUpDown,
+  Calculator,
+  Database,
+  Receipt
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
@@ -103,6 +108,17 @@ const menuItems: MenuItem[] = [
       { icon: Clock, label: 'Carga de Horas', view: 'time-tracking', roles: ['admin', 'support', 'user'] },
       { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
       { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
+    ]
+  },
+  { 
+    icon: Wallet, 
+    label: 'Finanzas', 
+    roles: ['admin', 'support', 'user'],
+    subItems: [
+      { icon: ArrowUpDown, label: 'Cashflow', view: 'finanzas-cashflow', roles: ['admin', 'support', 'user'] },
+      { icon: Calculator, label: 'Cotizador', view: 'finanzas-cotizador', roles: ['admin', 'support', 'user'] },
+      { icon: Database, label: 'EERR', view: 'finanzas-eerr', roles: ['admin', 'support', 'user'] },
+      { icon: Receipt, label: 'Presupuesto', view: 'finanzas-presupuesto', roles: ['admin', 'support', 'user'] },
     ]
   },
   { icon: Headphones, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { Camera, User, Upload, CheckCircle, AlertCircle, Building2, Calendar, Eye, EyeOff, Home, Video, Users as UsersIcon, FolderOpen, Clock, CheckSquare, Wrench, Headphones, Settings, Layers, FileText, BookOpen, Briefcase, Heart, MessageSquare, Copy, Plus, Trash2, RefreshCw, Factory, Package, ShoppingCart, TrendingUp, BarChart3, DollarSign, Truck, Sparkles } from 'lucide-react';
+import { Camera, User, Upload, CheckCircle, AlertCircle, Building2, Calendar, Eye, EyeOff, Home, Video, Users as UsersIcon, FolderOpen, Clock, CheckSquare, Wrench, Headphones, Settings, Layers, FileText, BookOpen, Briefcase, Heart, MessageSquare, Copy, Plus, Trash2, RefreshCw, Factory, Package, ShoppingCart, TrendingUp, BarChart3, DollarSign, Truck, Sparkles, Wallet, ArrowUpDown, Calculator, Database, Receipt } from 'lucide-react';
 
 export function ProfileSettings() {
   const { profile, user, refreshProfile } = useAuth();
@@ -49,6 +49,10 @@ export function ProfileSettings() {
     { key: 'time-tracking', label: 'Carga de Horas', icon: Clock, category: 'negocio' },
     { key: 'tasks', label: 'Tareas', icon: CheckSquare, category: 'negocio' },
     { key: 'tools', label: 'Herramientas', icon: Wrench, category: 'negocio' },
+    { key: 'finanzas-cashflow', label: 'Cashflow', icon: ArrowUpDown, category: 'finanzas' },
+    { key: 'finanzas-cotizador', label: 'Cotizador', icon: Calculator, category: 'finanzas' },
+    { key: 'finanzas-eerr', label: 'EERR', icon: Database, category: 'finanzas' },
+    { key: 'finanzas-presupuesto', label: 'Presupuesto', icon: Receipt, category: 'finanzas' },
     { key: 'tickets', label: 'Soporte', icon: Headphones, category: 'main' },
     { key: 'direct-messages', label: 'Chat / Mensajes Directos', icon: MessageSquare, category: 'main' },
   ];
@@ -1004,8 +1008,46 @@ export function ProfileSettings() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Módulos de Finanzas */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Finanzas</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {allModules.filter(m => m.category === 'finanzas').map((module) => {
+                const Icon = module.icon;
+                const isVisible = visibleModules[module.key] !== false; // Por defecto true
+                return (
+                  <label
+                    key={module.key}
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition ${
+                      isVisible
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isVisible}
+                      onChange={() => handleModuleToggle(module.key)}
+                      disabled={savingModules}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                    />
+                    <Icon className={`w-5 h-5 ${isVisible ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <span className={`flex-1 font-medium ${isVisible ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {module.label}
+                    </span>
+                    {isVisible ? (
+                      <Eye className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    )}
+                  </label>
+                );
+              })}
             </div>
           </div>
+        </div>
         </div>
       )}
 

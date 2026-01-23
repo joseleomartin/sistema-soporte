@@ -209,7 +209,7 @@ export async function listFilesInFolder(
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
             errorData.error?.message || 
-            'No tienes permisos para acceder a esta carpeta.'
+            'No tienes permisos para acceder a esta carpeta desde tu cuenta de Google Drive. Los permisos se gestionan directamente en Google Drive. Si crees que deberías tener acceso, contacta al administrador de la carpeta en Google Drive.'
           );
         }
         const errorData = await response.json().catch(() => ({}));
@@ -475,7 +475,7 @@ export async function getFolderInfo(
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error?.message || 
-          'Carpeta no encontrada. Puede que no exista o no tengas permisos para acceder a ella.'
+          'Carpeta no encontrada. Es posible que la carpeta no exista o que no tengas permisos para acceder a ella desde tu cuenta de Google Drive. Los permisos se gestionan directamente en Google Drive.'
         );
       }
       const errorData = await response.json().catch(() => ({}));

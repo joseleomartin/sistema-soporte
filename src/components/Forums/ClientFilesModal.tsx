@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, FileText, Image, File, Download, Calendar, User, Loader2, Search, ExternalLink, Folder } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import { GoogleDriveFolderSelector } from './GoogleDriveFolderSelector';
 import { GoogleDriveViewer } from './GoogleDriveViewer';
 import { DriveFolder } from '../../lib/googleDriveAPI';
@@ -22,6 +23,9 @@ interface ClientFilesModalProps {
 }
 
 export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFilesModalProps) {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'support';
+  
   const [activeTab, setActiveTab] = useState<'chat' | 'drive'>('chat');
   const [files, setFiles] = useState<FileAttachment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -446,18 +450,32 @@ export function ClientFilesModal({ subforumId, subforumName, onClose }: ClientFi
                   webViewLink={driveFolderLink || undefined}
                   onError={(err) => {
                     setError(err);
-                    // Si hay error, permitir seleccionar nueva carpeta
-                    setDriveFolderId(null);
-                    setDriveFolderName(null);
-                    setDriveFolderLink(null);
+                    // Solo permitir seleccionar nueva carpeta si es admin
+                    if (isAdmin) {
+                      setDriveFolderId(null);
+                      setDriveFolderName(null);
+                      setDriveFolderLink(null);
+                    }
                   }}
                 />
-              ) : (
+              ) : isAdmin ? (
+                // Solo admins pueden configurar carpetas
                 <GoogleDriveFolderSelector
                   clientName={subforumName}
                   onSelectFolder={handleSelectFolder}
                   onError={(err) => setError(err)}
                 />
+              ) : (
+                // Usuarios normales ven mensaje cuando no hay carpeta configurada
+                <div className="text-center py-12">
+                  <Folder className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    No hay carpeta de Google Drive configurada
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Un administrador debe configurar la carpeta de Google Drive para este cliente.
+                  </p>
+                </div>
               )}
             </>
           )}

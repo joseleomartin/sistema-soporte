@@ -659,6 +659,16 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
         { view: 'tools', label: 'Herramientas' },
       ]
     },
+    { 
+      label: 'Finanzas', 
+      hasSubItems: true,
+      subItems: [
+        { view: 'finanzas-cashflow', label: 'Cashflow' },
+        { view: 'finanzas-cotizador', label: 'Cotizador' },
+        { view: 'finanzas-eerr', label: 'EERR' },
+        { view: 'finanzas-presupuesto', label: 'Presupuesto' },
+      ]
+    },
     { view: 'tickets', label: 'Soporte', hasSubItems: false },
     { view: 'users', label: 'Usuarios', hasSubItems: false },
     { view: 'settings', label: 'Configuración', hasSubItems: false },
@@ -686,7 +696,7 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
     })
     .filter((module): module is NonNullable<typeof module> => module !== null);
 
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(['Personas', 'Negocio']));
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(['Personas', 'Negocio', 'Finanzas']));
 
   const [permissions, setPermissions] = useState<Record<string, DepartmentPermission>>({});
   const [loading, setLoading] = useState(true);

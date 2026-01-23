@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Calendar, User, AlertTriangle, Clock, Users, Building2, UserPlus, Trash2, Edit } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import { TaskChat } from './TaskChat';
 import { AddUserToTaskModal } from './AddUserToTaskModal';
 import { EditTaskModal } from './EditTaskModal';
@@ -80,6 +81,7 @@ const formatDuration = (startDate: string, endDate?: string | null): string => {
 
 export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
 
   const getAvatarUrl = (avatarPath: string | null | undefined) => {
     if (!avatarPath) return null;
@@ -315,9 +317,37 @@ export function TaskDetail({ task: initialTask, onBack }: TaskDetailProps) {
       setUpdating(true);
       console.log('🔄 Updating task status to:', newStatus);
 
+      // Obtener el tenant_id de la tarea actual para preservarlo
+      const { data: currentTask, error: fetchError } = await supabase
+        .from('tasks')
+        .select('tenant_id')
+        .eq('id', task.id)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Error fetching task tenant_id:', fetchError);
+        throw fetchError;
+      }
+
+      // Determinar el tenant_id a usar: primero de la tarea, luego del contexto, luego del perfil
+      let taskTenantId = currentTask?.tenant_id;
+      if (!taskTenantId && tenantId) {
+        taskTenantId = tenantId;
+      } else if (!taskTenantId && profile?.tenant_id) {
+        taskTenantId = profile.tenant_id;
+      }
+
+      if (!taskTenantId) {
+        throw new Error('No se pudo determinar el tenant_id para la tarea');
+      }
+
+      // Actualizar solo el status, preservando tenant_id explícitamente
       const { data, error } = await supabase
         .from('tasks')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          tenant_id: taskTenantId
+        })
         .eq('id', task.id)
         .select()
         .single();

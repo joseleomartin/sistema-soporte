@@ -79,13 +79,105 @@ async function getGoogleClientId(): Promise<string> {
   // Fallback: usar variable de entorno del frontend
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   if (!clientId) {
-    const errorMessage = 
-      'VITE_GOOGLE_CLIENT_ID no está configurada en las variables de entorno.\n\n' +
-      'SOLUCIÓN:\n' +
-      '1. Si usas backend: Configura VITE_BACKEND_URL en Vercel para obtener el Client ID del backend\n' +
-      '2. Si no usas backend: Agrega VITE_GOOGLE_CLIENT_ID en Vercel (Settings → Environment Variables)\n\n' +
-      'IMPORTANTE: El Client ID debe existir en Google Cloud Console y ser de tipo "Aplicación web"';
+    // Verificar si hay backend URL configurado para dar un mensaje más específico
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const hasBackend = !!backendUrl;
+    
+    const isLocal = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '0.0.0.0' ||
+      window.location.protocol === 'http:'
+    );
+    
+    let errorMessage = '🔐 Configuración de Google Drive requerida\n\n';
+    
+    if (isLocal) {
+      // Mensaje para desarrollo local
+      errorMessage += 
+        '📍 ENTORNO: Desarrollo Local detectado\n\n' +
+        '⚠️ PROBLEMA: No hay configuración de Google Drive para desarrollo local.\n\n' +
+        'Necesitas configurar UNA de estas opciones:\n\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+        'OPCIÓN 1: Usar Backend con ngrok (Recomendado)\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+        '1. Ejecuta el backend: cd backend && 8-iniciar-todo-ngrok.bat\n' +
+        '2. Copia la URL de ngrok que aparece (ej: https://abc123.ngrok-free.app)\n' +
+        '3. Crea un archivo .env en la carpeta project/ con este contenido:\n' +
+        '   VITE_BACKEND_URL=https://TU-URL-NGROK.ngrok-free.app\n' +
+        '   (Reemplaza TU-URL-NGROK con la URL real de ngrok)\n' +
+        '4. REINICIA el servidor de desarrollo (Ctrl+C y luego npm run dev)\n' +
+        '5. Recarga la página (F5)\n\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+        'OPCIÓN 2: Configurar Client ID Directamente\n' +
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+        '1. Obtén tu Client ID de Google Cloud Console → Credenciales\n' +
+        '2. Crea un archivo .env en la carpeta project/ con este contenido:\n' +
+        '   VITE_GOOGLE_CLIENT_ID=TU_CLIENT_ID.apps.googleusercontent.com\n' +
+        '   (Reemplaza TU_CLIENT_ID con tu Client ID real)\n' +
+        '3. REINICIA el servidor de desarrollo (Ctrl+C y luego npm run dev)\n' +
+        '4. Recarga la página (F5)\n\n' +
+        '📝 NOTA IMPORTANTE:\n' +
+        '- El archivo .env debe estar en: project/.env\n' +
+        '- NO agregues espacios alrededor del signo =\n' +
+        '- NO agregues comillas alrededor del valor\n' +
+        '- Vite solo carga .env al INICIAR el servidor, por eso debes reiniciar\n' +
+        '- Puedes copiar project/.env.example a project/.env como plantilla\n';
+    } else if (hasBackend) {
+      // Mensaje para producción con backend
+      errorMessage += 
+        '⚠️ PROBLEMA: Aunque VITE_BACKEND_URL está configurado, no se pudo obtener el Client ID del backend.\n\n' +
+        'Posibles causas:\n' +
+        '1. El backend no está corriendo o no es accesible\n' +
+        '2. El endpoint /api/google/client-id no existe o no responde correctamente\n' +
+        '3. El backend no tiene el Client ID configurado\n\n' +
+        'SOLUCIÓN:\n' +
+        'Opción A (Recomendado): Verifica que el backend esté corriendo y accesible\n' +
+        `  - URL del backend: ${backendUrl}\n` +
+        '  - Verifica que el endpoint /api/google/client-id funcione\n' +
+        '  - Verifica que el backend tenga GOOGLE_CLIENT_ID configurado\n\n' +
+        'Opción B: Configura VITE_GOOGLE_CLIENT_ID directamente en Vercel\n' +
+        '  - Ve a Vercel → Settings → Environment Variables\n' +
+        '  - Agrega: VITE_GOOGLE_CLIENT_ID = TU_CLIENT_ID.apps.googleusercontent.com\n' +
+        '  - Redesplega la aplicación\n';
+    } else {
+      // Mensaje para producción sin backend
+      errorMessage += 
+        '⚠️ PROBLEMA: No hay configuración de Google Drive.\n\n' +
+        'Necesitas configurar UNA de estas opciones:\n\n' +
+        'OPCIÓN 1: Usar Backend (Recomendado - Más Seguro)\n' +
+        '1. Ve a Vercel → Settings → Environment Variables\n' +
+        '2. Agrega: VITE_BACKEND_URL = https://TU-URL-NGROK.ngrok-free.app\n' +
+        '3. Asegúrate de que el backend esté corriendo\n' +
+        '4. Asegúrate de que el backend tenga el endpoint /api/google/client-id\n' +
+        '5. Redesplega la aplicación\n\n' +
+        'OPCIÓN 2: Configurar Client ID Directamente\n' +
+        '1. Ve a Vercel → Settings → Environment Variables\n' +
+        '2. Agrega: VITE_GOOGLE_CLIENT_ID = TU_CLIENT_ID.apps.googleusercontent.com\n' +
+        '   (Obtén el Client ID de Google Cloud Console → Credenciales)\n' +
+        '3. Redesplega la aplicación\n\n' +
+        'IMPORTANTE:\n' +
+        '- El Client ID debe existir en Google Cloud Console\n' +
+        '- El Client ID debe ser de tipo "Aplicación web"\n' +
+        '- Después de agregar variables en Vercel, DEBES redesplegar\n';
+    }
+    
+    if (!isLocal) {
+      errorMessage += 
+        '\n📖 Más información:\n' +
+        '- Ver archivo: CONFIGURAR_GOOGLE_DRIVE_VERCEL.md\n' +
+        '- Ver archivo: backend/VERIFICAR_CLIENT_ID_FRONTEND.md';
+    }
+    
     console.error('❌', errorMessage);
+    console.error('❌ Variables de entorno disponibles:', {
+      VITE_BACKEND_URL: backendUrl || 'NO CONFIGURADO',
+      VITE_GOOGLE_CLIENT_ID: 'NO CONFIGURADO',
+      MODE: import.meta.env.MODE,
+      DEV: import.meta.env.DEV,
+      PROD: import.meta.env.PROD
+    });
+    
     throw new Error(errorMessage);
   }
   

@@ -33,6 +33,7 @@ import { CostsModule } from './components/Fabinsa/Costs/CostsModule';
 import { SuppliersModule } from './components/Fabinsa/Suppliers/SuppliersModule';
 import { ClientsModule } from './components/Fabinsa/Clients/ClientsModule';
 import { SubscriptionManagement } from './components/Subscription/SubscriptionManagement';
+import { EERRModule } from './components/Finanzas/EERRModule';
 import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
@@ -249,6 +250,35 @@ function MainApp() {
         return <CostsModule key={`fabinsa-costs-${viewKey}`} />;
       case 'fabinsa-suppliers':
         return <SuppliersModule key={`fabinsa-suppliers-${viewKey}`} />;
+      case 'finanzas-cashflow':
+        return (
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Cashflow</h2>
+              <p className="text-gray-600 dark:text-gray-400">Módulo en desarrollo</p>
+            </div>
+          </div>
+        );
+      case 'finanzas-cotizador':
+        return (
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Cotizador</h2>
+              <p className="text-gray-600 dark:text-gray-400">Módulo de Cotizador en desarrollo</p>
+            </div>
+          </div>
+        );
+      case 'finanzas-eerr':
+        return <EERRModule key={`finanzas-eerr-${viewKey}`} />;
+      case 'finanzas-presupuesto':
+        return (
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Presupuesto</h2>
+              <p className="text-gray-600 dark:text-gray-400">Módulo de Presupuesto en desarrollo</p>
+            </div>
+          </div>
+        );
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
       case 'subscription':
