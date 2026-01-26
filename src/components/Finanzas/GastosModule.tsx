@@ -203,31 +203,53 @@ export function GastosModule() {
   const initializeDefaultCategories = async () => {
     if (!tenant?.id) return;
 
-    const defaultCategories = [
-      { name: 'COGS', order: 1 },
-      { name: 'SERVICIOS', order: 2 },
-      { name: 'INFRAESTRUCTURA', order: 3 },
-      { name: 'COMERCIAL', order: 4 },
-    ];
+    try {
+      const defaultCategories = [
+        { name: 'COGS', order: 1 },
+        { name: 'SERVICIOS', order: 2 },
+        { name: 'INFRAESTRUCTURA', order: 3 },
+        { name: 'COMERCIAL', order: 4 },
+      ];
 
-    for (const cat of defaultCategories) {
-      // Verificar si ya existe antes de insertar
-      const { data: existing } = await supabase
+      // Verificar todas las categorías existentes de una vez (sin .single() para evitar 406)
+      const { data: existingCategories, error: checkError } = await supabase
         .from('gastos_categories')
-        .select('id')
-        .eq('tenant_id', tenant.id)
-        .eq('name', cat.name)
-        .single();
+        .select('name')
+        .eq('tenant_id', tenant.id);
 
-      if (!existing) {
-        await supabase
-          .from('gastos_categories')
-          .insert({
-            tenant_id: tenant.id,
-            name: cat.name,
-            display_order: cat.order,
-          });
+      // Si hay error al verificar, no continuar
+      if (checkError) {
+        console.error('Error verificando categorías existentes:', checkError);
+        return;
       }
+
+      const existingNames = new Set((existingCategories || []).map(c => c.name.toUpperCase()));
+
+      // Insertar solo las que no existen
+      const categoriesToInsert = defaultCategories.filter(
+        cat => !existingNames.has(cat.name.toUpperCase())
+      );
+
+      if (categoriesToInsert.length > 0) {
+        // Insertar todas en un solo batch
+        const { error } = await supabase
+          .from('gastos_categories')
+          .insert(
+            categoriesToInsert.map(cat => ({
+              tenant_id: tenant.id,
+              name: cat.name,
+              display_order: cat.order,
+            }))
+          );
+
+        // Ignorar errores de restricción única (23505) - significa que ya existe
+        if (error && error.code !== '23505') {
+          console.error('Error inicializando categorías:', error);
+        }
+      }
+    } catch (error) {
+      // Ignorar errores silenciosamente para evitar problemas en la primera carga
+      console.error('Error en initializeDefaultCategories:', error);
     }
   };
 
@@ -254,6 +276,8 @@ export function GastosModule() {
       // Si no hay categorías, crear las básicas
       if (!categoriesData || categoriesData.length === 0) {
         await initializeDefaultCategories();
+        // Esperar un momento para que se completen las inserciones
+        await new Promise(resolve => setTimeout(resolve, 300));
         // Recargar categorías
         const { data: reloadedCategories, error: reloadError } = await supabase
           .from('gastos_categories')
@@ -261,8 +285,25 @@ export function GastosModule() {
           .eq('tenant_id', tenant!.id)
           .order('display_order', { ascending: true });
 
-        if (reloadError) throw reloadError;
-        categoriesData = reloadedCategories || [];
+        if (reloadError) {
+          // Si hay error, intentar una vez más después de otro delay
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const { data: retryCategories, error: retryError } = await supabase
+            .from('gastos_categories')
+            .select('*')
+            .eq('tenant_id', tenant!.id)
+            .order('display_order', { ascending: true });
+          
+          if (retryError) {
+            console.error('Error recargando categorías después de reintento:', retryError);
+            // Continuar con datos vacíos en lugar de lanzar error
+            categoriesData = [];
+          } else {
+            categoriesData = retryCategories || [];
+          }
+        } else {
+          categoriesData = reloadedCategories || [];
+        }
       }
 
       // Cargar sub-items (conceptos en gastos)
