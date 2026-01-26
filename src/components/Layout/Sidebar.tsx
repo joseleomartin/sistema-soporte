@@ -35,7 +35,8 @@ import {
   ArrowUpDown,
   Calculator,
   Database,
-  Receipt
+  Receipt,
+  TrendingDown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
@@ -119,6 +120,7 @@ const menuItems: MenuItem[] = [
       { icon: Calculator, label: 'Cotizador', view: 'finanzas-cotizador', roles: ['admin', 'support', 'user'] },
       { icon: Database, label: 'EERR', view: 'finanzas-eerr', roles: ['admin', 'support', 'user'] },
       { icon: Receipt, label: 'Presupuesto', view: 'finanzas-presupuesto', roles: ['admin', 'support', 'user'] },
+      { icon: TrendingDown, label: 'Gastos', view: 'finanzas-gastos', roles: ['admin', 'support', 'user'] },
     ]
   },
   { icon: Headphones, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },

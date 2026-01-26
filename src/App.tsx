@@ -34,6 +34,8 @@ import { SuppliersModule } from './components/Fabinsa/Suppliers/SuppliersModule'
 import { ClientsModule } from './components/Fabinsa/Clients/ClientsModule';
 import { SubscriptionManagement } from './components/Subscription/SubscriptionManagement';
 import { EERRModule } from './components/Finanzas/EERRModule';
+import { CashFlowModule } from './components/Finanzas/CashFlowModule';
+import { GastosModule } from './components/Finanzas/GastosModule';
 import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
@@ -251,14 +253,7 @@ function MainApp() {
       case 'fabinsa-suppliers':
         return <SuppliersModule key={`fabinsa-suppliers-${viewKey}`} />;
       case 'finanzas-cashflow':
-        return (
-          <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Cashflow</h2>
-              <p className="text-gray-600 dark:text-gray-400">Módulo en desarrollo</p>
-            </div>
-          </div>
-        );
+        return <CashFlowModule key={`finanzas-cashflow-${viewKey}`} />;
       case 'finanzas-cotizador':
         return (
           <div className="flex items-center justify-center h-screen">
@@ -279,6 +274,8 @@ function MainApp() {
             </div>
           </div>
         );
+      case 'finanzas-gastos':
+        return <GastosModule key={`finanzas-gastos-${viewKey}`} />;
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
       case 'subscription':

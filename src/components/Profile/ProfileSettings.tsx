@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { Camera, User, Upload, CheckCircle, AlertCircle, Building2, Calendar, Eye, EyeOff, Home, Video, Users as UsersIcon, FolderOpen, Clock, CheckSquare, Wrench, Headphones, Settings, Layers, FileText, BookOpen, Briefcase, Heart, MessageSquare, Copy, Plus, Trash2, RefreshCw, Factory, Package, ShoppingCart, TrendingUp, BarChart3, DollarSign, Truck, Sparkles, Wallet, ArrowUpDown, Calculator, Database, Receipt } from 'lucide-react';
+import { Camera, User, Upload, CheckCircle, AlertCircle, Building2, Calendar, Eye, EyeOff, Home, Video, Users as UsersIcon, FolderOpen, Clock, CheckSquare, Wrench, Headphones, Settings, Layers, FileText, BookOpen, Briefcase, Heart, MessageSquare, Copy, Plus, Trash2, RefreshCw, Factory, Package, ShoppingCart, TrendingUp, BarChart3, DollarSign, Truck, Sparkles, Wallet, ArrowUpDown, Calculator, Database, Receipt, TrendingDown } from 'lucide-react';
 
 export function ProfileSettings() {
   const { profile, user, refreshProfile } = useAuth();
@@ -53,6 +53,7 @@ export function ProfileSettings() {
     { key: 'finanzas-cotizador', label: 'Cotizador', icon: Calculator, category: 'finanzas' },
     { key: 'finanzas-eerr', label: 'EERR', icon: Database, category: 'finanzas' },
     { key: 'finanzas-presupuesto', label: 'Presupuesto', icon: Receipt, category: 'finanzas' },
+    { key: 'finanzas-gastos', label: 'Gastos', icon: TrendingDown, category: 'finanzas' },
     { key: 'tickets', label: 'Soporte', icon: Headphones, category: 'main' },
     { key: 'direct-messages', label: 'Chat / Mensajes Directos', icon: MessageSquare, category: 'main' },
   ];
