@@ -119,7 +119,6 @@ const menuItems: MenuItem[] = [
       { icon: ArrowUpDown, label: 'Cashflow', view: 'finanzas-cashflow', roles: ['admin', 'support', 'user'] },
       { icon: Calculator, label: 'Cotizador', view: 'finanzas-cotizador', roles: ['admin', 'support', 'user'] },
       { icon: Database, label: 'EERR', view: 'finanzas-eerr', roles: ['admin', 'support', 'user'] },
-      { icon: Receipt, label: 'Presupuesto', view: 'finanzas-presupuesto', roles: ['admin', 'support', 'user'] },
       { icon: TrendingDown, label: 'Gastos', view: 'finanzas-gastos', roles: ['admin', 'support', 'user'] },
     ]
   },

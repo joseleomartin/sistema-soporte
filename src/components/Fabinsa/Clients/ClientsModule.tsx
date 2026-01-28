@@ -70,6 +70,13 @@ export function ClientsModule() {
   const [loadingSales, setLoadingSales] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Estados para la nueva estructura
+  const [mainTab, setMainTab] = useState<'resumen' | 'gestion'>('resumen');
+  const [selectedClientForDetails, setSelectedClientForDetails] = useState<Client | null>(null);
+  const [clientDetailTab, setClientDetailTab] = useState<'facturas' | 'cuenta' | 'info' | 'otra'>('facturas');
+  const [selectedSale, setSelectedSale] = useState<Sale | Sale[] | null>(null);
+  const [showSaleDetailModal, setShowSaleDetailModal] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     nombre: '',
@@ -89,6 +96,13 @@ export function ClientsModule() {
       loadClients();
     }
   }, [tenantId]);
+
+  // Cargar ventas cuando se selecciona un cliente
+  useEffect(() => {
+    if (selectedClientForDetails && clientSales.length === 0 && !loadingSales) {
+      loadClientSales(selectedClientForDetails);
+    }
+  }, [selectedClientForDetails]);
 
   const loadClients = async () => {
     if (!tenantId) return;
@@ -526,61 +540,565 @@ export function ClientsModule() {
     );
   }
 
+  // Filtrar clientes según tab activo
+  const filteredClients = searchTerm
+    ? clients.filter((client) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          client.nombre.toLowerCase().includes(term) ||
+          (client.razon_social && client.razon_social.toLowerCase().includes(term)) ||
+          (client.cuit && client.cuit.includes(term)) ||
+          (client.telefono && client.telefono.includes(term)) ||
+          (client.email && client.email.toLowerCase().includes(term))
+        );
+      })
+    : clients;
+
   return (
     <div className="p-4 sm:p-6 w-full">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
-        <div className="flex items-center space-x-3 mb-2">
-          <Users className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clientes</h1>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de clientes y documentos</p>
-      </div>
-
-      {/* Header with Add Button */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Clientes</h2>
-        {canCreate('forums') && (
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Importar</span>
-            </button>
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nuevo Cliente</span>
-            </button>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center space-x-3 mb-2">
+              <Users className="w-6 h-6 text-blue-600" />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clientes</h1>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de clientes y documentos</p>
           </div>
-        )}
-      </div>
-
-      {/* Buscador */}
-      <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, razón social, CUIT, teléfono o email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X className="w-4 h-4" />
+          {mainTab === 'resumen' && (
+            <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition">
+              <Calendar className="w-4 h-4" />
+              <span>Calendario de vencimientos</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Tabs principales */}
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <div className="flex space-x-1">
+          <button
+            onClick={() => setMainTab('resumen')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              mainTab === 'resumen'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            Resumen clientes
+          </button>
+          <button
+            onClick={() => setMainTab('gestion')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              mainTab === 'gestion'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            Gestión de clientes
+          </button>
+        </div>
+      </div>
+
+      {/* Contenido según tab principal */}
+      {mainTab === 'resumen' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Columna izquierda - Lista de clientes */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Lista de clientes</h2>
+              
+              {/* Buscador */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Buscar cliente:"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Tabla de clientes */}
+            <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Razón social</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredClients.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                        {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredClients.map((client) => (
+                      <tr
+                        key={client.id}
+                        onClick={() => {
+                          setSelectedClientForDetails(client);
+                          loadClientSales(client);
+                        }}
+                        className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                          selectedClientForDetails?.id === client.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                        }`}
+                      >
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                          {client.nombre}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          {client.razon_social || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+                          {/* El saldo se calculará dinámicamente o se mostrará 0 por ahora */}
+                          $0,00
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Columna derecha - Detalles del cliente */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            {selectedClientForDetails ? (
+              <>
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    {selectedClientForDetails.nombre}
+                  </h2>
+                  
+                  {/* Tabs de detalles */}
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => setClientDetailTab('facturas')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        clientDetailTab === 'facturas'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Facturas adeudadas
+                    </button>
+                    <button
+                      onClick={() => setClientDetailTab('cuenta')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        clientDetailTab === 'cuenta'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Cuenta cliente
+                    </button>
+                    <button
+                      onClick={() => setClientDetailTab('info')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        clientDetailTab === 'info'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Información general
+                    </button>
+                    <button
+                      onClick={() => setClientDetailTab('otra')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        clientDetailTab === 'otra'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Otra información
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 overflow-y-auto max-h-[calc(100vh-300px)]">
+                  {clientDetailTab === 'facturas' && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Facturas adeudadas por el cliente (doble click para seleccionar ítem)
+                      </p>
+                      {loadingSales ? (
+                        <div className="text-center py-8">
+                          <div className="text-gray-500 dark:text-gray-400">Cargando facturas...</div>
+                        </div>
+                      ) : clientSales.length === 0 ? (
+                        <p className="text-center text-gray-500 dark:text-gray-400 py-8">No hay facturas registradas</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-50 dark:bg-gray-700">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Nro. Comprobante</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Tipo</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Fecha pago</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Descripción</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300">Total</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300">Cobrado</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300">Saldo</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300">Días</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300">Saldo acumulado</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                              {(() => {
+                                // Agrupar ventas por order_id o order_number
+                                const groupedSales = clientSales.reduce((acc: any, sale: any) => {
+                                  const orderKey = sale.order_id || sale.order_number || sale.id;
+                                  if (!acc[orderKey]) {
+                                    acc[orderKey] = [];
+                                  }
+                                  acc[orderKey].push(sale);
+                                  return acc;
+                                }, {});
+
+                                // Convertir a array y ordenar por fecha
+                                const orders = Object.values(groupedSales).map((sales: any) => {
+                                  // Ordenar las ventas de la orden por fecha
+                                  sales.sort((a: any, b: any) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+                                  return sales;
+                                }).sort((a: any, b: any) => new Date(a[0].fecha).getTime() - new Date(b[0].fecha).getTime());
+
+                                let saldoAcumuladoTotal = 0;
+
+                                return orders.map((orderSales: any[], orderIndex: number) => {
+                                  // Calcular totales de la orden
+                                  const orderTotal = orderSales.reduce((sum: number, sale: any) => {
+                                    const tieneIva = sale.tiene_iva || false;
+                                    const ivaPct = sale.iva_pct || 0;
+                                    const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                                    return sum + sale.ingreso_neto + ivaMonto;
+                                  }, 0);
+
+                                  const orderCobrado = orderSales.reduce((sum: number, sale: any) => {
+                                    const tieneIva = sale.tiene_iva || false;
+                                    const ivaPct = sale.iva_pct || 0;
+                                    const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                                    const totalConIva = sale.ingreso_neto + ivaMonto;
+                                    const pagado = sale.pagado || false;
+                                    return sum + (pagado ? totalConIva : 0);
+                                  }, 0);
+
+                                  const orderPagado = orderSales.every((sale: any) => sale.pagado);
+                                  const orderSaldo = orderPagado ? 0 : -(orderTotal - orderCobrado);
+                                  
+                                  // Actualizar saldo acumulado
+                                  saldoAcumuladoTotal += orderSaldo;
+
+                                  const firstSale = orderSales[0];
+                                  const orderNumber = firstSale.order_number ? `ORD-${firstSale.order_number}` : firstSale.order_id ? firstSale.order_id.substring(0, 8) : firstSale.id.substring(0, 8);
+                                  const productCount = orderSales.length;
+                                  const description = productCount === 1 
+                                    ? orderSales[0].producto 
+                                    : `${productCount} productos`;
+
+                                  // Calcular días desde la emisión
+                                  const fechaEmision = new Date(firstSale.fecha);
+                                  const fechaActual = new Date();
+                                  const diasTranscurridos = Math.floor((fechaActual.getTime() - fechaEmision.getTime()) / (1000 * 60 * 60 * 24));
+                                  
+                                  // Calcular días de atraso (si no está pagada, son los días transcurridos)
+                                  const diasAtraso = orderPagado ? 0 : diasTranscurridos;
+                                  
+                                  // Determinar color según días de atraso
+                                  const getDiasColor = () => {
+                                    if (orderPagado) {
+                                      // Si está pagada, mostrar en verde pero con información de días
+                                      if (diasTranscurridos <= 30) {
+                                        return 'text-green-600 dark:text-green-400';
+                                      }
+                                      if (diasTranscurridos <= 60) {
+                                        return 'text-green-600 dark:text-green-400';
+                                      }
+                                      return 'text-green-600 dark:text-green-400';
+                                    }
+                                    // Si no está pagada, colores según atraso
+                                    if (diasAtraso <= 15) {
+                                      return 'text-gray-600 dark:text-gray-400';
+                                    }
+                                    if (diasAtraso <= 30) {
+                                      return 'text-yellow-600 dark:text-yellow-400';
+                                    }
+                                    if (diasAtraso <= 60) {
+                                      return 'text-orange-600 dark:text-orange-400';
+                                    }
+                                    return 'text-red-600 dark:text-red-400';
+                                  };
+
+                                  const getDiasBackground = () => {
+                                    if (orderPagado) {
+                                      return 'bg-green-100 dark:bg-green-900/30';
+                                    }
+                                    // Si no está pagada, colores según atraso
+                                    if (diasAtraso <= 15) {
+                                      return 'bg-gray-100 dark:bg-gray-700';
+                                    }
+                                    if (diasAtraso <= 30) {
+                                      return 'bg-yellow-100 dark:bg-yellow-900/30';
+                                    }
+                                    if (diasAtraso <= 60) {
+                                      return 'bg-orange-100 dark:bg-orange-900/30';
+                                    }
+                                    return 'bg-red-100 dark:bg-red-900/30';
+                                  };
+
+                                  const getDiasText = () => {
+                                    if (orderPagado) {
+                                      return `${diasTranscurridos} días (Pagada)`;
+                                    }
+                                    return `${diasAtraso} días`;
+                                  };
+
+                                  return (
+                                    <tr
+                                      key={firstSale.order_id || firstSale.id}
+                                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                                      onClick={() => {
+                                        // Guardar todas las ventas de la orden
+                                        setSelectedSale(orderSales as any);
+                                        setShowSaleDetailModal(true);
+                                      }}
+                                    >
+                                      <td className="px-3 py-2 text-gray-900 dark:text-white">
+                                        {orderNumber}
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">REC</td>
+                                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                                        {new Date(firstSale.fecha).toLocaleDateString('es-AR')}
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{description}</td>
+                                      <td className="px-3 py-2 text-right text-gray-900 dark:text-white">
+                                        ${formatNumber(orderTotal)}
+                                      </td>
+                                      <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">
+                                        ${formatNumber(orderCobrado)}
+                                      </td>
+                                      <td className={`px-3 py-2 text-right ${orderPagado ? 'text-gray-500 dark:text-gray-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {orderPagado ? '$0,00' : `-${formatNumber(Math.abs(orderSaldo))}`}
+                                      </td>
+                                      <td className="px-3 py-2 text-center">
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getDiasBackground()} ${getDiasColor()}`} title={orderPagado ? `Pagada después de ${diasTranscurridos} días` : `Atraso de ${diasAtraso} días`}>
+                                          {getDiasText()}
+                                        </span>
+                                      </td>
+                                      <td className={`px-3 py-2 text-right ${saldoAcumuladoTotal >= 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {saldoAcumuladoTotal >= 0 ? '' : '-'}${formatNumber(Math.abs(saldoAcumuladoTotal))}
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {clientDetailTab === 'cuenta' && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Información de cuenta del cliente</p>
+                      {loadingSales ? (
+                        <div className="text-center py-8">
+                          <div className="text-gray-500 dark:text-gray-400">Cargando información...</div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {(() => {
+                            if (!clientSales || clientSales.length === 0) {
+                              return (
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Saldo total:</p>
+                                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    $0,00
+                                  </p>
+                                </div>
+                              );
+                            }
+                            
+                            // Calcular totales
+                            const totalFacturas = clientSales.reduce((sum: number, sale: any) => {
+                              const tieneIva = sale.tiene_iva || false;
+                              const ivaPct = sale.iva_pct || 0;
+                              const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                              const totalConIva = sale.ingreso_neto + ivaMonto;
+                              return sum + totalConIva;
+                            }, 0);
+                            
+                            const totalCobrado = clientSales.reduce((sum: number, sale: any) => {
+                              const tieneIva = sale.tiene_iva || false;
+                              const ivaPct = sale.iva_pct || 0;
+                              const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                              const totalConIva = sale.ingreso_neto + ivaMonto;
+                              const pagado = sale.pagado || false;
+                              return sum + (pagado ? totalConIva : 0);
+                            }, 0);
+                            
+                            const saldoAdeudado = clientSales.reduce((sum: number, sale: any) => {
+                              const tieneIva = sale.tiene_iva || false;
+                              const ivaPct = sale.iva_pct || 0;
+                              const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                              const totalConIva = sale.ingreso_neto + ivaMonto;
+                              const pagado = sale.pagado || false;
+                              return sum + (pagado ? 0 : -totalConIva);
+                            }, 0);
+                            
+                            return (
+                              <>
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Saldo total adeudado:</p>
+                                  <p className={`text-2xl font-bold ${saldoAdeudado < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                                    {saldoAdeudado < 0 ? `-$${formatNumber(Math.abs(saldoAdeudado))}` : `$${formatNumber(saldoAdeudado)}`}
+                                  </p>
+                                </div>
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Total facturado:</p>
+                                  <p className="text-xl font-semibold text-gray-900 dark:text-white">
+                                    ${formatNumber(totalFacturas)}
+                                  </p>
+                                </div>
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Total cobrado:</p>
+                                  <p className="text-xl font-semibold text-green-600 dark:text-green-400">
+                                    ${formatNumber(totalCobrado)}
+                                  </p>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {clientDetailTab === 'info' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.nombre}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Razón Social</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.razon_social || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CUIT</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.cuit || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.telefono || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.email || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dirección</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.direccion || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Localidad</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.localidad || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Provincia</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.provincia || '-'}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {clientDetailTab === 'otra' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Condición de Pago</label>
+                        <p className="text-sm text-gray-900 dark:text-white">{selectedClientForDetails.condicion_pago || '-'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observaciones</label>
+                        <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                          {selectedClientForDetails.observaciones || '-'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                Seleccione un cliente de la lista para ver sus detalles
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab de Gestión de clientes */}
+      {mainTab === 'gestion' && (
+        <div>
+          {/* Header with Add Button */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Clientes</h2>
+            {canCreate('forums') && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Importar</span>
+                </button>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nuevo Cliente</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Buscador */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, razón social, CUIT, teléfono o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
 
       {/* Form Modal */}
       {showForm && (
@@ -939,124 +1457,308 @@ export function ClientsModule() {
         </div>
       )}
 
-      {/* Clients Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
-        <div className="overflow-x-auto w-full sales-scroll">
-          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 min-w-[800px]">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                  Nombre
-                </th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                  Razón Social
-                </th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                  CUIT
-                </th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                  Teléfono
-                </th>
-                <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                  Email
-                </th>
-                <th className="px-3 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {(() => {
-                const filteredClients = searchTerm
-                  ? clients.filter((client) => {
-                      const term = searchTerm.toLowerCase();
-                      return (
-                        client.nombre.toLowerCase().includes(term) ||
-                        (client.razon_social && client.razon_social.toLowerCase().includes(term)) ||
-                        (client.cuit && client.cuit.includes(term)) ||
-                        (client.telefono && client.telefono.includes(term)) ||
-                        (client.email && client.email.toLowerCase().includes(term))
-                      );
-                    })
-                  : clients;
-
-                if (filteredClients.length === 0) {
-                  return (
+          {/* Clients Table */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
+            <div className="overflow-x-auto w-full sales-scroll">
+              <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 min-w-[800px]">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Nombre
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Razón Social
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      CUIT
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Teléfono
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Email
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredClients.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         {searchTerm ? 'No se encontraron clientes que coincidan con la búsqueda' : 'No hay clientes registrados'}
                       </td>
                     </tr>
-                  );
-                }
-
-                return filteredClients.map((client) => (
-                  <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-3 sm:px-4 py-3 sm:py-4">
-                      <button
-                        onClick={() => openSalesHistoryModal(client)}
-                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline truncate block w-full text-left max-w-[150px]"
-                        title={client.nombre}
-                      >
-                        {client.nombre}
-                      </button>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
-                      <div className="truncate max-w-[150px]" title={client.razon_social || ''}>
-                        {client.razon_social || '-'}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
-                      <div className="truncate max-w-[120px]" title={client.cuit || ''}>
-                        {client.cuit || '-'}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
-                      <div className="truncate max-w-[120px]" title={client.telefono || ''}>
-                        {client.telefono || '-'}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
-                      <div className="truncate max-w-[200px]" title={client.email || ''}>
-                        {client.email || '-'}
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-3 sm:py-4 text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-1 sm:space-x-2 flex-shrink-0">
-                        <button
-                          onClick={() => openDocumentsModal(client)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex-shrink-0"
-                          title="Ver documentos"
-                        >
-                          <FileText className="w-4 h-4" />
-                        </button>
-                        {canEdit('forums') && (
+                  ) : (
+                    filteredClients.map((client) => (
+                      <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-3 sm:px-4 py-3 sm:py-4">
                           <button
-                            onClick={() => handleEdit(client)}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex-shrink-0"
-                            title="Editar"
+                            onClick={() => openSalesHistoryModal(client)}
+                            className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 hover:underline truncate block w-full text-left max-w-[150px]"
+                            title={client.nombre}
                           >
-                            <Edit className="w-4 h-4" />
+                            {client.nombre}
                           </button>
-                        )}
-                        {canDelete('forums') && (
-                          <button
-                            onClick={() => handleDelete(client.id)}
-                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 flex-shrink-0"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ));
-              })()}
-            </tbody>
-          </table>
+                        </td>
+                        <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <div className="truncate max-w-[150px]" title={client.razon_social || ''}>
+                            {client.razon_social || '-'}
+                          </div>
+                        </td>
+                        <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <div className="truncate max-w-[120px]" title={client.cuit || ''}>
+                            {client.cuit || '-'}
+                          </div>
+                        </td>
+                        <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <div className="truncate max-w-[120px]" title={client.telefono || ''}>
+                            {client.telefono || '-'}
+                          </div>
+                        </td>
+                        <td className="px-3 sm:px-4 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400">
+                          <div className="truncate max-w-[200px]" title={client.email || ''}>
+                            {client.email || '-'}
+                          </div>
+                        </td>
+                        <td className="px-3 sm:px-4 py-3 sm:py-4 text-right text-sm font-medium">
+                          <div className="flex justify-end space-x-1 sm:space-x-2 flex-shrink-0">
+                            <button
+                              onClick={() => openDocumentsModal(client)}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex-shrink-0"
+                              title="Ver documentos"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
+                            {canEdit('forums') && (
+                              <button
+                                onClick={() => handleEdit(client)}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 flex-shrink-0"
+                                title="Editar"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
+                            {canDelete('forums') && (
+                              <button
+                                onClick={() => handleDelete(client.id)}
+                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 flex-shrink-0"
+                                title="Eliminar"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+
+      {/* Modal de Detalles de Factura */}
+      {showSaleDetailModal && selectedSale && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center space-x-2 text-gray-900 dark:text-white">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <span>Detalles de Orden</span>
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                  {(() => {
+                    const sales = Array.isArray(selectedSale) ? selectedSale : [selectedSale];
+                    const firstSale = sales[0];
+                    return firstSale.order_number ? `Orden: ORD-${firstSale.order_number}` : firstSale.order_id ? `ID: ${firstSale.order_id.substring(0, 8)}` : `ID: ${firstSale.id.substring(0, 8)}`;
+                  })()}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSaleDetailModal(false);
+                  setSelectedSale(null);
+                }}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {(() => {
+                const sales = Array.isArray(selectedSale) ? selectedSale : [selectedSale];
+                const firstSale = sales[0];
+                
+                // Calcular totales de la orden
+                const orderTotal = sales.reduce((sum: number, sale: any) => {
+                  const tieneIva = sale.tiene_iva || false;
+                  const ivaPct = sale.iva_pct || 0;
+                  const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                  return sum + sale.ingreso_neto + ivaMonto;
+                }, 0);
+
+                const orderCobrado = sales.reduce((sum: number, sale: any) => {
+                  const tieneIva = sale.tiene_iva || false;
+                  const ivaPct = sale.iva_pct || 0;
+                  const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                  const totalConIva = sale.ingreso_neto + ivaMonto;
+                  const pagado = sale.pagado || false;
+                  return sum + (pagado ? totalConIva : 0);
+                }, 0);
+
+                const orderIngresoNeto = sales.reduce((sum: number, sale: any) => sum + sale.ingreso_neto, 0);
+                const orderIngresoBruto = sales.reduce((sum: number, sale: any) => sum + sale.ingreso_bruto, 0);
+                const orderGananciaTotal = sales.reduce((sum: number, sale: any) => sum + sale.ganancia_total, 0);
+                const orderIvaTotal = sales.reduce((sum: number, sale: any) => {
+                  const tieneIva = sale.tiene_iva || false;
+                  const ivaPct = sale.iva_pct || 0;
+                  return sum + (tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0);
+                }, 0);
+
+                const allPagado = sales.every((sale: any) => sale.pagado);
+                const allEntregado = sales.every((sale: any) => (sale as any).estado === 'recibido');
+
+                return (
+                  <div className="space-y-6">
+                    {/* Información General */}
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <h4 className="text-md font-semibold mb-4 text-gray-900 dark:text-white">Información General</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Fecha:</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {new Date(firstSale.fecha).toLocaleDateString('es-AR')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Productos:</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{sales.length} {sales.length === 1 ? 'producto' : 'productos'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Cliente:</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{firstSale.cliente || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400">Estado:</p>
+                          <div className="flex gap-2 mt-1">
+                            {allPagado ? (
+                              <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                                Cobrado
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                                Pendiente
+                              </span>
+                            )}
+                            {allEntregado && (
+                              <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                                Entregado
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lista de Productos */}
+                    {sales.length > 1 && (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 className="text-md font-semibold mb-4 text-gray-900 dark:text-white">Productos de la Orden</h4>
+                        <div className="space-y-3">
+                          {sales.map((sale: any, index: number) => {
+                            const tieneIva = sale.tiene_iva || false;
+                            const ivaPct = sale.iva_pct || 0;
+                            const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                            const totalConIva = sale.ingreso_neto + ivaMonto;
+                            
+                            return (
+                              <div key={sale.id} className="border-b border-gray-300 dark:border-gray-600 pb-3 last:border-0 last:pb-0">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex-1">
+                                    <p className="font-medium text-gray-900 dark:text-white">{sale.producto}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                      Cantidad: {sale.cantidad} • Tipo: {sale.tipo_producto}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold text-gray-900 dark:text-white">${formatNumber(totalConIva)}</p>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                  <div>Precio unit: ${formatNumber(sale.precio_unitario)}</div>
+                                  <div>Neto: ${formatNumber(sale.ingreso_neto)}</div>
+                                  {tieneIva && <div>IVA ({ivaPct}%): ${formatNumber(ivaMonto)}</div>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Detalles de Precios */}
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <h4 className="text-md font-semibold mb-4 text-gray-900 dark:text-white">Resumen de la Orden</h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Ingreso Bruto:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">${formatNumber(orderIngresoBruto)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Ingreso Neto:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">${formatNumber(orderIngresoNeto)}</span>
+                        </div>
+                        {orderIvaTotal > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">IVA Total:</span>
+                            <span className="font-medium text-blue-600 dark:text-blue-400">${formatNumber(orderIvaTotal)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Total Cobrado:</span>
+                          <span className="font-medium text-green-600 dark:text-green-400">${formatNumber(orderCobrado)}</span>
+                        </div>
+                        <div className="border-t border-gray-300 dark:border-gray-600 pt-3 mt-3">
+                          <div className="flex justify-between">
+                            <span className="text-lg font-semibold text-gray-900 dark:text-white">Total de la Orden:</span>
+                            <span className="text-lg font-bold text-gray-900 dark:text-white">${formatNumber(orderTotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Información de Costos y Ganancia */}
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <h4 className="text-md font-semibold mb-4 text-gray-900 dark:text-white">Costos y Ganancia</h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Costo Total:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            ${formatNumber(sales.reduce((sum: number, sale: any) => sum + (sale.costo_unitario * sale.cantidad), 0))}
+                          </span>
+                        </div>
+                        <div className="border-t border-gray-300 dark:border-gray-600 pt-3 mt-3">
+                          <div className="flex justify-between">
+                            <span className="text-lg font-semibold text-gray-900 dark:text-white">Ganancia Total:</span>
+                            <span className="text-lg font-bold text-green-600 dark:text-green-400">${formatNumber(orderGananciaTotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Historial de Ventas */}
       {showSalesHistoryModal && selectedClientForSales && (

@@ -142,19 +142,20 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
           // 1. Buscar o crear forum para el cliente
           let forumId: string;
 
+          if (!profile.tenant_id) {
+            throw new Error('No se pudo identificar la empresa');
+          }
+
           const { data: existingForum } = await supabase
             .from('forums')
             .select('id')
-            .eq('name', row.client_name.trim())
+            .eq('tenant_id', profile.tenant_id)
+            .ilike('name', row.client_name.trim())
             .maybeSingle();
 
           if (existingForum) {
             forumId = (existingForum as any).id;
           } else {
-            if (!profile.tenant_id) {
-              throw new Error('No se pudo identificar la empresa');
-            }
-
             const { data: newForum, error: forumError } = await supabase
               .from('forums')
               .insert({
@@ -175,28 +176,46 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
           const combinedPhone =
             [row.phone1, row.phone2].filter((v) => v && v.trim().length > 0).join(' / ') || null;
 
-          const accessKeys =
-            row.arca_user ||
-            row.arca_password ||
-            row.agip_user ||
-            row.agip_password ||
-            row.arba_user ||
-            row.arba_password
-              ? {
-                  arca: { usuario: row.arca_user || '', contraseña: row.arca_password || '' },
-                  agip: { usuario: row.agip_user || '', contraseña: row.agip_password || '' },
-                  armba: { usuario: row.arba_user || '', contraseña: row.arba_password || '' },
-                }
-              : null;
+          // Preparar access_keys: solo incluir los que tienen valores en el CSV
+          const hasAccessKeysData =
+            row.arca_user?.trim() ||
+            row.arca_password?.trim() ||
+            row.agip_user?.trim() ||
+            row.agip_password?.trim() ||
+            row.arba_user?.trim() ||
+            row.arba_password?.trim();
+          
+          const accessKeys = hasAccessKeysData
+            ? {
+                arca: {
+                  usuario: row.arca_user?.trim() || '',
+                  contraseña: row.arca_password?.trim() || '',
+                },
+                agip: {
+                  usuario: row.agip_user?.trim() || '',
+                  contraseña: row.agip_password?.trim() || '',
+                },
+                armba: {
+                  usuario: row.arba_user?.trim() || '',
+                  contraseña: row.arba_password?.trim() || '',
+                },
+              }
+            : null;
 
           // 2. Buscar si ya existe un cliente con el mismo nombre o CUIT
+          // IMPORTANTE: Solo actualizar clientes existentes, NO crear duplicados
           let existingSubforum: any = null;
           
-          // Primero buscar por CUIT si está disponible
+          if (!profile.tenant_id) {
+            throw new Error('No se pudo identificar la empresa');
+          }
+          
+          // Primero buscar por CUIT si está disponible (más preciso)
           if (row.cuit?.trim()) {
             const { data: subforumByCuit } = await supabase
               .from('subforums')
-              .select('id, name, forum_id')
+              .select('*')
+              .eq('tenant_id', profile.tenant_id)
               .eq('cuit', row.cuit.trim())
               .maybeSingle();
             
@@ -205,12 +224,13 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
             }
           }
           
-          // Si no se encontró por CUIT, buscar por nombre de cliente
-          if (!existingSubforum) {
+          // Si no se encontró por CUIT, buscar por nombre de cliente (case-insensitive)
+          if (!existingSubforum && row.client_name?.trim()) {
             const { data: subforumByName } = await supabase
               .from('subforums')
-              .select('id, name, forum_id')
-              .eq('client_name', row.client_name.trim())
+              .select('*')
+              .eq('tenant_id', profile.tenant_id)
+              .ilike('client_name', row.client_name.trim())
               .maybeSingle();
             
             if (subforumByName) {
@@ -222,36 +242,103 @@ export function BulkImportClientsModal({ onClose, onSuccess }: BulkImportClients
           let subforumName: string;
 
           if (existingSubforum) {
-            // Actualizar cliente existente
-            const updateData: any = {
-              name: row.workspace_name.trim() || row.client_name.trim(),
-              description: row.description?.trim() || null,
-              client_name: row.client_name.trim(),
-              cuit: row.cuit?.trim() || null,
-              email: combinedEmail,
-              access_keys: accessKeys,
-              economic_link: row.economic_link?.trim() || null,
-              contact_full_name: row.contact_name?.trim() || null,
-              client_type: row.client_type?.trim() || null,
-              phone: combinedPhone,
-            };
+            // Obtener datos existentes del cliente
+            const existingData = existingSubforum;
+            
+            // Construir objeto de actualización: solo actualizar campos con valores en el CSV
+            const updateData: any = {};
+            
+            // Solo actualizar name si viene en el CSV
+            if (row.workspace_name?.trim()) {
+              updateData.name = row.workspace_name.trim();
+            } else if (row.client_name?.trim() && !existingData.name) {
+              updateData.name = row.client_name.trim();
+            }
+            
+            // Solo actualizar description si viene en el CSV
+            if (row.description?.trim()) {
+              updateData.description = row.description.trim();
+            }
+            
+            // client_name siempre se actualiza si viene en el CSV
+            if (row.client_name?.trim()) {
+              updateData.client_name = row.client_name.trim();
+            }
+            
+            // Solo actualizar cuit si viene en el CSV
+            if (row.cuit?.trim()) {
+              updateData.cuit = row.cuit.trim();
+            }
+            
+            // Solo actualizar email si viene en el CSV
+            if (combinedEmail) {
+              updateData.email = combinedEmail;
+            }
+            
+            // Actualizar access_keys haciendo merge con los existentes
+            // Solo actualizar si hay al menos un valor de access_keys en el CSV
+            if (hasAccessKeysData) {
+              const existingAccessKeys = existingData.access_keys || {};
+              // Hacer merge: mantener valores existentes y actualizar solo los que vienen en el CSV
+              updateData.access_keys = {
+                arca: {
+                  usuario: row.arca_user?.trim() || existingAccessKeys.arca?.usuario || '',
+                  contraseña: row.arca_password?.trim() || existingAccessKeys.arca?.contraseña || '',
+                },
+                agip: {
+                  usuario: row.agip_user?.trim() || existingAccessKeys.agip?.usuario || '',
+                  contraseña: row.agip_password?.trim() || existingAccessKeys.agip?.contraseña || '',
+                },
+                armba: {
+                  usuario: row.arba_user?.trim() || existingAccessKeys.armba?.usuario || '',
+                  contraseña: row.arba_password?.trim() || existingAccessKeys.armba?.contraseña || '',
+                },
+              };
+            }
+            
+            // Solo actualizar economic_link si viene en el CSV
+            if (row.economic_link?.trim()) {
+              updateData.economic_link = row.economic_link.trim();
+            }
+            
+            // Solo actualizar contact_full_name si viene en el CSV
+            if (row.contact_name?.trim()) {
+              updateData.contact_full_name = row.contact_name.trim();
+            }
+            
+            // Solo actualizar client_type si viene en el CSV
+            if (row.client_type?.trim()) {
+              updateData.client_type = row.client_type.trim();
+            }
+            
+            // Solo actualizar phone si viene en el CSV
+            if (combinedPhone) {
+              updateData.phone = combinedPhone;
+            }
 
             // Si el forum_id cambió, actualizarlo también
             if (existingSubforum.forum_id !== forumId) {
               updateData.forum_id = forumId;
             }
 
-            const { data: updatedSubforum, error: updateError } = await supabase
-              .from('subforums')
-              .update(updateData)
-              .eq('id', existingSubforum.id)
-              .select('id, name')
-              .single();
+            // Solo hacer update si hay campos para actualizar
+            if (Object.keys(updateData).length > 0) {
+              const { data: updatedSubforum, error: updateError } = await supabase
+                .from('subforums')
+                .update(updateData)
+                .eq('id', existingSubforum.id)
+                .select('id, name')
+                .single();
 
-            if (updateError) throw updateError;
-            subforumId = (updatedSubforum as any).id;
-            subforumName = (updatedSubforum as any).name;
-            updated += 1;
+              if (updateError) throw updateError;
+              subforumId = (updatedSubforum as any).id;
+              subforumName = (updatedSubforum as any).name;
+              updated += 1;
+            } else {
+              // No hay cambios, usar datos existentes
+              subforumId = existingSubforum.id;
+              subforumName = existingSubforum.name;
+            }
           } else {
             // Crear nuevo cliente
             if (!profile.tenant_id) {

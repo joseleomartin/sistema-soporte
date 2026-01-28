@@ -1117,7 +1117,57 @@ export function CashFlowModule() {
       )}
 
       {/* Tabla - Scroll horizontal y vertical para ver todos los días */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-x-auto max-h-[calc(100vh-300px)] overflow-y-auto">
+      <div 
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-x-auto max-h-[calc(100vh-300px)] overflow-y-auto"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#64748b #1e293b',
+        }}
+      >
+        <style>{`
+          div::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+          }
+          div::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 6px;
+          }
+          div::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 6px;
+            border: 2px solid #1e293b;
+          }
+          div::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+          }
+          div::-webkit-scrollbar-button {
+            display: block;
+            height: 12px;
+            width: 12px;
+            background: #1e293b;
+          }
+          div::-webkit-scrollbar-button:single-button:vertical:decrement {
+            border-width: 0 4px 4px 4px;
+            border-color: transparent transparent #94a3b8 transparent;
+            border-style: solid;
+          }
+          div::-webkit-scrollbar-button:single-button:vertical:increment {
+            border-width: 4px 4px 0 4px;
+            border-color: #94a3b8 transparent transparent transparent;
+            border-style: solid;
+          }
+          div::-webkit-scrollbar-button:single-button:horizontal:decrement {
+            border-width: 4px 4px 4px 0;
+            border-color: transparent #94a3b8 transparent transparent;
+            border-style: solid;
+          }
+          div::-webkit-scrollbar-button:single-button:horizontal:increment {
+            border-width: 4px 0 4px 4px;
+            border-color: transparent transparent transparent #94a3b8;
+            border-style: solid;
+          }
+        `}</style>
         <table className="w-full min-w-[2000px]">
           <thead className="sticky top-0 z-20 bg-white dark:bg-slate-800">
             <tr className="border-b-2 border-gray-200 dark:border-slate-700">
@@ -1213,7 +1263,7 @@ export function CashFlowModule() {
                       return (
                         <td 
                           key={day} 
-                          className="text-right p-2"
+                          className="text-right p-2 border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30"
                           onDoubleClick={() => {
                             if (canEditDirectly) {
                               setEditingCategoryValue(prev => ({
@@ -1303,7 +1353,7 @@ export function CashFlowModule() {
                           : (value ? formatNumberForInput(value) : '');
 
                         return (
-                          <td key={day} className="text-right p-2">
+                          <td key={day} className="text-right p-2 border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
                             <input
                               type="text"
                               inputMode="decimal"
@@ -1396,7 +1446,7 @@ export function CashFlowModule() {
                 TOTAL DISPONIBILIDADES
               </td>
               {daysOfMonth.map(day => (
-                <td key={day} className="text-right p-2 font-bold text-green-700 dark:text-green-400 text-sm">
+                <td key={day} className="text-right p-2 font-bold text-green-700 dark:text-green-400 text-sm border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
                   {formatNumber(totalDisponibilidadesByDay[day] || 0)}
                 </td>
               ))}
@@ -1478,7 +1528,7 @@ export function CashFlowModule() {
                       return (
                         <td 
                           key={day} 
-                          className="text-right p-2"
+                          className="text-right p-2 border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30"
                           onDoubleClick={() => {
                             if (canEditDirectly) {
                               setEditingCategoryValue(prev => ({
@@ -1568,7 +1618,7 @@ export function CashFlowModule() {
                           : (value ? formatNumberForInput(value) : '');
 
                         return (
-                          <td key={day} className="text-right p-2">
+                          <td key={day} className="text-right p-2 border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
                             <input
                               type="text"
                               inputMode="decimal"
@@ -1661,7 +1711,7 @@ export function CashFlowModule() {
                 TOTAL DE INGRESOS DIARIOS
               </td>
               {daysOfMonth.map(day => (
-                <td key={day} className="text-right p-2 font-bold text-green-700 dark:text-green-400 text-sm">
+                <td key={day} className="text-right p-2 font-bold text-green-700 dark:text-green-400 text-sm border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
                   {formatNumber(totalIngresosByDay[day] || 0)}
                 </td>
               ))}
@@ -1743,7 +1793,7 @@ export function CashFlowModule() {
                       return (
                         <td 
                           key={day} 
-                          className="text-right p-2"
+                          className="text-right p-2 border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30"
                           onDoubleClick={() => {
                             if (canEditDirectly) {
                               setEditingCategoryValue(prev => ({
@@ -1833,7 +1883,7 @@ export function CashFlowModule() {
                           : (value ? formatNumberForInput(value) : '');
 
                         return (
-                          <td key={day} className="text-right p-2">
+                          <td key={day} className="text-right p-2 border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
                             <input
                               type="text"
                               inputMode="decimal"
@@ -1926,7 +1976,7 @@ export function CashFlowModule() {
                 Total EGRESOS Corriente
               </td>
               {daysOfMonth.map(day => (
-                <td key={day} className="text-right p-2 font-bold text-red-700 dark:text-red-400 text-sm">
+                <td key={day} className="text-right p-2 font-bold text-red-700 dark:text-red-400 text-sm border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
                   {formatNumber(totalEgresosByDay[day] || 0)}
                 </td>
               ))}
@@ -1940,7 +1990,7 @@ export function CashFlowModule() {
               {daysOfMonth.map(day => {
                 const flujo = flujoFondosByDay[day] || 0;
                 return (
-                  <td key={day} className="text-right p-2 font-bold text-sm">
+                  <td key={day} className="text-right p-2 font-bold text-sm border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
                     <span className={flujo >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                       {formatNumber(flujo)}
                     </span>
@@ -1957,7 +2007,7 @@ export function CashFlowModule() {
               {daysOfMonth.map(day => {
                 const saldo = saldoFinalByDay[day] || 0;
                 return (
-                  <td key={day} className="text-right p-2 font-bold text-sm">
+                  <td key={day} className="text-right p-2 font-bold text-sm border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
                     <span className={saldo >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                       {formatNumber(saldo)}
                     </span>

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star, FileSpreadsheet, Grid3x3, List } from 'lucide-react';
+import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star, FileSpreadsheet, Grid3x3, List, Download } from 'lucide-react';
+import { writeFile, utils } from 'xlsx';
 import { CreateForumModal } from './CreateForumModal';
 import { SubforumChat } from './SubforumChat';
 import { ManagePermissionsModal } from './ManagePermissionsModal';
@@ -68,6 +69,198 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   });
 
   const canCreateForum = profile?.role === 'admin' || profile?.role === 'support';
+
+  // Función para exportar todos los clientes a Excel
+  const exportClientsToExcel = async () => {
+    if (!tenantId) {
+      alert('Error: No se pudo identificar la empresa');
+      return;
+    }
+
+    try {
+      // Obtener todos los subforums del tenant
+      const { data: allSubforums, error } = await supabase
+        .from('subforums')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('client_name', { ascending: true });
+
+      if (error) throw error;
+
+      if (!allSubforums || allSubforums.length === 0) {
+        alert('No hay clientes para exportar');
+        return;
+      }
+
+      // Obtener todos los drive mappings de una vez
+      const subforumIds = allSubforums.map(s => s.id);
+      const query = supabase
+        .from('client_drive_mapping')
+        .select('subforum_id, folder_link, google_drive_folder_id')
+        .in('subforum_id', subforumIds);
+      
+      // Filtrar por tenant_id si existe en la tabla
+      if (tenantId) {
+        query.eq('tenant_id', tenantId);
+      }
+      
+      const { data: driveMappings, error: driveError } = await query;
+      
+      if (driveError) {
+        console.warn('Error obteniendo drive mappings:', driveError);
+      }
+
+      // Crear un mapa para acceso rápido
+      const driveLinkMap = new Map<string, string>();
+      driveMappings?.forEach((mapping: any) => {
+        // Usar folder_link si existe, sino construir desde google_drive_folder_id
+        if (mapping.folder_link) {
+          driveLinkMap.set(mapping.subforum_id, mapping.folder_link);
+        } else if (mapping.google_drive_folder_id) {
+          // Construir el link desde el folder_id
+          driveLinkMap.set(mapping.subforum_id, `https://drive.google.com/drive/folders/${mapping.google_drive_folder_id}`);
+        }
+      });
+
+      // Preparar los datos en el formato de la plantilla de importación
+      const exportData = allSubforums.map((subforum) => {
+        // Parsear access_keys si existen
+        let arcaUser = '';
+        let arcaPassword = '';
+        let agipUser = '';
+        let agipPassword = '';
+        let arbaUser = '';
+        let arbaPassword = '';
+
+        if (subforum.access_keys) {
+          try {
+            const accessKeys = typeof subforum.access_keys === 'string' 
+              ? JSON.parse(subforum.access_keys) 
+              : subforum.access_keys;
+            
+            if (accessKeys.arca) {
+              arcaUser = accessKeys.arca.usuario || '';
+              arcaPassword = accessKeys.arca.contraseña || '';
+            }
+            if (accessKeys.agip) {
+              agipUser = accessKeys.agip.usuario || '';
+              agipPassword = accessKeys.agip.contraseña || '';
+            }
+            if (accessKeys.armba) {
+              arbaUser = accessKeys.armba.usuario || '';
+              arbaPassword = accessKeys.armba.contraseña || '';
+            }
+          } catch (e) {
+            console.error('Error parsing access_keys:', e);
+          }
+        }
+
+        // Separar email y phone si están combinados
+        let email1 = '';
+        let email2 = '';
+        if (subforum.email) {
+          const emails = subforum.email.split(' / ').map(e => e.trim());
+          email1 = emails[0] || '';
+          email2 = emails[1] || '';
+        }
+
+        let phone1 = '';
+        let phone2 = '';
+        if (subforum.phone) {
+          const phones = subforum.phone.split(' / ').map(p => p.trim());
+          phone1 = phones[0] || '';
+          phone2 = phones[1] || '';
+        }
+
+        // Obtener el link de Google Drive del mapa
+        const driveLink = driveLinkMap.get(subforum.id) || '';
+
+        return [
+          subforum.name || subforum.client_name || '', // Nombre espacio de trabajo
+          subforum.client_name || '', // Nombre del cliente
+          subforum.description || '', // Descripción
+          subforum.cuit || '', // CUIT
+          email1, // Email 1
+          email2, // Email 2
+          phone1, // Teléfono 1
+          phone2, // Teléfono 2
+          subforum.economic_link || '', // Vinculación económica
+          subforum.contact_full_name || '', // Nombre de contacto
+          subforum.client_type || '', // Tipo de cliente
+          arcaUser, // Usuario ARCA
+          arcaPassword, // Contraseña ARCA
+          agipUser, // Usuario AGIP
+          agipPassword, // Contraseña AGIP
+          arbaUser, // Usuario ARBA
+          arbaPassword, // Contraseña ARBA
+          driveLink, // Link carpeta Google Drive
+        ];
+      });
+
+      // Encabezados (mismo formato que la plantilla de importación)
+      const headers = [
+        'Nombre espacio de trabajo',
+        'Nombre del cliente',
+        'Descripción',
+        'CUIT',
+        'Email 1',
+        'Email 2',
+        'Teléfono 1',
+        'Teléfono 2',
+        'Vinculación económica',
+        'Nombre de contacto',
+        'Tipo de cliente',
+        'Usuario ARCA',
+        'Contraseña ARCA',
+        'Usuario AGIP',
+        'Contraseña AGIP',
+        'Usuario ARBA',
+        'Contraseña ARBA',
+        'Link carpeta Google Drive',
+      ];
+
+      // Crear el workbook
+      const wb = utils.book_new();
+      const ws = utils.aoa_to_sheet([headers, ...exportData]);
+
+      // Ajustar el ancho de las columnas
+      const colWidths = [
+        { wch: 25 }, // Nombre espacio de trabajo
+        { wch: 25 }, // Nombre del cliente
+        { wch: 30 }, // Descripción
+        { wch: 15 }, // CUIT
+        { wch: 25 }, // Email 1
+        { wch: 25 }, // Email 2
+        { wch: 15 }, // Teléfono 1
+        { wch: 15 }, // Teléfono 2
+        { wch: 25 }, // Vinculación económica
+        { wch: 20 }, // Nombre de contacto
+        { wch: 20 }, // Tipo de cliente
+        { wch: 15 }, // Usuario ARCA
+        { wch: 15 }, // Contraseña ARCA
+        { wch: 15 }, // Usuario AGIP
+        { wch: 15 }, // Contraseña AGIP
+        { wch: 15 }, // Usuario ARBA
+        { wch: 15 }, // Contraseña ARBA
+        { wch: 40 }, // Link carpeta Google Drive
+      ];
+      ws['!cols'] = colWidths;
+
+      utils.book_append_sheet(wb, ws, 'Clientes');
+
+      // Generar el nombre del archivo con fecha
+      const dateStr = new Date().toISOString().split('T')[0];
+      const fileName = `clientes_exportacion_${dateStr}.xlsx`;
+
+      // Descargar el archivo
+      writeFile(wb, fileName);
+
+      alert(`Exportación completada: ${allSubforums.length} clientes exportados`);
+    } catch (error: any) {
+      console.error('Error al exportar clientes:', error);
+      alert(`Error al exportar clientes: ${error?.message || 'Error desconocido'}`);
+    }
+  };
 
   const toggleViewMode = () => {
     const newMode = viewMode === 'grid' ? 'list' : 'grid';
@@ -281,10 +474,15 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
         data = result.data;
         error = result.error;
       } else {
-        const result = await supabase
+        const query = supabase
           .from('subforums')
           .select('*');
-
+        
+        if (tenantId) {
+          query.eq('tenant_id', tenantId);
+        }
+        
+        const result = await query;
         data = result.data;
         error = result.error;
       }
@@ -490,6 +688,14 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
             >
               <Users className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="truncate">Asignación Masiva</span>
+            </button>
+            <button
+              onClick={exportClientsToExcel}
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium text-sm sm:text-base"
+              title="Exportar todos los clientes a Excel"
+            >
+              <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="truncate">Exportar Clientes</span>
             </button>
             <button
               onClick={() => setShowBulkImportModal(true)}

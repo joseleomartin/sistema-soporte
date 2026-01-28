@@ -52,7 +52,6 @@ export function ProfileSettings() {
     { key: 'finanzas-cashflow', label: 'Cashflow', icon: ArrowUpDown, category: 'finanzas' },
     { key: 'finanzas-cotizador', label: 'Cotizador', icon: Calculator, category: 'finanzas' },
     { key: 'finanzas-eerr', label: 'EERR', icon: Database, category: 'finanzas' },
-    { key: 'finanzas-presupuesto', label: 'Presupuesto', icon: Receipt, category: 'finanzas' },
     { key: 'finanzas-gastos', label: 'Gastos', icon: TrendingDown, category: 'finanzas' },
     { key: 'tickets', label: 'Soporte', icon: Headphones, category: 'main' },
     { key: 'direct-messages', label: 'Chat / Mensajes Directos', icon: MessageSquare, category: 'main' },
