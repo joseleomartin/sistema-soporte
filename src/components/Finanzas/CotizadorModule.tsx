@@ -91,6 +91,9 @@ interface Seccion {
   display_order: number;
   subtotal_label?: string | null;
   markup_label?: string | null;
+  custom_name?: string | null; // Nombre personalizado para esta cotización
+  custom_subtotal_label?: string | null; // Etiqueta personalizada de subtotal para esta cotización
+  custom_markup_label?: string | null; // Etiqueta personalizada de markup para esta cotización
 }
 
 interface Concepto {
@@ -138,6 +141,11 @@ export function CotizadorModule() {
   const [secciones, setSecciones] = useState<Seccion[]>([]);
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [valores, setValores] = useState<Valor[]>([]);
+  const [customSectionNames, setCustomSectionNames] = useState<Record<string, {
+    custom_name?: string | null;
+    custom_subtotal_label?: string | null;
+    custom_markup_label?: string | null;
+  }>>({});
   
   const [editingInputs, setEditingInputs] = useState<Record<string, string>>({});
   const [editingCotizacion, setEditingCotizacion] = useState<Partial<Cotizacion>>({});
@@ -242,6 +250,40 @@ export function CotizadorModule() {
 
       if (valoresError) throw valoresError;
       setValores(valoresData || []);
+
+      // Cargar nombres personalizados de secciones para esta cotización
+      const { data: customNamesData, error: customNamesError } = await supabase
+        .from('cotizador_secciones_cotizacion')
+        .select('seccion_id, custom_name, custom_subtotal_label, custom_markup_label')
+        .eq('cotizacion_id', cotizacionId);
+
+      if (customNamesError) {
+        console.warn('Error cargando nombres personalizados de secciones:', customNamesError);
+      } else {
+        const customNamesMap: Record<string, {
+          custom_name?: string | null;
+          custom_subtotal_label?: string | null;
+          custom_markup_label?: string | null;
+        }> = {};
+        
+        customNamesData?.forEach((item: any) => {
+          customNamesMap[item.seccion_id] = {
+            custom_name: item.custom_name,
+            custom_subtotal_label: item.custom_subtotal_label,
+            custom_markup_label: item.custom_markup_label,
+          };
+        });
+        
+        setCustomSectionNames(customNamesMap);
+        
+        // Actualizar secciones con nombres personalizados
+        setSecciones(prevSecciones => prevSecciones.map(sec => ({
+          ...sec,
+          custom_name: customNamesMap[sec.id]?.custom_name || null,
+          custom_subtotal_label: customNamesMap[sec.id]?.custom_subtotal_label || null,
+          custom_markup_label: customNamesMap[sec.id]?.custom_markup_label || null,
+        })));
+      }
     } catch (error: any) {
       console.error('Error cargando datos de cotización:', error);
     }
@@ -363,6 +405,14 @@ export function CotizadorModule() {
   const handleSelectCotizacion = async (cotizacion: Cotizacion) => {
     setCurrentCotizacion(cotizacion);
     setEditingCotizacion({});
+    setCustomSectionNames({}); // Limpiar nombres personalizados antes de cargar
+    // Resetear secciones a sus valores base
+    setSecciones(prevSecciones => prevSecciones.map(sec => ({
+      ...sec,
+      custom_name: null,
+      custom_subtotal_label: null,
+      custom_markup_label: null,
+    })));
     await loadCotizacionData(cotizacion.id);
   };
 
@@ -511,6 +561,14 @@ export function CotizadorModule() {
             onClick={() => {
               setCurrentCotizacion(null);
               setEditingCotizacion({});
+              setCustomSectionNames({}); // Limpiar nombres personalizados
+              // Resetear secciones a sus valores base
+              setSecciones(prevSecciones => prevSecciones.map(sec => ({
+                ...sec,
+                custom_name: null,
+                custom_subtotal_label: null,
+                custom_markup_label: null,
+              })));
             }}
             className="px-3 py-1.5 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded-lg flex items-center gap-2"
           >
@@ -772,21 +830,44 @@ export function CotizadorModule() {
                                 }));
                               }}
                               onBlur={async () => {
+                                if (!currentCotizacion) return;
+                                
                                 const newName = editingSectionName[seccion.id]?.trim() || seccion.name;
                                 
                                 try {
+                                  // Obtener valores actuales de customSectionNames
+                                  const currentCustom = customSectionNames[seccion.id] || {};
+                                  
+                                  // Guardar en la tabla de nombres personalizados por cotización
                                   const { error } = await supabase
-                                    .from('cotizador_secciones')
-                                    .update({ name: newName })
-                                    .eq('id', seccion.id);
+                                    .from('cotizador_secciones_cotizacion')
+                                    .upsert({
+                                      cotizacion_id: currentCotizacion.id,
+                                      seccion_id: seccion.id,
+                                      tenant_id: tenantId!,
+                                      custom_name: newName !== seccion.name ? newName : null,
+                                      custom_subtotal_label: currentCustom.custom_subtotal_label || null,
+                                      custom_markup_label: currentCustom.custom_markup_label || null,
+                                    }, {
+                                      onConflict: 'cotizacion_id,seccion_id'
+                                    });
 
                                   if (error) throw error;
 
+                                  // Actualizar estado local
                                   setSecciones(secciones.map(s => 
                                     s.id === seccion.id 
-                                      ? { ...s, name: newName }
+                                      ? { ...s, custom_name: newName !== seccion.name ? newName : null }
                                       : s
                                   ));
+
+                                  setCustomSectionNames(prev => ({
+                                    ...prev,
+                                    [seccion.id]: {
+                                      ...prev[seccion.id],
+                                      custom_name: newName !== seccion.name ? newName : null,
+                                    }
+                                  }));
 
                                   setEditingSectionName(prev => {
                                     const newState = { ...prev };
@@ -821,11 +902,11 @@ export function CotizadorModule() {
                               className="cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-700 rounded px-2 py-1"
                               onClick={() => setEditingSectionName(prev => ({
                                 ...prev,
-                                [seccion.id]: seccion.name
+                                [seccion.id]: seccion.custom_name || seccion.name
                               }))}
                               title="Haz clic para editar"
                             >
-                              {seccion.name}
+                              {seccion.custom_name || seccion.name}
                             </span>
                           )}
                           <button
@@ -1139,21 +1220,44 @@ export function CotizadorModule() {
                               }));
                             }}
                             onBlur={async () => {
+                              if (!currentCotizacion) return;
+                              
                               const newName = editingSubtotalName[seccion.id]?.trim() || null;
                               
                               try {
+                                // Obtener valores actuales de customSectionNames
+                                const currentCustom = customSectionNames[seccion.id] || {};
+                                
+                                // Guardar en la tabla de nombres personalizados por cotización
                                 const { error } = await supabase
-                                  .from('cotizador_secciones')
-                                  .update({ subtotal_label: newName })
-                                  .eq('id', seccion.id);
+                                  .from('cotizador_secciones_cotizacion')
+                                  .upsert({
+                                    cotizacion_id: currentCotizacion.id,
+                                    seccion_id: seccion.id,
+                                    tenant_id: tenantId!,
+                                    custom_name: currentCustom.custom_name || null,
+                                    custom_subtotal_label: newName,
+                                    custom_markup_label: currentCustom.custom_markup_label || null,
+                                  }, {
+                                    onConflict: 'cotizacion_id,seccion_id'
+                                  });
 
                                 if (error) throw error;
 
+                                // Actualizar estado local
                                 setSecciones(secciones.map(s => 
                                   s.id === seccion.id 
-                                    ? { ...s, subtotal_label: newName }
+                                    ? { ...s, custom_subtotal_label: newName }
                                     : s
                                 ));
+
+                                setCustomSectionNames(prev => ({
+                                  ...prev,
+                                  [seccion.id]: {
+                                    ...prev[seccion.id],
+                                    custom_subtotal_label: newName,
+                                  }
+                                }));
 
                                 setEditingSubtotalName(prev => {
                                   const newState = { ...prev };
@@ -1188,11 +1292,11 @@ export function CotizadorModule() {
                             className="cursor-pointer hover:bg-green-100 dark:hover:bg-green-700 rounded px-2 py-1"
                             onClick={() => setEditingSubtotalName(prev => ({
                               ...prev,
-                              [seccion.id]: seccion.subtotal_label || `Subtotal Costos ${seccion.name.split(' ')[0]}`
+                              [seccion.id]: seccion.custom_subtotal_label || seccion.subtotal_label || `Subtotal Costos ${(seccion.custom_name || seccion.name).split(' ')[0]}`
                             }))}
                             title="Haz clic para editar"
                           >
-                            {seccion.subtotal_label || `Subtotal Costos ${seccion.name.split(' ')[0]}`}
+                            {seccion.custom_subtotal_label || seccion.subtotal_label || `Subtotal Costos ${(seccion.custom_name || seccion.name).split(' ')[0]}`}
                           </span>
                         )}
                       </td>
@@ -1227,21 +1331,44 @@ export function CotizadorModule() {
                                 }));
                               }}
                               onBlur={async () => {
+                                if (!currentCotizacion) return;
+                                
                                 const newName = editingMarkupName[seccion.id]?.trim() || null;
                                 
                                 try {
+                                  // Obtener valores actuales de customSectionNames
+                                  const currentCustom = customSectionNames[seccion.id] || {};
+                                  
+                                  // Guardar en la tabla de nombres personalizados por cotización
                                   const { error } = await supabase
-                                    .from('cotizador_secciones')
-                                    .update({ markup_label: newName })
-                                    .eq('id', seccion.id);
+                                    .from('cotizador_secciones_cotizacion')
+                                    .upsert({
+                                      cotizacion_id: currentCotizacion.id,
+                                      seccion_id: seccion.id,
+                                      tenant_id: tenantId!,
+                                      custom_name: currentCustom.custom_name || null,
+                                      custom_subtotal_label: currentCustom.custom_subtotal_label || null,
+                                      custom_markup_label: newName,
+                                    }, {
+                                      onConflict: 'cotizacion_id,seccion_id'
+                                    });
 
                                   if (error) throw error;
 
+                                  // Actualizar estado local
                                   setSecciones(secciones.map(s => 
                                     s.id === seccion.id 
-                                      ? { ...s, markup_label: newName }
+                                      ? { ...s, custom_markup_label: newName }
                                       : s
                                   ));
+
+                                  setCustomSectionNames(prev => ({
+                                    ...prev,
+                                    [seccion.id]: {
+                                      ...prev[seccion.id],
+                                      custom_markup_label: newName,
+                                    }
+                                  }));
 
                                   setEditingMarkupName(prev => {
                                     const newState = { ...prev };
@@ -1276,11 +1403,11 @@ export function CotizadorModule() {
                               className="cursor-pointer hover:bg-green-100 dark:hover:bg-green-700 rounded px-2 py-1"
                             onClick={() => setEditingMarkupName(prev => ({
                               ...prev,
-                              [seccion.id]: seccion.markup_label || `Markup Costos ${seccion.name.split(' ')[0]}`
+                              [seccion.id]: seccion.custom_markup_label || seccion.markup_label || `Markup Costos ${(seccion.custom_name || seccion.name).split(' ')[0]}`
                             }))}
                             title="Haz clic para editar"
                           >
-                            {seccion.markup_label || `Markup Costos ${seccion.name.split(' ')[0]}`}
+                            {seccion.custom_markup_label || seccion.markup_label || `Markup Costos ${(seccion.custom_name || seccion.name).split(' ')[0]}`}
                           </span>
                           )}
                           {editingMarkup[seccion.id] !== undefined ? (
