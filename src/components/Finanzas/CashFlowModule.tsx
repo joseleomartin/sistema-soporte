@@ -990,23 +990,15 @@ export function CashFlowModule() {
     return flujo;
   }, [totalIngresosByDay, totalEgresosByDay, daysOfMonth]);
 
-  // Calcular saldo final de caja por día (disponibilidades iniciales solo día 1 + flujo de fondos acumulado)
+  // Calcular saldo final de caja por día (cada día es independiente: disponibilidades del día + flujo del día)
   const saldoFinalByDay = useMemo((): Record<number, number> => {
     const saldo: Record<number, number> = {};
-    // Disponibilidades iniciales solo del día 1
-    const disponibilidadesIniciales = totalDisponibilidadesByDay[1] || 0;
-    let saldoAnterior = disponibilidadesIniciales;
     
     daysOfMonth.forEach(day => {
-      if (day === 1) {
-        // Día 1: disponibilidades iniciales + flujo del día
-        saldo[day] = disponibilidadesIniciales + (flujoFondosByDay[day] || 0);
-        saldoAnterior = saldo[day];
-      } else {
-        // Días siguientes: saldo anterior + flujo del día
-        saldo[day] = saldoAnterior + (flujoFondosByDay[day] || 0);
-        saldoAnterior = saldo[day];
-      }
+      // Cada día es independiente: Disponibilidades al inicio del día + Flujo de fondos del día
+      const disponibilidadesDelDia = totalDisponibilidadesByDay[day] || 0;
+      const flujoDelDia = flujoFondosByDay[day] || 0;
+      saldo[day] = disponibilidadesDelDia + flujoDelDia;
     });
     return saldo;
   }, [totalDisponibilidadesByDay, flujoFondosByDay, daysOfMonth]);
@@ -1124,16 +1116,16 @@ export function CashFlowModule() {
         </div>
       )}
 
-      {/* Tabla - Scroll horizontal para ver todos los días */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-x-auto">
+      {/* Tabla - Scroll horizontal y vertical para ver todos los días */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-x-auto max-h-[calc(100vh-300px)] overflow-y-auto">
         <table className="w-full min-w-[2000px]">
-          <thead>
+          <thead className="sticky top-0 z-20 bg-white dark:bg-slate-800">
             <tr className="border-b-2 border-gray-200 dark:border-slate-700">
-              <th className="text-left p-3 font-semibold text-gray-900 dark:text-white text-sm sticky left-0 bg-white dark:bg-slate-800 z-10 min-w-[200px]">
+              <th className="text-left p-3 font-semibold text-gray-900 dark:text-white text-sm sticky left-0 bg-white dark:bg-slate-800 z-30 min-w-[200px]">
                 Descripción/Día
               </th>
               {daysOfMonth.map(day => (
-                <th key={day} className="text-center p-2 font-semibold text-gray-900 dark:text-white min-w-[80px] text-xs">
+                <th key={day} className="text-center p-2 font-semibold text-gray-900 dark:text-white min-w-[80px] text-xs bg-white dark:bg-slate-800">
                   <div className="flex flex-col">
                     <span>{day}</span>
                     <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
@@ -1147,25 +1139,28 @@ export function CashFlowModule() {
           <tbody>
             {/* DISPONIBILIDADES */}
             <tr className="border-b-2 border-gray-300 dark:border-slate-600">
-              <td colSpan={daysOfMonth.length + 1} className="p-2 bg-blue-50 dark:bg-blue-900/20 font-bold text-blue-900 dark:text-blue-300">
-                <div className="flex items-center gap-2">
+              <td className="p-2 bg-blue-50 dark:bg-blue-800 font-bold text-blue-900 dark:text-blue-300 sticky left-0 z-10 min-w-[400px] w-auto">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>DISPONIBILIDADES AL INICIO DEL DÍA</span>
                   <button
                     onClick={() => handleAddCategoryDirectly('disponibilidades')}
-                    className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center"
+                    className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center flex-shrink-0"
                     title="Agregar categoría"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
               </td>
+              {daysOfMonth.map(day => (
+                <td key={day} className="p-2 bg-blue-50 dark:bg-blue-800 font-bold text-blue-900 dark:text-blue-300"></td>
+              ))}
             </tr>
             {categories
               .filter(c => c.category_type === 'disponibilidades')
               .map(category => (
                 <React.Fragment key={category.id}>
-                  <tr className="border-b border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-900/20">
-                    <td className="p-3 sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 z-10">
+                  <tr className="border-b border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-800">
+                    <td className="p-3 sticky left-0 bg-yellow-50 dark:bg-yellow-800 z-10">
                       <div className="flex items-center gap-2">
                         {editingCategoryId === category.id ? (
                           <input
@@ -1285,7 +1280,7 @@ export function CashFlowModule() {
                     })}
                   </tr>
                   {category.sub_items.map(subItem => (
-                    <tr key={subItem.id} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                    <tr key={subItem.id} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="p-3 pl-8 sticky left-0 bg-white dark:bg-slate-800 z-10">
                         <div className="flex items-center gap-2">
                           <span className="text-gray-700 dark:text-gray-300 text-sm">{subItem.name}</span>
@@ -1359,8 +1354,8 @@ export function CashFlowModule() {
                     </tr>
                   ))}
                   {addingSubItem === category.id && (
-                    <tr className="border-b border-gray-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/10">
-                      <td className="p-3 pl-8 sticky left-0 bg-blue-50 dark:bg-blue-900/10 z-10">
+                    <tr className="border-b border-gray-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-800">
+                      <td className="p-3 pl-8 sticky left-0 bg-blue-50 dark:bg-blue-800 z-10">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
@@ -1396,8 +1391,8 @@ export function CashFlowModule() {
                   )}
                 </React.Fragment>
               ))}
-            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-green-50 dark:bg-green-900/20">
-              <td className="p-3 sticky left-0 bg-green-50 dark:bg-green-900/20 z-10 font-bold text-green-900 dark:text-green-300">
+            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-green-50 dark:bg-green-800">
+              <td className="p-3 sticky left-0 bg-green-50 dark:bg-green-800 z-10 font-bold text-green-900 dark:text-green-300">
                 TOTAL DISPONIBILIDADES
               </td>
               {daysOfMonth.map(day => (
@@ -1409,25 +1404,28 @@ export function CashFlowModule() {
 
             {/* INGRESOS */}
             <tr className="border-b-2 border-gray-300 dark:border-slate-600">
-              <td colSpan={daysOfMonth.length + 1} className="p-2 bg-green-50 dark:bg-green-900/20 font-bold text-green-900 dark:text-green-300">
-                <div className="flex items-center gap-2">
+              <td className="p-2 bg-green-50 dark:bg-green-800 font-bold text-green-900 dark:text-green-300 sticky left-0 z-10 min-w-[400px] w-auto">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>DISPONIBILIDADES (INGRESOS CORTO PLAZO)</span>
                   <button
                     onClick={() => handleAddCategoryDirectly('ingresos')}
-                    className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center"
+                    className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center flex-shrink-0"
                     title="Agregar categoría"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
               </td>
+              {daysOfMonth.map(day => (
+                <td key={day} className="p-2 bg-green-50 dark:bg-green-800 font-bold text-green-900 dark:text-green-300"></td>
+              ))}
             </tr>
             {categories
               .filter(c => c.category_type === 'ingresos')
               .map(category => (
                 <React.Fragment key={category.id}>
-                  <tr className="border-b border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-900/20">
-                    <td className="p-3 sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 z-10">
+                  <tr className="border-b border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-800">
+                    <td className="p-3 sticky left-0 bg-yellow-50 dark:bg-yellow-800 z-10">
                       <div className="flex items-center gap-2">
                         {editingCategoryId === category.id ? (
                           <input
@@ -1547,7 +1545,7 @@ export function CashFlowModule() {
                     })}
                   </tr>
                   {category.sub_items.map(subItem => (
-                    <tr key={subItem.id} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                    <tr key={subItem.id} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="p-3 pl-8 sticky left-0 bg-white dark:bg-slate-800 z-10">
                         <div className="flex items-center gap-2">
                           <span className="text-gray-700 dark:text-gray-300 text-sm">{subItem.name}</span>
@@ -1621,8 +1619,8 @@ export function CashFlowModule() {
                     </tr>
                   ))}
                   {addingSubItem === category.id && (
-                    <tr className="border-b border-gray-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/10">
-                      <td className="p-3 pl-8 sticky left-0 bg-blue-50 dark:bg-blue-900/10 z-10">
+                    <tr className="border-b border-gray-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-800">
+                      <td className="p-3 pl-8 sticky left-0 bg-blue-50 dark:bg-blue-800 z-10">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
@@ -1658,8 +1656,8 @@ export function CashFlowModule() {
                   )}
                 </React.Fragment>
               ))}
-            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-green-50 dark:bg-green-900/20">
-              <td className="p-3 sticky left-0 bg-green-50 dark:bg-green-900/20 z-10 font-bold text-green-900 dark:text-green-300">
+            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-green-50 dark:bg-green-800">
+              <td className="p-3 sticky left-0 bg-green-50 dark:bg-green-800 z-10 font-bold text-green-900 dark:text-green-300">
                 TOTAL DE INGRESOS DIARIOS
               </td>
               {daysOfMonth.map(day => (
@@ -1671,25 +1669,28 @@ export function CashFlowModule() {
 
             {/* EGRESOS */}
             <tr className="border-b-2 border-gray-300 dark:border-slate-600">
-              <td colSpan={daysOfMonth.length + 1} className="p-2 bg-red-50 dark:bg-red-900/20 font-bold text-red-900 dark:text-red-300">
-                <div className="flex items-center gap-2">
+              <td className="p-2 bg-red-50 dark:bg-red-800 font-bold text-red-900 dark:text-red-300 sticky left-0 z-10 min-w-[400px] w-auto">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <span>EGRESOS CORRIENTES</span>
                   <button
                     onClick={() => handleAddCategoryDirectly('egresos')}
-                    className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center"
+                    className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center flex-shrink-0"
                     title="Agregar categoría"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
               </td>
+              {daysOfMonth.map(day => (
+                <td key={day} className="p-2 bg-red-50 dark:bg-red-800 font-bold text-red-900 dark:text-red-300"></td>
+              ))}
             </tr>
             {categories
               .filter(c => c.category_type === 'egresos')
               .map(category => (
                 <React.Fragment key={category.id}>
-                  <tr className="border-b border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-900/20">
-                    <td className="p-3 sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 z-10">
+                  <tr className="border-b border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-800">
+                    <td className="p-3 sticky left-0 bg-yellow-50 dark:bg-yellow-800 z-10">
                       <div className="flex items-center gap-2">
                         {editingCategoryId === category.id ? (
                           <input
@@ -1809,7 +1810,7 @@ export function CashFlowModule() {
                     })}
                   </tr>
                   {category.sub_items.map(subItem => (
-                    <tr key={subItem.id} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                    <tr key={subItem.id} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700">
                       <td className="p-3 pl-8 sticky left-0 bg-white dark:bg-slate-800 z-10">
                         <div className="flex items-center gap-2">
                           <span className="text-gray-700 dark:text-gray-300 text-sm">{subItem.name}</span>
@@ -1883,8 +1884,8 @@ export function CashFlowModule() {
                     </tr>
                   ))}
                   {addingSubItem === category.id && (
-                    <tr className="border-b border-gray-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-900/10">
-                      <td className="p-3 pl-8 sticky left-0 bg-blue-50 dark:bg-blue-900/10 z-10">
+                    <tr className="border-b border-gray-100 dark:border-slate-700 bg-blue-50 dark:bg-blue-800">
+                      <td className="p-3 pl-8 sticky left-0 bg-blue-50 dark:bg-blue-800 z-10">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
@@ -1920,8 +1921,8 @@ export function CashFlowModule() {
                   )}
                 </React.Fragment>
               ))}
-            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-red-50 dark:bg-red-900/20">
-              <td className="p-3 sticky left-0 bg-red-50 dark:bg-red-900/20 z-10 font-bold text-red-900 dark:text-red-300">
+            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-red-50 dark:bg-red-800">
+              <td className="p-3 sticky left-0 bg-red-50 dark:bg-red-800 z-10 font-bold text-red-900 dark:text-red-300">
                 Total EGRESOS Corriente
               </td>
               {daysOfMonth.map(day => (
@@ -1932,8 +1933,8 @@ export function CashFlowModule() {
             </tr>
 
             {/* FLUJO DE FONDOS */}
-            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-blue-50 dark:bg-blue-900/20">
-              <td className="p-3 sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 font-bold text-blue-900 dark:text-blue-300">
+            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-blue-50 dark:bg-blue-800">
+              <td className="p-3 sticky left-0 bg-blue-50 dark:bg-blue-800 z-10 font-bold text-blue-900 dark:text-blue-300">
                 FLUJO DE FONDOS
               </td>
               {daysOfMonth.map(day => {
@@ -1949,8 +1950,8 @@ export function CashFlowModule() {
             </tr>
 
             {/* SALDO FINAL DE CAJA */}
-            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-purple-50 dark:bg-purple-900/20">
-              <td className="p-3 sticky left-0 bg-purple-50 dark:bg-purple-900/20 z-10 font-bold text-purple-900 dark:text-purple-300">
+            <tr className="border-b-2 border-gray-300 dark:border-slate-600 bg-purple-50 dark:bg-purple-800">
+              <td className="p-3 sticky left-0 bg-purple-50 dark:bg-purple-800 z-10 font-bold text-purple-900 dark:text-purple-300">
                 SALDO FINAL DE CAJA
               </td>
               {daysOfMonth.map(day => {
