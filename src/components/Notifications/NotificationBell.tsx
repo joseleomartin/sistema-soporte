@@ -136,7 +136,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
 
       if (data) {
         // Filtrar también en el frontend por si acaso
-        const filteredData = data.filter(n => n.type !== 'direct_message');
+        const filteredData = (data as Notification[]).filter(n => n.type !== 'direct_message');
         const newUnreadCount = filteredData.filter(n => !n.read).length;
         
         // Solo actualizar si hay cambios
@@ -170,7 +170,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
   }, []);
 
   const markAsRead = async (notificationId: string) => {
-    await supabase
+    await (supabase as any)
       .from('notifications')
       .update({ read: true })
       .eq('id', notificationId);
@@ -184,7 +184,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
   const markAllAsRead = async () => {
     if (!profile?.id) return;
 
-    await supabase
+    await (supabase as any)
       .from('notifications')
       .update({ read: true })
       .eq('user_id', profile.id)
@@ -480,7 +480,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
           
           {/* Dropdown de notificaciones - Adaptado para móviles */}
           <div 
-            className={`fixed ${isMobile ? 'inset-0 w-full h-full rounded-none' : 'w-[340px] max-w-[calc(100vw-2rem)] rounded-3xl'} bg-white dark:bg-slate-800 shadow-2xl border border-gray-200 dark:border-slate-700/50 backdrop-blur-xl overflow-hidden`}
+            className={`fixed ${isMobile ? 'inset-0 w-full h-full rounded-none' : 'w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl'} bg-white/95 dark:bg-slate-900/95 shadow-2xl border border-gray-200/50 dark:border-slate-700/30 backdrop-blur-2xl overflow-hidden`}
             style={{
               ...(isMobile ? {
                 top: 0,
@@ -496,35 +496,37 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                 transformOrigin: buttonPosition && buttonPosition.transformOriginX !== undefined && buttonPosition.transformOriginY !== undefined ? 
                   `${buttonPosition.transformOriginX}px ${buttonPosition.transformOriginY}px` : 
                   '40px 40px',
-                animation: 'openFromBell 0.25s ease-out',
+                animation: 'openFromBell 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
               }),
-              boxShadow: isMobile ? 'none' : '0 20px 60px -15px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.5)',
+              boxShadow: isMobile ? 'none' : '0 25px 80px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
               zIndex: 10000001, // Por encima del overlay y del navbar (z-40)
             }}
             onClick={(e) => e.stopPropagation()} // Prevenir que el clic en el dropdown lo cierre
           >
-            {/* Header con diseño más sutil */}
-            <div className={`relative flex items-center justify-between ${isMobile ? 'p-4' : 'p-4'} bg-gradient-to-r from-slate-700 to-slate-600 overflow-hidden border-b border-white/10`}>
-              {/* Efecto sutil de brillo */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
+            {/* Header con diseño más orgánico */}
+            <div className={`relative flex items-center justify-between ${isMobile ? 'p-4' : 'p-3'} bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 overflow-hidden border-b border-white/10 dark:border-slate-600/20`}>
+              {/* Efecto de brillo animado más orgánico */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50 animate-shimmer"></div>
+              {/* Efecto de profundidad */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent"></div>
               
-              <div className="relative z-10 flex items-center gap-2 sm:gap-3">
+              <div className="relative z-10 flex items-center gap-2 sm:gap-2.5">
                 {!isMobile && (
                   <button
                     onClick={() => {
                       setShowDropdown(false);
                       setButtonPosition(null);
                     }}
-                    className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all duration-200 cursor-pointer touch-manipulation"
+                    className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 hover:bg-white/25 hover:border-white/30 transition-all duration-300 cursor-pointer touch-manipulation shadow-lg shadow-black/10 hover:shadow-xl hover:shadow-black/20 hover:scale-105"
                     title="Cerrar notificaciones"
                   >
-                    <Bell className="w-5 h-5 text-white" />
+                    <Bell className="w-4 h-4 text-white drop-shadow-sm" />
                   </button>
                 )}
                 <div>
-                  <h3 className={`font-bold ${isMobile ? 'text-base' : 'text-base'} text-white drop-shadow-lg`}>Notificaciones</h3>
+                  <h3 className={`font-bold ${isMobile ? 'text-base' : 'text-base'} text-white drop-shadow-md tracking-tight`}>Notificaciones</h3>
                   {unreadCount > 0 && (
-                    <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-white/80 font-medium`}>{unreadCount} sin leer</p>
+                    <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-white/70 font-medium mt-0.5`}>{unreadCount} sin leer</p>
                   )}
                 </div>
               </div>
@@ -533,7 +535,7 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className={`${isMobile ? 'text-xs px-3 py-2' : 'text-xs px-3 py-1.5'} text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white/90 font-semibold whitespace-nowrap rounded-lg bg-white/80 dark:bg-white/20 hover:bg-white dark:hover:bg-white/30 backdrop-blur-sm border border-gray-300 dark:border-white/30 transition-all duration-200 ${isMobile ? 'touch-manipulation' : 'hover:scale-105'}`}
+                    className={`${isMobile ? 'text-xs px-3 py-1.5' : 'text-xs px-3 py-1.5'} text-white hover:text-white font-semibold whitespace-nowrap rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 hover:border-white/30 transition-all duration-300 shadow-md shadow-black/10 hover:shadow-lg hover:shadow-black/20 ${isMobile ? 'touch-manipulation' : 'hover:scale-105 active:scale-95'}`}
                   >
                     Marcar todas
                   </button>
@@ -543,87 +545,90 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
                     setShowDropdown(false);
                     setButtonPosition(null);
                   }}
-                  className={`text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white/80 flex-shrink-0 ${isMobile ? 'p-3' : 'p-2'} rounded-lg bg-white/80 dark:bg-white/20 hover:bg-white dark:hover:bg-white/30 backdrop-blur-sm border border-gray-300 dark:border-white/30 transition-all duration-200 ${isMobile ? 'touch-manipulation' : 'hover:scale-110 hover:rotate-90'}`}
+                  className={`text-white hover:text-white flex-shrink-0 ${isMobile ? 'p-2.5' : 'p-2'} rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 hover:border-white/30 transition-all duration-300 shadow-md shadow-black/10 hover:shadow-lg hover:shadow-black/20 ${isMobile ? 'touch-manipulation' : 'hover:scale-110 hover:rotate-90 active:scale-95'}`}
                 >
-                  <X className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'}`} />
+                  <X className={`${isMobile ? 'w-4 h-4' : 'w-3.5 h-3.5'}`} />
                 </button>
               </div>
             </div>
 
             {/* Contenido con scroll - Adaptado para móviles */}
-            <div className={`${isMobile ? 'flex-1 overflow-y-auto' : 'max-h-[400px] overflow-y-auto'} notifications-scroll bg-slate-800`}>
+            <div className={`${isMobile ? 'flex-1 overflow-y-auto' : 'max-h-[400px] overflow-y-auto'} notifications-scroll bg-gradient-to-b from-slate-900/50 to-slate-900`}>
               {notifications.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="relative inline-block mb-4">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-200 to-purple-200 flex items-center justify-center animate-pulse">
-                      <Bell className="w-10 h-10 text-blue-600" />
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-400/20 via-purple-400/20 to-pink-400/20 backdrop-blur-xl flex items-center justify-center animate-pulse border border-white/10 shadow-2xl">
+                      <Bell className="w-10 h-10 text-blue-400 drop-shadow-lg" />
                     </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full animate-bounce"></div>
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full animate-bounce shadow-lg ring-2 ring-yellow-400/30"></div>
                   </div>
-                  <p className="text-gray-200 font-semibold text-lg">No hay notificaciones</p>
-                  <p className="text-gray-400 text-sm mt-1">Todo está al día</p>
+                  <p className="text-gray-100 font-bold text-lg mb-1">No hay notificaciones</p>
+                  <p className="text-gray-400 text-sm">Todo está al día ✨</p>
                 </div>
               ) : (
-                <div className={`${isMobile ? 'p-2' : 'p-2'} space-y-2`}>
+                <div className={`${isMobile ? 'p-2.5' : 'p-2.5'} space-y-2`}>
                   {notifications.map((notification, index) => (
                     <button
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`group w-full text-left ${isMobile ? 'p-3' : 'p-3'} ${isMobile ? 'rounded-xl' : 'rounded-xl'} border-2 transition-all duration-300 ${isMobile ? 'active:scale-[0.98] touch-manipulation' : 'hover:shadow-xl hover:scale-[1.02]'} relative overflow-hidden ${
+                      className={`group w-full text-left ${isMobile ? 'p-3' : 'p-3'} ${isMobile ? 'rounded-xl' : 'rounded-xl'} border transition-all duration-300 ${isMobile ? 'active:scale-[0.98] touch-manipulation' : 'hover:shadow-2xl hover:scale-[1.01]'} relative overflow-hidden backdrop-blur-sm ${
                         !notification.read 
-                          ? 'bg-slate-700 border-slate-600/50 shadow-lg' 
-                          : 'bg-slate-700/90 backdrop-blur-sm border-slate-600/30 hover:border-slate-500/50 hover:bg-slate-700'
+                          ? 'bg-gradient-to-br from-slate-800/90 to-slate-700/90 border-blue-500/30 shadow-xl shadow-blue-500/10' 
+                          : 'bg-gradient-to-br from-slate-800/60 to-slate-700/60 border-slate-600/20 hover:border-slate-500/40 hover:bg-gradient-to-br hover:from-slate-800/80 hover:to-slate-700/80 shadow-md'
                       }`}
                       style={{
-                        animationDelay: `${index * 50}ms`,
+                        animationDelay: `${index * 40}ms`,
                       }}
                     >
-                      {/* Efecto de brillo en hover */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -translate-x-full group-hover:translate-x-full"></div>
+                      {/* Efecto de brillo en hover más orgánico */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 -translate-x-full group-hover:translate-x-full"></div>
                       
-                      {/* Indicador de no leída */}
+                      {/* Efecto de profundidad */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      
+                      {/* Indicador de no leída más orgánico */}
                       {!notification.read && (
-                        <div className="absolute top-3 right-3 w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full animate-pulse ring-2 ring-blue-200"></div>
+                        <div className="absolute top-3 right-3 w-2 h-2 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full animate-pulse ring-2 ring-blue-400/50 shadow-lg shadow-blue-500/50"></div>
                       )}
                       
-                      <div className={`relative flex items-start ${isMobile ? 'gap-3' : 'gap-4'}`}>
-                        {/* Icono con fondo decorativo */}
-                        <div className={`flex-shrink-0 ${isMobile ? 'w-10 h-10' : 'w-12 h-12'} ${isMobile ? 'rounded-lg' : 'rounded-xl'} flex items-center justify-center transition-all duration-300 ${isMobile ? '' : 'group-hover:scale-110'} ${
+                      <div className={`relative flex items-start ${isMobile ? 'gap-2.5' : 'gap-3'}`}>
+                        {/* Icono con fondo decorativo más orgánico */}
+                        <div className={`flex-shrink-0 ${isMobile ? 'w-10 h-10' : 'w-10 h-10'} rounded-xl flex items-center justify-center transition-all duration-300 ${isMobile ? '' : 'group-hover:scale-110 group-hover:rotate-3'} shadow-lg ${
                           !notification.read 
-                            ? 'bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30' 
-                            : 'bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-purple-100'
+                            ? 'bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 shadow-xl shadow-blue-500/40 ring-2 ring-blue-400/30' 
+                            : 'bg-gradient-to-br from-slate-600 to-slate-700 group-hover:from-blue-500/80 group-hover:to-purple-500/80 group-hover:shadow-xl group-hover:shadow-blue-500/30 border border-slate-500/30 group-hover:border-blue-400/50'
                         }`}>
-                          <div className="text-white scale-90">
+                          <div className={`${!notification.read ? 'text-white' : 'text-gray-300 group-hover:text-white'} transition-colors duration-300 scale-90`}>
                             {getNotificationIcon(notification.type)}
                           </div>
                         </div>
                         
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 pt-0.5">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <p className={`${isMobile ? 'text-base' : 'text-sm'} font-bold leading-tight ${
+                            <p className={`${isMobile ? 'text-sm' : 'text-sm'} font-bold leading-tight tracking-tight ${
                               !notification.read 
                                 ? 'text-white' 
                                 : 'text-gray-200 group-hover:text-white'
-                            }`}>
+                            } transition-colors duration-300`}>
                               {notification.title}
                             </p>
                           </div>
                           
-                          <p className={`${isMobile ? 'text-sm' : 'text-sm'} mt-2 leading-relaxed ${isMobile ? 'line-clamp-3' : 'line-clamp-2'} ${
+                          <p className={`${isMobile ? 'text-xs' : 'text-xs'} mt-1.5 leading-relaxed ${isMobile ? 'line-clamp-3' : 'line-clamp-2'} ${
                             !notification.read 
                               ? 'text-gray-200' 
                               : 'text-gray-300 group-hover:text-gray-200'
-                          }`}>
+                          } transition-colors duration-300`}>
                             {(notification.type === 'forum_mention' || notification.type === 'task_mention')
                               ? cleanMentionMessage(notification.message)
                               : notification.message}
                           </p>
                           
-                          <div className="flex items-center gap-2 mt-3">
-                            <div className={`${isMobile ? 'w-2 h-2' : 'w-1.5 h-1.5'} rounded-full ${
-                              !notification.read ? 'bg-blue-500' : 'bg-gray-300'
-                            }`}></div>
-                            <p className={`${isMobile ? 'text-xs' : 'text-xs'} font-medium text-gray-400`}>
+                          <div className="flex items-center gap-2 mt-2.5">
+                            <div className={`${isMobile ? 'w-1.5 h-1.5' : 'w-1.5 h-1.5'} rounded-full ${
+                              !notification.read ? 'bg-gradient-to-br from-blue-400 to-purple-500 shadow-sm' : 'bg-gray-500'
+                            } transition-all duration-300`}></div>
+                            <p className={`${isMobile ? 'text-xs' : 'text-xs'} font-medium text-gray-400 group-hover:text-gray-300 transition-colors duration-300`}>
                               {new Date(notification.created_at).toLocaleString('es-ES', {
                                 day: 'numeric',
                                 month: 'short',

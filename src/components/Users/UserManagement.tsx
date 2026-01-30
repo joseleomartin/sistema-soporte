@@ -16,6 +16,7 @@ interface User {
   role: 'admin' | 'support' | 'user';
   created_at: string;
   departments?: Department[];
+  is_online?: boolean;
 }
 
 export function UserManagement() {
@@ -29,12 +30,85 @@ export function UserManagement() {
   const [showAssignModal, setShowAssignModal] = useState(false);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    let heartbeatInterval: NodeJS.Timeout | null = null;
+    
+    const initializePresence = async () => {
+      // Cargar usuarios primero
+      await loadUsers();
+      
+      // Registrar presencia del usuario actual inmediatamente
+      if (profile?.id) {
+        await registerPresence();
+        // Recargar usuarios después de registrar presencia para ver el estado actualizado
+        setTimeout(() => loadUsers(), 1000);
+        
+        // Luego cada 30 segundos
+        heartbeatInterval = setInterval(() => {
+          registerPresence();
+        }, 30000);
+      }
+    };
+    
+    initializePresence();
+    
+    return () => {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+    };
+  }, [profile?.id]);
 
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm]);
+
+  // Suscribirse a cambios en tiempo real de presencia
+  useEffect(() => {
+    const channel = supabase
+      .channel('user_presence_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'user_presence' 
+        }, 
+        () => {
+          loadUsers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const registerPresence = async () => {
+    if (!profile?.id) return;
+    
+    try {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('user_presence')
+        .upsert({
+          user_id: profile.id,
+          last_seen: now,
+          is_online: true
+        }, {
+          onConflict: 'user_id'
+        });
+      
+      if (error) {
+        console.error('Error registering presence:', error);
+        // Si la tabla no existe, no es crítico, solo logueamos
+        if (error.code === '42P01') {
+          console.warn('Tabla user_presence no existe. Ejecuta la migración primero.');
+        }
+      }
+    } catch (error) {
+      console.error('Error registering presence:', error);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -45,7 +119,7 @@ export function UserManagement() {
 
       if (error) throw error;
       if (data) {
-        // Cargar áreas para cada usuario
+        // Cargar áreas y presencia para cada usuario
         const usersWithDepartments = await Promise.all(
           data.map(async (user) => {
             const { data: deptData } = await supabase
@@ -56,8 +130,23 @@ export function UserManagement() {
               `)
               .eq('user_id', user.id);
 
+            // Cargar estado de presencia
+            const { data: presenceData, error: presenceError } = await supabase
+              .from('user_presence')
+              .select('is_online, last_seen')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            // Verificar si está online (última actividad hace menos de 5 minutos)
+            let isOnline = false;
+            if (presenceData && presenceData.last_seen) {
+              const lastSeen = new Date(presenceData.last_seen);
+              const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+              isOnline = presenceData.is_online === true && lastSeen > fiveMinutesAgo;
+            }
+
             const departments = deptData?.map((d: any) => d.departments).filter(Boolean) || [];
-            return { ...user, departments };
+            return { ...user, departments, is_online: isOnline };
           })
         );
         setUsers(usersWithDepartments);
@@ -189,7 +278,12 @@ export function UserManagement() {
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                     <td className="px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                      <div className="font-medium text-sm sm:text-base text-gray-900 dark:text-white">{user.full_name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-sm sm:text-base text-gray-900 dark:text-white">{user.full_name}</div>
+                        {user.is_online && (
+                          <div className="w-2 h-2 bg-green-500 rounded-full" title="Conectado"></div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate max-w-[200px]">{user.email}</div>
@@ -261,7 +355,12 @@ export function UserManagement() {
             <div key={user.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
               <div className="space-y-3">
                 <div>
-                  <div className="font-semibold text-base text-gray-900 dark:text-white mb-1">{user.full_name}</div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="font-semibold text-base text-gray-900 dark:text-white">{user.full_name}</div>
+                    {user.is_online && (
+                      <div className="w-2 h-2 bg-green-500 rounded-full" title="Conectado"></div>
+                    )}
+                  </div>
                   <div className="text-sm text-gray-600 dark:text-gray-300 break-all">{user.email}</div>
                 </div>
                 

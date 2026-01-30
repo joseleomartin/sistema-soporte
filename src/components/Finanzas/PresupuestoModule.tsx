@@ -853,22 +853,22 @@ export function PresupuestoModule() {
         <table className="w-full min-w-[1800px] border-collapse">
           <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-800 sticky top-0 z-20 shadow-md">
             <tr>
-              <th rowSpan={2} className="p-4 text-left font-bold text-gray-900 dark:text-white sticky left-0 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-800 z-30 border-r-2 border-gray-300 dark:border-slate-600 min-w-[200px]">
+              <th rowSpan={2} className="p-2 text-left font-bold text-gray-900 dark:text-white sticky left-0 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-800 z-30 border-r-2 border-gray-300 dark:border-slate-600 min-w-[200px]">
                 <div className="flex flex-col">
-                  <span>Concepto</span>
+                  <span className="text-xs">Concepto</span>
                 </div>
               </th>
-              <th rowSpan={2} className="p-4 text-center font-bold text-gray-900 dark:text-white min-w-[140px] bg-gray-100 dark:bg-slate-700 border-r-2 border-gray-300 dark:border-slate-600">
+              <th rowSpan={2} className="p-2 text-center font-bold text-gray-900 dark:text-white min-w-[160px] bg-gray-100 dark:bg-slate-700 border-r-2 border-gray-300 dark:border-slate-600">
                 <div className="flex flex-col">
-                  <span>Presupuesto</span>
-                  <span className="text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">Base (Enero)</span>
+                  <span className="text-xs">Presupuesto</span>
+                  <span className="text-[10px] font-normal text-gray-500 dark:text-gray-400 mt-0.5">Base (Enero)</span>
                 </div>
               </th>
               {MONTHS.map(month => (
-                <th key={month.num} colSpan={3} className="p-3 text-center font-bold text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm">{month.name}-{selectedYear.toString().slice(-2)}</span>
-                    <span className="text-xs font-normal text-blue-600 dark:text-blue-400">
+                <th key={month.num} colSpan={3} className="p-2 text-center font-bold text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs">{month.name}-{selectedYear.toString().slice(-2)}</span>
+                    <span className="text-[10px] font-normal text-blue-600 dark:text-blue-400">
                       IPC: {(() => {
                         const ipc = ipcValues.find(i => i.month === month.num);
                         return ipc ? `${ipc.ipc_percentage}%` : '0%';
@@ -877,23 +877,23 @@ export function PresupuestoModule() {
                   </div>
                 </th>
               ))}
-              <th rowSpan={2} className="p-4 text-center font-bold text-gray-900 dark:text-white min-w-[140px] bg-gray-200 dark:bg-slate-600 border-l-2 border-gray-400 dark:border-slate-500">
+              <th rowSpan={2} className="p-2 text-center font-bold text-gray-900 dark:text-white min-w-[160px] bg-gray-200 dark:bg-slate-600 border-l-2 border-gray-400 dark:border-slate-500">
                 <div className="flex flex-col">
-                  <span>Totales</span>
-                  <span className="text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">Anual</span>
+                  <span className="text-xs">Totales</span>
+                  <span className="text-[10px] font-normal text-gray-500 dark:text-gray-400 mt-0.5">Anual</span>
                 </div>
               </th>
             </tr>
             <tr className="bg-gray-100 dark:bg-slate-700">
               {MONTHS.map(month => (
                 <React.Fragment key={month.num}>
-                  <th className="p-2 text-center font-semibold text-xs text-gray-700 dark:text-gray-300 border-l border-gray-300 dark:border-slate-600 min-w-[110px] bg-gray-50 dark:bg-slate-800">
+                  <th className="p-1 text-center font-semibold text-[10px] text-gray-700 dark:text-gray-300 border-l border-gray-300 dark:border-slate-600 min-w-[140px] bg-gray-50 dark:bg-slate-800">
                     Presupuesto
                   </th>
-                  <th className="p-2 text-center font-semibold text-xs text-gray-700 dark:text-gray-300 min-w-[110px] bg-gray-50 dark:bg-slate-800">
+                  <th className="p-1 text-center font-semibold text-[10px] text-gray-700 dark:text-gray-300 min-w-[140px] bg-gray-50 dark:bg-slate-800">
                     Real
                   </th>
-                  <th className="p-2 text-center font-semibold text-xs text-gray-700 dark:text-gray-300 min-w-[90px] bg-gray-50 dark:bg-slate-800 border-r border-gray-300 dark:border-slate-600">
+                  <th className="p-1 text-center font-semibold text-[10px] text-gray-700 dark:text-gray-300 min-w-[100px] bg-gray-50 dark:bg-slate-800 border-r border-gray-300 dark:border-slate-600">
                     Diferencia %
                   </th>
                 </React.Fragment>
@@ -903,7 +903,7 @@ export function PresupuestoModule() {
           <tbody>
             {/* INGRESOS */}
             <tr className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800">
-              <td colSpan={24} className="p-3 font-bold text-white text-lg border-b-2 border-blue-800 dark:border-blue-900">
+              <td colSpan={24} className="p-2 font-bold text-white text-sm border-b-2 border-blue-800 dark:border-blue-900">
                 <div className="flex items-center gap-2">
                   <span>INGRESOS</span>
                 </div>
@@ -985,7 +985,7 @@ export function PresupuestoModule() {
                       )}
                     </div>
                   </td>
-                  <td className="p-3 text-right bg-gray-50 dark:bg-slate-700/30 border-r-2 border-gray-300 dark:border-slate-600">
+                  <td className="p-1.5 text-right bg-gray-50 dark:bg-slate-700/30 border-r-2 border-gray-300 dark:border-slate-600">
                     <input
                       type="text"
                       inputMode="decimal"
@@ -1010,7 +1010,7 @@ export function PresupuestoModule() {
                           return newState;
                         });
                       }}
-                      className="w-full px-3 py-2 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm text-right font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs text-right font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       placeholder="$0.00"
                     />
                   </td>
@@ -1035,13 +1035,13 @@ export function PresupuestoModule() {
                     return (
                       <React.Fragment key={month.num}>
                         {/* Columna Presupuesto (calculado con IPC) */}
-                        <td className="p-3 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
-                          <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        <td className="p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
+                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
                             {formatNumber(presupuestoAjustado)}
                           </div>
                         </td>
                         {/* Columna Real (input editable) */}
-                        <td className="p-3 text-right bg-white dark:bg-slate-800">
+                        <td className="p-1.5 text-right bg-white dark:bg-slate-800">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1063,13 +1063,13 @@ export function PresupuestoModule() {
                                 return newState;
                               });
                             }}
-                            className="w-full px-3 py-2 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm text-right font-medium focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                            className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs text-right font-medium focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all"
                             placeholder="Ingresar real"
                           />
                         </td>
                         {/* Columna Diferencia % */}
-                        <td className="p-3 text-right border-r border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
-                          <div className={`text-sm font-bold px-2 py-1 rounded ${
+                        <td className="p-1.5 text-right border-r border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
+                          <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                             diferenciaPorcentual === null 
                               ? 'text-gray-400 dark:text-gray-500'
                               : diferenciaPorcentual > 0
@@ -1159,10 +1159,10 @@ export function PresupuestoModule() {
             {/* Totales de Ingresos */}
             {ingresosTotales.map(concept => (
               <tr key={concept.id} className="bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 border-t-4 border-green-400 dark:border-green-600">
-                <td className="p-4 font-bold text-green-900 dark:text-green-200 text-lg sticky left-0 bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 z-10 border-r-2 border-green-400 dark:border-green-600">
+                <td className="p-2 font-bold text-green-900 dark:text-green-200 text-xs sticky left-0 bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 z-10 border-r-2 border-green-400 dark:border-green-600">
                   {concept.name}
                 </td>
-                <td className="p-4 bg-green-100 dark:bg-green-900/20 border-r-2 border-green-300 dark:border-green-700"></td>
+                <td className="p-2 bg-green-100 dark:bg-green-900/20 border-r-2 border-green-300 dark:border-green-700"></td>
                 {MONTHS.map(month => {
                   // Calcular totales de presupuesto ajustado y real para este mes
                   let totalPresupuestoAjustado = 0;
@@ -1186,14 +1186,14 @@ export function PresupuestoModule() {
                   
                   return (
                     <React.Fragment key={month.num}>
-                      <td className="p-4 text-right font-bold text-green-900 dark:text-green-200 text-base border-l-2 border-green-300 dark:border-green-700 bg-green-100 dark:bg-green-900/20">
+                      <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs border-l-2 border-green-300 dark:border-green-700 bg-green-100 dark:bg-green-900/20">
                         {formatNumber(totalPresupuestoAjustado)}
                       </td>
-                      <td className="p-4 text-right font-bold text-green-900 dark:text-green-200 text-base bg-green-100 dark:bg-green-900/20">
+                      <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs bg-green-100 dark:bg-green-900/20">
                         {formatNumber(totalReal)}
                       </td>
-                      <td className="p-4 text-right font-bold bg-green-100 dark:bg-green-900/20 border-r border-green-300 dark:border-green-700">
-                        <div className={`text-sm font-bold px-3 py-1 rounded ${
+                      <td className="p-1.5 text-right font-bold bg-green-100 dark:bg-green-900/20 border-r border-green-300 dark:border-green-700">
+                        <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                           diferenciaPorcentual === null 
                             ? 'text-gray-400 dark:text-gray-500'
                             : diferenciaPorcentual > 0
@@ -1211,7 +1211,7 @@ export function PresupuestoModule() {
                     </React.Fragment>
                   );
                 })}
-                <td className="p-4 text-right font-bold text-green-900 dark:text-green-200 text-lg bg-green-200 dark:bg-green-900/40 border-l-2 border-green-400 dark:border-green-600">
+                <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs bg-green-200 dark:bg-green-900/40 border-l-2 border-green-400 dark:border-green-600">
                   {formatNumber(
                     MONTHS.reduce((sum, month) => sum + (totals.ingresosByMonth[month.num] || 0), 0)
                   )}
@@ -1221,7 +1221,7 @@ export function PresupuestoModule() {
 
             {/* EGRESOS */}
             <tr className="bg-gradient-to-r from-red-600 to-red-700 dark:from-red-700 dark:to-red-800">
-              <td colSpan={24} className="p-3 font-bold text-white text-lg border-b-2 border-red-800 dark:border-red-900">
+              <td colSpan={24} className="p-1.5 font-bold text-white text-xs border-b-2 border-red-800 dark:border-red-900">
                 <div className="flex items-center gap-2">
                   <span>EGRESOS</span>
                 </div>
@@ -1234,7 +1234,7 @@ export function PresupuestoModule() {
               
               return (
                 <tr key={concept.id} className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
-                  <td className="p-3 sticky left-0 bg-gray-50 dark:bg-slate-700/30 z-10 border-r-2 border-gray-300 dark:border-slate-600 font-medium">
+                  <td className="p-2 sticky left-0 bg-gray-50 dark:bg-slate-700/30 z-10 border-r-2 border-gray-300 dark:border-slate-600 font-medium">
                     <div className="flex items-center gap-2">
                       {editingConceptId === concept.id ? (
                         <input
@@ -1278,13 +1278,13 @@ export function PresupuestoModule() {
                               setEditingConceptId(null);
                             }
                           }}
-                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs"
                           autoFocus
                         />
                       ) : (
                         <>
                           <span
-                            className="flex-1 cursor-pointer text-gray-900 dark:text-gray-100 font-medium hover:text-blue-600 dark:hover:text-blue-400"
+                            className="flex-1 cursor-pointer text-gray-900 dark:text-gray-100 font-medium text-xs hover:text-blue-600 dark:hover:text-blue-400"
                             onClick={() => {
                               setEditingConceptId(concept.id);
                               setEditingName(concept.name);
@@ -1303,7 +1303,7 @@ export function PresupuestoModule() {
                       )}
                     </div>
                   </td>
-                  <td className="p-3 text-right bg-gray-50 dark:bg-slate-700/30 border-r-2 border-gray-300 dark:border-slate-600">
+                  <td className="p-1.5 text-right bg-gray-50 dark:bg-slate-700/30 border-r-2 border-gray-300 dark:border-slate-600">
                     <input
                       type="text"
                       inputMode="decimal"
@@ -1329,7 +1329,7 @@ export function PresupuestoModule() {
                           return newState;
                         });
                       }}
-                      className="w-full px-3 py-2 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm text-right font-medium focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs text-right font-medium focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                       placeholder="$0.00"
                     />
                   </td>
@@ -1353,13 +1353,13 @@ export function PresupuestoModule() {
                     return (
                       <React.Fragment key={month.num}>
                         {/* Columna Presupuesto (calculado con IPC) */}
-                        <td className="p-3 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
-                          <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        <td className="p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
+                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
                             {formatNumber(Math.abs(presupuestoAjustado))}
                           </div>
                         </td>
                         {/* Columna Real (input editable) */}
-                        <td className="p-3 text-right bg-white dark:bg-slate-800">
+                        <td className="p-1.5 text-right bg-white dark:bg-slate-800">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1382,13 +1382,13 @@ export function PresupuestoModule() {
                                 return newState;
                               });
                             }}
-                            className="w-full px-3 py-2 border-2 border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm text-right font-medium focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                            className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs text-right font-medium focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                             placeholder="Ingresar real"
                           />
                         </td>
                         {/* Columna Diferencia % */}
-                        <td className="p-3 text-right border-r border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
-                          <div className={`text-sm font-bold px-2 py-1 rounded ${
+                        <td className="p-1.5 text-right border-r border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
+                          <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                             diferenciaPorcentual === null 
                               ? 'text-gray-400 dark:text-gray-500'
                               : diferenciaPorcentual > 0
@@ -1406,8 +1406,8 @@ export function PresupuestoModule() {
                       </React.Fragment>
                     );
                   })}
-                  <td className="p-3 text-right font-bold bg-gray-100 dark:bg-slate-600 border-l-2 border-gray-400 dark:border-slate-500 text-gray-900 dark:text-white">
-                    <div className="text-base">
+                  <td className="p-1.5 text-right font-bold bg-gray-100 dark:bg-slate-600 border-l-2 border-gray-400 dark:border-slate-500 text-gray-900 dark:text-white">
+                    <div className="text-xs">
                       {formatNumber(
                         Math.abs(MONTHS.reduce((sum, month) => {
                           const valueCurrentMonth = values.find(v => v.concept_id === concept.id && v.month === month.num);
@@ -1478,10 +1478,10 @@ export function PresupuestoModule() {
             {/* Totales de Egresos */}
             {egresosTotales.map(concept => (
               <tr key={concept.id} className="bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 border-t-4 border-red-400 dark:border-red-600">
-                <td className="p-4 font-bold text-red-900 dark:text-red-200 text-lg sticky left-0 bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 z-10 border-r-2 border-red-400 dark:border-red-600">
+                <td className="p-2 font-bold text-red-900 dark:text-red-200 text-xs sticky left-0 bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 z-10 border-r-2 border-red-400 dark:border-red-600">
                   {concept.name}
                 </td>
-                <td className="p-4 bg-red-100 dark:bg-red-900/20 border-r-2 border-red-300 dark:border-red-700"></td>
+                <td className="p-2 bg-red-100 dark:bg-red-900/20 border-r-2 border-red-300 dark:border-red-700"></td>
                 {MONTHS.map(month => {
                   // Calcular totales de presupuesto ajustado y real para este mes
                   let totalPresupuestoAjustado = 0;
@@ -1505,14 +1505,14 @@ export function PresupuestoModule() {
                   
                   return (
                     <React.Fragment key={month.num}>
-                      <td className="p-4 text-right font-bold text-red-900 dark:text-red-200 text-base border-l-2 border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900/20">
+                      <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs border-l-2 border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900/20">
                         {formatNumber(Math.abs(totalPresupuestoAjustado))}
                       </td>
-                      <td className="p-4 text-right font-bold text-red-900 dark:text-red-200 text-base bg-red-100 dark:bg-red-900/20">
+                      <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs bg-red-100 dark:bg-red-900/20">
                         {formatNumber(Math.abs(totalReal))}
                       </td>
-                      <td className="p-4 text-right font-bold bg-red-100 dark:bg-red-900/20 border-r border-red-300 dark:border-red-700">
-                        <div className={`text-sm font-bold px-3 py-1 rounded ${
+                      <td className="p-1.5 text-right font-bold bg-red-100 dark:bg-red-900/20 border-r border-red-300 dark:border-red-700">
+                        <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                           diferenciaPorcentual === null 
                             ? 'text-gray-400 dark:text-gray-500'
                             : diferenciaPorcentual > 0
@@ -1530,7 +1530,7 @@ export function PresupuestoModule() {
                     </React.Fragment>
                   );
                 })}
-                <td className="p-4 text-right font-bold text-red-900 dark:text-red-200 text-lg bg-red-200 dark:bg-red-900/40 border-l-2 border-red-400 dark:border-red-600">
+                <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs bg-red-200 dark:bg-red-900/40 border-l-2 border-red-400 dark:border-red-600">
                   {formatNumber(
                     Math.abs(MONTHS.reduce((sum, month) => sum + (totals.egresosByMonth[month.num] || 0), 0))
                   )}
@@ -1540,40 +1540,40 @@ export function PresupuestoModule() {
 
             {/* Superávit | Déficit */}
             <tr className="bg-yellow-50 dark:bg-yellow-900/20 border-t-4 border-gray-400">
-              <td className="p-3 font-bold text-lg text-gray-900 dark:text-white sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 z-10 border-r border-gray-200 dark:border-slate-600">
+              <td className="p-2 font-bold text-xs text-gray-900 dark:text-white sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 z-10 border-r border-gray-200 dark:border-slate-600">
                 Superávit | Déficit
               </td>
-              <td className="p-3"></td>
-              <td className="p-3"></td>
+              <td className="p-2"></td>
+              <td className="p-2"></td>
               {MONTHS.map(month => (
-                <td key={month.num} className="p-3 text-right font-bold text-lg text-gray-900 dark:text-white">
+                <td key={month.num} className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white">
                   {formatNumber(totals.superavitByMonth[month.num] || 0)}
                 </td>
               ))}
-              <td className="p-3 text-right font-bold text-lg text-gray-900 dark:text-white bg-yellow-100 dark:bg-yellow-900/30">
+              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-yellow-100 dark:bg-yellow-900/30">
                 {formatNumber(totals.acumulado)}
               </td>
             </tr>
 
             {/* Acumulado */}
             <tr className="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-gray-300">
-              <td className="p-3 font-bold text-lg text-gray-900 dark:text-white sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 border-r border-gray-200 dark:border-slate-600">
+              <td className="p-2 font-bold text-xs text-gray-900 dark:text-white sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 border-r border-gray-200 dark:border-slate-600">
                 Acumulado
               </td>
-              <td className="p-3"></td>
-              <td className="p-3"></td>
+              <td className="p-2"></td>
+              <td className="p-2"></td>
               {MONTHS.map((month, index) => {
                 const acumulado = MONTHS.slice(0, index + 1).reduce(
                   (sum, m) => sum + (totals.superavitByMonth[m.num] || 0),
                   0
                 );
                 return (
-                  <td key={month.num} className="p-3 text-right font-bold text-lg text-gray-900 dark:text-white">
+                  <td key={month.num} className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white">
                     {formatNumber(acumulado)}
                   </td>
                 );
               })}
-              <td className="p-3 text-right font-bold text-lg text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/30">
+              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/30">
                 {formatNumber(totals.acumulado)}
               </td>
             </tr>
