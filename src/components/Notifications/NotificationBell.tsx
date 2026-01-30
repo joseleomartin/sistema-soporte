@@ -20,7 +20,8 @@ interface Notification {
     | 'ticket_created'
     | 'time_entry_reminder'
     | 'social_post'
-    | 'professional_news';
+    | 'professional_news'
+    | 'vacation_request';
   title: string;
   message: string;
   read: boolean;
@@ -30,6 +31,7 @@ interface Notification {
   task_id?: string;
   subforum_id?: string;
   direct_message_id?: string;
+  vacation_id?: string;
   metadata?: any;
 }
 
@@ -41,9 +43,10 @@ interface NotificationBellProps {
   onNavigateToSocial?: () => void;
   onNavigateToTimeTracking?: () => void;
   onNavigateToProfessionalNews?: () => void;
+  onNavigateToVacations?: () => void;
 }
 
-export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial, onNavigateToTimeTracking, onNavigateToProfessionalNews }: NotificationBellProps) {
+export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onNavigateToTasks, onNavigateToForum, onNavigateToSocial, onNavigateToTimeTracking, onNavigateToProfessionalNews, onNavigateToVacations }: NotificationBellProps) {
   const { profile } = useAuth();
   const { theme } = useTheme();
   const isMobile = useMobile();
@@ -316,6 +319,14 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         // Fallback: usar window.location si no hay callback
         window.location.hash = 'time-tracking';
       }
+    } else if (notification.type === 'vacation_request') {
+      // Navegar a Gestión de Vacaciones
+      if (onNavigateToVacations) {
+        onNavigateToVacations();
+      } else {
+        // Fallback: usar window.location si no hay callback
+        window.location.hash = 'vacations';
+      }
     }
   };
 
@@ -351,6 +362,8 @@ export function NotificationBell({ onNavigateToTicket, onNavigateToCalendar, onN
         return <MessageSquare className="w-5 h-5 text-pink-600" />;
       case 'professional_news':
         return <MessageSquare className="w-5 h-5 text-indigo-600" />;
+      case 'vacation_request':
+        return <Calendar className="w-5 h-5 text-orange-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }

@@ -667,6 +667,7 @@ function DepartmentPermissionsConfig({ departmentId, tenantId }: { departmentId:
         { view: 'finanzas-cotizador', label: 'Cotizador' },
         { view: 'finanzas-eerr', label: 'EERR' },
         { view: 'finanzas-gastos', label: 'Gastos' },
+        { view: 'finanzas-presupuesto', label: 'Presupuesto' },
       ]
     },
     { view: 'tickets', label: 'Soporte', hasSubItems: false },

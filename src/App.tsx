@@ -37,6 +37,7 @@ import { EERRModule } from './components/Finanzas/EERRModule';
 import { CashFlowModule } from './components/Finanzas/CashFlowModule';
 import { GastosModule } from './components/Finanzas/GastosModule';
 import { CotizadorModule } from './components/Finanzas/CotizadorModule';
+import { PresupuestoModule } from './components/Finanzas/PresupuestoModule';
 import { useTenant } from './contexts/TenantContext';
 import { GoogleOAuthCallback } from './pages/GoogleOAuthCallback';
 import { EmailConfirmation } from './pages/EmailConfirmation';
@@ -99,6 +100,11 @@ function MainApp() {
 
   const handleNavigateToProfessionalNews = useCallback(() => {
     setCurrentView('professional-news');
+    setViewKey(prev => prev + 1);
+  }, []);
+
+  const handleNavigateToVacations = useCallback(() => {
+    setCurrentView('vacations');
     setViewKey(prev => prev + 1);
   }, []);
 
@@ -261,6 +267,8 @@ function MainApp() {
         return <EERRModule key={`finanzas-eerr-${viewKey}`} />;
       case 'finanzas-gastos':
         return <GastosModule key={`finanzas-gastos-${viewKey}`} />;
+      case 'finanzas-presupuesto':
+        return <PresupuestoModule key={`finanzas-presupuesto-${viewKey}`} />;
       case 'settings':
         return <ProfileSettings key={`settings-${viewKey}`} />;
       case 'subscription':
@@ -296,6 +304,7 @@ function MainApp() {
         onNavigateToTimeTracking={handleNavigateToTimeTracking}
         onNavigateToSocial={handleNavigateToSocial}
         onNavigateToProfessionalNews={handleNavigateToProfessionalNews}
+        onNavigateToVacations={handleNavigateToVacations}
         isCollapsed={isMobile ? false : sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         isMobile={isMobile}

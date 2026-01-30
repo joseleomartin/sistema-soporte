@@ -36,7 +36,8 @@ import {
   Calculator,
   Database,
   Receipt,
-  TrendingDown
+  TrendingDown,
+  FileText as FileTextIcon
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useExtraction } from '../../contexts/ExtractionContext';
@@ -54,6 +55,7 @@ interface SidebarProps {
   onNavigateToTimeTracking: () => void;
   onNavigateToSocial?: () => void;
   onNavigateToProfessionalNews?: () => void;
+  onNavigateToVacations?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   isMobile?: boolean;
@@ -120,6 +122,7 @@ const menuItems: MenuItem[] = [
       { icon: Calculator, label: 'Cotizador', view: 'finanzas-cotizador', roles: ['admin', 'support', 'user'] },
       { icon: Database, label: 'EERR', view: 'finanzas-eerr', roles: ['admin', 'support', 'user'] },
       { icon: TrendingDown, label: 'Gastos', view: 'finanzas-gastos', roles: ['admin', 'support', 'user'] },
+      { icon: FileTextIcon, label: 'Presupuesto', view: 'finanzas-presupuesto', roles: ['admin', 'support', 'user'] },
     ]
   },
   { icon: Headphones, label: 'Soporte', view: 'tickets', roles: ['admin', 'support', 'user'] },
@@ -128,7 +131,7 @@ const menuItems: MenuItem[] = [
   { icon: Settings, label: 'Configuración', view: 'settings', roles: ['admin', 'support', 'user'] },
 ];
 
-export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking, onNavigateToSocial, onNavigateToProfessionalNews, isCollapsed = false, onToggleCollapse, isMobile = false, isOpen = true, onClose }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavigateToForum, onNavigateToTimeTracking, onNavigateToSocial, onNavigateToProfessionalNews, onNavigateToVacations, isCollapsed = false, onToggleCollapse, isMobile = false, isOpen = true, onClose }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const { tenant } = useTenant();
   const { activeJobsCount } = useExtraction();
@@ -395,6 +398,7 @@ export function Sidebar({ currentView, onViewChange, onNavigateToTicket, onNavig
                   onNavigateToSocial={onNavigateToSocial}
                   onNavigateToTimeTracking={onNavigateToTimeTracking}
                   onNavigateToProfessionalNews={onNavigateToProfessionalNews}
+                  onNavigateToVacations={onNavigateToVacations}
                 />
                 <button
                   onClick={isMobile && onClose ? onClose : handleToggleCollapse}
