@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, Trash2, ChevronDown, X, Printer, FileText, CheckCircle, DollarSign, Pencil } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, ChevronDown, X, Printer, FileText, CheckCircle, DollarSign, Pencil, RefreshCw } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -70,7 +70,9 @@ export function SalesModule() {
   const [editingOrder, setEditingOrder] = useState<any | null>(null);
   const [productType, setProductType] = useState<'fabricado' | 'reventa'>('fabricado');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
   const clientInputRef = useRef<HTMLInputElement>(null);
+  const productInputRef = useRef<HTMLInputElement>(null);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [alertModal, setAlertModal] = useState<{
@@ -115,6 +117,40 @@ export function SalesModule() {
       loadData();
     }
   }, [tenantId]);
+
+  // useEffect para debug: verificar el valor del precio después de actualizarse
+  useEffect(() => {
+    if (formData.precio_unitario && formData.producto) {
+      console.log(`[useEffect] Valor actual de precio_unitario en formData:`, {
+        precio_unitario: formData.precio_unitario,
+        tipo: typeof formData.precio_unitario,
+        producto: formData.producto,
+        parseFloat: parseFloat(formData.precio_unitario),
+        longitud: formData.precio_unitario.length
+      });
+      
+      // Verificar si el valor del input en el DOM coincide con el estado
+      setTimeout(() => {
+        const inputElement = document.querySelector('input[inputmode="decimal"][required]') as HTMLInputElement;
+        if (inputElement) {
+          console.log(`[useEffect] Valor en DOM del input:`, {
+            domValue: inputElement.value,
+            formDataValue: formData.precio_unitario,
+            coinciden: inputElement.value === formData.precio_unitario,
+            producto: formData.producto
+          });
+          
+          if (inputElement.value !== formData.precio_unitario) {
+            console.error(`[useEffect] ⚠️ DESINCRONIZACIÓN DETECTADA:`, {
+              valorEnDOM: inputElement.value,
+              valorEnEstado: formData.precio_unitario,
+              producto: formData.producto
+            });
+          }
+        }
+      }, 100);
+    }
+  }, [formData.precio_unitario, formData.producto]);
 
   useEffect(() => {
     // Recalcular valores cuando cambian los inputs
@@ -354,6 +390,173 @@ export function SalesModule() {
     );
   };
 
+  const getFilteredProducts = (searchTerm: string) => {
+    if (!searchTerm) return availableProducts;
+    const term = searchTerm.toLowerCase();
+    return availableProducts.filter(p => 
+      p.nombre.toLowerCase().includes(term) ||
+      (p.codigo_producto && p.codigo_producto.toLowerCase().includes(term))
+    );
+  };
+
+  // Función helper para obtener el precio de venta actualizado de un producto desde la BD
+  const getProductPriceFromDB = async (productName: string, reloadProducts: boolean = false): Promise<number | null> => {
+    if (!tenantId) return null;
+
+    try {
+      // Normalizar el nombre del producto (trim y espacios múltiples)
+      const normalizedName = productName.trim().replace(/\s+/g, ' ');
+
+      // Si se solicita recargar productos, hacerlo primero
+      // SIEMPRE recargar productos para obtener los precios más actualizados
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('updated_at', { ascending: false }); // Ordenar por fecha de actualización
+        
+      if (productsData) {
+        setProducts(productsData);
+        console.log(`[getProductPriceFromDB] Productos recargados: ${productsData.length} productos`);
+        
+        // Buscar el producto en los datos recién cargados para verificar
+        const productInReloaded = productsData.find(p => 
+          p.nombre.trim().toLowerCase() === normalizedName.toLowerCase() ||
+          p.nombre.trim().toLowerCase() === productName.trim().toLowerCase()
+        );
+        
+        if (productInReloaded) {
+          console.log(`[getProductPriceFromDB] Producto encontrado en datos recargados:`, {
+            nombre: productInReloaded.nombre,
+            precio_venta: productInReloaded.precio_venta,
+            updated_at: productInReloaded.updated_at,
+            id: productInReloaded.id
+          });
+        }
+      }
+
+      // Intentar búsqueda exacta primero - ordenar por updated_at descendente para obtener el más reciente
+      let { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('id, nombre, precio_venta, updated_at')
+        .eq('tenant_id', tenantId)
+        .eq('nombre', normalizedName)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      console.log(`[getProductPriceFromDB] Búsqueda exacta para "${normalizedName}":`, { 
+        productData, 
+        productError,
+        precio_encontrado: productData?.precio_venta,
+        fecha_actualizacion: productData?.updated_at
+      });
+
+      // Si no encuentra con búsqueda exacta, intentar case-insensitive - ordenar por updated_at descendente
+      if (!productData && !productError) {
+        const { data: productDataILike } = await supabase
+          .from('products')
+          .select('id, nombre, precio_venta, updated_at')
+          .eq('tenant_id', tenantId)
+          .ilike('nombre', normalizedName)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        productData = productDataILike;
+        console.log(`[getProductPriceFromDB] Búsqueda case-insensitive para "${normalizedName}":`, {
+          productData,
+          precio_encontrado: productData?.precio_venta,
+          fecha_actualizacion: productData?.updated_at
+        });
+      }
+
+      // Si aún no encuentra, intentar con el nombre original (sin normalizar)
+      if (!productData && !productError && productName !== normalizedName) {
+        const { data: productDataOriginal } = await supabase
+          .from('products')
+          .select('id, nombre, precio_venta')
+          .eq('tenant_id', tenantId)
+          .ilike('nombre', productName.trim())
+          .limit(1)
+          .maybeSingle();
+        productData = productDataOriginal;
+        console.log(`[getProductPriceFromDB] Búsqueda con nombre original "${productName.trim()}":`, productData);
+      }
+
+      // Si aún no encuentra, buscar todos los productos y hacer una búsqueda más flexible
+      // Ordenar por updated_at descendente para obtener el más reciente
+      if (!productData && !productError) {
+        const { data: allProducts } = await supabase
+          .from('products')
+          .select('id, nombre, precio_venta, updated_at')
+          .eq('tenant_id', tenantId)
+          .order('updated_at', { ascending: false });
+        
+        if (allProducts) {
+          // Buscar coincidencia exacta (case-insensitive) - tomar el más reciente
+          const exactMatches = allProducts.filter(p => 
+            p.nombre.trim().toLowerCase() === normalizedName.toLowerCase() ||
+            p.nombre.trim().toLowerCase() === productName.trim().toLowerCase()
+          );
+          
+          if (exactMatches.length > 0) {
+            // Si hay múltiples coincidencias, tomar la más reciente (ya está ordenada)
+            productData = exactMatches[0];
+            console.log(`[getProductPriceFromDB] Coincidencia exacta encontrada en búsqueda flexible:`, {
+              productData,
+              total_coincidencias: exactMatches.length,
+              precios_encontrados: exactMatches.map(p => ({ nombre: p.nombre, precio: p.precio_venta, updated_at: p.updated_at }))
+            });
+          } else {
+            // Buscar coincidencia parcial - tomar la más reciente
+            const partialMatches = allProducts.filter(p => 
+              p.nombre.trim().toLowerCase().includes(normalizedName.toLowerCase()) ||
+              normalizedName.toLowerCase().includes(p.nombre.trim().toLowerCase())
+            );
+            
+            if (partialMatches.length > 0) {
+              productData = partialMatches[0];
+              console.log(`[getProductPriceFromDB] Coincidencia parcial encontrada:`, {
+                productData,
+                total_coincidencias: partialMatches.length
+              });
+            }
+          }
+        }
+      }
+
+      if (productData && productData.precio_venta !== null && productData.precio_venta !== undefined) {
+        // Asegurar que el precio sea un número
+        const precioNumerico = typeof productData.precio_venta === 'string' 
+          ? parseFloat(productData.precio_venta) 
+          : Number(productData.precio_venta);
+        
+        console.log(`[getProductPriceFromDB] Precio encontrado para "${productData.nombre}": $${precioNumerico} (tipo: ${typeof productData.precio_venta})`);
+        
+        // Actualizar también el array local de productos
+        const productIndex = products.findIndex(p => 
+          p.id === productData!.id ||
+          (p.nombre === productData!.nombre) || 
+          (p.nombre.toLowerCase() === productData!.nombre.toLowerCase())
+        );
+        if (productIndex >= 0) {
+          const updatedProducts = [...products];
+          updatedProducts[productIndex] = { ...updatedProducts[productIndex], precio_venta: precioNumerico };
+          setProducts(updatedProducts);
+          console.log(`[getProductPriceFromDB] Array local actualizado para producto en índice ${productIndex}`);
+        }
+        
+        return precioNumerico;
+      }
+
+      console.warn(`[getProductPriceFromDB] No se encontró precio para "${productName}"`);
+      return null;
+    } catch (error) {
+      console.error('Error obteniendo precio del producto desde BD:', error);
+      return null;
+    }
+  };
+
   // Función para calcular el costo unitario de un producto desde costos
   const calculateProductCostFromCosts = async (productName: string): Promise<number> => {
     try {
@@ -412,7 +615,25 @@ export function SalesModule() {
     }
 
     const cantidad = parseInt(formData.cantidad);
-    const precioUnitario = parseFloat(formData.precio_unitario);
+    // Preservar precisión: parsear el precio manteniendo todos los decimales
+    const precioUnitarioStr = formData.precio_unitario.trim();
+    const precioUnitario = parseFloat(precioUnitarioStr);
+    
+    if (isNaN(precioUnitario)) {
+      alert('El precio unitario no es válido');
+      return;
+    }
+    
+    console.log(`[handleAddProduct] Agregando producto:`, {
+      producto: formData.producto,
+      cantidad: cantidad,
+      precio_unitario_string: precioUnitarioStr,
+      precio_unitario_parseado: precioUnitario,
+      tipo_string: typeof precioUnitarioStr,
+      tipo_parseado: typeof precioUnitario,
+      decimales_preservados: precioUnitarioStr.includes('.') ? precioUnitarioStr.split('.')[1].length : 0,
+      valor_exacto: precioUnitario
+    });
     const iibPct = parseFloat(formData.iib_pct) || 0;
     const discountPct = parseFloat(formData.descuento_pct) || 0;
     const tieneIva = formData.tiene_iva;
@@ -866,6 +1087,207 @@ export function SalesModule() {
     } catch (error) {
       console.error('Error updating payment status:', error);
       alert('Error al actualizar el estado de pago');
+    }
+  };
+
+  const handleUpdatePrices = async () => {
+    if (!tenantId) return;
+    
+    try {
+      setLoading(true);
+      
+      // Primero recargar los productos de costos para asegurar que tenemos los precios más actualizados
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      
+      if (productsError) {
+        console.error('Error cargando productos:', productsError);
+        throw productsError;
+      }
+
+      // Obtener todas las ventas
+      const { data: allSales, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      
+      if (salesError) throw salesError;
+      
+      if (!allSales || allSales.length === 0) {
+        setAlertModal({
+          isOpen: true,
+          title: 'Sin ventas',
+          message: 'No hay ventas para actualizar',
+          type: 'info',
+        });
+        return;
+      }
+
+      // Crear un mapa de productos con sus precios de venta (usando comparación case-insensitive)
+      const productPriceMap = new Map<string, number>();
+      const productNameMap = new Map<string, string>(); // Mapa para normalizar nombres
+      const productOriginalNames: string[] = []; // Lista de nombres originales para búsqueda flexible
+      
+      for (const product of productsData || []) {
+        if (product.precio_venta !== null && product.precio_venta !== undefined && product.precio_venta > 0) {
+          const normalizedName = product.nombre.trim().toLowerCase().replace(/\s+/g, ' ');
+          productPriceMap.set(normalizedName, product.precio_venta);
+          productNameMap.set(normalizedName, product.nombre); // Guardar el nombre original
+          productOriginalNames.push(product.nombre);
+        }
+      }
+
+      console.log(`Productos con precio de venta encontrados: ${productPriceMap.size}`);
+      console.log('Productos:', Array.from(productPriceMap.entries()).map(([name, price]) => `${productNameMap.get(name)}: $${price}`));
+
+      let updatedCount = 0;
+      let skippedCount = 0;
+      const notFoundProducts: string[] = [];
+
+      // Función helper para buscar producto (búsqueda flexible)
+      const findProductPrice = (saleProductName: string): number | null => {
+        const normalizedSaleName = saleProductName.trim().toLowerCase().replace(/\s+/g, ' ');
+        
+        // Primero intentar búsqueda exacta
+        let precioVenta = productPriceMap.get(normalizedSaleName);
+        if (precioVenta !== undefined) {
+          return precioVenta;
+        }
+        
+        // Si no encuentra, intentar búsqueda parcial (el nombre de la venta contiene el nombre del producto o viceversa)
+        for (const [normalizedName, price] of productPriceMap.entries()) {
+          // Verificar si el nombre normalizado de la venta contiene el nombre del producto o viceversa
+          if (normalizedSaleName.includes(normalizedName) || normalizedName.includes(normalizedSaleName)) {
+            console.log(`Coincidencia parcial encontrada: "${saleProductName}" -> "${productNameMap.get(normalizedName)}"`);
+            return price;
+          }
+        }
+        
+        // Si aún no encuentra, intentar búsqueda por palabras clave (split por " - ")
+        const saleParts = normalizedSaleName.split(' - ').map(p => p.trim()).filter(p => p.length > 0);
+        if (saleParts.length > 0) {
+          for (const [normalizedName, price] of productPriceMap.entries()) {
+            const productParts = normalizedName.split(' - ').map(p => p.trim()).filter(p => p.length > 0);
+            // Si al menos 2 partes coinciden, considerarlo una coincidencia
+            let matches = 0;
+            for (const salePart of saleParts) {
+              for (const productPart of productParts) {
+                if (salePart === productPart || salePart.includes(productPart) || productPart.includes(salePart)) {
+                  matches++;
+                  break;
+                }
+              }
+            }
+            if (matches >= Math.min(2, saleParts.length, productParts.length)) {
+              console.log(`Coincidencia por palabras clave encontrada: "${saleProductName}" -> "${productNameMap.get(normalizedName)}" (${matches} coincidencias)`);
+              return price;
+            }
+          }
+        }
+        
+        return null;
+      };
+
+      // Actualizar cada venta
+      for (const sale of allSales) {
+        const saleProductName = sale.producto.trim();
+        const precioVenta = findProductPrice(saleProductName);
+        
+        // Solo actualizar si el producto tiene precio_venta definido en costos
+        if (precioVenta !== null && precioVenta !== undefined && precioVenta > 0) {
+          // Obtener valores de la venta actual
+          const tieneIva = (sale as any).tiene_iva || false;
+          const ivaPct = (sale as any).iva_pct || 0;
+          const iibPct = sale.iib_pct || 0;
+          const discountPct = sale.descuento_pct || 0;
+          const cantidad = sale.cantidad;
+          const costoUnitario = sale.costo_unitario;
+
+          // Recalcular valores con el nuevo precio
+          const values = calculateSaleValues(
+            precioVenta,
+            cantidad,
+            iibPct,
+            discountPct,
+            costoUnitario,
+            tieneIva,
+            ivaPct
+          );
+
+          // Actualizar la venta
+          const updateData: any = {
+            precio_unitario: precioVenta,
+            precio_final: values.precio_final,
+            ingreso_bruto: values.ingreso_bruto,
+            ingreso_neto: values.ingreso_neto,
+            ganancia_un: values.ganancia_un,
+            ganancia_total: values.ganancia_total,
+          };
+
+          const { error: updateError } = await supabase
+            .from('sales')
+            .update(updateData)
+            .eq('id', sale.id)
+            .eq('tenant_id', tenantId);
+
+          if (updateError) {
+            console.error(`Error actualizando venta ${sale.id} (${saleProductName}):`, updateError);
+            skippedCount++;
+            if (!notFoundProducts.includes(saleProductName)) {
+              notFoundProducts.push(saleProductName);
+            }
+          } else {
+            updatedCount++;
+            console.log(`Venta actualizada: ${saleProductName} - Precio anterior: $${sale.precio_unitario}, Nuevo precio: $${precioVenta}`);
+          }
+        } else {
+          skippedCount++;
+          if (!notFoundProducts.includes(saleProductName)) {
+            notFoundProducts.push(saleProductName);
+          }
+          console.log(`Venta omitida: "${saleProductName}" - No tiene precio de venta definido en costos`);
+          console.log(`  Productos disponibles en costos:`, productOriginalNames.filter(p => 
+            p.toLowerCase().includes(saleProductName.toLowerCase().split(' - ')[0]) ||
+            saleProductName.toLowerCase().includes(p.toLowerCase().split(' - ')[0])
+          ));
+        }
+      }
+
+      // Recargar datos
+      await loadData();
+
+      // Mostrar mensaje de éxito con detalles
+      let message = `Se actualizaron ${updatedCount} venta(s).`;
+      if (skippedCount > 0) {
+        const uniqueSkipped = [...new Set(notFoundProducts)];
+        message += `\n\n${skippedCount} venta(s) no se actualizaron.`;
+        if (uniqueSkipped.length > 0 && uniqueSkipped.length <= 10) {
+          message += `\n\nProductos no encontrados en costos:\n${uniqueSkipped.map(p => `• ${p}`).join('\n')}`;
+          message += `\n\nVerifique que estos productos tengan un precio de venta definido en el módulo de Costos.`;
+        } else if (uniqueSkipped.length > 10) {
+          message += `\n\n${uniqueSkipped.length} productos diferentes no encontrados en costos.`;
+          message += `\n\nVerifique la consola del navegador para ver detalles.`;
+        }
+      }
+
+      setAlertModal({
+        isOpen: true,
+        title: 'Actualización completada',
+        message: message,
+        type: updatedCount > 0 ? 'success' : 'info',
+      });
+    } catch (error: any) {
+      console.error('Error actualizando precios:', error);
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: `Error al actualizar precios: ${error?.message || 'Error desconocido'}`,
+        type: 'error',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1411,14 +1833,31 @@ export function SalesModule() {
       resetForm();
       setEditingOrder(null);
       await loadData();
-      alert(editingOrder ? 'Orden actualizada exitosamente' : 'Venta registrada exitosamente');
+      setAlertModal({
+        isOpen: true,
+        title: editingOrder ? '✅ Orden Actualizada' : '✅ Venta Registrada',
+        message: editingOrder 
+          ? 'La orden ha sido actualizada exitosamente.' 
+          : 'La venta ha sido registrada exitosamente y está lista para ser procesada.',
+        type: 'success',
+      });
     } catch (error: any) {
       console.error('Error saving sale:', error);
       const errorMessage = error?.message || String(error);
       if (errorMessage.includes('column') || errorMessage.includes('does not exist') || errorMessage.includes('tiene_iva') || errorMessage.includes('iva_pct')) {
-        alert('Error: Las migraciones de base de datos no se han ejecutado. Por favor, ejecuta la migración en Supabase:\n\n20250120000054_add_iva_to_sales.sql\n\nError: ' + errorMessage);
+        setAlertModal({
+          isOpen: true,
+          title: '⚠️ Error de Base de Datos',
+          message: 'Las migraciones de base de datos no se han ejecutado. Por favor, ejecuta la migración en Supabase:\n\n20250120000054_add_iva_to_sales.sql\n\nError: ' + errorMessage,
+          type: 'error',
+        });
       } else {
-        alert('Error al registrar la venta: ' + errorMessage);
+        setAlertModal({
+          isOpen: true,
+          title: '❌ Error al Registrar Venta',
+          message: 'Error al registrar la venta: ' + errorMessage,
+          type: 'error',
+        });
       }
     }
   };
@@ -1450,6 +1889,7 @@ export function SalesModule() {
     setShowForm(false);
     setProductUnitCost(null);
     setShowClientDropdown(false);
+    setShowProductDropdown(false);
   };
 
   const availableProducts = productType === 'fabricado' ? fabricatedProducts : resaleProducts;
@@ -1476,15 +1916,39 @@ export function SalesModule() {
       {/* Header with Add Button */}
       <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'} mb-4 sm:mb-6`}>
         <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-900 dark:text-white`}>Registro de Ventas</h2>
-        {canCreate('fabinsa-sales') && (
-          <button
-            onClick={() => setShowForm(true)}
-            className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors touch-manipulation`}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nueva Venta</span>
-          </button>
-        )}
+        <div className={`flex ${isMobile ? 'flex-col w-full gap-3' : 'items-center gap-3'}`}>
+          {canEdit('fabinsa-sales') && (
+            <button
+              onClick={handleUpdatePrices}
+              disabled={loading}
+              className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Actualizar Precios</span>
+            </button>
+          )}
+          {canCreate('fabinsa-sales') && (
+            <button
+              onClick={async () => {
+                // Recargar productos antes de abrir el formulario para tener los precios más actualizados
+                if (tenantId) {
+                  const { data: productsData } = await supabase
+                    .from('products')
+                    .select('*')
+                    .eq('tenant_id', tenantId);
+                  if (productsData) {
+                    setProducts(productsData);
+                  }
+                }
+                setShowForm(true);
+              }}
+              className={`flex items-center justify-center space-x-2 ${isMobile ? 'w-full px-4 py-3' : 'px-4 py-2'} bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors touch-manipulation`}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nueva Venta</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Sales Form */}
@@ -1504,15 +1968,49 @@ export function SalesModule() {
                   onChange={(e) => {
                     const newType = e.target.value as 'fabricado' | 'reventa';
                     setProductType(newType);
-                    // Si hay un producto seleccionado, buscar su precio de venta
-                    if (formData.producto) {
-                      const product = products.find(p => p.nombre === formData.producto);
-                      const precioVenta = product?.precio_venta;
-                      setFormData({ 
-                        ...formData, 
-                        producto: formData.producto,
-                        precio_unitario: precioVenta ? precioVenta.toString() : formData.precio_unitario
-                      });
+                    // Si hay un producto seleccionado, buscar su precio de venta actualizado
+                    if (formData.producto && tenantId) {
+                      // Recargar el precio desde la BD para asegurar que tenemos el más actualizado
+                      (async () => {
+                        let precioVenta = await getProductPriceFromDB(formData.producto, true);
+                        
+                        // Si no se encontró, intentar una vez más sin recargar productos
+                        if (precioVenta === null) {
+                          precioVenta = await getProductPriceFromDB(formData.producto, false);
+                        }
+                        
+                        if (precioVenta !== null) {
+                          // Asegurar que el precio sea un número y se formatee correctamente
+                          const precioNumerico = typeof precioVenta === 'number' ? precioVenta : parseFloat(String(precioVenta));
+                          const precioFormateado = isNaN(precioNumerico) ? formData.precio_unitario : precioNumerico.toString();
+                          
+                          console.log(`[cambiarTipo] Precio encontrado: $${precioFormateado} para "${formData.producto}" (original: ${precioVenta}, tipo: ${typeof precioVenta})`);
+                          setFormData({ 
+                            ...formData, 
+                            producto: formData.producto,
+                            precio_unitario: precioFormateado
+                          });
+                        } else {
+                          console.warn(`No se encontró precio_venta en BD para: "${formData.producto}"`);
+                          // Fallback al array local solo si no se encontró en BD
+                          const product = products.find(p => 
+                            p.nombre === formData.producto || 
+                            p.nombre.toLowerCase() === formData.producto.toLowerCase()
+                          );
+                          const precioVentaLocal = product?.precio_venta;
+                          if (precioVentaLocal) {
+                            const precioLocalFormateado = typeof precioVentaLocal === 'number' 
+                              ? precioVentaLocal.toString() 
+                              : String(precioVentaLocal);
+                            console.warn(`Usando precio del array local (puede estar desactualizado): $${precioLocalFormateado} para "${formData.producto}"`);
+                            setFormData({ 
+                              ...formData, 
+                              producto: formData.producto,
+                              precio_unitario: precioLocalFormateado
+                            });
+                          }
+                        }
+                      })();
                     } else {
                       setFormData({ ...formData, producto: '' });
                     }
@@ -1524,55 +2022,224 @@ export function SalesModule() {
                 </select>
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                   Producto {saleItems.length === 0 ? '*' : ''}
                 </label>
-                <select
-                  required={saleItems.length === 0}
-                  value={formData.producto}
-                  onChange={async (e) => {
-                    const selectedProductName = e.target.value;
-                    // Buscar el precio de venta del producto en la tabla products
-                    const product = products.find(p => p.nombre === selectedProductName);
-                    const precioVenta = product?.precio_venta;
-                    
-                    setFormData({ 
-                      ...formData, 
-                      producto: selectedProductName,
-                      precio_unitario: precioVenta ? precioVenta.toString() : formData.precio_unitario
-                    });
+                <div className="relative">
+                  <input
+                    ref={productInputRef}
+                    type="text"
+                    required={saleItems.length === 0}
+                    value={formData.producto}
+                    onChange={async (e) => {
+                      const selectedProductName = e.target.value;
+                      setFormData({ 
+                        ...formData, 
+                        producto: selectedProductName
+                      });
+                      setShowProductDropdown(selectedProductName.length > 0 && getFilteredProducts(selectedProductName).length > 0);
+                    }}
+                    onFocus={() => {
+                      if (getFilteredProducts(formData.producto).length > 0) {
+                        setShowProductDropdown(true);
+                      }
+                    }}
+                    onBlur={async () => {
+                      setTimeout(async () => {
+                        setShowProductDropdown(false);
+                        // Si el texto escrito coincide exactamente con un producto (por nombre o código), seleccionarlo automáticamente
+                        const exactMatchByName = availableProducts.find(p => p.nombre.toLowerCase() === formData.producto.toLowerCase());
+                        const exactMatchByCode = availableProducts.find(p => 
+                          p.codigo_producto && p.codigo_producto.toLowerCase() === formData.producto.toLowerCase()
+                        );
+                        const exactMatch = exactMatchByName || exactMatchByCode;
+                        
+                        if (exactMatch && formData.producto) {
+                          const selectedProductName = exactMatch.nombre;
+                          // Recargar el precio del producto desde la base de datos para asegurar que tenemos el más actualizado
+                          let precioVenta = await getProductPriceFromDB(selectedProductName, true);
+                          
+                          // Si no se encontró, intentar una vez más sin recargar productos
+                          if (precioVenta === null) {
+                            precioVenta = await getProductPriceFromDB(selectedProductName, false);
+                          }
+                          
+                          if (precioVenta === null) {
+                            // Fallback al array local solo si no se encontró en BD
+                            const product = products.find(p => 
+                              p.nombre === selectedProductName || 
+                              p.nombre.toLowerCase() === selectedProductName.toLowerCase()
+                            );
+                            precioVenta = product?.precio_venta || null;
+                            if (precioVenta) {
+                              console.warn(`Usando precio del array local (puede estar desactualizado): $${precioVenta} para "${selectedProductName}"`);
+                            } else {
+                              console.warn(`No se encontró precio_venta para: "${selectedProductName}"`);
+                            }
+                          } else {
+                            console.log(`Precio encontrado en BD: $${precioVenta} para "${selectedProductName}"`);
+                          }
+                          
+                          // Asegurar que el precio se formatee correctamente
+                          let precioFormateado: string;
+                          if (precioVenta !== null && precioVenta !== undefined) {
+                            if (typeof precioVenta === 'number') {
+                              // Usar toString para mantener todos los decimales
+                              precioFormateado = precioVenta.toString();
+                            } else {
+                              precioFormateado = String(precioVenta);
+                            }
+                          } else {
+                            precioFormateado = formData.precio_unitario;
+                          }
+                          
+                          console.log(`[onBlur] Aplicando precio al formulario:`, {
+                            precioOriginal: precioVenta,
+                            tipoOriginal: typeof precioVenta,
+                            precioFormateado: precioFormateado,
+                            producto: selectedProductName
+                          });
+                          
+                          setFormData(prev => {
+                            const nuevo = { 
+                              ...prev, 
+                              producto: selectedProductName,
+                              precio_unitario: precioFormateado
+                            };
+                            console.log(`[onBlur] Estado actualizado:`, nuevo);
+                            return nuevo;
+                          });
 
-                    // Verificar si viene de costos y calcular el costo (tanto para fabricados como reventa)
-                    if (selectedProductName) {
-                      let prod;
-                      if (productType === 'fabricado') {
-                        prod = fabricatedProducts.find(p => p.nombre === selectedProductName);
-                      } else {
-                        prod = resaleProducts.find(p => p.nombre === selectedProductName);
-                      }
-                      
-                      if (prod && prod.id && typeof prod.id === 'string' && prod.id.startsWith('cost-')) {
-                        // Calcular costo desde costos
-                        const cost = await calculateProductCostFromCosts(selectedProductName);
-                        setProductUnitCost(cost);
-                      } else {
-                        // Si viene de stock, usar el costo del stock
-                        setProductUnitCost(null);
-                      }
-                    } else {
-                      setProductUnitCost(null);
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="">Seleccione un producto</option>
-                  {availableProducts.map((prod) => (
-                    <option key={prod.id} value={prod.nombre}>
-                      {prod.nombre} {prod.cantidad !== undefined ? `(Stock: ${prod.cantidad})` : '(Sin stock)'}
-                    </option>
-                  ))}
-                </select>
+                          // Verificar si viene de costos y calcular el costo
+                          let prodItem;
+                          if (productType === 'fabricado') {
+                            prodItem = fabricatedProducts.find(p => p.nombre === selectedProductName);
+                          } else {
+                            prodItem = resaleProducts.find(p => p.nombre === selectedProductName);
+                          }
+                          
+                          if (prodItem && prodItem.id && typeof prodItem.id === 'string' && prodItem.id.startsWith('cost-')) {
+                            // Calcular costo desde costos
+                            const cost = await calculateProductCostFromCosts(selectedProductName);
+                            setProductUnitCost(cost);
+                          } else {
+                            // Si viene de stock, usar el costo del stock
+                            setProductUnitCost(null);
+                          }
+                        }
+                      }, 200);
+                    }}
+                    className="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Escribe nombre o código del producto"
+                  />
+                  <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                  {showProductDropdown && getFilteredProducts(formData.producto).length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto sales-scroll">
+                      {getFilteredProducts(formData.producto).map((prod) => (
+                        <button
+                          key={prod.id}
+                          type="button"
+                          onClick={async () => {
+                            const selectedProductName = prod.nombre;
+                            // Recargar el precio del producto desde la base de datos para asegurar que tenemos el más actualizado
+                            let precioVenta = await getProductPriceFromDB(selectedProductName, true);
+                            
+                            // Si no se encontró, intentar una vez más sin recargar productos
+                            if (precioVenta === null) {
+                              precioVenta = await getProductPriceFromDB(selectedProductName, false);
+                            }
+                            
+                            if (precioVenta === null) {
+                              // Fallback al array local solo si no se encontró en BD
+                              const product = products.find(p => 
+                                p.nombre === selectedProductName || 
+                                p.nombre.toLowerCase() === selectedProductName.toLowerCase()
+                              );
+                              precioVenta = product?.precio_venta || null;
+                              if (precioVenta) {
+                                console.warn(`Usando precio del array local (puede estar desactualizado): $${precioVenta} para "${selectedProductName}"`);
+                              } else {
+                                console.warn(`No se encontró precio_venta para: "${selectedProductName}"`);
+                              }
+                            } else {
+                              console.log(`Precio encontrado en BD: $${precioVenta} para "${selectedProductName}"`);
+                            }
+                            
+                            // Asegurar que el precio se formatee correctamente
+                            let precioFormateado: string;
+                            if (precioVenta !== null && precioVenta !== undefined) {
+                              if (typeof precioVenta === 'number') {
+                                // Usar toFixed para mantener decimales, pero sin limitar a 2 decimales si tiene más
+                                precioFormateado = precioVenta.toString();
+                              } else {
+                                precioFormateado = String(precioVenta);
+                              }
+                            } else {
+                              precioFormateado = formData.precio_unitario;
+                            }
+                            
+                            console.log(`[onClick] Aplicando precio al formulario:`, {
+                              precioOriginal: precioVenta,
+                              tipoOriginal: typeof precioVenta,
+                              precioFormateado: precioFormateado,
+                              producto: selectedProductName
+                            });
+                            
+                            setFormData(prev => {
+                              const nuevo = { 
+                                ...prev, 
+                                producto: selectedProductName,
+                                precio_unitario: precioFormateado
+                              };
+                              console.log(`[onClick] Estado actualizado:`, nuevo);
+                              return nuevo;
+                            });
+                            setShowProductDropdown(false);
+
+                            // Verificar si viene de costos y calcular el costo (tanto para fabricados como reventa)
+                            if (selectedProductName) {
+                              let prodItem;
+                              if (productType === 'fabricado') {
+                                prodItem = fabricatedProducts.find(p => p.nombre === selectedProductName);
+                              } else {
+                                prodItem = resaleProducts.find(p => p.nombre === selectedProductName);
+                              }
+                              
+                              if (prodItem && prodItem.id && typeof prodItem.id === 'string' && prodItem.id.startsWith('cost-')) {
+                                // Calcular costo desde costos
+                                const cost = await calculateProductCostFromCosts(selectedProductName);
+                                setProductUnitCost(cost);
+                              } else {
+                                // Si viene de stock, usar el costo del stock
+                                setProductUnitCost(null);
+                              }
+                            } else {
+                              setProductUnitCost(null);
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-gray-700 focus:bg-blue-50 dark:focus:bg-gray-700 focus:outline-none text-gray-900 dark:text-white"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{prod.nombre}</div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {prod.cantidad !== undefined ? `Stock: ${prod.cantidad}` : 'Sin stock'}
+                              </div>
+                            </div>
+                            {prod.codigo_producto && (
+                              <div className="flex-shrink-0">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                  {prod.codigo_producto}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="relative">
@@ -1642,11 +2309,59 @@ export function SalesModule() {
                     Precio Unitario {saleItems.length === 0 ? '*' : ''}
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     required={saleItems.length === 0}
-                    value={formData.precio_unitario}
-                    onChange={(e) => setFormData({ ...formData, precio_unitario: e.target.value })}
+                    value={formData.precio_unitario || ''}
+                    onFocus={(e) => {
+                      console.log(`[input onFocus] Valor en input:`, {
+                        value: e.target.value,
+                        formDataValue: formData.precio_unitario,
+                        sonIguales: e.target.value === formData.precio_unitario,
+                        producto: formData.producto
+                      });
+                    }}
+                    onMouseEnter={(e) => {
+                      console.log(`[input onMouseEnter] Valor visible en input:`, {
+                        value: (e.target as HTMLInputElement).value,
+                        formDataValue: formData.precio_unitario,
+                        producto: formData.producto
+                      });
+                    }}
+                    onChange={(e) => {
+                      // Permitir solo números y punto decimal
+                      const value = e.target.value.replace(/[^0-9.]/g, '');
+                      // Evitar múltiples puntos decimales
+                      const parts = value.split('.');
+                      const formattedValue = parts.length > 2 
+                        ? parts[0] + '.' + parts.slice(1).join('')
+                        : value;
+                      console.log(`[input onChange] Cambiando precio:`, {
+                        valorOriginal: e.target.value,
+                        valorFormateado: formattedValue
+                      });
+                      setFormData({ ...formData, precio_unitario: formattedValue });
+                    }}
+                    onBlur={(e) => {
+                      // Asegurar que el valor tenga formato correcto al perder el foco
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value)) {
+                        // Preservar todos los decimales, no limitar a 2
+                        const valueStr = e.target.value.trim();
+                        // Si el valor original tiene decimales, preservarlos
+                        if (valueStr.includes('.')) {
+                          const parts = valueStr.split('.');
+                          // Mantener la parte entera y los decimales originales
+                          const formattedValue = parts[0] + '.' + (parts[1] || '');
+                          console.log(`[onBlur input] Preservando decimales: ${formattedValue} (original: ${e.target.value})`);
+                          setFormData({ ...formData, precio_unitario: formattedValue });
+                        } else {
+                          // Si no tiene decimales, usar el valor parseado
+                          console.log(`[onBlur input] Sin decimales, usando: ${value.toString()}`);
+                          setFormData({ ...formData, precio_unitario: value.toString() });
+                        }
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>

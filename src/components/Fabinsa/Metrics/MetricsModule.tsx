@@ -4,11 +4,12 @@
  */
 
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Package, DollarSign, Users, Factory, ShoppingCart, Percent, Activity, X, Settings, Download } from 'lucide-react';
+import { BarChart3, TrendingUp, Package, DollarSign, Users, Factory, ShoppingCart, Percent, Activity, X, Settings, Download, HelpCircle, Calendar } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
 import { writeFile, utils } from 'xlsx';
+import { LineChart, Line, BarChart, Bar, ComposedChart, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Función para formatear números con separadores de miles
 const formatNumber = (value: number): string => {
@@ -211,6 +212,120 @@ export function MetricsModule() {
     return acc;
   }, {} as Record<string, number>);
 
+  // Preparar datos para gráficos mensuales
+  const getMonthName = (date: Date) => {
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return months[date.getMonth()];
+  };
+
+  // Agrupar por mes para gráficos
+  const monthlyData = (() => {
+    const dataMap: Record<string, {
+      mes: string;
+      ingresos: number;
+      gastos: number;
+      ganancia: number;
+      saldo: number;
+      unidadesProducidas: number;
+      unidadesVendidas: number;
+    }> = {};
+
+    // Procesar ventas
+    sales.forEach(sale => {
+      try {
+        const date = new Date(sale.fecha);
+        if (isNaN(date.getTime())) return;
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (!dataMap[monthKey]) {
+          dataMap[monthKey] = {
+            mes: getMonthName(date),
+            ingresos: 0,
+            gastos: 0,
+            ganancia: 0,
+            saldo: 0,
+            unidadesProducidas: 0,
+            unidadesVendidas: 0,
+          };
+        }
+        dataMap[monthKey].ingresos += sale.ingreso_neto || 0;
+        dataMap[monthKey].ganancia += sale.ganancia_total || 0;
+        dataMap[monthKey].unidadesVendidas += sale.cantidad || 0;
+      } catch (e) {
+        console.error('Error procesando venta:', e, sale);
+      }
+    });
+
+    // Procesar costos de producción
+    productionMetrics.forEach(metric => {
+      try {
+        const date = new Date(metric.fecha);
+        if (isNaN(date.getTime())) return;
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (!dataMap[monthKey]) {
+          dataMap[monthKey] = {
+            mes: getMonthName(date),
+            ingresos: 0,
+            gastos: 0,
+            ganancia: 0,
+            saldo: 0,
+            unidadesProducidas: 0,
+            unidadesVendidas: 0,
+          };
+        }
+        dataMap[monthKey].gastos += (metric.costo_mp || 0) + (metric.costo_mo || 0);
+        dataMap[monthKey].unidadesProducidas += metric.cantidad || 0;
+      } catch (e) {
+        console.error('Error procesando métrica de producción:', e, metric);
+      }
+    });
+
+    // Si no hay datos, crear al menos un mes vacío para mostrar el gráfico
+    if (Object.keys(dataMap).length === 0) {
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      dataMap[monthKey] = {
+        mes: getMonthName(now),
+        ingresos: 0,
+        gastos: 0,
+        ganancia: 0,
+        saldo: 0,
+        unidadesProducidas: 0,
+        unidadesVendidas: 0,
+      };
+    }
+
+    // Calcular saldo acumulado
+    let saldoAcumulado = 0;
+    const sortedData = Object.entries(dataMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, data]) => {
+        saldoAcumulado += data.ingresos - data.gastos;
+        return {
+          ...data,
+          saldo: saldoAcumulado,
+        };
+      });
+
+    return sortedData;
+  })();
+
+  // Datos para gráfico de distribución de costos
+  const costDistributionData = [
+    { name: 'Materia Prima', value: totalCostMP, porcentaje: totalCostProduction > 0 ? (totalCostMP / totalCostProduction) * 100 : 0 },
+    { name: 'Mano de Obra', value: totalCostMO, porcentaje: totalCostProduction > 0 ? (totalCostMO / totalCostProduction) * 100 : 0 },
+  ];
+
+  // Colores para los gráficos (usando purple/indigo del proyecto)
+  const COLORS = {
+    primary: '#6366f1', // indigo-500
+    primaryLight: '#818cf8', // indigo-400
+    primaryDark: '#4f46e5', // indigo-600
+    secondary: '#8b5cf6', // violet-500
+    secondaryLight: '#a78bfa', // violet-400
+    success: '#10b981', // green-500
+    successLight: '#34d399', // green-400
+  };
+
   // Top products
   const topProductsByRevenue = Object.entries(salesByProduct)
     .sort(([, a], [, b]) => b - a)
@@ -386,8 +501,11 @@ export function MetricsModule() {
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-3">
-            <BarChart3 className="w-6 h-6 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Métricas</h1>
+            <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Métricas</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Reportes y análisis de producción, ventas e inventario</p>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <button
@@ -408,7 +526,6 @@ export function MetricsModule() {
             </button>
           </div>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">Reportes y análisis de producción, ventas e inventario</p>
       </div>
 
       {/* Date Range Filter */}
@@ -489,7 +606,7 @@ export function MetricsModule() {
               <p className="text-sm text-gray-600 dark:text-gray-300">Kg Consumidos</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatNumber(totalKgConsumed)}</p>
             </div>
-            <Package className="w-8 h-8 text-blue-600" />
+            <Package className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
           </div>
         </div>
         )}
@@ -549,7 +666,7 @@ export function MetricsModule() {
               <p className="text-sm text-gray-600 dark:text-gray-300">Unidades Producidas</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalUnitsProduced}</p>
             </div>
-            <Activity className="w-8 h-8 text-blue-600" />
+            <Activity className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
           </div>
         </div>
         )}
@@ -674,10 +791,289 @@ export function MetricsModule() {
               <p className="text-sm text-gray-600 dark:text-gray-300">Total Ventas</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{sales.length}</p>
             </div>
-            <ShoppingCart className="w-8 h-8 text-blue-600" />
+            <ShoppingCart className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
           </div>
         </div>
         )}
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Gráfico de Ingresos y Gastos */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ingresos y Gastos</h3>
+              <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" title="Ingresos de ventas vs costos de producción" />
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+              <Calendar className="w-4 h-4" />
+              <span>Mensual</span>
+            </div>
+          </div>
+          {monthlyData.length === 0 || (monthlyData.length === 1 && monthlyData[0].ingresos === 0 && monthlyData[0].gastos === 0) ? (
+            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+              <p>No hay datos disponibles para el período seleccionado</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                <XAxis 
+                  dataKey="mes" 
+                  stroke="#6b7280"
+                  className="dark:text-gray-400"
+                  tick={{ fill: '#6b7280' }}
+                />
+                <YAxis 
+                  yAxisId="left"
+                  stroke="#6b7280"
+                  className="dark:text-gray-400"
+                  tick={{ fill: '#6b7280' }}
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+                    return `$${value}`;
+                  }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                  }}
+                  formatter={(value: number) => `$${formatNumber(value)}`}
+                />
+                <Legend />
+                <Bar yAxisId="left" dataKey="ingresos" fill={COLORS.primary} name="Ingresos" />
+                <Bar yAxisId="left" dataKey="gastos" fill={COLORS.secondaryLight} name="Gastos" />
+                <Line 
+                  yAxisId="left"
+                  type="monotone" 
+                  dataKey="saldo" 
+                  stroke={COLORS.primaryDark} 
+                  strokeWidth={2}
+                  name="Saldo"
+                  dot={{ fill: COLORS.primaryDark, r: 4 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Gráfico de Producción y Ventas */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Producción y Ventas</h3>
+              <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" title="Unidades producidas vs unidades vendidas" />
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+              <Calendar className="w-4 h-4" />
+              <span>Mensual</span>
+            </div>
+          </div>
+          {monthlyData.length === 0 || (monthlyData.length === 1 && monthlyData[0].unidadesProducidas === 0 && monthlyData[0].unidadesVendidas === 0) ? (
+            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+              <p>No hay datos disponibles para el período seleccionado</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                <XAxis 
+                  dataKey="mes" 
+                  stroke="#6b7280"
+                  className="dark:text-gray-400"
+                  tick={{ fill: '#6b7280' }}
+                />
+                <YAxis 
+                  yAxisId="left"
+                  stroke="#6b7280"
+                  className="dark:text-gray-400"
+                  tick={{ fill: '#6b7280' }}
+                />
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#6b7280"
+                  className="dark:text-gray-400"
+                  tick={{ fill: '#6b7280' }}
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+                    return `$${value}`;
+                  }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Legend />
+                <Bar yAxisId="left" dataKey="unidadesProducidas" fill={COLORS.primary} name="Unidades Producidas" />
+                <Bar yAxisId="left" dataKey="unidadesVendidas" fill={COLORS.secondaryLight} name="Unidades Vendidas" />
+                <Line 
+                  yAxisId="right"
+                  type="monotone" 
+                  dataKey="ganancia" 
+                  stroke={COLORS.success} 
+                  strokeWidth={2}
+                  name="Ganancia"
+                  dot={{ fill: COLORS.success, r: 4 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Segunda fila de gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Gráfico de Distribución de Costos */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Distribución de Costos</h3>
+              <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" title="Distribución entre materia prima y mano de obra" />
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+              <Calendar className="w-4 h-4" />
+              <span>Mensual</span>
+            </div>
+          </div>
+          {totalCostProduction === 0 ? (
+            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">$0,00</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">No hay costos registrados</p>
+              </div>
+            </div>
+          ) : (
+            <div className="relative flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={costDistributionData.filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ porcentaje }) => porcentaje > 5 ? `${formatNumber(porcentaje)}%` : ''}
+                    outerRadius={100}
+                    innerRadius={60}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {costDistributionData.filter(d => d.value > 0).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index === 0 ? COLORS.primaryLight : COLORS.secondary} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number) => `$${formatNumber(value)}`}
+                    contentStyle={{ 
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {totalCostProduction >= 1000000 
+                      ? `${formatNumber(totalCostProduction / 1000000)}M`
+                      : `$${formatNumber(totalCostProduction)}`}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Costo Total</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="mt-4 flex justify-center space-x-6">
+            {costDistributionData.map((entry, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <div 
+                  className="w-4 h-4 rounded-full" 
+                  style={{ backgroundColor: index === 0 ? COLORS.primaryLight : COLORS.secondary }}
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {entry.name}: {formatNumber(entry.porcentaje)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Gráfico de Tendencia de Ganancias */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tendencia de Ganancias</h3>
+              <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" title="Evolución de las ganancias mensuales" />
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+              <Calendar className="w-4 h-4" />
+              <span>Mensual</span>
+            </div>
+          </div>
+          {monthlyData.length === 0 || (monthlyData.length === 1 && monthlyData[0].ganancia === 0 && monthlyData[0].ingresos === 0) ? (
+            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+              <p>No hay datos disponibles para el período seleccionado</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                <XAxis 
+                  dataKey="mes" 
+                  stroke="#6b7280"
+                  className="dark:text-gray-400"
+                  tick={{ fill: '#6b7280' }}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  className="dark:text-gray-400"
+                  tick={{ fill: '#6b7280' }}
+                  tickFormatter={(value) => {
+                    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+                    return `$${value}`;
+                  }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                  }}
+                  formatter={(value: number) => `$${formatNumber(value)}`}
+                />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="ganancia" 
+                  stroke={COLORS.success} 
+                  strokeWidth={3}
+                  name="Ganancia"
+                  dot={{ fill: COLORS.success, r: 5 }}
+                  activeDot={{ r: 7 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="ingresos" 
+                  stroke={COLORS.primary} 
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Ingresos"
+                  dot={{ fill: COLORS.primary, r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
 
       {/* Modales de Detalle */}

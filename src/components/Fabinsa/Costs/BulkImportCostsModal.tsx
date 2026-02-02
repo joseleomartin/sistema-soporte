@@ -56,22 +56,44 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
             return;
           }
 
-          // Verificar columnas requeridas
-          const requiredColumns = ['Familia', 'Medida', 'Característica', 'Precio_Venta', 'Moneda_Precio', 
-                                   'Cantidad_Fabricar', 'Cantidad_Hora', 'IIBB_Porcentaje', 'Precio_Dolar'];
-          // Código_Producto es opcional
+          // Verificar columnas requeridas (con variaciones posibles)
+          const requiredColumnsMap: Record<string, string[]> = {
+            'Familia': ['Familia', 'familia', 'FAMILIA'],
+            'Medida': ['Medida', 'medida', 'MEDIDA'],
+            'Característica': ['Característica', 'Caracteristica', 'característica', 'caracteristica', 'CARACTERÍSTICA', 'CARACTERISTICA'],
+            'Precio_Venta': ['Precio_Venta', 'Precio Venta', 'precio_venta', 'PRECIO_VENTA'],
+            'Moneda_Precio': ['Moneda_Precio', 'Moneda Precio', 'moneda_precio', 'MONEDA_PRECIO'],
+            'Cantidad_Fabricar': ['Cantidad_Fabricar', 'Cantidad Fabricar', 'cantidad_fabricar', 'CANTIDAD_FABRICAR'],
+            'Cantidad_Hora': ['Cantidad_Hora', 'Cantidad Hora', 'cantidad_hora', 'CANTIDAD_HORA'],
+            'IIBB_Porcentaje': ['IIBB_Porcentaje', 'IIBB Porcentaje', 'iibb_porcentaje', 'IIBB_PORCENTAJE'],
+            'Precio_Dolar': ['Precio_Dolar', 'Precio Dolar', 'precio_dolar', 'PRECIO_DOLAR', 'Precio_Dólar', 'Precio Dólar']
+          };
           
           const firstRow = jsonData[0];
-          const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+          const availableColumns = Object.keys(firstRow);
+          const missingColumns: string[] = [];
+          
+          // Verificar cada columna requerida
+          for (const [requiredCol, variations] of Object.entries(requiredColumnsMap)) {
+            const found = variations.some(variation => availableColumns.includes(variation));
+            if (!found) {
+              missingColumns.push(requiredCol);
+            }
+          }
           
           if (missingColumns.length > 0) {
-            reject(new Error(`Faltan las siguientes columnas: ${missingColumns.join(', ')}`));
+            reject(new Error(`Faltan las siguientes columnas: ${missingColumns.join(', ')}. Columnas disponibles: ${availableColumns.slice(0, 10).join(', ')}...`));
             return;
           }
 
           const rows: CostImportRow[] = [];
+          let skippedRows = 0;
+          const skippedRowDetails: string[] = [];
 
-          for (const row of jsonData) {
+          for (let index = 0; index < jsonData.length; index++) {
+            const row = jsonData[index];
+            const rowNumber = index + 2; // +2 porque index es 0-based y la fila 1 es el header
+            
             // Detectar materiales (columnas que empiezan con "Material_" o tienen patrón similar)
             const materialColumns: Array<{ nombre: string; cantidad: string; precio: string; moneda: string }> = [];
             const materialesData: Record<string, { nombre?: string; cantidad?: string; precio?: string; moneda?: string }> = {};
@@ -157,41 +179,163 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
               });
             }
 
-            // Parsear valores
-            const codigo_producto = String(row['Código_Producto'] || row['Codigo_Producto'] || row['Código'] || row['Codigo'] || '').trim() || undefined;
-            const familia = String(row['Familia'] || '').trim();
-            const medida = String(row['Medida'] || '').trim();
-            const caracteristica = String(row['Característica'] || '').trim();
+            // Parsear valores (buscando variaciones de nombres de columnas)
+            const codigo_producto = String(
+              row['Código_Producto'] || row['Codigo_Producto'] || row['Código'] || row['Codigo'] || 
+              row['codigo_producto'] || row['codigo'] || ''
+            ).trim() || undefined;
             
-            if (!familia || !medida || !caracteristica) {
-              continue; // Saltar filas incompletas
+            const familia = String(
+              row['Familia'] || row['familia'] || row['FAMILIA'] || ''
+            ).trim();
+            
+            const medida = String(
+              row['Medida'] || row['medida'] || row['MEDIDA'] || ''
+            ).trim();
+            
+            const caracteristica = String(
+              row['Característica'] || row['Caracteristica'] || row['característica'] || 
+              row['caracteristica'] || row['CARACTERÍSTICA'] || row['CARACTERISTICA'] || ''
+            ).trim();
+            
+            // Validación más flexible: permitir filas con al menos familia
+            // Si falta familia, es una fila inválida
+            if (!familia || familia.trim() === '') {
+              skippedRows++;
+              skippedRowDetails.push(`Fila ${rowNumber}: Falta Familia (Familia: "${familia}", Medida: "${medida}", Característica: "${caracteristica}")`);
+              continue; // Saltar filas sin familia
             }
+            
+            // Si falta medida o característica, usar valores por defecto en lugar de saltar
+            const medidaFinal = medida || 'Sin medida';
+            const caracteristicaFinal = caracteristica || 'Sin característica';
 
             // Parsear precio de venta (puede venir con formato complejo)
+            // Formatos soportados:
+            // - "u$s 7.20" o "u$s 7,20" -> USD
+            // - "7.20 USD" o "7,20 USD" -> USD
+            // - "101,32" o "101.32" -> ARS (por defecto)
+            // - "1345,33 ARS" -> ARS explícito
             let precio_venta = 0;
             let moneda_precio: 'ARS' | 'USD' = 'ARS';
-            const precioVentaRaw = String(row['Precio_Venta'] || '').trim();
+            const precioVentaRaw = String(
+              row['Precio_Venta'] || row['Precio Venta'] || row['precio_venta'] || row['PRECIO_VENTA'] || ''
+            ).trim();
+            
             if (precioVentaRaw) {
-              // Intentar extraer número y moneda
-              const precioMatch = precioVentaRaw.match(/([\d.,]+)/);
-              if (precioMatch) {
-                precio_venta = parseFloat(precioMatch[1].replace(',', '.'));
+              const precioVentaUpper = precioVentaRaw.toUpperCase();
+              
+              // Caso 1: Formato "u$s 7.20" o "u$s 7,20" (USD con prefijo u$s)
+              if (precioVentaUpper.includes('U$S') || precioVentaUpper.includes('U$')) {
+                const match = precioVentaRaw.match(/u\$s?\s*([\d.,]+)/i);
+                if (match) {
+                  precio_venta = parseFloat(match[1].replace(',', '.'));
+                  moneda_precio = 'USD';
+                }
               }
-              if (precioVentaRaw.toUpperCase().includes('USD') || precioVentaRaw.includes('$')) {
+              // Caso 2: Formato "7.20 USD" o "7,20 USD" (USD explícito al final)
+              else if (precioVentaUpper.endsWith(' USD')) {
+                const precioStr = precioVentaRaw.slice(0, -4).trim().replace(',', '.');
+                precio_venta = parseFloat(precioStr) || 0;
                 moneda_precio = 'USD';
               }
+              // Caso 3: Formato "1345,33 ARS" (ARS explícito al final)
+              else if (precioVentaUpper.endsWith(' ARS')) {
+                const precioStr = precioVentaRaw.slice(0, -4).trim().replace(',', '.');
+                precio_venta = parseFloat(precioStr) || 0;
+                moneda_precio = 'ARS';
+              }
+              // Caso 4: Solo número - detectar por formato
+              else {
+                // Si tiene punto como separador de miles y coma como decimal -> ARS (ej: "1.075,60")
+                // Si tiene solo punto como decimal -> puede ser USD o ARS, verificar contexto
+                // Si tiene coma como decimal -> ARS (ej: "101,32")
+                
+                // Limpiar el string para extraer solo números
+                let precioStr = precioVentaRaw.replace(/[^\d.,-]/g, '').trim();
+                
+                // Detectar formato: si tiene punto y coma, el punto es miles y la coma es decimal (ARS)
+                if (precioStr.includes('.') && precioStr.includes(',')) {
+                  // Formato: "1.075,60" -> ARS
+                  precio_venta = parseFloat(precioStr.replace(/\./g, '').replace(',', '.'));
+                  moneda_precio = 'ARS';
+                }
+                // Si solo tiene coma, es decimal (ARS)
+                else if (precioStr.includes(',') && !precioStr.includes('.')) {
+                  precio_venta = parseFloat(precioStr.replace(',', '.'));
+                  moneda_precio = 'ARS';
+                }
+                // Si solo tiene punto, puede ser decimal (USD o ARS)
+                else if (precioStr.includes('.') && !precioStr.includes(',')) {
+                  // Si el punto está en una posición que sugiere decimal (últimos 3 caracteres), es USD
+                  // Ej: "7.20" -> USD, "30.66" -> USD
+                  const parts = precioStr.split('.');
+                  if (parts.length === 2 && parts[1].length <= 2) {
+                    // Probablemente decimal (USD)
+                    precio_venta = parseFloat(precioStr);
+                    moneda_precio = 'USD';
+                  } else {
+                    // Probablemente miles (ARS)
+                    precio_venta = parseFloat(precioStr.replace(/\./g, ''));
+                    moneda_precio = 'ARS';
+                  }
+                }
+                // Si no tiene separadores, es un número entero (ARS por defecto)
+                else {
+                  precio_venta = parseFloat(precioStr) || 0;
+                  moneda_precio = 'ARS';
+                }
+              }
             }
 
-            // Usar moneda explícita si está en la columna
-            const monedaPrecioRaw = String(row['Moneda_Precio'] || '').trim().toUpperCase();
+            // Usar moneda explícita si está en la columna (tiene prioridad sobre la detección automática)
+            const monedaPrecioRaw = String(
+              row['Moneda_Precio'] || row['Moneda Precio'] || row['moneda_precio'] || row['MONEDA_PRECIO'] || ''
+            ).trim().toUpperCase();
             if (monedaPrecioRaw === 'USD' || monedaPrecioRaw === 'ARS') {
               moneda_precio = monedaPrecioRaw as 'ARS' | 'USD';
+              console.log(`  → Moneda explícita detectada en columna: ${moneda_precio}`);
             }
 
-            const cantidad_fabricar = parseFloat(String(row['Cantidad_Fabricar'] || '0').replace(',', '.')) || 0;
-            const cantidad_hora = parseFloat(String(row['Cantidad_Hora'] || '0').replace(',', '.')) || 0;
-            const iibb_porcentaje = parseFloat(String(row['IIBB_Porcentaje'] || '0').replace(',', '.')) || 0;
-            const precio_dolar = parseFloat(String(row['Precio_Dolar'] || '0').replace(',', '.')) || 0;
+            const cantidad_fabricar = parseFloat(
+              String(row['Cantidad_Fabricar'] || row['Cantidad Fabricar'] || row['cantidad_fabricar'] || row['CANTIDAD_FABRICAR'] || '0')
+                .replace(',', '.')
+            ) || 0;
+            
+            const cantidad_hora = parseFloat(
+              String(row['Cantidad_Hora'] || row['Cantidad Hora'] || row['cantidad_hora'] || row['CANTIDAD_HORA'] || '0')
+                .replace(',', '.')
+            ) || 0;
+            
+            const iibb_porcentaje = parseFloat(
+              String(row['IIBB_Porcentaje'] || row['IIBB Porcentaje'] || row['iibb_porcentaje'] || row['IIBB_PORCENTAJE'] || '0')
+                .replace(',', '.')
+            ) || 0;
+            
+            const precio_dolar = parseFloat(
+              String(row['Precio_Dolar'] || row['Precio Dolar'] || row['Precio_Dólar'] || row['Precio Dólar'] || row['precio_dolar'] || row['PRECIO_DOLAR'] || '0')
+                .replace(',', '.')
+            ) || 0;
+
+            // Convertir precio de venta de USD a ARS si es necesario
+            // Siempre guardamos el precio_venta en ARS
+            let precio_venta_final = precio_venta;
+            let moneda_precio_final: 'ARS' | 'USD' = moneda_precio;
+            
+            if (moneda_precio === 'USD' && precio_venta > 0) {
+              if (precio_dolar > 0) {
+                // Convertir USD a ARS usando el precio del dólar
+                precio_venta_final = precio_venta * precio_dolar;
+              } else {
+                // Usar precio del dólar por defecto si no está disponible
+                const precio_dolar_default = 1515;
+                precio_venta_final = precio_venta * precio_dolar_default;
+              }
+              // Siempre guardamos en ARS después de la conversión
+              moneda_precio_final = 'ARS';
+            } else if (moneda_precio === 'ARS') {
+              precio_venta_final = precio_venta;
+            }
 
             // Procesar materiales
             const materiales = materialColumns
@@ -215,20 +359,14 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
               // NO filtrar por precio > 0, ya que los materiales pueden no tener precio en el Excel
               // El precio se obtendrá del stock_materials cuando se calcule el costo
             
-            // Debug: mostrar materiales detectados
-            if (materiales.length > 0) {
-              console.log(`Materiales detectados para ${familia} - ${medida} - ${caracteristica}:`, materiales);
-            } else {
-              console.warn(`No se detectaron materiales para ${familia} - ${medida} - ${caracteristica}. Columnas disponibles:`, Object.keys(row));
-            }
 
             rows.push({
               codigo_producto,
               familia,
-              medida,
-              caracteristica,
-              precio_venta,
-              moneda_precio,
+              medida: medidaFinal,
+              caracteristica: caracteristicaFinal,
+              precio_venta: precio_venta_final, // Usar precio convertido a ARS
+              moneda_precio: moneda_precio_final, // Siempre 'ARS' después de conversión
               cantidad_fabricar,
               cantidad_hora,
               iibb_porcentaje,
@@ -237,6 +375,7 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
             });
           }
 
+          
           resolve(rows);
         } catch (error: any) {
           reject(new Error(`Error al leer el archivo: ${error.message}`));
@@ -306,43 +445,54 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
       let errors = 0;
       const errorDetails: string[] = [];
 
-      for (const row of rows) {
+      for (let index = 0; index < rows.length; index++) {
+        const row = rows[index];
+        const rowNumber = index + 1;
+        let productId: string | null = null;
+        let productCreated = false;
+        
         try {
           // Crear o buscar producto (para simulación de costos)
           const productName = `${row.familia} - ${row.medida} - ${row.caracteristica}`;
           
-          // Buscar producto existente por código o nombre
+          // Buscar producto existente por código (más preciso)
           let existingProduct = null;
           if (row.codigo_producto) {
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from('products')
               .select('id')
               .eq('tenant_id', tenantId)
               .eq('codigo_producto', row.codigo_producto)
               .maybeSingle();
-            existingProduct = data;
+            if (!error && data) {
+              existingProduct = data;
+            }
           }
           
-          // Si no se encontró por código, buscar por nombre
+          // Si no se encontró por código, buscar por nombre exacto (más estricto)
           if (!existingProduct) {
-            const { data } = await supabase
+            const { data, error } = await supabase
               .from('products')
               .select('id')
               .eq('tenant_id', tenantId)
-              .ilike('nombre', productName)
+              .eq('nombre', productName) // Usar eq en lugar de ilike para coincidencia exacta
               .maybeSingle();
-            existingProduct = data;
+            if (!error && data) {
+              existingProduct = data;
+            }
           }
-
-          let productId: string;
 
           if (existingProduct) {
             productId = existingProduct.id;
+            productCreated = false;
+            
             // Calcular peso unidad (suma de materiales)
             const peso_unidad = row.materiales.reduce((sum, m) => sum + m.kg_por_unidad, 0);
             
             // Actualizar producto existente con todos los datos de la simulación
-            await supabase
+            // IMPORTANTE: No actualizar cantidad_fabricar ni estado - estos son solo para simulación de costos
+            // No debe afectar producción en lo más mínimo
+            const { error: updateError } = await supabase
               .from('products')
               .update({
                 codigo_producto: row.codigo_producto || null,
@@ -352,18 +502,28 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
                 caracteristica: row.caracteristica,
                 peso_unidad: peso_unidad,
                 precio_venta: row.precio_venta || null,
-                cantidad_fabricar: row.cantidad_fabricar,
+                // NO actualizar cantidad_fabricar - solo para simulación de costos
                 cantidad_por_hora: row.cantidad_hora,
                 iibb_porcentaje: row.iibb_porcentaje,
                 moneda_precio: row.moneda_precio,
                 otros_costos: 0, // Se puede agregar al Excel si es necesario
+                // NO actualizar estado - no debe afectar producción
               })
               .eq('id', productId);
+            
+            if (updateError) {
+              throw new Error(`Error actualizando producto: ${updateError.message}`);
+            }
           } else {
+            productCreated = true;
+            
             // Calcular peso unidad (suma de materiales)
             const peso_unidad = row.materiales.reduce((sum, m) => sum + m.kg_por_unidad, 0);
 
             // Crear nuevo producto para simulación
+            // IMPORTANTE: cantidad_fabricar = 0 y NO establecer estado
+            // Esto asegura que NO aparezca en producción (el filtro requiere cantidad_fabricar > 0)
+            // La importación masiva es completamente independiente de producción
             const { data: newProduct, error: productError } = await supabase
               .from('products')
               .insert({
@@ -375,28 +535,32 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
                 caracteristica: row.caracteristica,
                 peso_unidad,
                 precio_venta: row.precio_venta || null,
-                cantidad_fabricar: row.cantidad_fabricar,
+                cantidad_fabricar: 0, // IMPORTANTE: 0 para que NO aparezca en producción
                 cantidad_por_hora: row.cantidad_hora,
                 iibb_porcentaje: row.iibb_porcentaje,
                 moneda_precio: row.moneda_precio,
-                estado: 'pendiente', // Todos los productos nuevos se crean como pendientes
+                // NO establecer estado - dejar que use el default o null
+                // La importación masiva es completamente independiente de producción
               })
               .select('id')
               .single();
 
-            if (productError) throw productError;
+            if (productError) {
+              throw new Error(`Error creando producto: ${productError.message}`);
+            }
             productId = newProduct.id;
           }
 
-          // Eliminar materiales existentes del producto
-          await supabase
-            .from('product_materials')
-            .delete()
-            .eq('product_id', productId);
+          // Eliminar materiales existentes del producto (solo si el producto ya existía)
+          if (!productCreated) {
+            await supabase
+              .from('product_materials')
+              .delete()
+              .eq('product_id', productId);
+          }
 
           // Agregar materiales
           if (row.materiales && row.materiales.length > 0) {
-            console.log(`Agregando ${row.materiales.length} materiales para producto ${productName}:`, row.materiales);
             for (const material of row.materiales) {
               const { error: materialError } = await supabase
                 .from('product_materials')
@@ -407,12 +571,9 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
                 });
               
               if (materialError) {
-                console.error(`Error al agregar material ${material.nombre}:`, materialError);
-                throw materialError;
+                // Continuar con los demás materiales aunque uno falle
               }
             }
-          } else {
-            console.warn(`No se encontraron materiales para el producto ${productName}`);
           }
 
           // Agregar a simulación de costos
@@ -442,27 +603,44 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
             simulationId = newSim.id;
           }
 
-          // Verificar si ya existe un item de simulación para este producto
-          const { data: existingSimulationItem } = await supabase
+          // Verificar y limpiar duplicados antes de agregar/actualizar
+          const { data: allSimulationItems, error: checkError } = await supabase
             .from('cost_simulation_items')
             .select('id')
             .eq('simulation_id', simulationId)
-            .eq('product_id', productId)
-            .maybeSingle();
+            .eq('product_id', productId);
 
-          if (existingSimulationItem) {
-            // Actualizar item de simulación existente
-            await supabase
+          if (checkError) {
+            throw new Error(`Error verificando items de simulación: ${checkError.message}`);
+          }
+
+          if (allSimulationItems && allSimulationItems.length > 0) {
+            // Si hay múltiples items duplicados, eliminar los extras y mantener solo el más reciente
+            if (allSimulationItems.length > 1) {
+              const itemsToDelete = allSimulationItems.slice(1).map(item => item.id);
+              await supabase
+                .from('cost_simulation_items')
+                .delete()
+                .in('id', itemsToDelete);
+            }
+            
+            // Actualizar el item existente (el que quedó)
+            const existingItemId = allSimulationItems[0].id;
+            const { error: updateError } = await supabase
               .from('cost_simulation_items')
               .update({
                 precio_venta: row.precio_venta,
                 descuento_pct: 0,
                 cantidad_fabricar: row.cantidad_fabricar,
               })
-              .eq('id', existingSimulationItem.id);
+              .eq('id', existingItemId);
+            
+            if (updateError) {
+              throw new Error(`Error actualizando item de simulación: ${updateError.message}`);
+            }
           } else {
-            // Agregar nuevo item a la simulación
-            await supabase
+            // No existe ningún item, crear uno nuevo
+            const { data: newSimulationItem, error: insertError } = await supabase
               .from('cost_simulation_items')
               .insert({
                 simulation_id: simulationId,
@@ -470,19 +648,27 @@ export function BulkImportCostsModal({ onClose, onSuccess }: BulkImportCostsModa
                 precio_venta: row.precio_venta,
                 descuento_pct: 0,
                 cantidad_fabricar: row.cantidad_fabricar,
-              });
+              })
+              .select('id')
+              .single();
+            
+            if (insertError) {
+              throw new Error(`Error insertando item de simulación: ${insertError.message}`);
+            }
           }
 
           imported++;
         } catch (error: any) {
           errors++;
-          errorDetails.push(`${row.familia} - ${row.medida} - ${row.caracteristica}: ${error.message}`);
+          const errorMsg = error.message || String(error);
+          errorDetails.push(`${row.familia} - ${row.medida} - ${row.caracteristica}: ${errorMsg}`);
         }
       }
 
+
       setImportResults({ imported, errors, errorDetails });
       setResultMessage(
-        `Importación completada: ${imported} items importados${errors > 0 ? `, ${errors} errores` : ''}`
+        `Importación completada: ${imported} productos procesados${errors > 0 ? `, ${errors} errores` : ''}`
       );
 
       if (imported > 0) {

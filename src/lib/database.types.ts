@@ -916,6 +916,7 @@ export interface Database {
           tenant_id: string
           fecha: string
           producto: string
+          codigo_producto: string | null
           cantidad: number
           precio: number
           proveedor: string
@@ -930,6 +931,7 @@ export interface Database {
           tenant_id: string
           fecha: string
           producto: string
+          codigo_producto?: string | null
           cantidad: number
           precio: number
           proveedor: string
@@ -944,6 +946,7 @@ export interface Database {
           tenant_id?: string
           fecha?: string
           producto?: string
+          codigo_producto?: string | null
           cantidad?: number
           precio?: number
           proveedor?: string

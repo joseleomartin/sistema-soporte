@@ -3,7 +3,7 @@
  * Simulación de costos y análisis de rentabilidad
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DollarSign, Plus, Trash2, X, Send, Package, ChevronDown, ChevronUp, Upload, Edit, BarChart3, TrendingUp } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
@@ -132,6 +132,7 @@ export function CostsModule() {
     quantity: '',
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false); // Ref para prevenir ejecuciones simultáneas
 
   useEffect(() => {
     if (tenantId) {
@@ -151,14 +152,41 @@ export function CostsModule() {
     
     const normalizedName = normalizeMaterialName(materialName);
     
-    return stockMaterials.find(m => {
-      // Normalizar ambos campos de stock_materials
+    // Primero intentar coincidencia exacta
+    let match = stockMaterials.find(m => {
       const normalizedMaterial = normalizeMaterialName(m.material || '');
       const normalizedNombre = normalizeMaterialName(m.nombre || '');
-      
-      // Priorizar búsqueda por nombre (que es lo que se importa), luego por material
       return normalizedNombre === normalizedName || normalizedMaterial === normalizedName;
     });
+    
+    if (match) return match;
+    
+    // Si no hay coincidencia exacta, buscar coincidencia parcial (contiene)
+    // Extraer palabras clave del nombre buscado
+    const searchWords = normalizedName.split(/\s+/).filter(w => w.length > 2); // Filtrar palabras muy cortas
+    
+    if (searchWords.length > 0) {
+      match = stockMaterials.find(m => {
+        const normalizedMaterial = normalizeMaterialName(m.material || '');
+        const normalizedNombre = normalizeMaterialName(m.nombre || '');
+        const combinedText = `${normalizedNombre} ${normalizedMaterial}`;
+        
+        // Verificar si todas las palabras clave están presentes
+        return searchWords.every(word => combinedText.includes(word));
+      });
+    }
+    
+    // Si aún no hay coincidencia, buscar por palabra principal (la primera palabra significativa)
+    if (!match && searchWords.length > 0) {
+      const mainWord = searchWords[0]; // Primera palabra clave
+      match = stockMaterials.find(m => {
+        const normalizedMaterial = normalizeMaterialName(m.material || '');
+        const normalizedNombre = normalizeMaterialName(m.nombre || '');
+        return normalizedNombre.includes(mainWord) || normalizedMaterial.includes(mainWord);
+      });
+    }
+    
+    return match;
   }, [stockMaterials, normalizeMaterialName]);
 
   // Función helper para buscar precios FIFO de manera flexible (prioriza búsqueda por nombre)
@@ -201,34 +229,63 @@ export function CostsModule() {
     if (!tenantId) return;
     setLoading(true);
     try {
-      // Cargar productos primero
-      const { data: prods } = await supabase
-        .from('products')
-        .select('*')
-        .eq('tenant_id', tenantId);
-      
-      setProducts(prods || []);
+      // OPTIMIZACIÓN: Cargar todo en paralelo desde el inicio
+      const [
+        productsResult,
+        employeesResult,
+        stockResult,
+        simulationResult
+      ] = await Promise.all([
+        // Cargar productos
+        supabase
+          .from('products')
+          .select('*')
+          .eq('tenant_id', tenantId),
+        // Cargar empleados
+        supabase
+          .from('employees')
+          .select('*')
+          .eq('tenant_id', tenantId),
+        // Cargar stock materials
+        supabase
+          .from('stock_materials')
+          .select('*')
+          .eq('tenant_id', tenantId),
+        // Cargar simulación activa en paralelo
+        supabase
+          .from('cost_simulations')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-      // Cargar todos los demás datos en paralelo
-      const productIds = (prods || []).map(p => p.id);
-      const [materialsResult, employeesResult, stockResult] = await Promise.all([
-        // Load all product materials at once (solo si hay productos)
+      const prods = productsResult.data || [];
+      setProducts(prods);
+      setEmployees(employeesResult.data || []);
+      setStockMaterials(stockResult.data || []);
+
+      // Cargar materiales de productos y items de simulación en paralelo
+      const productIds = prods.map(p => p.id);
+      const simulationId = simulationResult.data?.id;
+      
+      const [materialsResult, simulationItemsResult] = await Promise.all([
+        // Cargar materiales de productos
         productIds.length > 0
           ? supabase
               .from('product_materials')
               .select('*')
               .in('product_id', productIds)
           : Promise.resolve({ data: [], error: null }),
-        // Load employees
-        supabase
-          .from('employees')
-          .select('*')
-          .eq('tenant_id', tenantId),
-        // Load stock materials
-        supabase
-          .from('stock_materials')
-          .select('*')
-          .eq('tenant_id', tenantId),
+        // Cargar items de simulación si existe
+        simulationId
+          ? supabase
+              .from('cost_simulation_items')
+              .select('*, product:products(*)')
+              .eq('simulation_id', simulationId)
+              .order('created_at', { ascending: true })
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       const allMaterials = materialsResult.data || [];
@@ -243,21 +300,18 @@ export function CostsModule() {
       }
       setProductMaterials(materialsMap);
 
-      setEmployees(employeesResult.data || []);
-      setStockMaterials(stockResult.data || []);
-
-      // OPTIMIZACIÓN: Cargar precios FIFO y simulación en paralelo
+      // Cargar precios FIFO en paralelo con el procesamiento de simulación
       const stockMats = stockResult.data || [];
       const [fifoPrices] = await Promise.all([
-        // Cargar precios FIFO para todos los materiales disponibles
         getAllFIFOPrices(
           supabase,
           tenantId,
-          stockMats.map(m => ({ material: m.material, moneda: m.moneda, valor_dolar: m.valor_dolar }))
+          stockMats.map(m => ({ material: m.material || m.nombre || '', moneda: m.moneda || 'ARS', valor_dolar: m.valor_dolar || 1 }))
         ),
-        // Cargar o crear simulación activa (no esperamos su resultado aquí, pero lo ejecutamos en paralelo)
-        loadOrCreateSimulation(prods, allMaterials)
+        // Procesar simulación mientras se cargan FIFO
+        processSimulationItems(simulationId, simulationItemsResult.data || [], allMaterials)
       ]);
+      
       setFifoMaterialPrices(fifoPrices);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -266,6 +320,139 @@ export function CostsModule() {
     }
   };
 
+  // Función separada para procesar items de simulación (optimizada)
+  const processSimulationItems = async (
+    simulationId: string | undefined,
+    items: any[],
+    allMaterials: ProductMaterial[]
+  ) => {
+    if (!simulationId) {
+      // Si no hay simulación, crear una nueva
+      const { data: newSim, error: createError } = await supabase
+        .from('cost_simulations')
+        .insert({
+          tenant_id: tenantId,
+          nombre: 'Simulación de Costos',
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      setCurrentSimulationId(newSim.id);
+      setSimulationItems([]);
+      return;
+    }
+
+    setCurrentSimulationId(simulationId);
+
+    // LIMPIEZA DE DUPLICADOS: Si hay múltiples items para el mismo producto, mantener solo el más reciente
+    if (items && items.length > 0) {
+      const productItemsMap = new Map<string, typeof items>();
+      const duplicatesToDelete: string[] = [];
+
+      // Agrupar items por product_id
+      for (const item of items) {
+        const productId = item.product_id;
+        if (!productId) continue;
+
+        if (!productItemsMap.has(productId)) {
+          productItemsMap.set(productId, []);
+        }
+        productItemsMap.get(productId)!.push(item);
+      }
+
+      // Para cada producto con múltiples items, mantener solo el más reciente
+      for (const [productId, productItems] of productItemsMap.entries()) {
+        if (productItems.length > 1) {
+          // Ordenar por created_at (más reciente primero) y mantener solo el primero
+          const sortedItems = productItems.sort((a, b) => {
+            const dateA = new Date(a.created_at || 0).getTime();
+            const dateB = new Date(b.created_at || 0).getTime();
+            return dateB - dateA; // Más reciente primero
+          });
+
+          // Marcar los duplicados para eliminar (todos excepto el primero)
+          for (let i = 1; i < sortedItems.length; i++) {
+            duplicatesToDelete.push(sortedItems[i].id);
+          }
+        }
+      }
+
+      // Eliminar duplicados si hay alguno (en background, no bloquea)
+      if (duplicatesToDelete.length > 0) {
+        supabase
+          .from('cost_simulation_items')
+          .delete()
+          .in('id', duplicatesToDelete)
+          .then(() => {
+            // Recargar items después de eliminar duplicados
+            supabase
+              .from('cost_simulation_items')
+              .select('*, product:products(*)')
+              .eq('simulation_id', simulationId)
+              .order('created_at', { ascending: true })
+              .then(({ data: cleanedItems, error: reloadError }) => {
+                if (!reloadError && cleanedItems) {
+                  const materialsMap = createMaterialsMap(allMaterials);
+                  const loadedItems = convertItemsToSimulationItems(cleanedItems, materialsMap);
+                  setSimulationItems(loadedItems);
+                }
+              });
+          });
+      }
+    }
+
+    // Crear un mapa de materiales por product_id para acceso rápido
+    const materialsMap = createMaterialsMap(allMaterials);
+
+    // Convertir items a CostSimulationItem
+    const loadedItems = convertItemsToSimulationItems(items, materialsMap);
+    setSimulationItems(loadedItems);
+  };
+
+  // Función helper para crear mapa de materiales
+  const createMaterialsMap = (allMaterials: ProductMaterial[]): Record<string, ProductMaterial[]> => {
+    const materialsMap: Record<string, ProductMaterial[]> = {};
+    for (const mat of allMaterials) {
+      if (!materialsMap[mat.product_id]) {
+        materialsMap[mat.product_id] = [];
+      }
+      materialsMap[mat.product_id].push(mat);
+    }
+    return materialsMap;
+  };
+
+  // Función helper para convertir items a CostSimulationItem
+  // IMPORTANTE: Los items SIEMPRE se muestran, independientemente del estado del producto
+  // o si el producto es null. Los items de costos son independientes de las órdenes de producción.
+  const convertItemsToSimulationItems = (
+    items: any[],
+    materialsMap: Record<string, ProductMaterial[]>
+  ): CostSimulationItem[] => {
+    const loadedItems: CostSimulationItem[] = [];
+    
+    for (const item of items || []) {
+      const product = item.product as Product | null;
+      
+      // SIEMPRE agregar el item, incluso si el producto es null
+      // Los items de costos deben permanecer visibles siempre
+      const itemMaterials = product ? (materialsMap[product.id] || []) : [];
+      
+      loadedItems.push({
+        id: item.id,
+        product, // Puede ser null, pero el item se muestra igual
+        materials: itemMaterials,
+        precio_venta: item.precio_venta,
+        descuento_pct: item.descuento_pct,
+        cantidad_fabricar: item.cantidad_fabricar,
+        isManual: false,
+      });
+    }
+    
+    return loadedItems;
+  };
+
+  // Función legacy - mantener para compatibilidad pero usar processSimulationItems
   const loadOrCreateSimulation = async (allProducts: Product[], allMaterials: ProductMaterial[]) => {
     if (!tenantId) return;
 
@@ -309,6 +496,64 @@ export function CostsModule() {
 
       if (itemsError) throw itemsError;
 
+      // LIMPIEZA DE DUPLICADOS: Si hay múltiples items para el mismo producto, mantener solo el más reciente
+      if (items && items.length > 0) {
+        const productItemsMap = new Map<string, typeof items>();
+        const duplicatesToDelete: string[] = [];
+
+        // Agrupar items por product_id
+        for (const item of items) {
+          const productId = item.product_id;
+          if (!productId) continue;
+
+          if (!productItemsMap.has(productId)) {
+            productItemsMap.set(productId, []);
+          }
+          productItemsMap.get(productId)!.push(item);
+        }
+
+        // Para cada producto con múltiples items, mantener solo el más reciente
+        for (const [productId, productItems] of productItemsMap.entries()) {
+          if (productItems.length > 1) {
+            // Ordenar por created_at (más reciente primero) y mantener solo el primero
+            const sortedItems = productItems.sort((a, b) => {
+              const dateA = new Date(a.created_at || 0).getTime();
+              const dateB = new Date(b.created_at || 0).getTime();
+              return dateB - dateA; // Más reciente primero
+            });
+
+            // Marcar los duplicados para eliminar (todos excepto el primero)
+            for (let i = 1; i < sortedItems.length; i++) {
+              duplicatesToDelete.push(sortedItems[i].id);
+            }
+          }
+        }
+
+        // Eliminar duplicados si hay alguno
+        if (duplicatesToDelete.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('cost_simulation_items')
+            .delete()
+            .in('id', duplicatesToDelete);
+
+          if (deleteError) {
+            // Error silencioso - no es crítico
+          } else {
+            // Recargar items después de eliminar duplicados
+            const { data: cleanedItems, error: reloadError } = await supabase
+              .from('cost_simulation_items')
+              .select('*, product:products(*)')
+              .eq('simulation_id', simulationId)
+              .order('created_at', { ascending: true });
+
+            if (!reloadError && cleanedItems) {
+              // Usar los items limpiados
+              items.splice(0, items.length, ...cleanedItems);
+            }
+          }
+        }
+      }
+
       // Crear un mapa de materiales por product_id para acceso rápido
       const materialsMap: Record<string, ProductMaterial[]> = {};
       for (const mat of allMaterials) {
@@ -325,7 +570,30 @@ export function CostsModule() {
         if (product) {
           // Usar materiales del mapa en lugar de hacer consulta
           const itemMaterials = materialsMap[product.id] || [];
-          console.log(`Producto ${product.nombre}: materiales cargados:`, itemMaterials.map(m => ({ material_name: m.material_name, kg_por_unidad: m.kg_por_unidad })));
+          
+          // Si no hay materiales en el mapa, intentar cargarlos directamente desde la base de datos
+          if (itemMaterials.length === 0) {
+            const { data: directMaterials } = await supabase
+              .from('product_materials')
+              .select('*')
+              .eq('product_id', product.id);
+            
+            if (directMaterials && directMaterials.length > 0) {
+              // Agregar al mapa para futuras referencias
+              materialsMap[product.id] = directMaterials;
+              loadedItems.push({
+                id: item.id,
+                product,
+                materials: directMaterials,
+                precio_venta: item.precio_venta,
+                descuento_pct: item.descuento_pct,
+                cantidad_fabricar: item.cantidad_fabricar,
+                isManual: false,
+              });
+              continue;
+            }
+          }
+          
           loadedItems.push({
             id: item.id,
             product,
@@ -376,34 +644,33 @@ export function CostsModule() {
             valor_dolar: stockMat.valor_dolar || 1,
             moneda: stockMat.moneda || 'ARS',
           };
-          console.log(`Material ${mat.material_name}: precio de stock encontrado (stock: ${stockMat.kg} kg)`, {
-            costo_kilo_usd: stockMat.costo_kilo_usd,
-            valor_dolar: stockMat.valor_dolar,
-            moneda: stockMat.moneda,
-            stock_nombre: stockMat.nombre,
-            stock_material: stockMat.material
-          });
         } else {
           // Si el stock no tiene precio, intentar FIFO como fallback
-          console.warn(`Material ${mat.material_name} encontrado pero sin precio en stock. Buscando precio FIFO...`);
           const fifoPrice = findFIFOPrice(mat.material_name);
           if (fifoPrice) {
             materialPrices[mat.material_name] = fifoPrice;
-            console.log(`Material ${mat.material_name}: precio FIFO encontrado como fallback`, fifoPrice);
           } else {
-            console.warn(`Material ${mat.material_name}: NO se encontró precio ni en stock ni en FIFO`);
+            // Aunque no se encuentre el precio, agregarlo con precio 0 para que se cargue
+            materialPrices[mat.material_name] = {
+              costo_kilo_usd: 0,
+              valor_dolar: 1,
+              moneda: 'ARS' as 'ARS' | 'USD',
+            };
           }
         }
       } else {
         // Si no se encuentra en stock, intentar FIFO como última opción
-        console.warn(`Material ${mat.material_name} no encontrado en stock. Buscando precio FIFO...`);
         const fifoPrice = findFIFOPrice(mat.material_name);
         if (fifoPrice) {
           materialPrices[mat.material_name] = fifoPrice;
-          console.log(`Material ${mat.material_name}: precio FIFO encontrado`, fifoPrice);
         } else {
-          console.warn(`Material no encontrado ni en stock ni en compras FIFO: ${mat.material_name}`);
-          console.warn(`Materiales disponibles en stock:`, stockMaterials.map(m => ({ nombre: m.nombre, material: m.material, costo_kilo_usd: m.costo_kilo_usd })));
+          // Aunque no se encuentre el material, agregarlo con precio 0 para que se cargue
+          // Agregar con precio 0 para que el material se cargue de todas formas
+          materialPrices[mat.material_name] = {
+            costo_kilo_usd: 0,
+            valor_dolar: 1,
+            moneda: 'ARS' as 'ARS' | 'USD',
+          };
         }
       }
     });
@@ -720,17 +987,26 @@ export function CostsModule() {
     try {
       // Si el producto existe en la base de datos, actualizarlo
       if (selectedItem.product?.id) {
-        await supabase
+        const updateData = {
+          codigo_producto: editFormData.codigo_producto || null,
+          precio_venta: editFormData.precio_venta || null,
+          cantidad_fabricar: editFormData.cantidad_fabricar,
+          cantidad_por_hora: editFormData.cantidad_por_hora || null,
+          iibb_porcentaje: editFormData.iibb_porcentaje || null,
+          otros_costos: editFormData.otros_costos ?? 0, // Usar 0 en lugar de null si no está definido
+          updated_at: new Date().toISOString(), // Forzar actualización de updated_at
+        };
+        
+        const { data: updatedProduct, error: updateError } = await supabase
           .from('products')
-          .update({
-            codigo_producto: editFormData.codigo_producto || null,
-            precio_venta: editFormData.precio_venta || null,
-            cantidad_fabricar: editFormData.cantidad_fabricar,
-            cantidad_por_hora: editFormData.cantidad_por_hora || null,
-            iibb_porcentaje: editFormData.iibb_porcentaje || null,
-            otros_costos: editFormData.otros_costos || null,
-          })
-          .eq('id', selectedItem.product.id);
+          .update(updateData)
+          .eq('id', selectedItem.product.id)
+          .select('id, nombre, precio_venta, updated_at')
+          .single();
+        
+        if (updateError) {
+          throw updateError;
+        }
 
         // Actualizar materiales del producto
         if (editMaterials.length > 0) {
@@ -784,6 +1060,8 @@ export function CostsModule() {
     }
   };
 
+  // Función para eliminar items de costos - SOLO se llama manualmente por el usuario
+  // Los items NUNCA se eliminan automáticamente cuando se envía a producción
   const removeFromSimulation = async (id: string) => {
     try {
       // Eliminar de la base de datos
@@ -828,6 +1106,11 @@ export function CostsModule() {
       return;
     }
 
+    // Prevenir doble clic - verificar si ya hay un proceso en curso
+    if (isProcessing) {
+      return;
+    }
+
     // Mostrar modal para solicitar cantidad a producir
     setQuantityModal({
       isOpen: true,
@@ -837,6 +1120,11 @@ export function CostsModule() {
   };
 
   const handleQuantityConfirm = async () => {
+    // Prevenir múltiples ejecuciones simultáneas usando ref (más confiable que state)
+    if (processingRef.current || isProcessing) {
+      return;
+    }
+
     const quantity = parseFloat(quantityModal.quantity);
     
     if (!quantityModal.item || isNaN(quantity) || quantity <= 0) {
@@ -849,6 +1137,10 @@ export function CostsModule() {
       return;
     }
 
+    // Marcar como procesando INMEDIATAMENTE (antes de cerrar modal)
+    processingRef.current = true;
+    setIsProcessing(true);
+    
     // Cerrar modal de cantidad
     setQuantityModal({ ...quantityModal, isOpen: false });
 
@@ -888,7 +1180,14 @@ export function CostsModule() {
           type: 'warning',
           onConfirm: async () => {
             setConfirmModal({ ...confirmModal, isOpen: false });
+            // Proceder directamente - el flag ya está activo
             await proceedWithStockUpdate(itemWithQuantity);
+          },
+          onClose: () => {
+            // Si se cancela, resetear flags
+            processingRef.current = false;
+            setIsProcessing(false);
+            setConfirmModal({ ...confirmModal, isOpen: false });
           },
         });
         return;
@@ -904,336 +1203,198 @@ export function CostsModule() {
         message: `Error al enviar a producción: ${error?.message || 'Error desconocido'}`,
         type: 'error',
       });
+    } finally {
+      // Resetear flags de procesamiento
+      processingRef.current = false;
+      setIsProcessing(false);
     }
   };
 
   const proceedWithStockUpdate = async (item: CostSimulationItem) => {
-    if (!tenantId) return;
+    if (!tenantId) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: 'No se pudo identificar la empresa',
+        type: 'error',
+      });
+      return;
+    }
 
     try {
-      // Descontar materiales del stock
-      for (const mat of item.materials) {
-        const stockMat = findStockMaterial(mat.material_name);
-        if (stockMat) {
-          const kgNecesarios = mat.kg_por_unidad * item.cantidad_fabricar;
-          await supabase
-            .from('stock_materials')
-            .update({ kg: Math.max(0, stockMat.kg - kgNecesarios) })
-            .eq('id', stockMat.id);
-
-          // Registrar movimiento de inventario
-          const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
-          await supabase.from('inventory_movements').insert({
-            tenant_id: tenantId,
-            tipo: 'egreso_mp',
-            item_nombre: mat.material_name,
-            cantidad: kgNecesarios,
-            motivo: `Producción: ${productName}`,
-          });
-        }
-      }
-
-      // Validar que el producto existe
       if (!item.product) {
         throw new Error('Producto no válido');
       }
       
-      // Obtener los datos del producto base
       const productBase = item.product;
       const fechaActual = new Date().toISOString();
       
-      // Verificar si ya existe una orden pendiente para este producto
-      // Buscar por código si existe, sino por nombre
-      let existingOrder = null;
+      // Asegurar que los materiales estén cargados
+      let materialsToUse = item.materials || [];
+      if (materialsToUse.length === 0 && productBase.id) {
+        // Si no hay materiales, cargarlos desde la base de datos
+        const { data: productMaterials, error: materialsError } = await supabase
+          .from('product_materials')
+          .select('*')
+          .eq('product_id', productBase.id);
+        
+        if (!materialsError && productMaterials) {
+          materialsToUse = productMaterials;
+        }
+      }
+      
+      // PASO 1: Buscar orden pendiente existente (por código o nombre)
+      let existingOrderId: string | null = null;
       
       if (productBase.codigo_producto) {
-        const { data: orderByCode } = await supabase
+        const { data, error } = await supabase
           .from('products')
           .select('id')
           .eq('tenant_id', tenantId)
           .eq('codigo_producto', productBase.codigo_producto)
           .eq('estado', 'pendiente')
-          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
         
-        existingOrder = orderByCode;
+        if (error) throw error;
+        if (data) existingOrderId = data.id;
       }
       
-      // Si no se encontró por código, buscar por nombre
-      if (!existingOrder) {
-        const { data: orderByName } = await supabase
+      if (!existingOrderId) {
+        const { data, error } = await supabase
           .from('products')
           .select('id')
           .eq('tenant_id', tenantId)
-          .ilike('nombre', productBase.nombre)
+          .eq('nombre', productBase.nombre)
           .eq('estado', 'pendiente')
-          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
         
-        existingOrder = orderByName;
+        if (error) throw error;
+        if (data) existingOrderId = data.id;
       }
       
-      let productId: string;
-      
-      if (existingOrder) {
-        // Actualizar orden existente
-        productId = existingOrder.id;
+      // PASO 2: Si existe orden pendiente, ACTUALIZAR (sumar cantidad)
+      if (existingOrderId) {
+        const { data: currentOrder, error: fetchError } = await supabase
+          .from('products')
+          .select('cantidad_fabricar')
+          .eq('id', existingOrderId)
+          .single();
         
-        const updateData: Database['public']['Tables']['products']['Update'] = {
-          cantidad_fabricar: item.cantidad_fabricar,
-          precio_venta: item.precio_venta || null,
-          updated_at: fechaActual,
-        };
+        if (fetchError) throw fetchError;
+        
+        const cantidadAnterior = currentOrder?.cantidad_fabricar || 0;
+        const cantidadNueva = item.cantidad_fabricar;
+        const cantidadTotal = cantidadAnterior + cantidadNueva;
         
         const { error: updateError } = await supabase
           .from('products')
-          .update(updateData)
-          .eq('id', productId);
+          .update({
+            cantidad_fabricar: cantidadTotal,
+            precio_venta: item.precio_venta || null,
+            updated_at: fechaActual,
+          })
+          .eq('id', existingOrderId);
         
-        if (updateError) {
-          throw updateError;
-        }
+        if (updateError) throw updateError;
         
-        // Eliminar materiales existentes y agregar los nuevos
-        await supabase
+        // Actualizar materiales
+        const { error: deleteMaterialsError } = await supabase
           .from('product_materials')
           .delete()
-          .eq('product_id', productId);
+          .eq('product_id', existingOrderId);
         
-        if (item.materials && item.materials.length > 0) {
-          const materialsData: Database['public']['Tables']['product_materials']['Insert'][] = item.materials.map(mat => ({
-            product_id: productId,
+        if (deleteMaterialsError) throw deleteMaterialsError;
+        
+        if (materialsToUse && materialsToUse.length > 0) {
+          const materialsData = materialsToUse.map(mat => ({
+            product_id: existingOrderId,
             material_name: mat.material_name,
             kg_por_unidad: mat.kg_por_unidad,
           }));
-
-          const { error: materialsError } = await supabase
+          
+          const { error: insertMaterialsError } = await supabase
             .from('product_materials')
             .insert(materialsData);
-
-          if (materialsError) {
-            throw materialsError;
-          }
+          
+          if (insertMaterialsError) throw insertMaterialsError;
         }
+        
+        setAlertModal({
+          isOpen: true,
+          title: 'Éxito',
+          message: `Orden de producción actualizada exitosamente para: ${productBase.nombre}`,
+          type: 'success',
+        });
       } else {
-        // Crear nueva orden de producción
-        const newProductData: Database['public']['Tables']['products']['Insert'] = {
-          tenant_id: tenantId,
-          nombre: productBase.nombre,
-          codigo_producto: productBase.codigo_producto || null,
-          familia: productBase.familia,
-          medida: productBase.medida,
-          caracteristica: productBase.caracteristica,
-          peso_unidad: productBase.peso_unidad,
-          precio_venta: item.precio_venta || null,
-          cantidad_fabricar: item.cantidad_fabricar,
-          cantidad_por_hora: productBase.cantidad_por_hora,
-          iibb_porcentaje: productBase.iibb_porcentaje,
-          otros_costos: productBase.otros_costos,
-          moneda_precio: productBase.moneda_precio,
-          estado: 'pendiente', // Nueva orden siempre comienza como pendiente
-          created_at: fechaActual, // Fecha de orden de producción
-          updated_at: fechaActual,
-        };
-
+        // PASO 3: Si NO existe, CREAR nueva orden
         const { data: newProduct, error: productError } = await supabase
           .from('products')
-          .insert(newProductData)
-          .select()
+          .insert({
+            tenant_id: tenantId,
+            nombre: productBase.nombre,
+            codigo_producto: productBase.codigo_producto || null,
+            familia: productBase.familia,
+            medida: productBase.medida,
+            caracteristica: productBase.caracteristica,
+            peso_unidad: productBase.peso_unidad,
+            precio_venta: item.precio_venta || null,
+            cantidad_fabricar: item.cantidad_fabricar,
+            cantidad_por_hora: productBase.cantidad_por_hora,
+            iibb_porcentaje: productBase.iibb_porcentaje,
+            otros_costos: productBase.otros_costos,
+            moneda_precio: productBase.moneda_precio,
+            estado: 'pendiente',
+            created_at: fechaActual,
+            updated_at: fechaActual,
+          })
+          .select('id')
           .single();
-
-        if (productError) {
-          throw productError;
-        }
         
-        productId = newProduct.id;
-
-        // Copiar los materiales del producto original a la nueva orden
-        if (item.materials && item.materials.length > 0) {
-          const materialsData: Database['public']['Tables']['product_materials']['Insert'][] = item.materials.map(mat => ({
-            product_id: productId,
+        if (productError) throw productError;
+        
+        if (materialsToUse && materialsToUse.length > 0) {
+          const materialsData = materialsToUse.map(mat => ({
+            product_id: newProduct.id,
             material_name: mat.material_name,
             kg_por_unidad: mat.kg_por_unidad,
           }));
-
-          const { error: materialsError } = await supabase
+          
+          const { error: insertMaterialsError } = await supabase
             .from('product_materials')
             .insert(materialsData);
-
-          if (materialsError) {
-            throw materialsError;
-          }
+          
+          if (insertMaterialsError) throw insertMaterialsError;
         }
-      }
-
-      // Actualizar stock - Usar función interna directamente para evitar dependencias circulares
-      const itemCosts = calculateItemCostsInternal(item);
-      const { data: existingStock } = await supabase
-        .from('stock_products')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .ilike('nombre', item.product.nombre)
-        .limit(1);
-
-      if (existingStock && existingStock.length > 0) {
-        await supabase
-          .from('stock_products')
-          .update({
-            cantidad: existingStock[0].cantidad + item.cantidad_fabricar,
-            costo_unit_total: itemCosts.costo_base_unitario,
-          })
-          .eq('id', existingStock[0].id);
-      } else {
-        await supabase.from('stock_products').insert({
-          tenant_id: tenantId,
-          nombre: item.product.nombre,
-          codigo_producto: item.product.codigo_producto || null,
-          cantidad: item.cantidad_fabricar,
-          peso_unidad: item.product.peso_unidad,
-          costo_unit_total: itemCosts.costo_base_unitario,
+        
+        setAlertModal({
+          isOpen: true,
+          title: 'Éxito',
+          message: `Orden de producción creada exitosamente para: ${productBase.nombre}`,
+          type: 'success',
         });
       }
 
-      // Registrar movimiento de inventario (ingreso de producto fabricado)
-      const productNameForMovement = item.product?.nombre || item.nombre_manual || formatProductName(item.familia || '', item.medida || '', item.caracteristica || '');
-      await supabase.from('inventory_movements').insert({
-        tenant_id: tenantId,
-        tipo: 'ingreso_fab',
-        item_nombre: productNameForMovement,
-        cantidad: item.cantidad_fabricar,
-        motivo: 'Producción desde simulación de costos',
-      });
+      // IMPORTANTE: El item SIEMPRE permanece en costos - NUNCA se elimina automáticamente
+      // Se crea una orden de producción independiente
+      // Los módulos son independientes
+      // Los items de costos son permanentes y solo se eliminan manualmente por el usuario
 
-      // Calcular kg consumidos (suma de todos los materiales)
-      let kgConsumidos = 0;
-      item.materials.forEach(mat => {
-        const stockMat = findStockMaterial(mat.material_name);
-        if (stockMat) {
-          kgConsumidos += mat.kg_por_unidad * item.cantidad_fabricar;
-        }
-      });
-
-      // Registrar métrica de producción
-      const productNameForMetric = item.product?.nombre || item.nombre_manual || formatProductName(item.familia || '', item.medida || '', item.caracteristica || '');
-      
-      // Función auxiliar para validar valores numéricos requeridos
-      // LIMITE: NUMERIC(10,2) = máximo 99,999,999.99
-      const MAX_NUMERIC_VALUE = 99999999.99;
-      
-      const ensureNumber = (value: any, defaultValue: number = 0): number => {
-        if (value === null || value === undefined || isNaN(value) || !isFinite(value)) {
-          return defaultValue;
-        }
-        let num = Number(value);
-        // Limitar el valor al máximo permitido por la base de datos
-        if (Math.abs(num) > MAX_NUMERIC_VALUE) {
-          console.warn(`Valor numérico excede el límite: ${num}, limitando a ${MAX_NUMERIC_VALUE}`);
-          num = num > 0 ? MAX_NUMERIC_VALUE : -MAX_NUMERIC_VALUE;
-        }
-        // Redondear a 2 decimales para campos NUMERIC(10,2)
-        return Math.round(num * 100) / 100;
-      };
-
-      // Función auxiliar para validar valores numéricos opcionales (pueden ser null)
-      const ensureNumberOrNull = (value: any): number | null => {
-        if (value === null || value === undefined) {
-          return null;
-        }
-        let num = Number(value);
-        if (isNaN(num) || !isFinite(num)) {
-          return null;
-        }
-        // Limitar el valor al máximo permitido por la base de datos
-        if (Math.abs(num) > MAX_NUMERIC_VALUE) {
-          console.warn(`Valor numérico excede el límite: ${num}, limitando a ${MAX_NUMERIC_VALUE}`);
-          num = num > 0 ? MAX_NUMERIC_VALUE : -MAX_NUMERIC_VALUE;
-        }
-        // Redondear a 2 decimales para campos NUMERIC(10,2)
-        return Math.round(num * 100) / 100;
-      };
-
-      const productWeight = ensureNumber(item.product?.peso_unidad || item.peso_unidad, 0);
-      const cantidad = ensureNumber(item.cantidad_fabricar, 0);
-      const kgConsumidosValid = ensureNumber(kgConsumidos, 0);
-      const costoTotalMP = ensureNumber(itemCosts.costo_total_mp, 0);
-      const costoMO = ensureNumber(itemCosts.incidencia_mano_obra, 0);
-      const costoProdUnit = ensureNumber(itemCosts.costo_base_unitario, 0);
-      const precioVenta = ensureNumberOrNull(item.precio_venta);
-      const rentabilidadNeta = ensureNumberOrNull(itemCosts.rentabilidad_neta);
-      const rentabilidadTotal = rentabilidadNeta !== null && cantidad > 0
-        ? ensureNumberOrNull(rentabilidadNeta * cantidad)
-        : null;
-
-      // Preparar el objeto de inserción con validación final
-      const metricData = {
-        tenant_id: tenantId,
-        fecha: new Date().toISOString(),
-        producto: productNameForMetric || 'Producto sin nombre',
-        cantidad: cantidad,
-        peso_unidad: productWeight,
-        kg_consumidos: kgConsumidosValid,
-        costo_mp: costoTotalMP,
-        costo_mo: costoMO,
-        costo_prod_unit: costoProdUnit,
-        costo_total_mp: costoTotalMP,
-        precio_venta: precioVenta,
-        rentabilidad_neta: rentabilidadNeta,
-        rentabilidad_total: rentabilidadTotal,
-      };
-
-      // Validación final: asegurar que ningún valor exceda el límite
-      const validatedMetricData: any = {};
-      for (const [key, value] of Object.entries(metricData)) {
-        if (typeof value === 'number') {
-          if (Math.abs(value) > MAX_NUMERIC_VALUE) {
-            console.warn(`Campo ${key} excede el límite: ${value}, limitando a ${MAX_NUMERIC_VALUE}`);
-            validatedMetricData[key] = value > 0 ? MAX_NUMERIC_VALUE : -MAX_NUMERIC_VALUE;
-          } else {
-            validatedMetricData[key] = Math.round(value * 100) / 100;
-          }
-        } else {
-          validatedMetricData[key] = value;
-        }
-      }
-
-      // Log para debug (remover en producción si es necesario)
-      console.log('Insertando métrica de producción:', validatedMetricData);
-
-      const { error: insertError } = await supabase.from('production_metrics').insert(validatedMetricData);
-
-      if (insertError) {
-        console.error('Error al insertar métrica de producción:', insertError);
-        console.error('Datos que se intentaron insertar:', validatedMetricData);
-        throw insertError;
-      }
-
-      // NO eliminar el item de la simulación de costos - debe permanecer visible
-      // El producto permanece en la simulación para futuras referencias y análisis
-      // También aparecerá en el módulo de producción
-
-      setAlertModal({
-        isOpen: true,
-        title: 'Éxito',
-        message: 'Producto enviado a producción exitosamente. El producto permanece en la simulación de costos.',
-        type: 'success',
-      });
-
-      // Recargar stock y materiales
-      const { data: updatedStock } = await supabase
-        .from('stock_materials')
-        .select('*')
-        .eq('tenant_id', tenantId);
-      setStockMaterials(updatedStock || []);
+      // Recargar datos para reflejar cambios
+      await loadData();
     } catch (error: any) {
-      console.error('Error sending to production:', error);
+      console.error('Error en proceedWithStockUpdate:', error);
       setAlertModal({
         isOpen: true,
         title: 'Error',
         message: `Error al enviar a producción: ${error?.message || 'Error desconocido'}`,
         type: 'error',
       });
+    } finally {
+      // Resetear flag de procesamiento al finalizar
+      processingRef.current = false;
+      setIsProcessing(false);
     }
   };
 
@@ -1518,7 +1679,12 @@ export function CostsModule() {
         <>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-4 md:mb-6">
             <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos en Simulación</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos en Simulación</h2>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                  {simulationItems.length} {simulationItems.length === 1 ? 'producto' : 'productos'}
+                </span>
+              </div>
             </div>
             {/* Simulation Items - Mobile Cards View */}
             {isMobile ? (
@@ -1747,8 +1913,11 @@ export function CostsModule() {
       {showImportModal && (
         <BulkImportCostsModal
           onClose={() => setShowImportModal(false)}
-          onSuccess={() => {
-            loadData();
+          onSuccess={async () => {
+            // Esperar un momento para asegurar que los datos se hayan guardado
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Recargar todos los datos para asegurar que los materiales se carguen correctamente
+            await loadData();
             setShowImportModal(false);
           }}
         />
@@ -2126,9 +2295,10 @@ export function CostsModule() {
                 </button>
                 <button
                   onClick={handleQuantityConfirm}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors shadow-sm hover:shadow-md"
+                  disabled={isProcessing}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Confirmar
+                  {isProcessing ? 'Procesando...' : 'Confirmar'}
                 </button>
               </div>
             </div>

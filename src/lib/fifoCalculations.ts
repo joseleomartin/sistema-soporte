@@ -228,7 +228,6 @@ async function getFIFOPriceInfo(
   }
 
   // Último fallback: devolver 0 si no se encuentra nada
-  console.warn(`No se encontró precio para material: ${materialName} (materialField: ${materialField})`);
   return { precioARS: 0, moneda: 'ARS', valorDolar: 1 };
 }
 

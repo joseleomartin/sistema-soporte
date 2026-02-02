@@ -99,24 +99,58 @@ export function calculateMaterialCost(
     // Si no se encuentra, intentar búsqueda flexible (normalizada)
     if (!precio) {
       const normalizedName = normalizeMaterialName(material.material_name);
-      // Buscar en todas las claves del mapa
+      // Primero buscar coincidencia exacta normalizada
       for (const [key, value] of Object.entries(materialPrices)) {
         if (normalizeMaterialName(key) === normalizedName) {
           precio = value;
           break;
         }
       }
+      
+      // Si no hay coincidencia exacta, buscar coincidencia parcial
+      if (!precio) {
+        const searchWords = normalizedName.split(/\s+/).filter(w => w.length > 2);
+        if (searchWords.length > 0) {
+          for (const [key, value] of Object.entries(materialPrices)) {
+            const normalizedKey = normalizeMaterialName(key);
+            // Verificar si todas las palabras clave están presentes
+            if (searchWords.every(word => normalizedKey.includes(word))) {
+              precio = value;
+              break;
+            }
+          }
+        }
+        
+        // Si aún no hay coincidencia, buscar por palabra principal
+        if (!precio && searchWords.length > 0) {
+          const mainWord = searchWords[0];
+          for (const [key, value] of Object.entries(materialPrices)) {
+            const normalizedKey = normalizeMaterialName(key);
+            if (normalizedKey.includes(mainWord) || mainWord.includes(normalizedKey)) {
+              precio = value;
+              break;
+            }
+          }
+        }
+      }
     }
 
     if (!precio) {
-      console.warn(`Precio no encontrado para material: "${material.material_name}". Materiales disponibles en materialPrices:`, Object.keys(materialPrices));
-      continue;
+      // Usar precio 0 en lugar de omitir el material
+      precio = {
+        costo_kilo_usd: 0,
+        valor_dolar: 1,
+        moneda: 'ARS' as 'ARS' | 'USD',
+      };
     }
 
-    // Verificar que el precio sea válido
+    // Si el precio es 0 o inválido, usar 0 pero continuar (no omitir el material)
     if (!precio.costo_kilo_usd || precio.costo_kilo_usd <= 0) {
-      console.warn(`Material "${material.material_name}" tiene costo_kilo_usd inválido (${precio.costo_kilo_usd}). Se omitirá del cálculo.`);
-      continue;
+      precio = {
+        costo_kilo_usd: 0,
+        valor_dolar: precio.valor_dolar || 1,
+        moneda: precio.moneda || 'ARS',
+      };
     }
 
     const kgPorUnidad = material.kg_por_unidad;
@@ -125,7 +159,6 @@ export function calculateMaterialCost(
     if (precio.moneda === 'USD') {
       const valorDolar = valorDolarCostos && valorDolarCostos > 0 ? valorDolarCostos : precio.valor_dolar;
       if (!valorDolar || valorDolar <= 0) {
-        console.warn(`Material "${material.material_name}" tiene valor_dolar inválido (${valorDolar}). Se omitirá del cálculo.`);
         continue;
       }
       costoPesos = precio.costo_kilo_usd * valorDolar;
@@ -135,10 +168,8 @@ export function calculateMaterialCost(
 
     const costoMaterial = kgPorUnidad * costoPesos;
     total += costoMaterial;
-    console.log(`Material ${material.material_name}: ${kgPorUnidad} kg/unidad × $${costoPesos.toFixed(2)}/kg = $${costoMaterial.toFixed(2)}`);
   }
 
-  console.log(`Costo total de materiales: $${total.toFixed(2)}`);
   return total;
 }
 

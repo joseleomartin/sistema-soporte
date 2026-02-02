@@ -1543,14 +1543,67 @@ export function PresupuestoModule() {
               <td className="p-2 font-bold text-xs text-gray-900 dark:text-white sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 z-10 border-r border-gray-200 dark:border-slate-600">
                 Superávit | Déficit
               </td>
-              <td className="p-2"></td>
-              <td className="p-2"></td>
-              {MONTHS.map(month => (
-                <td key={month.num} className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white">
-                  {formatNumber(totals.superavitByMonth[month.num] || 0)}
-                </td>
-              ))}
-              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-yellow-100 dark:bg-yellow-900/30">
+              <td className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border-r-2 border-gray-300 dark:border-slate-600"></td>
+              {MONTHS.map(month => {
+                // Calcular superávit/déficit usando la misma lógica que totals
+                let ingresosPresupuesto = 0;
+                let egresosPresupuesto = 0;
+                let ingresosReal = 0;
+                let egresosReal = 0;
+                
+                concepts.forEach(concept => {
+                  if (concept.is_total) return;
+                  
+                  const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
+                  const presupuestoAjustado = calculateValueWithIPC(concept.id, month.num, presupuestoBase);
+                  const valueCurrentMonth = values.find(v => v.concept_id === concept.id && v.month === month.num);
+                  const real = valueCurrentMonth?.real !== null && valueCurrentMonth?.real !== undefined 
+                    ? valueCurrentMonth.real 
+                    : presupuestoAjustado;
+                  
+                  if (concept.concept_type === 'ingreso') {
+                    ingresosPresupuesto += presupuestoAjustado;
+                    ingresosReal += real;
+                  } else {
+                    egresosPresupuesto += Math.abs(presupuestoAjustado);
+                    egresosReal += Math.abs(real);
+                  }
+                });
+                
+                const superavitPresupuesto = ingresosPresupuesto - egresosPresupuesto;
+                const superavitReal = ingresosReal - egresosReal;
+                const diferenciaPorcentual = superavitPresupuesto !== 0
+                  ? ((superavitReal - superavitPresupuesto) / Math.abs(superavitPresupuesto)) * 100
+                  : null;
+                
+                return (
+                  <React.Fragment key={month.num}>
+                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-slate-600 bg-yellow-50 dark:bg-yellow-900/20">
+                      {formatNumber(superavitPresupuesto)}
+                    </td>
+                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-yellow-50 dark:bg-yellow-900/20">
+                      {formatNumber(superavitReal)}
+                    </td>
+                    <td className="p-1.5 text-right font-bold bg-yellow-50 dark:bg-yellow-900/20 border-r border-gray-300 dark:border-slate-600">
+                      <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                        diferenciaPorcentual === null 
+                          ? 'text-gray-400 dark:text-gray-500'
+                          : diferenciaPorcentual > 0
+                          ? 'text-green-800 dark:text-green-300 bg-green-200 dark:bg-green-800/30'
+                          : diferenciaPorcentual < 0
+                          ? 'text-red-800 dark:text-red-300 bg-red-200 dark:bg-red-800/30'
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {diferenciaPorcentual !== null 
+                          ? `${diferenciaPorcentual >= 0 ? '+' : ''}${diferenciaPorcentual.toFixed(2)}%`
+                          : '-'
+                        }
+                      </div>
+                    </td>
+                  </React.Fragment>
+                );
+              })}
+              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-yellow-100 dark:bg-yellow-900/30 border-l-2 border-gray-400 dark:border-slate-500">
                 {formatNumber(totals.acumulado)}
               </td>
             </tr>
@@ -1560,20 +1613,73 @@ export function PresupuestoModule() {
               <td className="p-2 font-bold text-xs text-gray-900 dark:text-white sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 border-r border-gray-200 dark:border-slate-600">
                 Acumulado
               </td>
-              <td className="p-2"></td>
-              <td className="p-2"></td>
+              <td className="p-2 bg-blue-50 dark:bg-blue-900/20 border-r-2 border-gray-300 dark:border-slate-600"></td>
               {MONTHS.map((month, index) => {
-                const acumulado = MONTHS.slice(0, index + 1).reduce(
-                  (sum, m) => sum + (totals.superavitByMonth[m.num] || 0),
-                  0
-                );
+                // Calcular acumulado usando la misma lógica que totals
+                let acumuladoPresupuesto = 0;
+                let acumuladoReal = 0;
+                
+                MONTHS.slice(0, index + 1).forEach(m => {
+                  let ingresosPresupuesto = 0;
+                  let egresosPresupuesto = 0;
+                  let ingresosReal = 0;
+                  let egresosReal = 0;
+                  
+                  concepts.forEach(concept => {
+                    if (concept.is_total) return;
+                    
+                    const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
+                    const presupuestoAjustado = calculateValueWithIPC(concept.id, m.num, presupuestoBase);
+                    const valueCurrentMonth = values.find(v => v.concept_id === concept.id && v.month === m.num);
+                    const real = valueCurrentMonth?.real !== null && valueCurrentMonth?.real !== undefined 
+                      ? valueCurrentMonth.real 
+                      : presupuestoAjustado;
+                    
+                    if (concept.concept_type === 'ingreso') {
+                      ingresosPresupuesto += presupuestoAjustado;
+                      ingresosReal += real;
+                    } else {
+                      egresosPresupuesto += Math.abs(presupuestoAjustado);
+                      egresosReal += Math.abs(real);
+                    }
+                  });
+                  
+                  acumuladoPresupuesto += (ingresosPresupuesto - egresosPresupuesto);
+                  acumuladoReal += (ingresosReal - egresosReal);
+                });
+                
+                const diferenciaPorcentual = acumuladoPresupuesto !== 0
+                  ? ((acumuladoReal - acumuladoPresupuesto) / Math.abs(acumuladoPresupuesto)) * 100
+                  : null;
+                
                 return (
-                  <td key={month.num} className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white">
-                    {formatNumber(acumulado)}
-                  </td>
+                  <React.Fragment key={month.num}>
+                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-slate-600 bg-blue-50 dark:bg-blue-900/20">
+                      {formatNumber(acumuladoPresupuesto)}
+                    </td>
+                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-blue-50 dark:bg-blue-900/20">
+                      {formatNumber(acumuladoReal)}
+                    </td>
+                    <td className="p-1.5 text-right font-bold bg-blue-50 dark:bg-blue-900/20 border-r border-gray-300 dark:border-slate-600">
+                      <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                        diferenciaPorcentual === null 
+                          ? 'text-gray-400 dark:text-gray-500'
+                          : diferenciaPorcentual > 0
+                          ? 'text-green-800 dark:text-green-300 bg-green-200 dark:bg-green-800/30'
+                          : diferenciaPorcentual < 0
+                          ? 'text-red-800 dark:text-red-300 bg-red-200 dark:bg-red-800/30'
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {diferenciaPorcentual !== null 
+                          ? `${diferenciaPorcentual >= 0 ? '+' : ''}${diferenciaPorcentual.toFixed(2)}%`
+                          : '-'
+                        }
+                      </div>
+                    </td>
+                  </React.Fragment>
                 );
               })}
-              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/30">
+              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/30 border-l-2 border-gray-400 dark:border-slate-500">
                 {formatNumber(totals.acumulado)}
               </td>
             </tr>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, Search, CheckCircle, AlertCircle, Building2, X, Plus } from 'lucide-react';
+import { Users, Search, CheckCircle, AlertCircle, Building2, X, Plus, Trash2 } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -201,6 +201,46 @@ export function UserManagement() {
     }
   };
 
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!profile || profile.role !== 'admin') {
+      setMessage({ type: 'error', text: 'Solo los administradores pueden eliminar usuarios' });
+      setTimeout(() => setMessage(null), 5000);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Estás seguro de que deseas eliminar al usuario "${userName}"?\n\nEsta acción eliminará el usuario y forzará su desconexión completa. Los datos históricos se mantendrán.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      console.log('🗑️ Intentando eliminar usuario:', { userId, userName });
+      
+      const { error } = await supabase.rpc('delete_user', {
+        user_uuid: userId
+      });
+
+      if (error) {
+        console.error('❌ Error al eliminar usuario:', error);
+        throw error;
+      }
+
+      console.log('✅ Usuario eliminado exitosamente');
+      setMessage({ type: 'success', text: 'Usuario eliminado correctamente. Se ha forzado su desconexión.' });
+      setTimeout(() => setMessage(null), 5000);
+      
+      await loadUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.message || 'Error al eliminar el usuario. Verifica tus permisos.' 
+      });
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 sm:h-64">
@@ -264,12 +304,17 @@ export function UserManagement() {
                 <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Fecha de Registro
                 </th>
+                {profile?.role === 'admin' && (
+                  <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 lg:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={profile?.role === 'admin' ? 6 : 5} className="px-4 lg:px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                     <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-400 dark:text-gray-600" />
                     <p className="text-sm sm:text-base">No se encontraron usuarios</p>
                   </td>
@@ -335,6 +380,18 @@ export function UserManagement() {
                     <td className="px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                       {new Date(user.created_at).toLocaleDateString('es-ES')}
                     </td>
+                    {profile?.role === 'admin' && (
+                      <td className="px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.full_name)}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Eliminar usuario"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="hidden lg:inline">Eliminar</span>
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -418,6 +475,19 @@ export function UserManagement() {
                     {new Date(user.created_at).toLocaleDateString('es-ES')}
                   </div>
                 </div>
+
+                {profile?.role === 'admin' && (
+                  <div>
+                    <button
+                      onClick={() => handleDeleteUser(user.id, user.full_name)}
+                      className="w-full mt-2 inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800"
+                      title="Eliminar usuario"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar Usuario
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))

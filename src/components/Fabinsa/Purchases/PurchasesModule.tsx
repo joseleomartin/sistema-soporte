@@ -44,6 +44,7 @@ interface MaterialItem {
 interface ProductItem {
   id: string;
   producto: string;
+  codigo_producto: string | null;
   cantidad: number;
   precio: number;
   moneda: 'ARS' | 'USD';
@@ -85,6 +86,7 @@ export function PurchasesModule() {
   const [productForm, setProductForm] = useState({
     fecha: new Date().toISOString().split('T')[0],
     producto: '',
+    codigo_producto: null as string | null,
     cantidad: '',
     precio: '',
     proveedor: '',
@@ -113,11 +115,18 @@ export function PurchasesModule() {
   const [showMaterialDropdown, setShowMaterialDropdown] = useState(false);
   const materialInputRef = useRef<HTMLInputElement>(null);
 
+  // Productos para dropdown (desde la tabla products, igual que en costos)
+  type Product = Database['public']['Tables']['products']['Row'];
+  const [availableProducts, setAvailableProducts] = useState<Array<{ id: string; nombre: string; codigo_producto: string | null }>>([]);
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const productInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (tenantId) {
       loadPurchases();
       loadSuppliers();
       loadStockMaterials();
+      loadAvailableProducts();
     }
   }, [tenantId]);
 
@@ -208,16 +217,58 @@ export function PurchasesModule() {
         }
         acc[purchase.order_id].items.push(purchase);
         
-        // purchase.total siempre es el subtotal sin IVA
+        // purchase.total ahora está en la moneda original (USD si es USD, ARS si es ARS)
+        // Pero necesitamos verificar si el total guardado está en la moneda correcta
+        let totalSinIva = purchase.total;
+        
+        // Si la moneda es USD, verificar si el total está en ARS (compras antiguas)
+        if (purchase.moneda === 'USD' && purchase.valor_dolar) {
+          const totalEsperado = purchase.precio * purchase.cantidad;
+          const totalEsperadoARS = totalEsperado * purchase.valor_dolar;
+          
+          // Si el total guardado está más cerca del total esperado en ARS que del total esperado en USD
+          // o si el total es mucho mayor que el esperado en USD (más de 10 veces)
+          const distanciaAUSD = Math.abs(purchase.total - totalEsperado);
+          const distanciaAARS = Math.abs(purchase.total - totalEsperadoARS);
+          
+          if (distanciaAARS < distanciaAUSD || purchase.total > totalEsperado * 100) {
+            // Convertir de ARS a USD
+            console.log('Corrigiendo total de ARS a USD:', {
+              producto: purchase.producto,
+              total_guardado: purchase.total,
+              total_esperado_usd: totalEsperado,
+              total_esperado_ars: totalEsperadoARS,
+              total_corregido: purchase.total / purchase.valor_dolar
+            });
+            totalSinIva = purchase.total / purchase.valor_dolar;
+          }
+        }
+        
         const tieneIva = purchase.tiene_iva || false;
         const ivaPct = purchase.iva_pct || 0;
-        const totalSinIva = purchase.total;
         const ivaMonto = tieneIva ? totalSinIva * (ivaPct / 100) : 0;
-        const totalConIva = totalSinIva + ivaMonto;
+        const totalConIva = totalSinIva + ivaMonto; // En la moneda original
         
-        acc[purchase.order_id].total_compra += totalConIva;
-        acc[purchase.order_id].subtotal_sin_iva += totalSinIva;
-        acc[purchase.order_id].total_iva += ivaMonto;
+        // Convertir a ARS para sumar correctamente
+        const totalConIvaARS = purchase.moneda === 'USD' && purchase.valor_dolar
+          ? totalConIva * purchase.valor_dolar
+          : totalConIva;
+        const totalSinIvaARS = purchase.moneda === 'USD' && purchase.valor_dolar
+          ? totalSinIva * purchase.valor_dolar
+          : totalSinIva;
+        const ivaMontoARS = purchase.moneda === 'USD' && purchase.valor_dolar
+          ? ivaMonto * purchase.valor_dolar
+          : ivaMonto;
+        
+        acc[purchase.order_id].total_compra += totalConIvaARS; // Sumar en ARS
+        acc[purchase.order_id].subtotal_sin_iva += totalSinIvaARS; // Sumar en ARS
+        acc[purchase.order_id].total_iva += ivaMontoARS; // Sumar en ARS
+        
+        // Guardar información de moneda para mostrar correctamente
+        if (!acc[purchase.order_id].moneda) {
+          acc[purchase.order_id].moneda = purchase.moneda;
+          acc[purchase.order_id].valor_dolar = purchase.valor_dolar;
+        }
         if (tieneIva) {
           acc[purchase.order_id].tiene_iva = true;
           // Si ya hay un iva_pct y es diferente, mantener el mayor o el primero encontrado
@@ -268,6 +319,32 @@ export function PurchasesModule() {
     }
   };
 
+  const loadAvailableProducts = async () => {
+    if (!tenantId) return;
+    try {
+      // Cargar productos desde la tabla products (igual que en el módulo de costos)
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, nombre, codigo_producto')
+        .eq('tenant_id', tenantId)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+
+      // Mapear productos al formato esperado
+      const products: Array<{ id: string; nombre: string; codigo_producto: string | null }> = 
+        (data || []).map((prod: Product) => ({
+          id: prod.id,
+          nombre: prod.nombre,
+          codigo_producto: prod.codigo_producto || null,
+        }));
+
+      setAvailableProducts(products);
+    } catch (error) {
+      console.error('Error loading available products:', error);
+    }
+  };
+
   const loadSuppliers = async () => {
     if (!tenantId) return;
     try {
@@ -300,6 +377,15 @@ export function PurchasesModule() {
     return stockMaterials.filter(m => 
       (m.nombre && m.nombre.toLowerCase().includes(term)) ||
       (m.material && m.material.toLowerCase().includes(term))
+    );
+  };
+
+  const getFilteredProducts = (searchTerm: string) => {
+    if (!searchTerm) return availableProducts;
+    const term = searchTerm.toLowerCase();
+    return availableProducts.filter(p => 
+      p.nombre.toLowerCase().includes(term) ||
+      (p.codigo_producto && p.codigo_producto.toLowerCase().includes(term))
     );
   };
 
@@ -561,6 +647,7 @@ export function PurchasesModule() {
     setProductForm({
       fecha: fechaStr,
       producto: '',
+      codigo_producto: null,
       cantidad: '',
       precio: '',
       proveedor: firstItem.proveedor || '',
@@ -576,6 +663,7 @@ export function PurchasesModule() {
       return {
         id: item.id,
         producto: item.producto,
+        codigo_producto: item.codigo_producto || null,
         cantidad: item.cantidad,
         precio: precioUnitario,
         moneda: item.moneda || 'ARS',
@@ -683,13 +771,26 @@ export function PurchasesModule() {
     const precio = parseFloat(productForm.precio);
     const valorDolar = productForm.moneda === 'USD' ? parseFloat(productForm.valor_dolar) : 1;
     const precioARS = productForm.moneda === 'USD' ? precio * valorDolar : precio;
-    const total = cantidad * precioARS;
+    // Calcular el total en la moneda original (USD si es USD, ARS si es ARS)
+    const total = cantidad * precio; // Total en la moneda original
+    const totalARS = cantidad * precioARS; // Total en ARS (para referencia)
 
     // Verificar si ya existe el producto en la lista
     const existingItem = productItems.find(item => item.producto === productForm.producto);
     if (existingItem) {
       alert('Este producto ya está en la lista. Elimínelo primero si desea cambiarlo.');
       return;
+    }
+
+    // Si no hay código de producto pero el nombre coincide con un producto disponible, buscar el código
+    let codigoProducto = productForm.codigo_producto;
+    if (!codigoProducto) {
+      const matchedProduct = availableProducts.find(
+        p => p.nombre.toLowerCase().trim() === productForm.producto.toLowerCase().trim()
+      );
+      if (matchedProduct) {
+        codigoProducto = matchedProduct.codigo_producto;
+      }
     }
 
     // Calcular total con IVA si aplica
@@ -701,6 +802,7 @@ export function PurchasesModule() {
     const newItem: ProductItem = {
       id: Date.now().toString(),
       producto: productForm.producto,
+      codigo_producto: codigoProducto,
       cantidad,
       precio,
       moneda: productForm.moneda,
@@ -718,6 +820,7 @@ export function PurchasesModule() {
     setProductForm({
       ...productForm,
       producto: '',
+      codigo_producto: null,
       cantidad: '',
       precio: '',
       moneda: 'ARS',
@@ -791,12 +894,17 @@ export function PurchasesModule() {
 
       // Crear registros de compra para cada producto con el mismo order_id
       for (const item of productItems) {
-        const data: PurchaseProductInsert & { order_id?: string; estado?: string; tiene_iva?: boolean; iva_pct?: number } = {
+        // Si la moneda es USD, guardar el precio original en USD, no el convertido a ARS
+        // El precio en ARS se calculará cuando sea necesario usando precio * valor_dolar
+        const precioAGuardar = item.moneda === 'USD' ? item.precio : item.precioARS;
+        
+        const data: PurchaseProductInsert & { order_id?: string; estado?: string; tiene_iva?: boolean; iva_pct?: number; codigo_producto?: string | null } = {
           tenant_id: tenantId,
           fecha,
           producto: item.producto,
+          codigo_producto: item.codigo_producto || null,
           cantidad: item.cantidad,
-          precio: item.precioARS,
+          precio: precioAGuardar,
           proveedor,
           moneda: item.moneda,
           valor_dolar: item.moneda === 'USD' ? item.valor_dolar : null,
@@ -807,7 +915,30 @@ export function PurchasesModule() {
           iva_pct: item.iva_pct,
         } as any;
 
-        await supabase.from('purchases_products').insert(data);
+        console.log('Insertando compra de producto:', {
+          producto: item.producto,
+          codigo_producto: item.codigo_producto,
+          data: data
+        });
+
+        const { error: insertError } = await supabase.from('purchases_products').insert(data);
+        
+        if (insertError) {
+          // Si el error es porque la columna codigo_producto no existe, intentar sin ese campo
+          if (insertError.message?.includes('codigo_producto') || insertError.message?.includes('column') && insertError.message?.includes('codigo_producto')) {
+            console.warn('Columna codigo_producto no existe, intentando insertar sin ese campo');
+            const dataWithoutCodigo = { ...data };
+            delete (dataWithoutCodigo as any).codigo_producto;
+            const { error: retryError } = await supabase.from('purchases_products').insert(dataWithoutCodigo);
+            if (retryError) {
+              console.error('Error inserting purchase (retry):', retryError);
+              throw retryError;
+            }
+          } else {
+            console.error('Error inserting purchase:', insertError);
+            throw insertError;
+          }
+        }
         
         // NO actualizar stock automáticamente - se actualizará cuando se complete el control de recepción
       }
@@ -819,8 +950,8 @@ export function PurchasesModule() {
     } catch (error: any) {
       console.error('Error saving purchase:', error);
       const errorMessage = error?.message || 'Error al guardar la compra';
-      if (errorMessage.includes('column') || errorMessage.includes('does not exist') || errorMessage.includes('tiene_iva') || errorMessage.includes('iva_pct') || errorMessage.includes('estado')) {
-        alert('Error: Las migraciones de base de datos no se han ejecutado. Por favor, ejecuta las migraciones en Supabase:\n\n1. 20250120000050_add_purchase_status_and_reception_control.sql\n2. 20250120000051_add_iva_to_purchases.sql\n\nError: ' + errorMessage);
+      if (errorMessage.includes('column') || errorMessage.includes('does not exist') || errorMessage.includes('codigo_producto') || errorMessage.includes('tiene_iva') || errorMessage.includes('iva_pct') || errorMessage.includes('estado')) {
+        alert('Error: Las migraciones de base de datos no se han ejecutado. Por favor, ejecuta las migraciones en Supabase:\n\n1. 20250120000050_add_purchase_status_and_reception_control.sql\n2. 20250120000051_add_iva_to_purchases.sql\n3. 20250127000003_add_codigo_producto_to_purchases_products.sql\n\nError: ' + errorMessage);
       } else {
         alert(`Error al guardar la compra: ${errorMessage}`);
       }
@@ -1057,6 +1188,20 @@ export function PurchasesModule() {
           motivo: 'Compra de materia prima',
         });
       } else {
+        // Buscar el código del producto desde la tabla products
+        let codigoProducto: string | null = null;
+        const { data: productData } = await supabase
+          .from('products')
+          .select('codigo_producto')
+          .eq('tenant_id', tenantId)
+          .ilike('nombre', itemName)
+          .limit(1)
+          .maybeSingle();
+        
+        if (productData && productData.codigo_producto) {
+          codigoProducto = productData.codigo_producto;
+        }
+
         // Buscar si existe en resale_products
         const { data: existing } = await supabase
           .from('resale_products')
@@ -1070,20 +1215,28 @@ export function PurchasesModule() {
 
         if (existing && existing.length > 0) {
           // Actualizar cantidad existente
+          const updateData: any = {
+            cantidad: existing[0].cantidad + quantity,
+            costo_unitario: costoUnitario,
+            costo_unitario_final: costoFinal,
+            moneda: currency,
+            valor_dolar: currency === 'USD' ? dollarValue : null,
+          };
+          
+          // Actualizar código si se encontró y el existente no tiene código
+          if (codigoProducto && !existing[0].codigo_producto) {
+            updateData.codigo_producto = codigoProducto;
+          }
+          
           await supabase
             .from('resale_products')
-            .update({
-              cantidad: existing[0].cantidad + quantity,
-              costo_unitario: costoUnitario,
-              costo_unitario_final: costoFinal,
-              moneda: currency,
-              valor_dolar: currency === 'USD' ? dollarValue : null,
-            })
+            .update(updateData)
             .eq('id', existing[0].id);
         } else {
           // Crear nuevo registro
           await supabase.from('resale_products').insert({
             tenant_id: tenantId,
+            codigo_producto: codigoProducto,
             nombre: itemName,
             cantidad: quantity,
             costo_unitario: costoUnitario,
@@ -1128,6 +1281,7 @@ export function PurchasesModule() {
     setProductForm({
       fecha: new Date().toISOString().split('T')[0],
       producto: '',
+      codigo_producto: null,
       cantidad: '',
       precio: '',
       proveedor: '',
@@ -1568,7 +1722,16 @@ export function PurchasesModule() {
                                   ${formatNumber(order.subtotal_sin_iva)}
                                 </td>
                                 <td className="px-2 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                                  ${formatNumber(order.total_compra)}
+                                  {order.moneda === 'USD' && order.valor_dolar ? (
+                                    <>
+                                      ${formatNumber(order.total_compra_usd || order.total_compra / order.valor_dolar)} {order.moneda}
+                                      <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        (${formatNumber(order.total_compra)} ARS)
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>${formatNumber(order.total_compra)} ARS</>
+                                  )}
                                 </td>
                                 <td className="px-2 py-3 text-sm">
                                   <div className="flex flex-col gap-1">
@@ -1991,13 +2154,51 @@ export function PurchasesModule() {
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                       Producto {productItems.length === 0 ? '*' : ''}
                     </label>
-                    <input
-                      type="text"
-                      required={productItems.length === 0}
-                      value={productForm.producto}
-                      onChange={(e) => setProductForm({ ...productForm, producto: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                    />
+                    <div className="relative">
+                      <input
+                        ref={productInputRef}
+                        type="text"
+                        required={productItems.length === 0}
+                        value={productForm.producto}
+                        onChange={(e) => {
+                          const selectedProductName = e.target.value;
+                          setProductForm({ ...productForm, producto: selectedProductName });
+                          setShowProductDropdown(selectedProductName.length > 0 && getFilteredProducts(selectedProductName).length > 0);
+                        }}
+                        onFocus={() => {
+                          if (getFilteredProducts(productForm.producto).length > 0) {
+                            setShowProductDropdown(true);
+                          }
+                        }}
+                        onBlur={() => {
+                          // Delay para permitir que el click en el dropdown funcione
+                          setTimeout(() => setShowProductDropdown(false), 200);
+                        }}
+                        className="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Escribe o selecciona un producto"
+                      />
+                      <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                      {showProductDropdown && getFilteredProducts(productForm.producto).length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto top-full">
+                          {getFilteredProducts(productForm.producto).map((prod) => (
+                            <button
+                              key={prod.id}
+                              type="button"
+                              onClick={() => {
+                                setProductForm({ ...productForm, producto: prod.nombre, codigo_producto: prod.codigo_producto });
+                                setShowProductDropdown(false);
+                                productInputRef.current?.blur();
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-600 focus:bg-blue-50 dark:focus:bg-slate-600 focus:outline-none text-gray-900 dark:text-white"
+                            >
+                              <div className="font-medium">
+                                {prod.codigo_producto ? `${prod.codigo_producto} - ${prod.nombre}` : prod.nombre}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
@@ -2074,7 +2275,9 @@ export function PurchasesModule() {
                           <div key={item.id} className="bg-white dark:bg-slate-600 p-3 rounded-md">
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <div className="font-medium text-gray-900 dark:text-white">{item.producto}</div>
+                                <div className="font-medium text-gray-900 dark:text-white">
+                                  {item.codigo_producto ? `${item.codigo_producto} - ${item.producto}` : item.producto}
+                                </div>
                                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                   Cantidad: {item.cantidad} u | Precio: ${formatNumber(item.precio)} ({item.moneda})
                                   {item.moneda === 'USD' && item.valor_dolar && (
@@ -2249,7 +2452,16 @@ export function PurchasesModule() {
                                   ${formatNumber(order.subtotal_sin_iva)}
                                 </td>
                                 <td className="px-2 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 text-xs">
-                                  ${formatNumber(order.total_compra)}
+                                  {order.moneda === 'USD' && order.valor_dolar ? (
+                                    <>
+                                      ${formatNumber(order.total_compra_usd || order.total_compra / order.valor_dolar)} {order.moneda}
+                                      <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        (${formatNumber(order.total_compra)} ARS)
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>${formatNumber(order.total_compra)} ARS</>
+                                  )}
                                 </td>
                                 <td className="px-2 py-3 text-sm">
                                   <div className="flex flex-col gap-1">
@@ -2336,11 +2548,10 @@ export function PurchasesModule() {
                               </tr>
                               {/* Filas de productos (si está expandida) */}
                               {isExpanded && order.items.map((item: any) => {
-                                // El precio guardado es el precio unitario en ARS
-                                // Si la moneda original era USD, necesitamos convertir de vuelta a USD
-                                const precioUnitarioMostrar = item.moneda === 'USD' && item.valor_dolar 
-                                  ? item.precio / item.valor_dolar 
-                                  : item.precio;
+                                // El precio guardado ahora es el precio original en la moneda de la compra
+                                // Si la moneda es USD, item.precio ya está en USD
+                                // Si la moneda es ARS, item.precio está en ARS
+                                const precioUnitarioMostrar = item.precio;
                                 
                                 // Calcular IVA para este item
                                 const tieneIva = item.tiene_iva || false;
@@ -2353,7 +2564,7 @@ export function PurchasesModule() {
                                   <tr key={item.id} className="bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600">
                                     <td className="px-2 py-2 text-sm text-gray-600 dark:text-gray-400"></td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white pl-6 text-xs">
-                                      • {item.producto}
+                                      • {item.codigo_producto ? `${item.codigo_producto} - ${item.producto}` : item.producto}
                                     </td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">{item.cantidad} u</td>
                                     <td className="px-2 py-2 text-sm text-gray-900 dark:text-white text-xs">
@@ -2399,7 +2610,7 @@ export function PurchasesModule() {
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
                               {new Date(purchase.fecha).toLocaleDateString('es-AR')}
                             </td>
-                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.producto}</td>
+                            <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.codigo_producto ? `${purchase.codigo_producto} - ${purchase.producto}` : purchase.producto}</td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">{purchase.cantidad} u</td>
                             <td className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white text-xs">
                               ${formatNumber(purchase.precio)} ({purchase.moneda})
@@ -2506,7 +2717,7 @@ export function PurchasesModule() {
                                 {new Date(purchase.fecha).toLocaleDateString('es-AR')}
                               </td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                {purchase.producto}
+                                {purchase.codigo_producto ? `${purchase.codigo_producto} - ${purchase.producto}` : purchase.producto}
                               </td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatNumber(purchase.cantidad)} u</td>
                               <td className="px-2 sm:px-3 md:px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">

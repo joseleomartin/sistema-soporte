@@ -46,6 +46,8 @@ export function ClientsModule() {
   const { profile } = useAuth();
   const { canCreate, canEdit, canDelete } = useDepartmentPermissions();
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientBalances, setClientBalances] = useState<Record<string, number>>({});
+  const [clientTotals, setClientTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -99,10 +101,88 @@ export function ClientsModule() {
 
   // Cargar ventas cuando se selecciona un cliente
   useEffect(() => {
-    if (selectedClientForDetails && clientSales.length === 0 && !loadingSales) {
+    if (selectedClientForDetails) {
+      // Limpiar ventas anteriores cuando cambia el cliente
+      setClientSales([]);
       loadClientSales(selectedClientForDetails);
+    } else {
+      // Si no hay cliente seleccionado, limpiar las ventas
+      setClientSales([]);
     }
   }, [selectedClientForDetails]);
+
+  // Recalcular saldo cuando cambian las ventas del cliente seleccionado
+  useEffect(() => {
+    if (selectedClientForDetails && clientSales.length > 0) {
+      updateClientBalance(selectedClientForDetails);
+    }
+  }, [clientSales, selectedClientForDetails]);
+
+  // Función para actualizar el saldo y total facturado de un cliente específico usando las ventas ya cargadas
+  const updateClientBalance = (client: Client) => {
+    if (!clientSales || clientSales.length === 0) {
+      // Si no hay ventas, el saldo y total facturado son 0
+      setClientBalances(prev => ({
+        ...prev,
+        [client.id]: 0
+      }));
+      setClientTotals(prev => ({
+        ...prev,
+        [client.id]: 0
+      }));
+      return;
+    }
+
+    try {
+      // Agrupar ventas por orden
+      const groupedSales = clientSales.reduce((acc: any, sale: any) => {
+        const orderKey = sale.order_id || sale.order_number || sale.id;
+        if (!acc[orderKey]) {
+          acc[orderKey] = [];
+        }
+        acc[orderKey].push(sale);
+        return acc;
+      }, {});
+
+      // Calcular saldo y total facturado
+      let saldo = 0;
+      let totalFacturado = 0;
+      Object.values(groupedSales).forEach((sales: any) => {
+        const orderTotal = sales.reduce((sum: number, s: any) => {
+          const tieneIva = s.tiene_iva || false;
+          const ivaPct = s.iva_pct || 0;
+          const ivaMonto = tieneIva ? s.ingreso_neto * (ivaPct / 100) : 0;
+          return sum + s.ingreso_neto + ivaMonto;
+        }, 0);
+
+        const orderCobrado = sales.reduce((sum: number, s: any) => {
+          const tieneIva = s.tiene_iva || false;
+          const ivaPct = s.iva_pct || 0;
+          const ivaMonto = tieneIva ? s.ingreso_neto * (ivaPct / 100) : 0;
+          const totalConIva = s.ingreso_neto + ivaMonto;
+          const pagado = s.pagado || false;
+          return sum + (pagado ? totalConIva : 0);
+        }, 0);
+
+        const orderPagado = sales.every((s: any) => s.pagado);
+        const orderSaldo = orderPagado ? 0 : -(orderTotal - orderCobrado);
+        saldo += orderSaldo;
+        totalFacturado += orderTotal;
+      });
+
+      // Actualizar el saldo y total facturado del cliente
+      setClientBalances(prev => ({
+        ...prev,
+        [client.id]: saldo
+      }));
+      setClientTotals(prev => ({
+        ...prev,
+        [client.id]: totalFacturado
+      }));
+    } catch (error) {
+      console.error('Error actualizando saldo del cliente:', error);
+    }
+  };
 
   const loadClients = async () => {
     if (!tenantId) return;
@@ -126,10 +206,88 @@ export function ClientsModule() {
       }
       
       setClients(data || []);
+      
+      // Cargar saldos de todos los clientes
+      await loadAllClientBalances(data || []);
     } catch (error) {
       console.error('Error loading clients:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAllClientBalances = async (clientsList: Client[]) => {
+    if (!tenantId || clientsList.length === 0) return;
+
+    try {
+      const balances: Record<string, number> = {};
+
+      // Cargar todas las ventas del tenant
+      const { data: allSales, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('tenant_id', tenantId);
+
+      if (salesError) {
+        console.error('Error cargando ventas para saldos:', salesError);
+        return;
+      }
+
+      // Calcular saldo y total facturado para cada cliente
+      const totals: Record<string, number> = {};
+      
+      for (const client of clientsList) {
+        let saldo = 0;
+        let totalFacturado = 0;
+
+        // Filtrar ventas del cliente (comparación exacta)
+        const clientSales = (allSales || []).filter((sale: any) => {
+          return sale.cliente === client.nombre || 
+                 (client.razon_social && sale.cliente === client.razon_social);
+        });
+
+        // Agrupar ventas por orden
+        const groupedSales = clientSales.reduce((acc: any, sale: any) => {
+          const orderKey = sale.order_id || sale.order_number || sale.id;
+          if (!acc[orderKey]) {
+            acc[orderKey] = [];
+          }
+          acc[orderKey].push(sale);
+          return acc;
+        }, {});
+
+        // Calcular saldo y total facturado por orden
+        Object.values(groupedSales).forEach((sales: any) => {
+          const orderTotal = sales.reduce((sum: number, s: any) => {
+            const tieneIva = s.tiene_iva || false;
+            const ivaPct = s.iva_pct || 0;
+            const ivaMonto = tieneIva ? s.ingreso_neto * (ivaPct / 100) : 0;
+            return sum + s.ingreso_neto + ivaMonto;
+          }, 0);
+
+          const orderCobrado = sales.reduce((sum: number, s: any) => {
+            const tieneIva = s.tiene_iva || false;
+            const ivaPct = s.iva_pct || 0;
+            const ivaMonto = tieneIva ? s.ingreso_neto * (ivaPct / 100) : 0;
+            const totalConIva = s.ingreso_neto + ivaMonto;
+            const pagado = s.pagado || false;
+            return sum + (pagado ? totalConIva : 0);
+          }, 0);
+
+          const orderPagado = sales.every((s: any) => s.pagado);
+          const orderSaldo = orderPagado ? 0 : -(orderTotal - orderCobrado);
+          saldo += orderSaldo;
+          totalFacturado += orderTotal;
+        });
+
+        balances[client.id] = saldo;
+        totals[client.id] = totalFacturado;
+      }
+
+      setClientBalances(balances);
+      setClientTotals(totals);
+    } catch (error) {
+      console.error('Error calculando saldos:', error);
     }
   };
 
@@ -258,18 +416,30 @@ export function ClientsModule() {
     if (!tenantId) return;
     setLoadingSales(true);
     try {
-      // Cargar ventas del cliente (por nombre o razón social)
-      const { data: salesData, error: salesError } = await supabase
+      // Cargar ventas del cliente (comparación exacta por nombre o razón social)
+      // Usamos comparación exacta (eq) en lugar de búsqueda parcial (ilike) para evitar traer ventas de otros clientes
+      let query = supabase
         .from('sales')
         .select('*')
-        .eq('tenant_id', tenantId)
-        .or(`cliente.ilike.%${client.nombre}%,cliente.ilike.%${client.razon_social || ''}%`)
+        .eq('tenant_id', tenantId);
+
+      // Construir el filtro OR con comparaciones exactas
+      if (client.razon_social && client.razon_social.trim() !== '') {
+        // Si hay razón social, buscar por nombre exacto O razón social exacta
+        query = query.or(`cliente.eq.${client.nombre},cliente.eq.${client.razon_social}`);
+      } else {
+        // Solo buscar por nombre exacto
+        query = query.eq('cliente', client.nombre);
+      }
+
+      const { data: salesData, error: salesError } = await query
         .order('fecha', { ascending: false });
 
       if (salesError) throw salesError;
       setClientSales(salesData || []);
     } catch (error) {
       console.error('Error loading client sales:', error);
+      setClientSales([]);
     } finally {
       setLoadingSales(false);
     }
@@ -637,13 +807,14 @@ export function ClientsModule() {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Razón social</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total facturado</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Saldo</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredClients.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={4} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
                         {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
                       </td>
                     </tr>
@@ -666,8 +837,22 @@ export function ClientsModule() {
                           {client.razon_social || '-'}
                         </td>
                         <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
-                          {/* El saldo se calculará dinámicamente o se mostrará 0 por ahora */}
-                          $0,00
+                          ${formatNumber(clientTotals[client.id] || 0)}
+                        </td>
+                        <td className={`px-4 py-3 text-sm text-right font-medium ${
+                          (clientBalances[client.id] || 0) < 0 
+                            ? 'text-red-600 dark:text-red-400' 
+                            : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {(() => {
+                            const saldo = clientBalances[client.id] || 0;
+                            if (saldo === 0) {
+                              return '$0,00';
+                            }
+                            return saldo < 0 
+                              ? `-$${formatNumber(Math.abs(saldo))}` 
+                              : `$${formatNumber(saldo)}`;
+                          })()}
                         </td>
                       </tr>
                     ))
@@ -935,32 +1120,51 @@ export function ClientsModule() {
                               );
                             }
                             
-                            // Calcular totales
-                            const totalFacturas = clientSales.reduce((sum: number, sale: any) => {
-                              const tieneIva = sale.tiene_iva || false;
-                              const ivaPct = sale.iva_pct || 0;
-                              const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
-                              const totalConIva = sale.ingreso_neto + ivaMonto;
-                              return sum + totalConIva;
-                            }, 0);
-                            
-                            const totalCobrado = clientSales.reduce((sum: number, sale: any) => {
-                              const tieneIva = sale.tiene_iva || false;
-                              const ivaPct = sale.iva_pct || 0;
-                              const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
-                              const totalConIva = sale.ingreso_neto + ivaMonto;
-                              const pagado = sale.pagado || false;
-                              return sum + (pagado ? totalConIva : 0);
-                            }, 0);
-                            
-                            const saldoAdeudado = clientSales.reduce((sum: number, sale: any) => {
-                              const tieneIva = sale.tiene_iva || false;
-                              const ivaPct = sale.iva_pct || 0;
-                              const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
-                              const totalConIva = sale.ingreso_neto + ivaMonto;
-                              const pagado = sale.pagado || false;
-                              return sum + (pagado ? 0 : -totalConIva);
-                            }, 0);
+                            // Agrupar ventas por orden (igual que en facturas adeudadas)
+                            const groupedSales = clientSales.reduce((acc: any, sale: any) => {
+                              const orderKey = sale.order_id || sale.order_number || sale.id;
+                              if (!acc[orderKey]) {
+                                acc[orderKey] = [];
+                              }
+                              acc[orderKey].push(sale);
+                              return acc;
+                            }, {});
+
+                            // Calcular totales agrupados por orden
+                            let totalFacturas = 0;
+                            let totalCobrado = 0;
+                            let saldoAdeudado = 0;
+
+                            Object.values(groupedSales).forEach((orderSales: any) => {
+                              // Calcular total de la orden
+                              const orderTotal = orderSales.reduce((sum: number, sale: any) => {
+                                const tieneIva = sale.tiene_iva || false;
+                                const ivaPct = sale.iva_pct || 0;
+                                const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                                return sum + sale.ingreso_neto + ivaMonto;
+                              }, 0);
+
+                              // Calcular lo cobrado de la orden
+                              const orderCobrado = orderSales.reduce((sum: number, sale: any) => {
+                                const tieneIva = sale.tiene_iva || false;
+                                const ivaPct = sale.iva_pct || 0;
+                                const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
+                                const totalConIva = sale.ingreso_neto + ivaMonto;
+                                const pagado = sale.pagado || false;
+                                return sum + (pagado ? totalConIva : 0);
+                              }, 0);
+
+                              // Verificar si la orden está completamente pagada
+                              const orderPagado = orderSales.every((sale: any) => sale.pagado);
+                              
+                              // Calcular saldo de la orden
+                              const orderSaldo = orderPagado ? 0 : -(orderTotal - orderCobrado);
+
+                              // Acumular totales
+                              totalFacturas += orderTotal;
+                              totalCobrado += orderCobrado;
+                              saldoAdeudado += orderSaldo;
+                            });
                             
                             return (
                               <>

@@ -3,7 +3,7 @@
  * Gestión de productos y sus materiales
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Trash2, Save, X, Factory, CheckCircle, Trash, FileText } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
@@ -67,6 +67,7 @@ export function ProductionModule() {
     type: 'info',
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -114,59 +115,33 @@ export function ProductionModule() {
       if (stockResult.error) throw stockResult.error;
       if (employeesResult.error) throw employeesResult.error;
 
-      const allProducts = productsResult.data || [];
+      const allProducts = (productsResult.data || []) as Product[];
       
-      // Obtener IDs de productos que están en simulación de costos activa
-      const { data: activeSimulation } = await supabase
-        .from('cost_simulations')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // SOLUCIÓN DEFINITIVA: Mostrar todas las órdenes de producción reales
+      // No filtrar por simulación de costos - los módulos son independientes
+      // Cuando se envía desde costos, se crea una orden de producción independiente
+      // Solo mostrar órdenes con estado válido y cantidad > 0
+      const productsData = allProducts.filter((p: Product) => {
+        const hasValidState = p.estado === 'pendiente' || p.estado === 'completada';
+        const hasQuantity = (p.cantidad_fabricar || 0) > 0;
+        return hasValidState && hasQuantity;
+      });
       
-      let productsInSimulation: string[] = [];
-      if (activeSimulation) {
-        const { data: simulationItems } = await supabase
-          .from('cost_simulation_items')
-          .select('product_id')
-          .eq('simulation_id', activeSimulation.id);
-        
-        productsInSimulation = (simulationItems || [])
-          .map(item => item.product_id)
-          .filter((id): id is string => id !== null);
-      }
-      
-      // Obtener productos que tienen métricas de producción (fueron enviados explícitamente a producción)
-      const { data: productionMetrics } = await supabase
-        .from('production_metrics')
-        .select('producto')
-        .eq('tenant_id', tenantId);
-      
-      const productsInProduction = new Set(
-        (productionMetrics || []).map(m => m.producto)
-      );
-      
-      // Filtrar productos:
-      // - Mostrar productos que NO están en simulación
-      // - O productos que están en simulación PERO tienen métricas de producción (fueron enviados explícitamente)
-      // Los productos siempre se crean con estado 'pendiente' por defecto
-      const productsData = allProducts.filter(p => {
-        const isInSimulation = productsInSimulation.includes(p.id);
-        if (!isInSimulation) {
-          return true; // No está en simulación, mostrarlo
-        }
-        // Está en simulación, solo mostrarlo si fue enviado explícitamente a producción
-        return productsInProduction.has(p.nombre);
+      // Asegurar que estén ordenadas por fecha de creación (más nuevas primero)
+      // La consulta ya ordena, pero por si acaso, ordenamos nuevamente después del filtrado
+      productsData.sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA; // Orden descendente (más nuevas primero)
       });
       
       setProducts(productsData);
       setStockMaterials(stockResult.data || []);
       setEmployees(employeesResult.data || []);
 
-      // Cargar todos los materiales de una vez usando los IDs de productos
-      if (allProducts.length > 0) {
-        const productIds = allProducts.map((p: Product) => p.id);
+      // Cargar todos los materiales de una vez usando los IDs de productos filtrados
+      if (productsData.length > 0) {
+        const productIds = productsData.map((p: Product) => p.id);
         const { data: allMaterials, error: materialsError } = await supabase
           .from('product_materials')
           .select('*')
@@ -338,11 +313,13 @@ export function ProductionModule() {
       // Obtener otros costos del producto
       const otrosCostos = (product as any).otros_costos || 0;
 
+      // IMPORTANTE: costo_base_unitario ya incluye otros_costos_unitario
+      // No sumar otrosCostos de nuevo para evitar duplicación
       return {
         costoMP: costs.costo_unitario_mp,
         costoMO: costs.costo_unitario_mano_obra,
         otrosCostos: otrosCostos,
-        costoTotal: costs.costo_base_unitario + otrosCostos,
+        costoTotal: costs.costo_base_unitario, // Ya incluye MP + MO + Otros Costos
       };
     } catch (error) {
       console.error('Error calculating product cost:', error);
@@ -597,6 +574,11 @@ export function ProductionModule() {
       return;
     }
 
+    // Prevenir múltiples ejecuciones simultáneas
+    if (processingRef.current || isProcessing) {
+      return;
+    }
+
     // Verificar si ya está completada (solo si la columna estado existe)
     if ((product.estado as any) === 'completada') {
       setAlertModal({
@@ -621,6 +603,15 @@ export function ProductionModule() {
 
   const executeCompleteProduction = async (product: Product) => {
     if (!tenantId) return;
+
+    // Prevenir múltiples ejecuciones simultáneas
+    if (processingRef.current || isProcessing) {
+      return;
+    }
+
+    // Marcar como procesando INMEDIATAMENTE
+    processingRef.current = true;
+    setIsProcessing(true);
 
     try {
       const productMaterials = materials[product.id] || [];
@@ -660,10 +651,16 @@ export function ProductionModule() {
           type: 'warning',
           onConfirm: async () => {
             setConfirmModal({ ...confirmModal, isOpen: false });
+            // Proceder directamente - el flag ya está activo
             await proceedWithProduction(product, materialWarnings);
           },
+          onClose: () => {
+            // Si se cancela, resetear flags
+            processingRef.current = false;
+            setIsProcessing(false);
+            setConfirmModal({ ...confirmModal, isOpen: false });
+          },
         });
-        setIsProcessing(false);
         return;
       }
 
@@ -678,6 +675,8 @@ export function ProductionModule() {
         type: 'error',
       });
     } finally {
+      // Resetear flags de procesamiento
+      processingRef.current = false;
       setIsProcessing(false);
     }
   };
@@ -686,7 +685,6 @@ export function ProductionModule() {
     if (!tenantId) return;
 
     try {
-      setIsProcessing(true);
       const productMaterials = materials[product.id] || [];
       const cantidad = product.cantidad_fabricar || 0;
 
@@ -743,29 +741,95 @@ export function ProductionModule() {
       }
 
       // Actualizar o crear stock de productos fabricados
-      const { data: existingStock } = await supabase
+      const { data: existingStock, error: searchError } = await supabase
         .from('stock_products')
         .select('*')
         .eq('tenant_id', tenantId)
         .ilike('nombre', product.nombre)
         .limit(1);
+      
+      if (searchError) {
+        console.error('Error buscando stock existente:', searchError);
+        throw new Error(`Error al buscar stock existente: ${searchError.message}`);
+      }
 
       if (existingStock && existingStock.length > 0) {
-        await supabase
+        // IMPORTANTE: El costo debe ser exactamente el mismo que el de producción
+        // No calcular promedio - usar siempre el costo de la producción actual
+        // Preparar datos de actualización - siempre intentar incluir codigo_producto
+        const updateData: any = {
+          cantidad: existingStock[0].cantidad + cantidad,
+          // Usar el costo exacto de esta producción, no un promedio
+          costo_unit_total: fullCosts.costo_base_unitario,
+        };
+        
+        // Intentar actualizar codigo_producto si el producto lo tiene
+        if (product.codigo_producto) {
+          updateData.codigo_producto = product.codigo_producto;
+        } else if (existingStock[0].codigo_producto) {
+          // Mantener el código existente si el producto no tiene uno nuevo
+          updateData.codigo_producto = existingStock[0].codigo_producto;
+        }
+        
+        const { error: updateStockError } = await supabase
           .from('stock_products')
-          .update({
-            cantidad: existingStock[0].cantidad + cantidad,
-            costo_unit_total: fullCosts.costo_base_unitario,
-          })
+          .update(updateData)
           .eq('id', existingStock[0].id);
+        
+        // Si falla por codigo_producto (columna no existe), intentar sin esa columna
+        if (updateStockError && (updateStockError.message?.includes('codigo_producto') || updateStockError.message?.includes('schema cache'))) {
+          const { error: retryError } = await supabase
+            .from('stock_products')
+            .update({
+              cantidad: existingStock[0].cantidad + cantidad,
+              // Mantener el costo exacto de producción
+              costo_unit_total: fullCosts.costo_base_unitario,
+            })
+            .eq('id', existingStock[0].id);
+          
+          if (retryError) {
+            console.error('Error actualizando stock_products:', retryError);
+            throw new Error(`Error al actualizar stock: ${retryError.message}`);
+          }
+        } else if (updateStockError) {
+          console.error('Error actualizando stock_products:', updateStockError);
+          throw new Error(`Error al actualizar stock: ${updateStockError.message}`);
+        }
       } else {
-        await supabase.from('stock_products').insert({
+        // Intentar insertar con codigo_producto primero
+        const insertData: any = {
           tenant_id: tenantId,
           nombre: product.nombre,
           cantidad: cantidad,
           peso_unidad: product.peso_unidad,
           costo_unit_total: fullCosts.costo_base_unitario,
-        });
+        };
+        
+        // Siempre intentar agregar codigo_producto si el producto lo tiene
+        if (product.codigo_producto) {
+          insertData.codigo_producto = product.codigo_producto;
+        }
+        
+        const { error: insertStockError } = await supabase.from('stock_products').insert(insertData);
+        
+        // Si falla por codigo_producto (columna no existe), intentar sin esa columna
+        if (insertStockError && (insertStockError.message?.includes('codigo_producto') || insertStockError.message?.includes('schema cache'))) {
+          const { error: retryError } = await supabase.from('stock_products').insert({
+            tenant_id: tenantId,
+            nombre: product.nombre,
+            cantidad: cantidad,
+            peso_unidad: product.peso_unidad,
+            costo_unit_total: fullCosts.costo_base_unitario,
+          });
+          
+          if (retryError) {
+            console.error('Error insertando en stock_products:', retryError);
+            throw new Error(`Error al agregar al stock: ${retryError.message}`);
+          }
+        } else if (insertStockError) {
+          console.error('Error insertando en stock_products:', insertStockError);
+          throw new Error(`Error al agregar al stock: ${insertStockError.message}`);
+        }
       }
 
       // Registrar movimiento de inventario (ingreso de producto fabricado)
@@ -884,6 +948,8 @@ export function ProductionModule() {
         type: 'error',
       });
     } finally {
+      // Resetear flags de procesamiento
+      processingRef.current = false;
       setIsProcessing(false);
     }
   };
@@ -1055,80 +1121,52 @@ export function ProductionModule() {
         try {
           setIsProcessing(true);
           
-          // Verificar qué productos están en simulación de costos
-          const { data: simulationItems } = await supabase
-            .from('cost_simulation_items')
-            .select('product_id')
-            .in('product_id', Array.from(selectedProducts));
-
-          const productsInSimulation = new Set(
-            (simulationItems || []).map(item => item.product_id).filter((id): id is string => id !== null)
-          );
-
-          // Filtrar productos: los que están en costos y los que no
-          const productsInCosts = Array.from(selectedProducts).filter(id => productsInSimulation.has(id));
-          const productsNotInCosts = Array.from(selectedProducts).filter(id => !productsInSimulation.has(id));
-
-          // Para productos en costos: eliminar métricas de producción pero mantener el producto
-          if (productsInCosts.length > 0) {
-            // Obtener nombres de productos para eliminar métricas
-            const productsInCostsData = products.filter(p => productsInCosts.includes(p.id));
-            const productNames = productsInCostsData.map(p => p.nombre);
-
-            if (productNames.length > 0) {
-              const { error: metricsError } = await supabase
-                .from('production_metrics')
-                .delete()
-                .in('producto', productNames)
-                .eq('tenant_id', tenantId);
-
-              if (metricsError) {
-                console.error('Error deleting production metrics:', metricsError);
-                throw metricsError;
-              }
+          const productIds = Array.from(selectedProducts);
+          
+          // ELIMINAR TODOS LOS PRODUCTOS SELECCIONADOS
+          // Primero eliminar materiales asociados
+          const { error: materialsError } = await supabase
+            .from('product_materials')
+            .delete()
+            .in('product_id', productIds);
+          
+          if (materialsError) {
+            console.error('Error deleting materials:', materialsError);
+          }
+          
+          // Eliminar métricas de producción
+          const productsToDelete = products.filter(p => productIds.includes(p.id));
+          const productNames = productsToDelete.map(p => p.nombre);
+          
+          if (productNames.length > 0) {
+            const { error: metricsError } = await supabase
+              .from('production_metrics')
+              .delete()
+              .in('producto', productNames)
+              .eq('tenant_id', tenantId);
+            
+            if (metricsError) {
+              console.error('Error deleting production metrics:', metricsError);
             }
           }
-
-          // Para productos NO en costos: eliminar de la base de datos normalmente
-          if (productsNotInCosts.length > 0) {
-            const { error } = await supabase
-              .from('products')
-              .delete()
-              .in('id', productsNotInCosts);
-
-            if (error) throw error;
-          }
           
-          loadProducts();
+          // Eliminar los productos de la base de datos
+          const { error: deleteError } = await supabase
+            .from('products')
+            .delete()
+            .in('id', productIds);
+          
+          if (deleteError) throw deleteError;
+          
           setSelectedProducts(new Set());
           setConfirmModal({ ...confirmModal, isOpen: false });
-          
-          // Mostrar mensaje según el resultado
-          if (productsInCosts.length > 0 && productsNotInCosts.length > 0) {
-            // Algunos en costos, algunos no
-            setAlertModal({
-              isOpen: true,
-              title: 'Eliminación completada',
-              message: `${productsNotInCosts.length} producción(es) eliminada(s) de la base de datos. ${productsInCosts.length} producción(es) eliminada(s) de producción pero permanecen en costos.`,
-              type: 'success',
-            });
-          } else if (productsInCosts.length > 0) {
-            // Todos están en costos
-            setAlertModal({
-              isOpen: true,
-              title: 'Eliminado de producción',
-              message: `${productsInCosts.length} producción(es) eliminada(s) de la vista de producción. Los productos permanecen en el módulo de costos.`,
-              type: 'success',
-            });
-          } else {
-            // Ninguno está en costos
-            setAlertModal({
-              isOpen: true,
-              title: 'Éxito',
-              message: `${productsNotInCosts.length} producción(es) eliminada(s) correctamente`,
-              type: 'success',
-            });
-          }
+          await loadProducts();
+          setAlertModal({
+            isOpen: true,
+            title: 'Éxito',
+            message: `${productIds.length} producción(es) eliminada(s) correctamente`,
+            type: 'success',
+          });
         } catch (error) {
           console.error('Error deleting products:', error);
           setAlertModal({
