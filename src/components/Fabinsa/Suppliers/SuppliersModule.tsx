@@ -555,9 +555,9 @@ export function SuppliersModule() {
   }
 
   return (
-    <div className="p-4 sm:p-6 w-full">
+    <div className="p-3 sm:p-4 md:p-6 w-full">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
         <div className="flex items-center space-x-3 mb-2">
           <Truck className="w-6 h-6 text-blue-600" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Proveedores</h1>
@@ -566,7 +566,7 @@ export function SuppliersModule() {
       </div>
 
       {/* Header with Add Button */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-2 sm:mb-3">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Proveedores</h2>
         {canCreate('fabinsa-suppliers') && (
           <div className="flex items-center space-x-2">

@@ -1191,9 +1191,9 @@ export function ProductionModule() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 sm:mb-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
         <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
           <Factory className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Producción</h1>
@@ -1202,7 +1202,7 @@ export function ProductionModule() {
       </div>
 
       {/* Header with Add Button */}
-      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'} mb-4 sm:mb-6`}>
+      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-between items-center'} mb-2 sm:mb-3`}>
         <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-900 dark:text-white`}>Órdenes de Producción</h2>
         <div className={`flex ${isMobile ? 'flex-col w-full gap-2' : 'items-center gap-2'}`}>
           {selectedProducts.size > 0 && (

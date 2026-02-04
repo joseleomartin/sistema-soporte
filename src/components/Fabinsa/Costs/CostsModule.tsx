@@ -1448,9 +1448,9 @@ export function CostsModule() {
   }
 
   return (
-    <div className="p-2 md:p-4 w-full">
+    <div className="p-3 sm:p-4 md:p-6 w-full">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 mb-4 sm:mb-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
         <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'} mb-2`}>
           <div className="flex items-center space-x-2 sm:space-x-3">
             <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
@@ -1468,7 +1468,7 @@ export function CostsModule() {
       </div>
 
       {/* Add Product to Simulation - Collapsible */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-4 md:mb-6 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-2 sm:mb-3 overflow-hidden">
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="w-full px-4 md:px-6 py-3 md:py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -1677,7 +1677,7 @@ export function CostsModule() {
       {/* Simulation Items */}
       {simulationItems.length > 0 && (
         <>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-4 md:mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-2 sm:mb-3">
             <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos en Simulación</h2>

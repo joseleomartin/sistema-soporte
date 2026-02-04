@@ -496,9 +496,9 @@ export function MetricsModule() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-3">
             <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
@@ -529,7 +529,7 @@ export function MetricsModule() {
       </div>
 
       {/* Date Range Filter */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-2 sm:mb-3">
         <div className="flex items-center space-x-4">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Rango de fechas:</label>
           <input
@@ -595,7 +595,7 @@ export function MetricsModule() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-2 sm:mb-3">
         {visibleMetrics['kg-consumidos'] && (
         <div 
           className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow cursor-pointer hover:shadow-lg transition-shadow"
@@ -798,7 +798,7 @@ export function MetricsModule() {
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-2 sm:mb-3">
         {/* Gráfico de Ingresos y Gastos */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
@@ -931,7 +931,7 @@ export function MetricsModule() {
       </div>
 
       {/* Segunda fila de gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-2 sm:mb-3">
         {/* Gráfico de Distribución de Costos */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">

@@ -316,7 +316,7 @@ function MainApp() {
           ? '' 
           : sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
       }`}>
-        <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' || currentView === 'forums' || currentView === 'fabinsa-suppliers' ? 'max-w-full' : 'max-w-7xl'} mx-auto p-2 sm:p-4 md:p-6 lg:p-8`}>
+        <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' || currentView === 'forums' || currentView === 'fabinsa-suppliers' || currentView === 'fabinsa-sales' || currentView === 'fabinsa-stock' || currentView === 'fabinsa-employees' || currentView === 'fabinsa-production' || currentView === 'fabinsa-purchases' || currentView === 'fabinsa-metrics' || currentView === 'finanzas-cashflow' || currentView === 'finanzas-cotizador' || currentView === 'finanzas-eerr' || currentView === 'finanzas-gastos' || currentView === 'finanzas-presupuesto' ? 'max-w-full' : 'max-w-7xl'} ${currentView === 'fabinsa-sales' || currentView === 'fabinsa-stock' || currentView === 'fabinsa-employees' || currentView === 'fabinsa-production' || currentView === 'fabinsa-purchases' || currentView === 'fabinsa-costs' || currentView === 'fabinsa-metrics' || currentView === 'fabinsa-suppliers' || currentView === 'forums' || currentView === 'finanzas-cashflow' || currentView === 'finanzas-cotizador' || currentView === 'finanzas-eerr' || currentView === 'finanzas-gastos' || currentView === 'finanzas-presupuesto' ? 'p-0' : 'mx-auto p-2 sm:p-4 md:p-6 lg:p-8'}`}>
           {renderContent()}
         </div>
       </main>

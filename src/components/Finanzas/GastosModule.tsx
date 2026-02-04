@@ -730,9 +730,10 @@ export function GastosModule() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Gastos</h1>
+    <div className="p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Gastos</h1>
         
         <div className="flex items-center gap-4">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -755,6 +756,7 @@ export function GastosModule() {
             <Plus className="w-5 h-5" />
             Agregar Categoría
           </button>
+        </div>
         </div>
       </div>
 

@@ -725,9 +725,9 @@ export function ClientsModule() {
     : clients;
 
   return (
-    <div className="p-4 sm:p-6 w-full">
+    <div className="p-3 sm:p-4 md:p-6 w-full">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center space-x-3 mb-2">
@@ -746,7 +746,7 @@ export function ClientsModule() {
       </div>
 
       {/* Tabs principales */}
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-2 sm:mb-3">
         <div className="flex space-x-1">
           <button
             onClick={() => setMainTab('resumen')}

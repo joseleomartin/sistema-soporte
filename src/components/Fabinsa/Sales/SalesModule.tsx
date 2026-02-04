@@ -3,8 +3,8 @@
  * Registro y gestión de ventas
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, Trash2, ChevronDown, X, Printer, FileText, CheckCircle, DollarSign, Pencil, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ShoppingCart, Plus, Trash2, ChevronDown, X, Printer, FileText, CheckCircle, DollarSign, Pencil, RefreshCw, Search, Calendar } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -58,6 +58,7 @@ export function SalesModule() {
   const { canCreate, canEdit, canDelete, canPrint } = useDepartmentPermissions();
   const isMobile = useMobile();
   const [sales, setSales] = useState<Sale[]>([]);
+  const [allSales, setAllSales] = useState<Sale[]>([]); // Todas las ventas sin filtrar
   const [fabricatedProducts, setFabricatedProducts] = useState<StockProduct[]>([]);
   const [resaleProducts, setResaleProducts] = useState<ResaleProduct[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -66,6 +67,10 @@ export function SalesModule() {
   const [stockMaterials, setStockMaterials] = useState<StockMaterial[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  // Estados para filtros
+  const [fechaDesde, setFechaDesde] = useState<string>('');
+  const [fechaHasta, setFechaHasta] = useState<string>('');
+  const [clienteSearch, setClienteSearch] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any | null>(null);
   const [productType, setProductType] = useState<'fabricado' | 'reventa'>('fabricado');
@@ -112,11 +117,54 @@ export function SalesModule() {
 
   const [productUnitCost, setProductUnitCost] = useState<number | null>(null);
 
+  // Función para aplicar filtros
+  const applyFilters = useCallback((salesToFilter: Sale[], desde: string, hasta: string, cliente: string) => {
+    let filtered = [...salesToFilter];
+
+    // Filtro por fecha desde
+    if (desde) {
+      const fechaDesdeDate = new Date(desde);
+      fechaDesdeDate.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(sale => {
+        const saleDate = new Date(sale.fecha);
+        saleDate.setHours(0, 0, 0, 0);
+        return saleDate >= fechaDesdeDate;
+      });
+    }
+
+    // Filtro por fecha hasta
+    if (hasta) {
+      const fechaHastaDate = new Date(hasta);
+      fechaHastaDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(sale => {
+        const saleDate = new Date(sale.fecha);
+        saleDate.setHours(0, 0, 0, 0);
+        return saleDate <= fechaHastaDate;
+      });
+    }
+
+    // Filtro por cliente
+    if (cliente.trim()) {
+      const clienteLower = cliente.toLowerCase().trim();
+      filtered = filtered.filter(sale => {
+        const clienteNombre = sale.cliente || '';
+        return clienteNombre.toLowerCase().includes(clienteLower);
+      });
+    }
+
+    setSales(filtered);
+  }, []);
+
   useEffect(() => {
     if (tenantId) {
       loadData();
     }
   }, [tenantId]);
+
+  // Aplicar filtros cuando cambien
+  useEffect(() => {
+    applyFilters(allSales, fechaDesde, fechaHasta, clienteSearch);
+  }, [fechaDesde, fechaHasta, clienteSearch, allSales, applyFilters]);
 
   // useEffect para debug: verificar el valor del precio después de actualizarse
   useEffect(() => {
@@ -257,7 +305,7 @@ export function SalesModule() {
         console.error('Error loading sales:', salesError);
         alert('Error al cargar ventas: ' + salesError.message);
       } else {
-        setSales(salesData || []);
+        setAllSales(salesData || []);
       }
 
       // Load products from costs module to get precio_venta (cargar primero para usarlo después)
@@ -1903,19 +1951,19 @@ export function SalesModule() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 sm:mb-6">
-        <div className="flex items-center space-x-2 sm:space-x-3 mb-2">
-          <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Ventas</h1>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
+        <div className="flex items-center space-x-2 sm:space-x-3 mb-1">
+          <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Ventas</h1>
         </div>
-        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Registro y gestión de ventas</p>
+        <p className="text-xs text-gray-600 dark:text-gray-300">Registro y gestión de ventas</p>
       </div>
 
       {/* Header with Add Button */}
-      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'} mb-4 sm:mb-6`}>
-        <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-gray-900 dark:text-white`}>Registro de Ventas</h2>
+      <div className={`flex ${isMobile ? 'flex-col gap-2' : 'justify-between items-center'} mb-2 sm:mb-3`}>
+        <h2 className={`${isMobile ? 'text-base' : 'text-lg'} font-semibold text-gray-900 dark:text-white`}>Registro de Ventas</h2>
         <div className={`flex ${isMobile ? 'flex-col w-full gap-3' : 'items-center gap-3'}`}>
           {canEdit('fabinsa-sales') && (
             <button
@@ -1949,6 +1997,74 @@ export function SalesModule() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Filtros */}
+      <div className={`mb-2 sm:mb-3 bg-white dark:bg-gray-800 rounded-lg shadow p-3 ${isMobile ? 'space-y-2' : ''}`}>
+        <div className={`${isMobile ? 'flex flex-col gap-3' : 'grid grid-cols-1 md:grid-cols-4 gap-4'}`}>
+          {/* Filtro por fecha desde */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <Calendar className="w-4 h-4 inline mr-1" />
+              Fecha Desde
+            </label>
+            <input
+              type="date"
+              value={fechaDesde}
+              onChange={(e) => setFechaDesde(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Filtro por fecha hasta */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <Calendar className="w-4 h-4 inline mr-1" />
+              Fecha Hasta
+            </label>
+            <input
+              type="date"
+              value={fechaHasta}
+              onChange={(e) => setFechaHasta(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Buscador por cliente */}
+          <div className={`flex-1 ${isMobile ? '' : 'md:col-span-2'}`}>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <Search className="w-4 h-4 inline mr-1" />
+              Buscar Cliente
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={clienteSearch}
+                onChange={(e) => setClienteSearch(e.target.value)}
+                placeholder="Ingrese el nombre del cliente..."
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Botón para limpiar filtros */}
+        {(fechaDesde || fechaHasta || clienteSearch) && (
+          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => {
+                setFechaDesde('');
+                setFechaHasta('');
+                setClienteSearch('');
+              }}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
+            >
+              <X className="w-4 h-4" />
+              Limpiar filtros
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sales Form */}
@@ -3086,24 +3202,24 @@ export function SalesModule() {
           <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Fecha</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">Cliente</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">Producto</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">Tipo</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">Cant.</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">P. Unit.</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">C. Unit.</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Ing. Neto</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">IVA</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Total</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-28">Estado</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-32">Acciones</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Fecha</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">Cliente</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">Producto</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">Tipo</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">Cant.</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">P. Unit.</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">C. Unit.</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Ing. Neto</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-20">IVA</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-24">Total</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-28">Estado</th>
+                <th className="px-1.5 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap w-32">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {sales.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-2 py-4 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={12} className="px-1.5 py-2 text-center text-gray-500 dark:text-gray-400">
                   No hay ventas registradas
                 </td>
               </tr>
@@ -3151,13 +3267,13 @@ export function SalesModule() {
                         <React.Fragment key={order.order_id}>
                           {/* Fila resumen de la orden */}
                           <tr className="bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30">
-                            <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                            <td className="px-1.5 py-2 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">
                               {new Date(order.fecha).toLocaleDateString()}
                             </td>
-                            <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                            <td className="px-1.5 py-2 text-sm font-medium text-gray-900 dark:text-white">
                               {order.cliente || '-'}
                             </td>
-                            <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white" colSpan={3}>
+                            <td className="px-1.5 py-2 text-sm font-medium text-gray-900 dark:text-white" colSpan={3}>
                               <button
                                 onClick={() => {
                                   const newExpanded = new Set(expandedOrders);
@@ -3174,19 +3290,19 @@ export function SalesModule() {
                                 <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                               </button>
                             </td>
-                            <td className="px-2 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap" colSpan={2}>
+                            <td className="px-1.5 py-2 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap" colSpan={2}>
                               Total
                             </td>
-                            <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
+                            <td className="px-1.5 py-2 text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
                               ${formatNumber(order.total_ingreso_neto)}
                             </td>
-                            <td className="px-2 py-3 text-sm font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                            <td className="px-1.5 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
                               ${formatNumber(order.total_iva || 0)}
                             </td>
-                            <td className="px-2 py-3 text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
+                            <td className="px-1.5 py-2 text-sm font-semibold text-green-600 dark:text-green-400 whitespace-nowrap">
                               ${formatNumber((order.total_ingreso_neto || 0) + (order.total_iva || 0))}
                             </td>
-                            <td className="px-2 py-3 text-sm">
+                            <td className="px-1.5 py-2 text-sm">
                               <div className="flex flex-col gap-1">
                                 {/* Estado de Recepción */}
                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -3206,7 +3322,7 @@ export function SalesModule() {
                                 </span>
                               </div>
                             </td>
-                            <td className="px-2 py-3 text-sm whitespace-nowrap">
+                            <td className="px-1.5 py-2 text-sm whitespace-nowrap">
                               <div className="flex items-center gap-1">
                                 {canEdit('fabinsa-sales') && (
                                   <button
@@ -3339,35 +3455,35 @@ export function SalesModule() {
                       const ivaMonto = tieneIva ? sale.ingreso_neto * (ivaPct / 100) : 0;
                       return (
                         <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                          <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             {new Date(sale.fecha).toLocaleDateString()}
                           </td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             {sale.cliente || '-'}
                           </td>
-                          <td className="px-2 py-4 text-sm text-gray-900 dark:text-white">{sale.producto}</td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm">
+                          <td className="px-1.5 py-2 text-sm text-gray-900 dark:text-white">{sale.producto}</td>
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm">
                             <span className={`px-2 py-1 rounded text-xs ${
                               sale.tipo_producto === 'fabricado' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                             }`}>
                               {sale.tipo_producto}
                             </span>
                           </td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${formatNumber(sale.precio_unitario)}</td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">{sale.cantidad}</td>
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">${formatNumber(sale.precio_unitario)}</td>
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
                             ${formatNumber(sale.costo_unitario)}
                           </td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
                             ${formatNumber(sale.ingreso_neto)}
                           </td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm font-semibold text-blue-600 dark:text-blue-400">
                             ${formatNumber(ivaMonto)}
                           </td>
-                          <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
+                          <td className="px-1.5 py-2 whitespace-nowrap text-sm font-semibold text-green-600 dark:text-green-400">
                             ${formatNumber(sale.ingreso_neto + ivaMonto)}
                           </td>
-                          <td className="px-2 py-4 text-sm">
+                          <td className="px-1.5 py-2 text-sm">
                             <div className="flex flex-col gap-1">
                               {/* Estado de Recepción */}
                               <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -3387,7 +3503,7 @@ export function SalesModule() {
                               </span>
                             </div>
                           </td>
-                        <td className="px-2 py-4 whitespace-nowrap text-right text-sm">
+                        <td className="px-1.5 py-2 whitespace-nowrap text-right text-sm">
                           <div className="flex items-center gap-1">
                             {canEdit('fabinsa-sales') && (
                               <button

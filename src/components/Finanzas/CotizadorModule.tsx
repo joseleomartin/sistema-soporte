@@ -551,9 +551,9 @@ export function CotizadorModule() {
 
   // Mostrar formulario de cotización cuando hay una seleccionada
   return (
-    <div className="space-y-4">
+    <div className="p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3">
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2 sm:mb-3">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             Cotizador
           </h2>

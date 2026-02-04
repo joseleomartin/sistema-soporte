@@ -1303,9 +1303,9 @@ export function PurchasesModule() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6 -mt-6 mb-6">
+      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
         <div className="flex items-center space-x-3 mb-2">
           <TrendingUp className="w-6 h-6 text-blue-600" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Compras</h1>
@@ -1314,7 +1314,7 @@ export function PurchasesModule() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 mb-6">
+      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-gray-700 mb-2 sm:mb-3">
         <div className="flex space-x-1">
           {[
             { id: 'materials' as TabType, label: 'Compras de Materia Prima' },

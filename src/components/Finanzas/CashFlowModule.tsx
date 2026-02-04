@@ -1020,14 +1020,16 @@ export function CashFlowModule() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Planificación Financiera</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Cash Flow mensual con disponibilidades, ingresos y egresos por día
-          </p>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Planificación Financiera</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+              Cash Flow mensual con disponibilidades, ingresos y egresos por día
+            </p>
+          </div>
         </div>
       </div>
 
