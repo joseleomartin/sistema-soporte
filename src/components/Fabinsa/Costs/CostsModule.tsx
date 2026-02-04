@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { DollarSign, Plus, Trash2, X, Send, Package, ChevronDown, ChevronUp, Upload, Edit, BarChart3, TrendingUp } from 'lucide-react';
+import { DollarSign, Plus, Trash2, X, Send, Package, Upload, Edit, BarChart3, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -68,6 +68,8 @@ export function CostsModule() {
   const [simulationItems, setSimulationItems] = useState<CostSimulationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [showImportModal, setShowImportModal] = useState(false);
   const [currentSimulationId, setCurrentSimulationId] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<CostSimulationItem | null>(null);
@@ -1439,6 +1441,94 @@ export function CostsModule() {
     };
   }, [simulationItems, itemCostsMap, calculateItemCostsInternal]);
 
+  // Función para manejar el ordenamiento
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Si ya está ordenando por esta columna, cambiar la dirección
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Si es una nueva columna, ordenar ascendente por defecto
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Items ordenados
+  const sortedItems = useMemo(() => {
+    if (!sortColumn) return simulationItems;
+
+    return [...simulationItems].sort((a, b) => {
+      const itemCostsA = itemCostsMap[a.id] || calculateItemCostsInternal(a);
+      const itemCostsB = itemCostsMap[b.id] || calculateItemCostsInternal(b);
+      
+      let valueA: number | string = 0;
+      let valueB: number | string = 0;
+
+      switch (sortColumn) {
+        case 'codigo':
+          valueA = a.product?.codigo_producto || a.codigo_producto || '';
+          valueB = b.product?.codigo_producto || b.codigo_producto || '';
+          break;
+        case 'producto':
+          valueA = a.product?.nombre || a.nombre_manual || '';
+          valueB = b.product?.nombre || b.nombre_manual || '';
+          break;
+        case 'precio_venta':
+          valueA = a.precio_venta;
+          valueB = b.precio_venta;
+          break;
+        case 'descuento':
+          valueA = a.descuento_pct;
+          valueB = b.descuento_pct;
+          break;
+        case 'precio_final':
+          valueA = itemCostsA.precio_final_unitario;
+          valueB = itemCostsB.precio_final_unitario;
+          break;
+        case 'mp':
+          valueA = itemCostsA.costo_mp_unitario;
+          valueB = itemCostsB.costo_mp_unitario;
+          break;
+        case 'mo':
+          valueA = itemCostsA.costo_mo_unitario;
+          valueB = itemCostsB.costo_mo_unitario;
+          break;
+        case 'otros':
+          valueA = itemCostsA.otros_costos_unitario || 0;
+          valueB = itemCostsB.otros_costos_unitario || 0;
+          break;
+        case 'iibb':
+          valueA = itemCostsA.iibb_unitario;
+          valueB = itemCostsB.iibb_unitario;
+          break;
+        case 'costo_total':
+          valueA = itemCostsA.costo_total_unitario;
+          valueB = itemCostsB.costo_total_unitario;
+          break;
+        case 'rentabilidad':
+          valueA = itemCostsA.rentabilidad_neta_unitaria;
+          valueB = itemCostsB.rentabilidad_neta_unitaria;
+          break;
+        case 'margen':
+          valueA = itemCostsA.margen;
+          valueB = itemCostsB.margen;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return sortDirection === 'asc' 
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      } else {
+        return sortDirection === 'asc'
+          ? (valueA as number) - (valueB as number)
+          : (valueB as number) - (valueA as number);
+      }
+    });
+  }, [simulationItems, sortColumn, sortDirection, itemCostsMap, calculateItemCostsInternal]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1467,27 +1557,33 @@ export function CostsModule() {
         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Simulación de costos y análisis de rentabilidad</p>
       </div>
 
-      {/* Add Product to Simulation - Collapsible */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-2 sm:mb-3 overflow-hidden">
+      {/* Add Product to Simulation - Button */}
+      <div className="mb-2 sm:mb-3">
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="w-full px-4 md:px-6 py-3 md:py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          onClick={() => setShowAddForm(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <div className="flex items-center space-x-3">
-            <Plus className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Agregar Producto a Simulación
-            </h2>
-          </div>
-          {showAddForm ? (
-            <ChevronUp className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-          )}
+          <Plus className="w-5 h-5" />
+          <span>Agregar Producto a Simulación</span>
         </button>
-        
-        {showAddForm && (
-          <div className="px-4 md:px-6 pb-4 md:pb-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+      </div>
+
+      {/* Modal para Agregar Producto */}
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Agregar Producto a Simulación
+              </h2>
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-4">
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
@@ -1585,26 +1681,15 @@ export function CostsModule() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Descuento %</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={manualFormData.descuento_pct}
-                  onChange={(e) => setManualFormData({ ...manualFormData, descuento_pct: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-              <div className="flex items-end">
-                <button
-                  onClick={handleAddToSimulation}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  <Plus className="w-4 h-4 inline mr-2" />
-                  Agregar
-                </button>
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Descuento %</label>
+              <input
+                type="number"
+                step="0.01"
+                value={manualFormData.descuento_pct}
+                onChange={(e) => setManualFormData({ ...manualFormData, descuento_pct: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
             </div>
 
             {/* Materiales Manuales */}
@@ -1670,9 +1755,25 @@ export function CostsModule() {
               )}
             </div>
             </div>
+            </div>
+            <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowAddForm(false)}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddToSimulation}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Agregar
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Simulation Items */}
       {simulationItems.length > 0 && (
@@ -1689,7 +1790,7 @@ export function CostsModule() {
             {/* Simulation Items - Mobile Cards View */}
             {isMobile ? (
               <div className="p-3 space-y-3">
-                {simulationItems.map((item) => {
+                {sortedItems.map((item) => {
                   const itemCosts = itemCostsMap[item.id] || calculateItemCostsInternal(item);
                   const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
                   const codigoProducto = item.product?.codigo_producto || item.codigo_producto || '-';
@@ -1823,23 +1924,167 @@ export function CostsModule() {
                   <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Código</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Producto</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">P. Venta</th>
-                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Desc.</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">P. Final</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">MP</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">MO</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Otros</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">IIBB</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">C. Total</th>
-                    <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Rent.</th>
-                    <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">M%</th>
+                    <th 
+                      className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('codigo')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Código
+                        {sortColumn === 'codigo' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('producto')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Producto
+                        {sortColumn === 'producto' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('precio_venta')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        P. Venta
+                        {sortColumn === 'precio_venta' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('descuento')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Desc.
+                        {sortColumn === 'descuento' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('precio_final')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        P. Final
+                        {sortColumn === 'precio_final' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('mp')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        MP
+                        {sortColumn === 'mp' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('mo')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        MO
+                        {sortColumn === 'mo' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('otros')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        Otros
+                        {sortColumn === 'otros' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('iibb')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        IIBB
+                        {sortColumn === 'iibb' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('costo_total')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        C. Total
+                        {sortColumn === 'costo_total' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('rentabilidad')}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        Rent.
+                        {sortColumn === 'rentabilidad' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 select-none"
+                      onClick={() => handleSort('margen')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        M%
+                        {sortColumn === 'margen' ? (
+                          sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" />
+                        )}
+                      </div>
+                    </th>
                     <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Acc.</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {simulationItems.map((item) => {
+                  {sortedItems.map((item) => {
                     const itemCosts = calculateItemCosts(item);
                     const productName = item.product?.nombre || item.nombre_manual || 'Producto sin nombre';
                     const codigoProducto = item.product?.codigo_producto || item.codigo_producto || '-';
