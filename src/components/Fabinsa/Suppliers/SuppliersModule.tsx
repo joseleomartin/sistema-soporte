@@ -71,6 +71,11 @@ export function SuppliersModule() {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Estados para la nueva estructura similar a Clientes
+  const [mainTab, setMainTab] = useState<'resumen' | 'gestion'>('resumen');
+  const [selectedSupplierForDetails, setSelectedSupplierForDetails] = useState<Supplier | null>(null);
+  const [supplierDetailTab, setSupplierDetailTab] = useState<'facturas' | 'cuenta' | 'info'>('facturas');
+
   // Form state
   const [formData, setFormData] = useState({
     nombre: '',
@@ -88,6 +93,20 @@ export function SuppliersModule() {
       loadSuppliers();
     }
   }, [tenantId]);
+
+  // Cargar compras cuando se selecciona un proveedor
+  useEffect(() => {
+    if (selectedSupplierForDetails) {
+      // Limpiar compras anteriores cuando cambia el proveedor
+      setSupplierMaterialPurchases([]);
+      setSupplierProductPurchases([]);
+      loadSupplierOrders(selectedSupplierForDetails);
+    } else {
+      // Si no hay proveedor seleccionado, limpiar las compras
+      setSupplierMaterialPurchases([]);
+      setSupplierProductPurchases([]);
+    }
+  }, [selectedSupplierForDetails]);
 
   const loadSuppliers = async () => {
     if (!tenantId) return;
@@ -554,61 +573,562 @@ export function SuppliersModule() {
     );
   }
 
+  // Filtrar proveedores según el término de búsqueda
+  const filteredSuppliers = searchTerm
+    ? suppliers.filter((supplier) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          supplier.nombre.toLowerCase().includes(term) ||
+          (supplier.razon_social && supplier.razon_social.toLowerCase().includes(term)) ||
+          (supplier.cuit && supplier.cuit.includes(term)) ||
+          (supplier.telefono && supplier.telefono.includes(term)) ||
+          (supplier.email && supplier.email.toLowerCase().includes(term))
+        );
+      })
+    : suppliers;
+
   return (
     <div className="p-3 sm:p-4 md:p-6 w-full">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6 mb-2 sm:mb-3">
-        <div className="flex items-center space-x-3 mb-2">
-          <Truck className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Proveedores</h1>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de proveedores y documentos</p>
-      </div>
-
-      {/* Header with Add Button */}
-      <div className="flex justify-between items-center mb-2 sm:mb-3">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Proveedores</h2>
-        {canCreate('fabinsa-suppliers') && (
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Importar</span>
-            </button>
-            <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nuevo Proveedor</span>
-            </button>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center space-x-3 mb-2">
+              <Truck className="w-6 h-6 text-blue-600" />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Proveedores</h1>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Gestión de proveedores y documentos</p>
           </div>
-        )}
-      </div>
-
-      {/* Buscador */}
-      <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre, razón social, CUIT, teléfono o email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
         </div>
       </div>
+
+      {/* Tabs principales */}
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-2 sm:mb-3">
+        <div className="flex space-x-1">
+          <button
+            onClick={() => setMainTab('resumen')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              mainTab === 'resumen'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            Resumen proveedores
+          </button>
+          <button
+            onClick={() => setMainTab('gestion')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              mainTab === 'gestion'
+                ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            Gestión de proveedores
+          </button>
+        </div>
+      </div>
+
+      {/* Contenido según tab principal */}
+      {mainTab === 'resumen' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Columna izquierda - Lista de proveedores */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Lista de proveedores</h2>
+              
+              {/* Buscador */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Buscar proveedor:"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Tabla de proveedores */}
+            <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nombre</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Razón social</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Contacto</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredSuppliers.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                        {searchTerm ? 'No se encontraron proveedores' : 'No hay proveedores registrados'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSuppliers.map((supplier) => (
+                      <tr
+                        key={supplier.id}
+                        onClick={() => {
+                          setSelectedSupplierForDetails(supplier);
+                          loadSupplierOrders(supplier);
+                        }}
+                        className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                          selectedSupplierForDetails?.id === supplier.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                        }`}
+                      >
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                          {supplier.nombre}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          {supplier.razon_social || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                          {supplier.telefono || supplier.email || '-'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Columna derecha - Detalles del proveedor */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            {selectedSupplierForDetails ? (
+              <>
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    {selectedSupplierForDetails.nombre}
+                  </h2>
+                  
+                  {/* Tabs de detalles */}
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => setSupplierDetailTab('facturas')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        supplierDetailTab === 'facturas'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Facturas adeudadas
+                    </button>
+                    <button
+                      onClick={() => setSupplierDetailTab('cuenta')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        supplierDetailTab === 'cuenta'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Cuenta proveedor
+                    </button>
+                    <button
+                      onClick={() => setSupplierDetailTab('info')}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        supplierDetailTab === 'info'
+                          ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Información general
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 overflow-y-auto max-h-[calc(100vh-300px)]">
+                  {supplierDetailTab === 'facturas' && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Facturas adeudadas al proveedor (doble click para seleccionar ítem)
+                      </p>
+                      {loadingOrders ? (
+                        <div className="text-center py-8">
+                          <div className="text-gray-500 dark:text-gray-400">Cargando facturas...</div>
+                        </div>
+                      ) : (supplierMaterialPurchases.length === 0 && supplierProductPurchases.length === 0) ? (
+                        <p className="text-center text-gray-500 dark:text-gray-400 py-8">No hay facturas registradas</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-50 dark:bg-gray-700">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Nro. Comprobante</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Tipo</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Fecha</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Descripción</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300">Total</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300">Pagado</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300">Saldo</th>
+                                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300">Días</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300">Saldo acumulado</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                              {(() => {
+                                // Combinar compras de materiales y productos
+                                const allPurchases: Array<PurchaseMaterial | PurchaseProduct & { tipo: 'material' | 'producto' }> = [
+                                  ...supplierMaterialPurchases.map(p => ({ ...p, tipo: 'material' as const })),
+                                  ...supplierProductPurchases.map(p => ({ ...p, tipo: 'producto' as const }))
+                                ];
+
+                                // Agrupar por fecha y tipo para crear "órdenes"
+                                const groupedPurchases = allPurchases.reduce((acc: any, purchase: any) => {
+                                  const key = `${purchase.fecha}_${purchase.tipo}`;
+                                  if (!acc[key]) {
+                                    acc[key] = [];
+                                  }
+                                  acc[key].push(purchase);
+                                  return acc;
+                                }, {});
+
+                                // Convertir a array y ordenar por fecha
+                                const orders = Object.values(groupedPurchases).map((purchases: any) => {
+                                  purchases.sort((a: any, b: any) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+                                  return purchases;
+                                }).sort((a: any, b: any) => new Date(a[0].fecha).getTime() - new Date(b[0].fecha).getTime());
+
+                                let saldoAcumuladoTotal = 0;
+
+                                return orders.map((orderPurchases: any[], orderIndex: number) => {
+                                  // Calcular totales de la orden
+                                  const orderTotal = orderPurchases.reduce((sum: number, purchase: any) => {
+                                    const tieneIva = purchase.tiene_iva || false;
+                                    const ivaPct = purchase.iva_pct || 0;
+                                    const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
+                                    return sum + purchase.total + ivaMonto;
+                                  }, 0);
+
+                                  const orderPagado = orderPurchases.reduce((sum: number, purchase: any) => {
+                                    const tieneIva = purchase.tiene_iva || false;
+                                    const ivaPct = purchase.iva_pct || 0;
+                                    const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
+                                    const totalConIva = purchase.total + ivaMonto;
+                                    const pagado = purchase.pagado || false;
+                                    return sum + (pagado ? totalConIva : 0);
+                                  }, 0);
+
+                                  const orderCompletamentePagado = orderPurchases.every((p: any) => p.pagado);
+                                  const orderSaldo = orderCompletamentePagado ? 0 : -(orderTotal - orderPagado);
+                                  
+                                  // Actualizar saldo acumulado
+                                  saldoAcumuladoTotal += orderSaldo;
+
+                                  const firstPurchase = orderPurchases[0];
+                                  const orderNumber = firstPurchase.id ? firstPurchase.id.substring(0, 8) : `ORD-${orderIndex + 1}`;
+                                  const purchaseCount = orderPurchases.length;
+                                  const description = purchaseCount === 1 
+                                    ? (firstPurchase.material || firstPurchase.producto || 'Compra')
+                                    : `${purchaseCount} ítems`;
+
+                                  // Calcular días desde la emisión
+                                  const fechaEmision = new Date(firstPurchase.fecha);
+                                  const fechaActual = new Date();
+                                  const diasTranscurridos = Math.floor((fechaActual.getTime() - fechaEmision.getTime()) / (1000 * 60 * 60 * 24));
+                                  
+                                  // Calcular días de atraso (si no está pagada, son los días transcurridos)
+                                  const diasAtraso = orderCompletamentePagado ? 0 : diasTranscurridos;
+                                  
+                                  // Determinar color según días de atraso
+                                  const getDiasColor = () => {
+                                    if (orderCompletamentePagado) {
+                                      return 'text-green-600 dark:text-green-400';
+                                    }
+                                    if (diasAtraso <= 15) {
+                                      return 'text-gray-600 dark:text-gray-400';
+                                    }
+                                    if (diasAtraso <= 30) {
+                                      return 'text-yellow-600 dark:text-yellow-400';
+                                    }
+                                    if (diasAtraso <= 60) {
+                                      return 'text-orange-600 dark:text-orange-400';
+                                    }
+                                    return 'text-red-600 dark:text-red-400';
+                                  };
+
+                                  const getDiasBackground = () => {
+                                    if (orderCompletamentePagado) {
+                                      return 'bg-green-100 dark:bg-green-900/30';
+                                    }
+                                    if (diasAtraso <= 15) {
+                                      return 'bg-gray-100 dark:bg-gray-700';
+                                    }
+                                    if (diasAtraso <= 30) {
+                                      return 'bg-yellow-100 dark:bg-yellow-900/30';
+                                    }
+                                    if (diasAtraso <= 60) {
+                                      return 'bg-orange-100 dark:bg-orange-900/30';
+                                    }
+                                    return 'bg-red-100 dark:bg-red-900/30';
+                                  };
+
+                                  const getDiasText = () => {
+                                    if (orderCompletamentePagado) {
+                                      return `${diasTranscurridos} días (Pagada)`;
+                                    }
+                                    return `${diasAtraso} días`;
+                                  };
+
+                                  return (
+                                    <tr
+                                      key={firstPurchase.id || orderIndex}
+                                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                                    >
+                                      <td className="px-3 py-2 text-gray-900 dark:text-white">
+                                        {orderNumber}
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                                        {firstPurchase.tipo === 'material' ? 'MAT' : 'PROD'}
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                                        {new Date(firstPurchase.fecha).toLocaleDateString('es-AR')}
+                                      </td>
+                                      <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{description}</td>
+                                      <td className="px-3 py-2 text-right text-gray-900 dark:text-white">
+                                        ${formatNumber(orderTotal)}
+                                      </td>
+                                      <td className="px-3 py-2 text-right text-gray-500 dark:text-gray-400">
+                                        ${formatNumber(orderPagado)}
+                                      </td>
+                                      <td className={`px-3 py-2 text-right ${orderCompletamentePagado ? 'text-gray-500 dark:text-gray-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {orderCompletamentePagado ? '$0,00' : `-${formatNumber(Math.abs(orderSaldo))}`}
+                                      </td>
+                                      <td className="px-3 py-2 text-center">
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getDiasBackground()} ${getDiasColor()}`} title={orderCompletamentePagado ? `Pagada después de ${diasTranscurridos} días` : `Atraso de ${diasAtraso} días`}>
+                                          {getDiasText()}
+                                        </span>
+                                      </td>
+                                      <td className={`px-3 py-2 text-right ${saldoAcumuladoTotal >= 0 ? 'text-gray-500 dark:text-gray-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {saldoAcumuladoTotal >= 0 ? '' : '-'}${formatNumber(Math.abs(saldoAcumuladoTotal))}
+                                      </td>
+                                    </tr>
+                                  );
+                                });
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {supplierDetailTab === 'cuenta' && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Información de cuenta del proveedor</p>
+                      {loadingOrders ? (
+                        <div className="text-center py-8">
+                          <div className="text-gray-500 dark:text-gray-400">Cargando información...</div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {(() => {
+                            if ((supplierMaterialPurchases.length === 0 && supplierProductPurchases.length === 0)) {
+                              return (
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Saldo total:</p>
+                                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    $0,00
+                                  </p>
+                                </div>
+                              );
+                            }
+                            
+                            // Combinar todas las compras
+                            const allPurchases = [
+                              ...supplierMaterialPurchases.map(p => ({ ...p, tipo: 'material' as const })),
+                              ...supplierProductPurchases.map(p => ({ ...p, tipo: 'producto' as const }))
+                            ];
+
+                            // Calcular totales
+                            let totalCompras = 0;
+                            let totalPagado = 0;
+                            let saldoAdeudado = 0;
+
+                            allPurchases.forEach((purchase: any) => {
+                              const tieneIva = purchase.tiene_iva || false;
+                              const ivaPct = purchase.iva_pct || 0;
+                              const ivaMonto = tieneIva ? purchase.total * (ivaPct / 100) : 0;
+                              const totalConIva = purchase.total + ivaMonto;
+                              const pagado = purchase.pagado || false;
+
+                              totalCompras += totalConIva;
+                              if (pagado) {
+                                totalPagado += totalConIva;
+                              }
+                            });
+
+                            saldoAdeudado = -(totalCompras - totalPagado);
+                            
+                            return (
+                              <>
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Saldo total adeudado:</p>
+                                  <p className={`text-2xl font-bold ${saldoAdeudado < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                                    {saldoAdeudado < 0 ? `-$${formatNumber(Math.abs(saldoAdeudado))}` : `$${formatNumber(saldoAdeudado)}`}
+                                  </p>
+                                </div>
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Total comprado:</p>
+                                  <p className="text-xl font-semibold text-gray-900 dark:text-white">
+                                    ${formatNumber(totalCompras)}
+                                  </p>
+                                </div>
+                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Total pagado:</p>
+                                  <p className="text-xl font-semibold text-green-600 dark:text-green-400">
+                                    ${formatNumber(totalPagado)}
+                                  </p>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {supplierDetailTab === 'info' && (
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Información de contacto</h3>
+                        <div className="space-y-2 text-sm">
+                          {selectedSupplierForDetails.telefono && (
+                            <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">Teléfono:</span>
+                              <span>{selectedSupplierForDetails.telefono}</span>
+                            </div>
+                          )}
+                          {selectedSupplierForDetails.email && (
+                            <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">Email:</span>
+                              <span>{selectedSupplierForDetails.email}</span>
+                            </div>
+                          )}
+                          {selectedSupplierForDetails.direccion && (
+                            <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">Dirección:</span>
+                              <span>{selectedSupplierForDetails.direccion}</span>
+                            </div>
+                          )}
+                          {selectedSupplierForDetails.provincia && (
+                            <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">Provincia:</span>
+                              <span>{selectedSupplierForDetails.provincia}</span>
+                            </div>
+                          )}
+                          {selectedSupplierForDetails.cuit && (
+                            <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">CUIT:</span>
+                              <span>{selectedSupplierForDetails.cuit}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {selectedSupplierForDetails.observaciones && (
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Observaciones</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{selectedSupplierForDetails.observaciones}</p>
+                        </div>
+                      )}
+
+                      {/* Botones de acción */}
+                      <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                          onClick={() => openDocumentsModal(selectedSupplierForDetails)}
+                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>Documentos</span>
+                        </button>
+                        <button
+                          onClick={() => openOrdersModal(selectedSupplierForDetails)}
+                          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        >
+                          <History className="w-4 h-4" />
+                          <span>Historial</span>
+                        </button>
+                        {canEdit('fabinsa-suppliers') && (
+                          <button
+                            onClick={() => handleEdit(selectedSupplierForDetails)}
+                            className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                          >
+                            <Edit className="w-4 h-4" />
+                            <span>Editar</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                Seleccione un proveedor de la lista para ver sus detalles
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab de Gestión de proveedores */}
+      {mainTab === 'gestion' && (
+        <div>
+          {/* Header with Add Button */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lista de Proveedores</h2>
+            {canCreate('fabinsa-suppliers') && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Importar</span>
+                </button>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nuevo Proveedor</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Buscador */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, razón social, CUIT, teléfono o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
 
       {/* Form Modal */}
       {showForm && (
@@ -943,61 +1463,44 @@ export function SuppliersModule() {
         </div>
       )}
 
-      {/* Suppliers Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
-        <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-          <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 min-w-[600px] md:min-w-[700px] lg:min-w-[900px]">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[140px] sm:min-w-[150px]">
-                  Nombre
-                </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell min-w-[130px] lg:min-w-[140px]">
-                  Razón Social
-                </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[140px] lg:min-w-[150px]">
-                  Dirección
-                </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell min-w-[110px] md:min-w-[120px]">
-                  Teléfono
-                </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[160px] lg:min-w-[180px]">
-                  Email
-                </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden 2xl:table-cell min-w-[90px] lg:min-w-[100px]">
-                  Provincia
-                </th>
-                <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[90px] md:min-w-[100px]">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {(() => {
-                const filteredSuppliers = searchTerm
-                  ? suppliers.filter((supplier) => {
-                      const term = searchTerm.toLowerCase();
-                      return (
-                        supplier.nombre.toLowerCase().includes(term) ||
-                        (supplier.razon_social && supplier.razon_social.toLowerCase().includes(term)) ||
-                        (supplier.cuit && supplier.cuit.includes(term)) ||
-                        (supplier.telefono && supplier.telefono.includes(term)) ||
-                        (supplier.email && supplier.email.toLowerCase().includes(term))
-                      );
-                    })
-                  : suppliers;
-
-                if (filteredSuppliers.length === 0) {
-                  return (
+          {/* Suppliers Table */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden w-full">
+            <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+              <table className="w-full divide-y divide-gray-200 dark:divide-gray-700 min-w-[600px] md:min-w-[700px] lg:min-w-[900px]">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[140px] sm:min-w-[150px]">
+                      Nombre
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell min-w-[130px] lg:min-w-[140px]">
+                      Razón Social
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[140px] lg:min-w-[150px]">
+                      Dirección
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell min-w-[110px] md:min-w-[120px]">
+                      Teléfono
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell min-w-[160px] lg:min-w-[180px]">
+                      Email
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden 2xl:table-cell min-w-[90px] lg:min-w-[100px]">
+                      Provincia
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[90px] md:min-w-[100px]">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredSuppliers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         {searchTerm ? 'No se encontraron proveedores que coincidan con la búsqueda' : 'No hay proveedores registrados'}
                       </td>
                     </tr>
-                  );
-                }
-
-                return filteredSuppliers.map((supplier) => (
+                  ) : (
+                    filteredSuppliers.map((supplier) => (
                   <tr key={supplier.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-3 sm:px-4 md:px-4 lg:px-6 py-3 sm:py-4">
                       <button
@@ -1069,12 +1572,14 @@ export function SuppliersModule() {
                       </div>
                     </td>
                   </tr>
-                ));
-              })()}
-            </tbody>
-          </table>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Modal de Historial de Pedidos */}
       {showOrdersModal && selectedSupplierForOrders && (
