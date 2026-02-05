@@ -190,14 +190,22 @@ export function MetricsModule() {
   }, {} as Record<string, number>);
 
   const salesByProduct = sales.reduce((acc, s) => {
-    acc[s.producto] = (acc[s.producto] || 0) + s.ingreso_neto;
+    if (!acc[s.producto]) {
+      acc[s.producto] = { ingreso: 0, cantidad: 0 };
+    }
+    acc[s.producto].ingreso += s.ingreso_neto;
+    acc[s.producto].cantidad += s.cantidad;
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, { ingreso: number; cantidad: number }>);
 
   const profitByProduct = sales.reduce((acc, s) => {
-    acc[s.producto] = (acc[s.producto] || 0) + s.ganancia_total;
+    if (!acc[s.producto]) {
+      acc[s.producto] = { ganancia: 0, cantidad: 0 };
+    }
+    acc[s.producto].ganancia += s.ganancia_total;
+    acc[s.producto].cantidad += s.cantidad;
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, { ganancia: number; cantidad: number }>);
 
   // Group by date for trends
   const revenueByDate = sales.reduce((acc, s) => {
@@ -328,11 +336,11 @@ export function MetricsModule() {
 
   // Top products
   const topProductsByRevenue = Object.entries(salesByProduct)
-    .sort(([, a], [, b]) => b - a)
+    .sort(([, a], [, b]) => b.ingreso - a.ingreso)
     .slice(0, 5);
 
   const topProductsByProfit = Object.entries(profitByProduct)
-    .sort(([, a], [, b]) => b - a)
+    .sort(([, a], [, b]) => b.ganancia - a.ganancia)
     .slice(0, 5);
 
   // Cost distribution
@@ -391,24 +399,24 @@ export function MetricsModule() {
 
     // Hoja 3: Ingresos por Producto
     const revenueByProductData = [
-      ['Producto', 'Ingreso Neto']
+      ['Producto', 'Cantidad Vendida', 'Ingreso Neto']
     ];
     Object.entries(salesByProduct)
-      .sort(([, a], [, b]) => b - a)
-      .forEach(([producto, ingreso]) => {
-        revenueByProductData.push([producto, formatNumber(ingreso)]);
+      .sort(([, a], [, b]) => b.ingreso - a.ingreso)
+      .forEach(([producto, data]) => {
+        revenueByProductData.push([producto, data.cantidad, formatNumber(data.ingreso)]);
       });
     const ws3 = utils.aoa_to_sheet(revenueByProductData);
     utils.book_append_sheet(wb, ws3, 'Ingresos por Producto');
 
     // Hoja 4: Ganancia por Producto
     const profitByProductData = [
-      ['Producto', 'Ganancia Total']
+      ['Producto', 'Cantidad Vendida', 'Ganancia Total']
     ];
     Object.entries(profitByProduct)
-      .sort(([, a], [, b]) => b - a)
-      .forEach(([producto, ganancia]) => {
-        profitByProductData.push([producto, formatNumber(ganancia)]);
+      .sort(([, a], [, b]) => b.ganancia - a.ganancia)
+      .forEach(([producto, data]) => {
+        profitByProductData.push([producto, data.cantidad, formatNumber(data.ganancia)]);
       });
     const ws4 = utils.aoa_to_sheet(profitByProductData);
     utils.book_append_sheet(wb, ws4, 'Ganancia por Producto');
@@ -1563,33 +1571,71 @@ export function MetricsModule() {
               {sales.length === 0 ? (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-8">No hay ingresos registrados</p>
               ) : (
-                <div className="space-y-4">
-                  {sales.map((sale) => (
-                    <div key={sale.id} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fecha</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {new Date(sale.fecha).toLocaleDateString('es-AR')}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Producto</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingreso Neto</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% del Total</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {totalRevenue > 0 ? formatNumber((sale.ingreso_neto / totalRevenue) * 100) : '0,00'}%
-                          </p>
-                        </div>
+                <div className="space-y-6">
+                  {/* Ingresos por Producto (Agrupado) */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Ingresos por Producto</p>
+                    <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(salesByProduct)
+                          .sort(([, a], [, b]) => b.ingreso - a.ingreso)
+                          .map(([producto, data]) => (
+                            <div key={producto} className="bg-white dark:bg-slate-600 rounded-lg p-4 border border-gray-200 dark:border-gray-500">
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3 truncate" title={producto}>
+                                {producto}
+                              </p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Cantidad Vendida</span>
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white">{data.cantidad} unidades</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Ingreso Neto</span>
+                                  <span className="text-sm font-bold text-green-600 dark:text-green-400">${formatNumber(data.ingreso)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Detalle de Ventas */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Detalle de Ventas</p>
+                    <div className="space-y-4">
+                      {sales.map((sale) => (
+                        <div key={sale.id} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fecha</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {new Date(sale.fecha).toLocaleDateString('es-AR')}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Producto</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Cantidad Vendida</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{sale.cantidad} unidades</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ingreso Neto</p>
+                              <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ingreso_neto)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% del Total</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {totalRevenue > 0 ? formatNumber((sale.ingreso_neto / totalRevenue) * 100) : '0,00'}%
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1617,33 +1663,73 @@ export function MetricsModule() {
               {sales.length === 0 ? (
                 <p className="text-center text-gray-500 dark:text-gray-400 py-8">No hay ganancias registradas</p>
               ) : (
-                <div className="space-y-4">
-                  {sales.map((sale) => (
-                    <div key={sale.id} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fecha</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {new Date(sale.fecha).toLocaleDateString('es-AR')}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Producto</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia</p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ganancia_total)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% del Total</p>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {totalProfit > 0 ? formatNumber((sale.ganancia_total / totalProfit) * 100) : '0,00'}%
-                          </p>
-                        </div>
+                <div className="space-y-6">
+                  {/* Ganancia por Producto (Agrupado) */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Ganancia por Producto</p>
+                    <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(profitByProduct)
+                          .sort(([, a], [, b]) => b.ganancia - a.ganancia)
+                          .map(([producto, data]) => (
+                            <div key={producto} className="bg-white dark:bg-slate-600 rounded-lg p-4 border border-gray-200 dark:border-gray-500">
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3 truncate" title={producto}>
+                                {producto}
+                              </p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Cantidad Vendida</span>
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white">{data.cantidad} unidades</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Ganancia Total</span>
+                                  <span className={`text-sm font-bold ${data.ganancia >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                    ${formatNumber(data.ganancia)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Detalle de Ventas */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Detalle de Ventas</p>
+                    <div className="space-y-4">
+                      {sales.map((sale) => (
+                        <div key={sale.id} className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Fecha</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {new Date(sale.fecha).toLocaleDateString('es-AR')}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Producto</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{sale.producto}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Cantidad Vendida</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{sale.cantidad} unidades</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Ganancia</p>
+                              <p className="text-sm font-semibold text-green-600 dark:text-green-400">${formatNumber(sale.ganancia_total)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">% del Total</p>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {totalProfit > 0 ? formatNumber((sale.ganancia_total / totalProfit) * 100) : '0,00'}%
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

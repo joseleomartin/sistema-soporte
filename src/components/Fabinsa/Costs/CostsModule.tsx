@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { DollarSign, Plus, Trash2, X, Send, Package, Upload, Edit, BarChart3, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { DollarSign, Plus, Trash2, X, Send, Package, Upload, Edit, BarChart3, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useTenant } from '../../../contexts/TenantContext';
 import { Database } from '../../../lib/database.types';
@@ -70,6 +70,7 @@ export function CostsModule() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [searchTerm, setSearchTerm] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
   const [currentSimulationId, setCurrentSimulationId] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<CostSimulationItem | null>(null);
@@ -1453,11 +1454,23 @@ export function CostsModule() {
     }
   };
 
-  // Items ordenados
+  // Items ordenados y filtrados
   const sortedItems = useMemo(() => {
-    if (!sortColumn) return simulationItems;
+    // Primero filtrar por término de búsqueda
+    let filtered = simulationItems;
+    
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = simulationItems.filter(item => {
+        const productName = (item.product?.nombre || item.nombre_manual || '').toLowerCase();
+        const codigoProducto = (item.product?.codigo_producto || item.codigo_producto || '').toLowerCase();
+        return productName.includes(searchLower) || codigoProducto.includes(searchLower);
+      });
+    }
 
-    return [...simulationItems].sort((a, b) => {
+    if (!sortColumn) return filtered;
+
+    return [...filtered].sort((a, b) => {
       const itemCostsA = itemCostsMap[a.id] || calculateItemCostsInternal(a);
       const itemCostsB = itemCostsMap[b.id] || calculateItemCostsInternal(b);
       
@@ -1527,7 +1540,7 @@ export function CostsModule() {
           : (valueB as number) - (valueA as number);
       }
     });
-  }, [simulationItems, sortColumn, sortDirection, itemCostsMap, calculateItemCostsInternal]);
+  }, [simulationItems, sortColumn, sortDirection, searchTerm, itemCostsMap, calculateItemCostsInternal]);
 
   if (loading) {
     return (
@@ -1780,10 +1793,34 @@ export function CostsModule() {
         <>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-2 sm:mb-3">
             <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Productos en Simulación</h2>
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-                  {simulationItems.length} {simulationItems.length === 1 ? 'producto' : 'productos'}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-0">Productos en Simulación</h2>
+                  {/* Buscador */}
+                  <div className="relative mt-2 sm:mt-0 sm:max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Buscar por nombre o código..."
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full whitespace-nowrap">
+                  {sortedItems.length} {sortedItems.length === 1 ? 'producto' : 'productos'}
+                  {searchTerm && simulationItems.length !== sortedItems.length && (
+                    <span className="ml-1 text-gray-500">de {simulationItems.length}</span>
+                  )}
                 </span>
               </div>
             </div>

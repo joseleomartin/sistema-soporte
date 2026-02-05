@@ -102,6 +102,7 @@ export function SalesModule() {
     iva_pct: '21',
     cliente: '',
     pagado: false,
+    fecha: new Date().toISOString().split('T')[0], // Fecha en formato YYYY-MM-DD
   });
 
   const [calculatedValues, setCalculatedValues] = useState({
@@ -1350,6 +1351,9 @@ export function SalesModule() {
     setProductType(tipo);
     
     // Cargar los datos en el formulario
+    // Formatear la fecha de la orden para el input de fecha (YYYY-MM-DD)
+    const orderDate = order.fecha ? new Date(order.fecha).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    
     setFormData({
       producto: firstItem.producto,
       cantidad: firstItem.cantidad.toString(),
@@ -1360,6 +1364,7 @@ export function SalesModule() {
       iva_pct: ((firstItem as any).iva_pct || 21).toString(),
       cliente: order.cliente || '',
       pagado: firstItem.pagado || false,
+      fecha: orderDate,
     });
     
     // Cargar todos los items de la orden en saleItems
@@ -1527,7 +1532,9 @@ export function SalesModule() {
     }
 
     try {
-      const fecha = new Date().toISOString();
+      // Usar la fecha del formulario, convertir a ISO string con hora del día
+      const fechaInput = formData.fecha || new Date().toISOString().split('T')[0];
+      const fecha = new Date(fechaInput + 'T00:00:00').toISOString();
       const cliente = formData.cliente || null;
       
       // Si estamos editando una orden existente
@@ -1636,7 +1643,7 @@ export function SalesModule() {
         for (const item of saleItems) {
           const saleDataBase: SaleInsert & { order_id?: string; order_number?: number } = {
             tenant_id: tenantId,
-            fecha: editingOrder.fecha || fecha, // Mantener la fecha original
+            fecha: fecha, // Usar la fecha del formulario
             producto: item.producto,
             tipo_producto: item.tipo_producto,
             cantidad: item.cantidad,
@@ -1806,7 +1813,12 @@ export function SalesModule() {
         resetForm();
         setEditingOrder(null);
         await loadData();
-        alert('Orden actualizada exitosamente');
+        setAlertModal({
+          isOpen: true,
+          title: '✅ Orden Actualizada',
+          message: 'La orden ha sido actualizada exitosamente.',
+          type: 'success',
+        });
         return;
       }
       
@@ -1921,6 +1933,7 @@ export function SalesModule() {
       iva_pct: '21',
       cliente: '',
       pagado: false,
+      fecha: new Date().toISOString().split('T')[0], // Fecha actual en formato YYYY-MM-DD
     });
     setCalculatedValues({
       precio_final: 0,
@@ -2407,6 +2420,20 @@ export function SalesModule() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Fecha *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.fecha}
+                  onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
@@ -2594,11 +2621,11 @@ export function SalesModule() {
                       <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(calculatedValues.precio_final)}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600 dark:text-gray-300">Ingreso Bruto:</span>
+                      <span className="text-gray-600 dark:text-gray-300">Ingreso sin descuento:</span>
                       <span className="ml-2 font-semibold text-gray-900 dark:text-white">${formatNumber(calculatedValues.ingreso_bruto)}</span>
                     </div>
                     <div>
-                      <span className="text-gray-600 dark:text-gray-300">Ingreso Neto:</span>
+                      <span className="text-gray-600 dark:text-gray-300">Ingreso con descuento:</span>
                       <span className="ml-2 font-semibold text-green-600 dark:text-green-400">
                         ${formatNumber(calculatedValues.ingreso_neto)}
                       </span>
