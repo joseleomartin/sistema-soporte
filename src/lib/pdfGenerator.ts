@@ -11,6 +11,8 @@ export interface OrderItem {
   tipo?: string;
   cantidad: number;
   precio_unitario?: number;
+  precio_lista?: number; // Precio de lista (antes de descuentos)
+  descuento_pct?: number; // Porcentaje de descuento
   costo_unitario?: number;
   ingreso_neto?: number;
   ganancia_total?: number;
@@ -281,10 +283,19 @@ export async function generateOrderPDF(order: OrderData) {
   // Tabla de items
   const tableData = order.items.map((item) => {
     if (order.tipo === 'venta') {
+      // Precio de lista (precio_unitario es el precio base)
+      const precioLista = item.precio_lista || item.precio_unitario || 0;
+      // Descuento porcentual
+      const descuentoPct = item.descuento_pct || 0;
+      // Precio unitario final (después de descuentos)
+      const precioUnitario = item.precio_unitario || 0;
+      
       return [
         item.producto || '-',
         item.cantidad.toString(),
-        item.precio_unitario ? `$${item.precio_unitario.toFixed(2)}` : '-',
+        precioLista > 0 ? `$${precioLista.toFixed(2)}` : '-',
+        descuentoPct > 0 ? `${descuentoPct.toFixed(2)}%` : '0%',
+        precioUnitario > 0 ? `$${precioUnitario.toFixed(2)}` : '-',
       ];
     } else if (order.tipo === 'compra') {
       const moneda = item.moneda || 'ARS';
@@ -310,7 +321,7 @@ export async function generateOrderPDF(order: OrderData) {
 
   const headers = 
     order.tipo === 'venta'
-      ? ['Producto', 'Cantidad', 'Precio Unit.']
+      ? ['Producto', 'Cantidad', 'Precio de Lista', 'Descuento', 'Precio Unit.']
       : order.tipo === 'compra'
       ? ['Material/Producto', 'Cantidad', 'Precio', 'Moneda', 'Total']
       : ['Material', 'Cantidad (kg)'];
@@ -333,7 +344,7 @@ export async function generateOrderPDF(order: OrderData) {
   doc.setFontSize(12);
 
   if (order.tipo === 'venta') {
-    // Calcular total de la venta (cantidad * precio unitario)
+    // Calcular total de la venta (cantidad * precio unitario final)
     const totalVenta = order.items.reduce((sum, item) => {
       const precio = item.precio_unitario || 0;
       return sum + (precio * item.cantidad);

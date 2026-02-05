@@ -1455,7 +1455,9 @@ export function SalesModule() {
         producto: item.producto,
         tipo: item.tipo_producto,
         cantidad: item.cantidad,
-        precio_unitario: item.precio_unitario,
+        precio_lista: item.precio_unitario, // Precio de lista (precio base)
+        precio_unitario: item.precio_final || item.precio_unitario, // Precio final después de descuentos
+        descuento_pct: item.descuento_pct || 0,
         costo_unitario: item.costo_unitario,
         ingreso_neto: item.ingreso_neto,
         ganancia_total: item.ganancia_total,
@@ -1509,7 +1511,9 @@ export function SalesModule() {
         producto: sale.producto,
         tipo: sale.tipo_producto,
         cantidad: sale.cantidad,
-        precio_unitario: sale.precio_unitario,
+        precio_lista: sale.precio_unitario, // Precio de lista (precio base)
+        precio_unitario: sale.precio_final || sale.precio_unitario, // Precio final después de descuentos
+        descuento_pct: sale.descuento_pct || 0,
         costo_unitario: sale.costo_unitario,
         ingreso_neto: sale.ingreso_neto,
         ganancia_total: sale.ganancia_total,
