@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { X, FolderOpen } from 'lucide-react';
+import { useTenant } from '../../contexts/TenantContext';
+import { X, FolderOpen, User } from 'lucide-react';
 
 interface EditClientModalProps {
   subforum: {
@@ -16,6 +17,7 @@ interface EditClientModalProps {
     economic_link?: string | null;
     contact_full_name?: string | null;
     client_type?: string | null;
+    vencimientos_responsable_id?: string | null;
   };
   onClose: () => void;
   onSuccess: () => void;
@@ -62,6 +64,7 @@ const parseAccessKeys = (accessKeys: any): AccessKeys => {
 
 export function EditClientModal({ subforum, onClose, onSuccess }: EditClientModalProps) {
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
   const [name, setName] = useState(subforum.name);
   const [clientName, setClientName] = useState(subforum.client_name);
   const [description, setDescription] = useState(subforum.description || '');
@@ -83,6 +86,32 @@ export function EditClientModal({ subforum, onClose, onSuccess }: EditClientModa
   const [error, setError] = useState('');
   const [availableClients, setAvailableClients] = useState<string[]>([]);
   const [driveLinkError, setDriveLinkError] = useState<string | null>(null);
+  
+  // Tipos de vencimientos disponibles
+  const tiposVencimientos = [
+    'Autónomos',
+    'Monotributo',
+    'IVA',
+    'Ingresos Brutos',
+    'Relación de Dependencia',
+    'Servicio Doméstico',
+    'Personas Humanas',
+    'Personas Jurídicas',
+    'Retenciones'
+  ];
+  
+  const [vencimientosTipos, setVencimientosTipos] = useState<string[]>(() => {
+    // Cargar tipos de vencimientos desde el subforum
+    if ((subforum as any).vencimientos_tipos && Array.isArray((subforum as any).vencimientos_tipos)) {
+      return (subforum as any).vencimientos_tipos;
+    }
+    return [];
+  });
+  
+  const [vencimientosResponsableId, setVencimientosResponsableId] = useState<string | null>(
+    (subforum as any).vencimientos_responsable_id || null
+  );
+  const [users, setUsers] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -108,6 +137,24 @@ export function EditClientModal({ subforum, onClose, onSuccess }: EditClientModa
     loadClients();
   }, [profile?.id]);
 
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const loadUsers = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('tenant_id', tenantId)
+        .order('full_name', { ascending: true });
+
+      if (!error && data) {
+        setUsers(data);
+      }
+    };
+
+    loadUsers();
+  }, [tenantId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.id) return;
@@ -130,6 +177,16 @@ export function EditClientModal({ subforum, onClose, onSuccess }: EditClientModa
       const combinedPhone =
         [phone.trim(), secondaryPhone.trim()].filter((v) => v.length > 0).join(' / ') || null;
 
+      // Obtener el responsable anterior para comparar
+      const { data: currentSubforum } = await supabase
+        .from('subforums')
+        .select('vencimientos_responsable_id, client_name, cuit')
+        .eq('id', subforum.id)
+        .single();
+
+      const responsableAnterior = currentSubforum?.vencimientos_responsable_id;
+      const responsableNuevo = vencimientosResponsableId || null;
+
       // Actualizar subforum (cliente)
       const { data: updatedSubforum, error: subforumError } = await supabase
         .from('subforums')
@@ -144,12 +201,102 @@ export function EditClientModal({ subforum, onClose, onSuccess }: EditClientModa
           contact_full_name: contactFullName.trim() || null,
           client_type: clientType.trim() || null,
           phone: combinedPhone,
+          vencimientos_tipos: vencimientosTipos.length > 0 ? vencimientosTipos : null,
+          vencimientos_responsable_id: vencimientosResponsableId || null,
         })
         .eq('id', subforum.id)
-        .select('id, name')
+        .select('id, name, tenant_id')
         .single();
 
       if (subforumError) throw subforumError;
+
+      // Si se asignó un nuevo responsable, asignar TODOS los vencimientos del cliente
+      if (responsableNuevo && responsableNuevo !== responsableAnterior && updatedSubforum?.tenant_id) {
+        try {
+          // Buscar TODOS los vencimientos del cliente (no solo pendientes)
+          const { data: todosVencimientos, error: vencimientosError } = await supabase
+            .from('vencimientos_gestion')
+            .select('id')
+            .eq('tenant_id', updatedSubforum.tenant_id)
+            .eq('client_name', clientName.trim());
+
+          if (vencimientosError) {
+            console.warn('Error al buscar vencimientos del cliente:', vencimientosError);
+          } else if (todosVencimientos && todosVencimientos.length > 0) {
+            // Obtener vencimientos que ya tienen asignaciones al nuevo responsable
+            const { data: asignacionesExistentes } = await supabase
+              .from('vencimientos_gestion_assignments')
+              .select('vencimiento_id')
+              .eq('assigned_to_user', responsableNuevo)
+              .in('vencimiento_id', todosVencimientos.map(v => v.id))
+              .eq('tenant_id', updatedSubforum.tenant_id);
+
+            const vencimientosYaAsignados = new Set(
+              asignacionesExistentes?.map(a => a.vencimiento_id) || []
+            );
+
+            // Eliminar asignaciones anteriores del responsable anterior (si existía)
+            if (responsableAnterior) {
+              await supabase
+                .from('vencimientos_gestion_assignments')
+                .delete()
+                .eq('assigned_to_user', responsableAnterior)
+                .in('vencimiento_id', todosVencimientos.map(v => v.id))
+                .eq('tenant_id', updatedSubforum.tenant_id);
+            }
+
+            // Crear nuevas asignaciones solo para vencimientos que no están ya asignados al nuevo responsable
+            const vencimientosParaAsignar = todosVencimientos.filter(
+              v => !vencimientosYaAsignados.has(v.id)
+            );
+
+            if (vencimientosParaAsignar.length > 0) {
+              const nuevasAsignaciones = vencimientosParaAsignar.map(vencimiento => ({
+                vencimiento_id: vencimiento.id,
+                assigned_to_user: responsableNuevo,
+                assigned_by: profile.id,
+                tenant_id: updatedSubforum.tenant_id
+              }));
+
+              // Insertar en lotes para evitar problemas con muchos vencimientos
+              const batchSize = 100;
+              for (let i = 0; i < nuevasAsignaciones.length; i += batchSize) {
+                const batch = nuevasAsignaciones.slice(i, i + batchSize);
+                const { error: assignError } = await supabase
+                  .from('vencimientos_gestion_assignments')
+                  .insert(batch);
+
+                if (assignError) {
+                  console.warn('Error al asignar vencimientos en lote:', assignError);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Error al asignar vencimientos al nuevo responsable:', error);
+          // No bloquear la actualización del cliente si falla la asignación
+        }
+      } else if (!responsableNuevo && responsableAnterior) {
+        // Si se removió el responsable, eliminar todas las asignaciones del responsable anterior
+        try {
+          const { data: vencimientosCliente } = await supabase
+            .from('vencimientos_gestion')
+            .select('id')
+            .eq('tenant_id', updatedSubforum.tenant_id)
+            .eq('client_name', clientName.trim());
+
+          if (vencimientosCliente && vencimientosCliente.length > 0) {
+            await supabase
+              .from('vencimientos_gestion_assignments')
+              .delete()
+              .eq('assigned_to_user', responsableAnterior)
+              .in('vencimiento_id', vencimientosCliente.map(v => v.id))
+              .eq('tenant_id', updatedSubforum.tenant_id);
+          }
+        } catch (error) {
+          console.warn('Error al remover asignaciones del responsable anterior:', error);
+        }
+      }
 
       // Si se proporcionó un enlace de Google Drive, actualizar el mapeo
       if (driveFolderLink.trim() && updatedSubforum?.id) {
@@ -488,6 +635,71 @@ export function EditClientModal({ subforum, onClose, onSuccess }: EditClientModa
               <option value="Responsable Inscripto">Responsable Inscripto</option>
               <option value="Persona Jurídica">Persona Jurídica</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tipos de Vencimientos que Aplican (opcional)
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Selecciona los tipos de vencimientos que aplican a este cliente. Esto determinará qué vencimientos se mostrarán en la columna de vencimientos.
+            </p>
+            <div className="border border-gray-200 rounded-lg p-3 bg-gray-50 space-y-2 max-h-48 overflow-y-auto">
+              {tiposVencimientos.map((tipo) => (
+                <label
+                  key={tipo}
+                  className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer transition"
+                >
+                  <input
+                    type="checkbox"
+                    checked={vencimientosTipos.includes(tipo)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setVencimientosTipos([...vencimientosTipos, tipo]);
+                      } else {
+                        setVencimientosTipos(vencimientosTipos.filter(t => t !== tipo));
+                      }
+                    }}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{tipo}</span>
+                </label>
+              ))}
+            </div>
+            {vencimientosTipos.length === 0 && (
+              <p className="text-xs text-gray-400 mt-2 italic">
+                Si no seleccionas ningún tipo, se mostrarán todos los vencimientos según el último dígito del CUIT.
+              </p>
+            )}
+            {vencimientosTipos.length > 0 && (
+              <p className="text-xs text-blue-600 mt-2">
+                {vencimientosTipos.length} tipo{vencimientosTipos.length !== 1 ? 's' : ''} seleccionado{vencimientosTipos.length !== 1 ? 's' : ''}: {vencimientosTipos.join(', ')}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Usuario Responsable de Vencimientos
+              </div>
+            </label>
+            <select
+              value={vencimientosResponsableId || ''}
+              onChange={(e) => setVencimientosResponsableId(e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Sin asignar</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.full_name} ({user.email})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Este usuario será asignado automáticamente a todos los vencimientos creados para este cliente.
+            </p>
           </div>
 
           <div>

@@ -6,6 +6,10 @@ import { useAuth } from '../../contexts/AuthContext';
 interface CreateTaskModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialClientName?: string;
+  initialDueDate?: string;
+  initialTitle?: string;
+  initialDescription?: string;
 }
 
 interface Profile {
@@ -21,18 +25,18 @@ interface Department {
   description: string | null;
 }
 
-export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
+export function CreateTaskModal({ onClose, onSuccess, initialClientName, initialDueDate, initialTitle, initialDescription }: CreateTaskModalProps) {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
   // Form fields
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [clientNameInput, setClientNameInput] = useState('');
+  const [title, setTitle] = useState(initialTitle || '');
+  const [description, setDescription] = useState(initialDescription || '');
+  const [clientName, setClientName] = useState(initialClientName || '');
+  const [clientNameInput, setClientNameInput] = useState(initialClientName || '');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState(initialDueDate || '');
   const [priority, setPriority] = useState<'low' | 'medium' | 'urgent'>('medium');
   // Usuarios no-admin solo pueden crear tareas personales
   const [isPersonal, setIsPersonal] = useState(profile?.role !== 'admin');
@@ -62,6 +66,23 @@ export function CreateTaskModal({ onClose, onSuccess }: CreateTaskModalProps) {
     fetchDepartments();
     fetchClients();
   }, []);
+
+  // Actualizar campos cuando cambien las props iniciales
+  useEffect(() => {
+    if (initialClientName) {
+      setClientName(initialClientName);
+      setClientNameInput(initialClientName);
+    }
+    if (initialDueDate) {
+      setDueDate(initialDueDate);
+    }
+    if (initialTitle) {
+      setTitle(initialTitle);
+    }
+    if (initialDescription) {
+      setDescription(initialDescription);
+    }
+  }, [initialClientName, initialDueDate, initialTitle, initialDescription]);
 
   const fetchUsers = async () => {
     try {

@@ -488,7 +488,7 @@ export function TasksList() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-slate-900">
+    <div className="h-full min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900">
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4">
         <div className="flex items-center justify-between mb-4">

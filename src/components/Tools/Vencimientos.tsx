@@ -1,34 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar, RefreshCw, Upload, Download, AlertCircle, CheckCircle2, Loader2, FileSpreadsheet, UserPlus, Users, Mail, X, Edit2, Trash2 } from 'lucide-react';
-import { useExtraction } from '../../contexts/ExtractionContext';
+import { Calendar, Upload, Download, AlertCircle, CheckCircle2, Loader2, FileSpreadsheet, UserPlus, Users, Mail, X, Edit2, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
+import { read, utils, writeFile } from 'xlsx';
 
-// Usar VITE_BACKEND_URL si está disponible, sino VITE_EXTRACTOR_API_URL, sino localhost:5000 (backend por defecto)
-const API_BASE_URL = (import.meta.env.VITE_BACKEND_URL as string | undefined) 
-  ?? (import.meta.env.VITE_EXTRACTOR_API_URL as string | undefined) 
-  ?? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? 'http://localhost:5000' 
-      : window.location.origin);
+interface VencimientoRow {
+  [key: string]: any;
+}
 
 interface VencimientoData {
-  archivo: string;
-  fecha_actualizacion: string;
   hojas: {
     [key: string]: {
       total_filas: number;
       columnas: string[];
-      datos: any[];
+      datos: VencimientoRow[];
     };
   };
-}
-
-interface JobStatus {
-  id: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
-  progress: number;
-  message: string;
-  error?: string;
+  fecha_actualizacion?: string;
 }
 
 interface Cliente {
@@ -41,23 +30,13 @@ interface Cliente {
 }
 
 export function Vencimientos() {
-  const { addJob, updateJob } = useExtraction();
   const { profile } = useAuth();
+  const { tenantId } = useTenant();
   const [vencimientos, setVencimientos] = useState<VencimientoData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshJobId, setRefreshJobId] = useState<string | null>(null);
-  const [localJobId, setLocalJobId] = useState<string | null>(null);
-  const [archivoCuits, setArchivoCuits] = useState<File | null>(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [archivoExcel, setArchivoExcel] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [filtrando, setFiltrando] = useState(false);
-  const [resultadoFiltrado, setResultadoFiltrado] = useState<{
-    filename: string;
-    downloadUrl: string;
-    total_cuits: number;
-    cuits_con_vencimientos: number;
-    cuits_sin_vencimientos: number;
-  } | null>(null);
   const [localMessage, setLocalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [tabActiva, setTabActiva] = useState<string | null>(null);
   
@@ -68,42 +47,73 @@ export function Vencimientos() {
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
   const [formCliente, setFormCliente] = useState({ nombre: '', cuit: '', email: '' });
   const [enviandoEmail, setEnviandoEmail] = useState(false);
+  const [showCargarModal, setShowCargarModal] = useState(false);
 
-  // Definir cargarVencimientos antes de usarlo en los useEffect
+  // Cargar vencimientos desde la base de datos
   const cargarVencimientos = useCallback(async () => {
+    if (!tenantId) return;
+    
     try {
       setLoading(true);
-      const headers: HeadersInit = {};
-      if (API_BASE_URL.includes('ngrok')) {
-        headers['ngrok-skip-browser-warning'] = 'true';
-        headers['User-Agent'] = 'Mozilla/5.0';
+      
+      // Obtener todos los vencimientos del tenant
+      const { data, error } = await supabase
+        .from('vencimientos')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Agrupar por hoja
+      const hojas: { [key: string]: VencimientoRow[] } = {};
+      
+      if (data) {
+        data.forEach((vencimiento) => {
+          const hojaNombre = vencimiento.hoja_nombre;
+          if (!hojas[hojaNombre]) {
+            hojas[hojaNombre] = [];
+          }
+          hojas[hojaNombre].push(vencimiento.datos);
+        });
       }
 
-      const response = await fetch(`${API_BASE_URL}/vencimientos/listar`, { headers });
+      // Convertir a formato esperado
+      const resultado: VencimientoData = {
+        hojas: {},
+      };
+
+      for (const [hojaNombre, filas] of Object.entries(hojas)) {
+        if (filas.length === 0) continue;
+        
+        // Obtener columnas únicas de todas las filas
+        const columnasSet = new Set<string>();
+        filas.forEach(fila => {
+          Object.keys(fila).forEach(col => columnasSet.add(col));
+        });
+        const columnas = Array.from(columnasSet);
+
+        resultado.hojas[hojaNombre] = {
+          total_filas: filas.length,
+          columnas,
+          datos: filas.slice(0, 100), // Mostrar solo las primeras 100 filas
+        };
+      }
+
+      setVencimientos(resultado);
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setVencimientos(data.data);
           // Establecer la primera hoja como pestaña activa por defecto
-          if (data.data.hojas && Object.keys(data.data.hojas).length > 0) {
-            const primeraHoja = Object.keys(data.data.hojas)[0];
+      if (Object.keys(resultado.hojas).length > 0) {
+        const primeraHoja = Object.keys(resultado.hojas)[0];
             setTabActiva(primeraHoja);
-          }
-        } else {
-          setLocalMessage({ type: 'error', text: data.message || 'Error al cargar vencimientos' });
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({ message: 'Error al cargar vencimientos' }));
-        setLocalMessage({ type: 'error', text: errorData.message || 'Error al cargar vencimientos' });
       }
     } catch (error: any) {
-      console.error('Error:', error);
-      setLocalMessage({ type: 'error', text: 'Error de conexión con el servidor' });
+      console.error('Error cargando vencimientos:', error);
+      setLocalMessage({ type: 'error', text: error.message || 'Error al cargar vencimientos' });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   // Cargar vencimientos al montar el componente
   useEffect(() => {
@@ -111,122 +121,248 @@ export function Vencimientos() {
     cargarClientes();
   }, [cargarVencimientos]);
 
-  // Polling para el estado del job de refresco
+  // Cerrar modal de carga cuando la subida sea exitosa
   useEffect(() => {
-    if (!refreshJobId) return;
+    if (!subiendo && localMessage?.type === 'success' && showCargarModal) {
+      const timer = setTimeout(() => {
+        setShowCargarModal(false);
+        setArchivoExcel(null);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [subiendo, localMessage, showCargarModal]);
 
-    const interval = setInterval(async () => {
-      try {
-        const headers: HeadersInit = {};
-        if (API_BASE_URL.includes('ngrok')) {
-          headers['ngrok-skip-browser-warning'] = 'true';
-          headers['User-Agent'] = 'Mozilla/5.0';
-        }
+  // Descargar plantilla Excel
+  const handleDescargarPlantilla = () => {
+    try {
+      // Estructura: Periodo + 10 columnas para CUITs del 0 al 9
+      const crearDatosEjemplo = () => [
+        {
+          'Periodo': 'Enero 2026',
+          'CUIT 0': '13-feb',
+          'CUIT 1': '13-feb',
+          'CUIT 2': '13-feb',
+          'CUIT 3': '18-feb',
+          'CUIT 4': '18-feb',
+          'CUIT 5': '18-feb',
+          'CUIT 6': '19-feb',
+          'CUIT 7': '19-feb',
+          'CUIT 8': '20-feb',
+          'CUIT 9': '20-feb',
+        },
+        {
+          'Periodo': 'Febrero 2026',
+          'CUIT 0': '13-mar',
+          'CUIT 1': '13-mar',
+          'CUIT 2': '13-mar',
+          'CUIT 3': '16-mar',
+          'CUIT 4': '16-mar',
+          'CUIT 5': '16-mar',
+          'CUIT 6': '17-mar',
+          'CUIT 7': '17-mar',
+          'CUIT 8': '18-mar',
+          'CUIT 9': '18-mar',
+        },
+        {
+          'Periodo': 'Marzo 2026',
+          'CUIT 0': '15-abr',
+          'CUIT 1': '15-abr',
+          'CUIT 2': '15-abr',
+          'CUIT 3': '16-abr',
+          'CUIT 4': '16-abr',
+          'CUIT 5': '16-abr',
+          'CUIT 6': '17-abr',
+          'CUIT 7': '17-abr',
+          'CUIT 8': '20-abr',
+          'CUIT 9': '20-abr',
+        },
+      ];
 
-        const response = await fetch(`${API_BASE_URL}/vencimientos/status/${refreshJobId}`, { headers });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.job) {
-            const job = data.job;
-            
-            // Actualizar job local en el contexto si existe
-            if (localJobId) {
-              updateJob(localJobId, {
-                progress: job.progress,
-                message: job.message,
-                status: job.status === 'completed' ? 'completed' : job.status === 'error' ? 'error' : 'processing'
-              });
-            }
+      // Crear workbook con todas las hojas
+      const wb = utils.book_new();
+      const datosEjemplo = crearDatosEjemplo();
 
-            if (job.status === 'completed') {
-              setRefreshing(false);
-              setRefreshJobId(null);
-              setLocalJobId(null);
-              // Recargar vencimientos
-              await cargarVencimientos();
-              setLocalMessage({
-                type: 'success',
-                text: 'Vencimientos actualizados exitosamente'
-              });
-            } else if (job.status === 'error') {
-              setRefreshing(false);
-              setRefreshJobId(null);
-              setLocalJobId(null);
-              setLocalMessage({
-                type: 'error',
-                text: job.error || 'Error al actualizar vencimientos'
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error consultando estado del job:', error);
-      }
-    }, 2000); // Consultar cada 2 segundos
+      // Todas las hojas tienen la misma estructura: Periodo + CUITs 0-9
+      // 1. Autónomos
+      const wsAutonomos = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsAutonomos, 'Autónomos');
 
-    return () => clearInterval(interval);
-  }, [refreshJobId, localJobId, updateJob, cargarVencimientos]);
+      // 2. Monotributo
+      const wsMonotributo = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsMonotributo, 'Monotributo');
 
-  const handleRefrescar = async () => {
-    setRefreshing(true);
+      // 3. IVA
+      const wsIVA = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsIVA, 'IVA');
+
+      // 4. Ingresos Brutos
+      const wsIngresosBrutos = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsIngresosBrutos, 'Ingresos Brutos');
+
+      // 5. Relación de Dependencia
+      const wsRelacionDependencia = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsRelacionDependencia, 'Relación de Dependencia');
+
+      // 6. Servicio Doméstico
+      const wsServicioDomestico = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsServicioDomestico, 'Servicio Doméstico');
+
+      // 7. Personas Humanas
+      const wsPersonasHumanas = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsPersonasHumanas, 'Personas Humanas');
+
+      // 8. Personas Jurídicas
+      const wsPersonasJuridicas = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsPersonasJuridicas, 'Personas Jurídicas');
+
+      // 9. Retenciones
+      const wsRetenciones = utils.json_to_sheet(datosEjemplo);
+      utils.book_append_sheet(wb, wsRetenciones, 'Retenciones');
+
+      // Descargar
+      writeFile(wb, 'plantilla_vencimientos.xlsx');
+      setLocalMessage({ type: 'success', text: 'Plantilla descargada exitosamente con todas las hojas de vencimientos' });
+    } catch (error: any) {
+      console.error('Error descargando plantilla:', error);
+      setLocalMessage({ type: 'error', text: 'Error al descargar plantilla' });
+    }
+  };
+
+  // Procesar y subir Excel
+  const handleSubirExcel = async () => {
+    // Verificar permisos: solo administradores pueden cargar vencimientos
+    if (profile?.role !== 'admin') {
+      setLocalMessage({ type: 'error', text: 'Solo los administradores pueden cargar vencimientos' });
+      return;
+    }
+
+    if (!archivoExcel || !tenantId) {
+      setLocalMessage({ type: 'error', text: 'Por favor selecciona un archivo Excel' });
+      return;
+    }
+
+    setSubiendo(true);
     setLocalMessage(null);
 
     try {
-      const headers: HeadersInit = {};
-      if (API_BASE_URL.includes('ngrok')) {
-        headers['ngrok-skip-browser-warning'] = 'true';
-        headers['User-Agent'] = 'Mozilla/5.0';
-      }
-
-      const url = `${API_BASE_URL}/vencimientos/refrescar`;
-      console.log('Llamando a:', url);
-      console.log('API_BASE_URL:', API_BASE_URL);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Error al iniciar actualización' }));
-        const errorMessage = errorData.message || `Error al iniciar actualización (${response.status})`;
-        console.error('Error en respuesta:', errorMessage, 'URL:', url);
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
+      // Leer el archivo Excel
+      const reader = new FileReader();
       
-      if (data.success && data.job_id) {
-        // Usar el job_id que retorna el backend
-        const backendJobId = data.job_id;
-        console.log('Job ID del backend:', backendJobId);
-        
-        // Crear job en el contexto local
-        const newLocalJobId = addJob({
-          banco: 'vencimientos',
-          bancoName: 'Vencimientos',
-          filename: 'Actualización de vencimientos',
-          status: 'processing',
-          progress: 10,
-          message: 'Scraper iniciado, procesando...',
-        });
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = read(data, { type: 'array' });
+          
+          // Procesar cada hoja
+          const hojas: { [key: string]: VencimientoRow[] } = {};
+          
+          workbook.SheetNames.forEach((sheetName) => {
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = utils.sheet_to_json(worksheet, { defval: null }) as VencimientoRow[];
+            
+            // Filtrar filas vacías
+            const filasValidas = jsonData.filter(fila => {
+              return Object.values(fila).some(valor => valor !== null && valor !== '' && valor !== undefined);
+            });
+            
+            if (filasValidas.length > 0) {
+              hojas[sheetName] = filasValidas;
+            }
+          });
 
-        // Guardar ambos IDs
-        setRefreshJobId(backendJobId);
-        setLocalJobId(newLocalJobId);
-      } else {
-        throw new Error(data.message || 'Error al iniciar actualización');
-      }
+          if (Object.keys(hojas).length === 0) {
+            throw new Error('El archivo Excel no contiene datos válidos');
+          }
+
+          if (!tenantId) {
+            throw new Error('No se pudo obtener el tenant. Por favor, recarga la página.');
+          }
+
+          // Limpiar vencimientos anteriores del tenant antes de insertar nuevos
+          const { error: deleteError } = await supabase
+            .from('vencimientos')
+            .delete()
+            .eq('tenant_id', tenantId);
+
+          if (deleteError) {
+            console.warn('Error eliminando vencimientos anteriores:', deleteError);
+            // Continuar de todas formas, puede que no haya vencimientos anteriores
+          }
+
+          // Insertar vencimientos por hoja directamente desde el cliente
+          let totalInsertados = 0;
+          let totalErrores = 0;
+          const resultados: { [hoja: string]: { insertados: number; errores: number } } = {};
+
+          for (const [hojaNombre, filas] of Object.entries(hojas)) {
+            if (!Array.isArray(filas)) {
+              console.error(`La hoja "${hojaNombre}" no contiene un array de filas`);
+              resultados[hojaNombre] = { insertados: 0, errores: 1 };
+              totalErrores++;
+              continue;
+            }
+
+            // Preparar datos para inserción
+            const datosParaInsertar = filas.map((fila: VencimientoRow) => ({
+              tenant_id: tenantId,
+              hoja_nombre: hojaNombre,
+              datos: fila, // Almacenar toda la fila como JSONB
+            }));
+
+            // Insertar en lotes de 1000 para evitar problemas de tamaño
+            const batchSize = 1000;
+            let insertados = 0;
+            let errores = 0;
+
+            for (let i = 0; i < datosParaInsertar.length; i += batchSize) {
+              const batch = datosParaInsertar.slice(i, i + batchSize);
+              
+              const { data, error: insertError } = await supabase
+                .from('vencimientos')
+                .insert(batch)
+                .select('id');
+
+              if (insertError) {
+                console.error(`Error insertando lote de ${hojaNombre}:`, insertError);
+                errores += batch.length;
+              } else {
+                insertados += data?.length || batch.length;
+              }
+            }
+
+            resultados[hojaNombre] = { insertados, errores };
+            totalInsertados += insertados;
+            totalErrores += errores;
+          }
+          
+          setLocalMessage({
+            type: 'success',
+            text: `Vencimientos cargados exitosamente. ${totalInsertados} registros insertados${totalErrores > 0 ? `, ${totalErrores} errores` : ''}.`,
+          });
+
+          // Recargar vencimientos
+          await cargarVencimientos();
+          
+          // Limpiar archivo
+          setArchivoExcel(null);
+        } catch (error: any) {
+          console.error('Error procesando Excel:', error);
+          setLocalMessage({ type: 'error', text: error.message || 'Error al procesar el archivo Excel' });
+        } finally {
+          setSubiendo(false);
+        }
+      };
+
+      reader.onerror = () => {
+        setLocalMessage({ type: 'error', text: 'Error al leer el archivo' });
+        setSubiendo(false);
+      };
+
+      reader.readAsArrayBuffer(archivoExcel);
     } catch (error: any) {
       console.error('Error:', error);
-      setRefreshing(false);
-      setRefreshJobId(null);
-      setLocalJobId(null);
-      setLocalMessage({
-        type: 'error',
-        text: error.message || 'Error de conexión con el servidor',
-      });
+      setLocalMessage({ type: 'error', text: error.message || 'Error al subir el archivo' });
+      setSubiendo(false);
     }
   };
 
@@ -249,9 +385,8 @@ export function Vencimientos() {
       const file = e.dataTransfer.files[0];
       const ext = file.name.toLowerCase().split('.').pop();
       if (ext === 'xlsx' || ext === 'xls') {
-        setArchivoCuits(file);
+        setArchivoExcel(file);
         setLocalMessage(null);
-        setResultadoFiltrado(null);
       } else {
         setLocalMessage({ type: 'error', text: 'Solo se permiten archivos Excel (.xlsx o .xls)' });
       }
@@ -263,129 +398,11 @@ export function Vencimientos() {
       const file = e.target.files[0];
       const ext = file.name.toLowerCase().split('.').pop();
       if (ext === 'xlsx' || ext === 'xls') {
-        setArchivoCuits(file);
+        setArchivoExcel(file);
         setLocalMessage(null);
-        setResultadoFiltrado(null);
       } else {
         setLocalMessage({ type: 'error', text: 'Solo se permiten archivos Excel (.xlsx o .xls)' });
       }
-    }
-  };
-
-  const handleFiltrar = async () => {
-    if (!archivoCuits) {
-      setLocalMessage({ type: 'error', text: 'Por favor selecciona un archivo Excel con CUITs' });
-      return;
-    }
-
-    setFiltrando(true);
-    setLocalMessage(null);
-
-    // Crear job en el contexto
-    const jobId = addJob({
-      banco: 'vencimientos',
-      bancoName: 'Filtrado de Vencimientos',
-      filename: `Filtrado: ${archivoCuits.name}`,
-      status: 'processing',
-      progress: 0,
-      message: 'Iniciando filtrado...',
-    });
-
-    try {
-      const formData = new FormData();
-      formData.append('archivo', archivoCuits);
-
-      const headers: HeadersInit = {};
-      if (API_BASE_URL.includes('ngrok')) {
-        headers['ngrok-skip-browser-warning'] = 'true';
-        headers['User-Agent'] = 'Mozilla/5.0';
-      }
-
-      updateJob(jobId, { progress: 20, message: 'Cargando archivo...' });
-
-      const response = await fetch(`${API_BASE_URL}/vencimientos/filtrar-por-cuils`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-
-      updateJob(jobId, { progress: 60, message: 'Procesando CUITs...' });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Error al filtrar vencimientos' }));
-        let errorMessage = errorData.message || 'Error al filtrar vencimientos';
-        
-        // Agregar información adicional si está disponible
-        if (errorData.columnas_disponibles) {
-          errorMessage += `\n\nColumnas encontradas en el archivo: ${errorData.columnas_disponibles.join(', ')}`;
-        }
-        if (errorData.columna_usada) {
-          errorMessage += `\n\nColumna utilizada: ${errorData.columna_usada}`;
-        }
-        if (errorData.total_filas !== undefined) {
-          errorMessage += `\n\nTotal de filas en el archivo: ${errorData.total_filas}`;
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        updateJob(jobId, {
-          status: 'completed',
-          progress: 100,
-          message: '✅ Filtrado completado exitosamente',
-          downloadUrl: data.downloadUrl,
-        });
-
-        setResultadoFiltrado({
-          filename: data.filename,
-          downloadUrl: data.downloadUrl,
-          total_cuits: data.total_cuits,
-          cuits_con_vencimientos: data.cuits_con_vencimientos,
-          cuits_sin_vencimientos: data.cuits_sin_vencimientos,
-        });
-
-        setLocalMessage({
-          type: 'success',
-          text: `Filtrado completado. ${data.cuits_con_vencimientos} CUITs con vencimientos, ${data.cuits_sin_vencimientos} sin vencimientos.`,
-        });
-      } else {
-        throw new Error(data.message || 'Error al filtrar vencimientos');
-      }
-    } catch (error: any) {
-      console.error('Error:', error);
-      updateJob(jobId, {
-        status: 'error',
-        progress: 0,
-        message: error.message || 'Error de conexión con el servidor',
-      });
-      setLocalMessage({
-        type: 'error',
-        text: error.message || 'Error de conexión con el servidor',
-      });
-    } finally {
-      setFiltrando(false);
-    }
-  };
-
-  const handleDescargar = (url: string) => {
-    window.open(url, '_blank');
-  };
-
-  const formatearFecha = (fechaISO: string) => {
-    try {
-      const fecha = new Date(fechaISO);
-      return fecha.toLocaleString('es-AR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return fechaISO;
     }
   };
 
@@ -402,7 +419,6 @@ export function Vencimientos() {
         .order('nombre', { ascending: true });
 
       if (error) throw error;
-      // Mapear 'cuil' de la base de datos a 'cuit' en la interfaz
       setClientes((data || []).map((cliente: any) => ({
         ...cliente,
         cuit: cliente.cuil || cliente.cuit || ''
@@ -423,7 +439,6 @@ export function Vencimientos() {
       return;
     }
 
-    // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formCliente.email)) {
       setLocalMessage({ type: 'error', text: 'El email no es válido' });
@@ -432,7 +447,6 @@ export function Vencimientos() {
 
     try {
       if (clienteEditando) {
-        // Actualizar cliente existente
         const { error } = await supabase
           .from('vencimientos_clientes')
           .update({
@@ -446,7 +460,6 @@ export function Vencimientos() {
         if (error) throw error;
         setLocalMessage({ type: 'success', text: 'Cliente actualizado correctamente' });
       } else {
-        // Crear nuevo cliente
         const { error } = await supabase
           .from('vencimientos_clientes')
           .insert({
@@ -506,68 +519,15 @@ export function Vencimientos() {
     setShowClienteModal(true);
   };
 
-  const handleEnviarEmail = async (cliente: Cliente) => {
-    if (!vencimientos) {
-      setLocalMessage({ type: 'error', text: 'No hay vencimientos disponibles para enviar' });
-      return;
-    }
-
-    setEnviandoEmail(true);
-    setLocalMessage(null);
-
-    try {
-      const headers: HeadersInit = {};
-      if (API_BASE_URL.includes('ngrok')) {
-        headers['ngrok-skip-browser-warning'] = 'true';
-        headers['User-Agent'] = 'Mozilla/5.0';
-      }
-
-      const response = await fetch(`${API_BASE_URL}/vencimientos/enviar-email`, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cliente_id: cliente.id,
-          cuit: cliente.cuit,
-          email: cliente.email,
-          nombre_cliente: cliente.nombre,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Error al enviar email' }));
-        throw new Error(errorData.message || 'Error al enviar email');
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setLocalMessage({ type: 'success', text: `Email enviado correctamente a ${cliente.email}` });
-      } else {
-        throw new Error(data.message || 'Error al enviar email');
-      }
-    } catch (error: any) {
-      console.error('Error enviando email:', error);
-      setLocalMessage({ type: 'error', text: error.message || 'Error al enviar email' });
-    } finally {
-      setEnviandoEmail(false);
-    }
-  };
-
   const formatearNombrePestaña = (nombre: string) => {
-    // Reemplazar guiones y guiones bajos con espacios
     let formateado = nombre.replace(/[-_]/g, ' ');
-    // Capitalizar cada palabra
     formateado = formateado
       .split(' ')
       .map(palabra => {
         if (palabra.length === 0) return '';
-        // Si es un número o sigla (como T1), mantenerlo como está
         if (/^[A-Z0-9]+$/.test(palabra)) {
           return palabra;
         }
-        // Capitalizar primera letra, resto en minúsculas
         return palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase();
       })
       .join(' ');
@@ -583,47 +543,6 @@ export function Vencimientos() {
         <p className="text-gray-600 dark:text-gray-300">
           Gestiona y controla vencimientos de clientes
         </p>
-      </div>
-
-      {/* Botón Refrescar */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Actualizar Vencimientos</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Ejecuta el scraper para obtener los vencimientos más recientes
-            </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">
-              ℹ️ Los datos son compartidos entre todos los usuarios
-            </p>
-            {vencimientos && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Última actualización: {vencimientos.fecha_actualizacion_formateada || formatearFecha(vencimientos.fecha_actualizacion)}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={handleRefrescar}
-            disabled={refreshing}
-            className={`px-6 py-3 rounded-lg font-medium transition flex items-center gap-2 ${
-              refreshing
-                ? 'bg-gray-300 dark:bg-slate-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                : 'bg-orange-600 dark:bg-orange-500 text-white hover:bg-orange-700 dark:hover:bg-orange-600'
-            }`}
-          >
-            {refreshing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Actualizando...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-5 h-5" />
-                Refrescar Vencimientos
-              </>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* Mensaje Local */}
@@ -647,11 +566,7 @@ export function Vencimientos() {
                   localMessage.type === 'success' ? 'text-blue-900 dark:text-blue-200' : 'text-red-900 dark:text-red-300'
                 }`}
               >
-                {localMessage.text.split('\n').map((line, idx) => (
-                  <p key={idx} className={idx > 0 ? 'mt-1' : ''}>
-                    {line}
-                  </p>
-                ))}
+                {localMessage.text}
               </div>
             </div>
             <button
@@ -664,20 +579,32 @@ export function Vencimientos() {
         </div>
       )}
 
+      {/* Botón para cargar vencimientos - Solo visible para administradores */}
+      {profile?.role === 'admin' && (
+        <div className="mb-6">
+          <button
+            onClick={() => setShowCargarModal(true)}
+            className="px-6 py-3 rounded-lg font-medium transition flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
+          >
+            <Upload className="w-5 h-5" />
+            Cargar Vencimientos
+          </button>
+        </div>
+      )}
+
       {/* Visualización de Vencimientos */}
       {loading ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-orange-600 dark:text-orange-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-300">Cargando vencimientos...</p>
         </div>
-      ) : vencimientos ? (
+      ) : vencimientos && Object.keys(vencimientos.hojas).length > 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Vencimientos Disponibles
           </h3>
           
           {/* Pestañas */}
-          {Object.keys(vencimientos.hojas).length > 0 && (
             <div className="mb-4 border-b border-gray-200 dark:border-slate-700">
               <nav className="flex space-x-1 overflow-x-auto vencimientos-scroll" aria-label="Tabs">
                 {Object.keys(vencimientos.hojas).map((nombreHoja) => {
@@ -706,7 +633,6 @@ export function Vencimientos() {
                 })}
               </nav>
             </div>
-          )}
 
           {/* Contenido de la pestaña activa */}
           {tabActiva && vencimientos.hojas[tabActiva] && (
@@ -771,117 +697,8 @@ export function Vencimientos() {
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-8 text-center">
           <AlertCircle className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-300">
-            No hay vencimientos disponibles. Ejecuta "Refrescar Vencimientos" para obtener los datos.
+            No hay vencimientos disponibles. Descarga la plantilla, complétala y súbela para comenzar.
           </p>
-        </div>
-      )}
-
-      {/* Carga de Excel con CUITs */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Filtrar Vencimientos por CUITs
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-          Carga un archivo Excel con una columna de CUITs. El sistema buscará vencimientos
-          comparando el último dígito del CUIT con los datos disponibles.
-        </p>
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3 mb-4">
-          <p className="text-xs text-blue-800 dark:text-blue-200 font-medium mb-1">📋 Formato del archivo:</p>
-          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 ml-4 list-disc">
-            <li>El archivo debe tener una columna con CUITs (puede llamarse "CUIL", "CUIT", "CUIL/CUIT", etc.)</li>
-            <li>Si no hay columna con ese nombre, se usará la primera columna con datos</li>
-            <li>Los CUITs pueden estar en formato: XX-XXXXXXXX-X o XXXXXXXXXXX</li>
-            <li>No importa si hay filas vacías, se ignorarán automáticamente</li>
-          </ul>
-        </div>
-
-        <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition mb-4 ${
-            dragActive
-              ? 'border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-900/20'
-              : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
-          }`}
-        >
-          <input
-            type="file"
-            id="file-upload-cuits"
-            accept=".xlsx,.xls"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <label htmlFor="file-upload-cuits" className="cursor-pointer">
-            <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-            <p className="text-lg font-medium text-gray-700 dark:text-white mb-2">
-              {archivoCuits ? archivoCuits.name : 'Arrastra y suelta el archivo Excel con CUITs aquí'}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              o haz clic para seleccionar un archivo
-            </p>
-          </label>
-        </div>
-
-        <button
-          onClick={handleFiltrar}
-          disabled={!archivoCuits || filtrando}
-          className={`w-full py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
-            !archivoCuits || filtrando
-              ? 'bg-gray-300 dark:bg-slate-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              : 'bg-orange-600 dark:bg-orange-500 text-white hover:bg-orange-700 dark:hover:bg-orange-600'
-          }`}
-        >
-          {filtrando ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Filtrando...
-            </>
-          ) : (
-            <>
-              <FileSpreadsheet className="w-5 h-5" />
-              Filtrar Vencimientos
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Resultado del Filtrado */}
-      {resultadoFiltrado && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl p-6 mb-6">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-green-900 dark:text-green-200 mb-2">
-                Filtrado Completado
-              </h3>
-              <p className="text-sm text-green-800 dark:text-green-300 mb-3">
-                Total CUITs procesados: {resultadoFiltrado.total_cuits}
-              </p>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-green-200 dark:border-green-800/50">
-                  <p className="text-xs font-medium text-green-900 dark:text-green-200 mb-1">Con Vencimientos</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {resultadoFiltrado.cuits_con_vencimientos}
-                  </p>
-                </div>
-                <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-green-200 dark:border-green-800/50">
-                  <p className="text-xs font-medium text-green-900 dark:text-green-200 mb-1">Sin Vencimientos</p>
-                  <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                    {resultadoFiltrado.cuits_sin_vencimientos}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleDescargar(resultadoFiltrado.downloadUrl)}
-                className="w-full py-3 px-6 rounded-lg font-medium bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 transition flex items-center justify-center gap-2"
-              >
-                <Download className="w-5 h-5" />
-                Descargar Resultado Excel
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -936,15 +753,6 @@ export function Vencimientos() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleEnviarEmail(cliente)}
-                    disabled={enviandoEmail || !vencimientos}
-                    className="px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Enviar vencimientos por email"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Enviar Vencimientos
-                  </button>
-                  <button
                     onClick={() => handleEditarCliente(cliente)}
                     className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition"
                     title="Editar cliente"
@@ -964,6 +772,93 @@ export function Vencimientos() {
           </div>
         )}
       </div>
+
+      {/* Modal para cargar vencimientos - Solo visible para administradores */}
+      {showCargarModal && profile?.role === 'admin' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Cargar Vencimientos
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCargarModal(false);
+                  setArchivoExcel(null);
+                }}
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Descarga la plantilla, complétala con tus vencimientos y súbela aquí.
+            </p>
+
+            <div className="flex gap-4 mb-4">
+              <button
+                onClick={handleDescargarPlantilla}
+                className="px-6 py-3 rounded-lg font-medium transition flex items-center gap-2 bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                <Download className="w-5 h-5" />
+                Descargar Plantilla
+              </button>
+            </div>
+
+            <div
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition mb-4 ${
+                dragActive
+                  ? 'border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-900/20'
+                  : 'border-gray-300 dark:border-slate-600 hover:border-gray-400 dark:hover:border-slate-500'
+              }`}
+            >
+              <input
+                type="file"
+                id="file-upload-excel"
+                accept=".xlsx,.xls"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <label htmlFor="file-upload-excel" className="cursor-pointer">
+                <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                <p className="text-lg font-medium text-gray-700 dark:text-white mb-2">
+                  {archivoExcel ? archivoExcel.name : 'Arrastra y suelta el archivo Excel aquí'}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  o haz clic para seleccionar un archivo
+                </p>
+              </label>
+            </div>
+
+            <button
+              onClick={handleSubirExcel}
+              disabled={!archivoExcel || subiendo}
+              className={`w-full py-3 px-6 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+                !archivoExcel || subiendo
+                  ? 'bg-gray-300 dark:bg-slate-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-orange-600 dark:bg-orange-500 text-white hover:bg-orange-700 dark:hover:bg-orange-600'
+              }`}
+            >
+              {subiendo ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="w-5 h-5" />
+                  Subir Vencimientos
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal para crear/editar cliente */}
       {showClienteModal && (
@@ -1055,26 +950,26 @@ export function Vencimientos() {
           ¿Cómo funciona el sistema de Vencimientos?
         </h3>
         <p className="text-sm text-orange-800 dark:text-orange-300 mb-3">
-          El sistema extrae tablas de vencimientos desde múltiples URLs,
-          incluyendo retenciones SICORE, autónomos, IVA, cargas sociales y más.
+          El sistema te permite cargar vencimientos desde un archivo Excel. Descarga la plantilla,
+          complétala con tus datos y súbela para comenzar a gestionar vencimientos.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
           <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-orange-200 dark:border-orange-800/50">
             <p className="text-xs font-medium text-orange-900 dark:text-orange-200 mb-1">✅ Funcionalidades</p>
             <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1 mt-2">
-              <li>• Actualización automática de vencimientos</li>
+              <li>• Carga de vencimientos desde Excel</li>
               <li>• Visualización por tipo de vencimiento</li>
-              <li>• Filtrado por CUITs</li>
-              <li>• Exportación a Excel</li>
+              <li>• Gestión de clientes</li>
+              <li>• Envío de vencimientos por email</li>
             </ul>
           </div>
           <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-orange-200 dark:border-orange-800/50">
-            <p className="text-xs font-medium text-orange-900 dark:text-orange-200 mb-1">✅ Filtrado por CUIT</p>
+            <p className="text-xs font-medium text-orange-900 dark:text-orange-200 mb-1">📋 Formato</p>
             <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1 mt-2">
-              <li>• Compara el último dígito del CUIT</li>
-              <li>• Busca en todas las tablas disponibles</li>
-              <li>• Genera reporte con resultados</li>
-              <li>• Indica CUITs sin vencimientos</li>
+              <li>• Descarga la plantilla Excel</li>
+              <li>• Completa con tus datos</li>
+              <li>• Sube el archivo completado</li>
+              <li>• Los datos se almacenan en la base de datos</li>
             </ul>
           </div>
         </div>
@@ -1082,26 +977,3 @@ export function Vencimientos() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

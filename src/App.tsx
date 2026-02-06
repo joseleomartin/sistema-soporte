@@ -16,6 +16,7 @@ import { ExtractionNotifications } from './components/Notifications/ExtractionNo
 import { DepartmentManagement } from './components/Departments/DepartmentManagement';
 import { ProfileSettings } from './components/Profile/ProfileSettings';
 import { TasksList } from './components/Tasks/TasksList';
+import { VencimientosList } from './components/Vencimientos/VencimientosList';
 import { VacationsManagement } from './components/Vacations/VacationsManagement';
 import { TimeTracking } from './components/TimeTracking/TimeTracking';
 import { LibraryAndCourses } from './components/Library/LibraryAndCourses';
@@ -227,6 +228,8 @@ function MainApp() {
         return <ToolsPanel key={`tools-${viewKey}`} />;
       case 'tasks':
         return <TasksList key={`tasks-${viewKey}`} />;
+      case 'vencimientos':
+        return <VencimientosList key={`vencimientos-${viewKey}`} />;
       case 'users':
         return profile.role === 'admin' ? <UserManagement key={`users-${viewKey}`} /> : <div>No autorizado</div>;
       case 'departments':
@@ -316,7 +319,7 @@ function MainApp() {
           ? '' 
           : sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
       }`}>
-        <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' || currentView === 'forums' || currentView === 'fabinsa-suppliers' || currentView === 'fabinsa-sales' || currentView === 'fabinsa-stock' || currentView === 'fabinsa-employees' || currentView === 'fabinsa-production' || currentView === 'fabinsa-purchases' || currentView === 'fabinsa-metrics' || currentView === 'finanzas-cashflow' || currentView === 'finanzas-cotizador' || currentView === 'finanzas-eerr' || currentView === 'finanzas-gastos' || currentView === 'finanzas-presupuesto' ? 'max-w-full' : 'max-w-7xl'} ${currentView === 'fabinsa-sales' || currentView === 'fabinsa-stock' || currentView === 'fabinsa-employees' || currentView === 'fabinsa-production' || currentView === 'fabinsa-purchases' || currentView === 'fabinsa-costs' || currentView === 'fabinsa-metrics' || currentView === 'fabinsa-suppliers' || currentView === 'forums' || currentView === 'finanzas-cashflow' || currentView === 'finanzas-cotizador' || currentView === 'finanzas-eerr' || currentView === 'finanzas-gastos' || currentView === 'finanzas-presupuesto' ? 'p-0' : 'mx-auto p-2 sm:p-4 md:p-6 lg:p-8'}`}>
+        <div className={`${currentView === 'social' || currentView === 'fabinsa-costs' || currentView === 'forums' || currentView === 'fabinsa-suppliers' || currentView === 'fabinsa-sales' || currentView === 'fabinsa-stock' || currentView === 'fabinsa-employees' || currentView === 'fabinsa-production' || currentView === 'fabinsa-purchases' || currentView === 'fabinsa-metrics' || currentView === 'finanzas-cashflow' || currentView === 'finanzas-cotizador' || currentView === 'finanzas-eerr' || currentView === 'finanzas-gastos' || currentView === 'finanzas-presupuesto' || currentView === 'tasks' || currentView === 'dashboard' ? 'max-w-full' : 'max-w-7xl'} ${currentView === 'fabinsa-sales' || currentView === 'fabinsa-stock' || currentView === 'fabinsa-employees' || currentView === 'fabinsa-production' || currentView === 'fabinsa-purchases' || currentView === 'fabinsa-costs' || currentView === 'fabinsa-metrics' || currentView === 'fabinsa-suppliers' || currentView === 'forums' || currentView === 'finanzas-cashflow' || currentView === 'finanzas-cotizador' || currentView === 'finanzas-eerr' || currentView === 'finanzas-gastos' || currentView === 'finanzas-presupuesto' || currentView === 'tasks' ? 'p-0 h-full' : currentView === 'dashboard' ? 'p-4 sm:p-6 md:p-8 lg:p-10 h-full' : 'mx-auto p-2 sm:p-4 md:p-6 lg:p-8'}`}>
           {renderContent()}
         </div>
       </main>

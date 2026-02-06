@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
-import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star, FileSpreadsheet, Grid3x3, List, Download } from 'lucide-react';
+import { Plus, FolderOpen, Users, Search, Settings, FileText, Image, File, Building2, CheckSquare, AlertCircle, X, Calendar, Filter, ArrowUpDown, ArrowUp, ArrowDown, Star, FileSpreadsheet, Grid3x3, List, Download, Clock, CheckCircle2, Loader2, Layers } from 'lucide-react';
 import { writeFile, utils } from 'xlsx';
 import { CreateForumModal } from './CreateForumModal';
 import { SubforumChat } from './SubforumChat';
@@ -13,6 +13,8 @@ import { BulkAssignUsersModal } from './BulkAssignUsersModal';
 import { EditClientModal } from './EditClientModal';
 import { ClientInfoModal } from './ClientInfoModal';
 import { BulkImportClientsModal } from './BulkImportClientsModal';
+import { CreateTaskModal } from '../Tasks/CreateTaskModal';
+import { CreateVencimientoModal } from '../Vencimientos/CreateVencimientoModal';
 
 interface Subforum {
   id: string;
@@ -30,6 +32,8 @@ interface Subforum {
   created_at: string;
   message_count?: number;
   is_favorite?: boolean;
+  vencimientos_tipos?: string[] | null;
+  vencimientos_responsable_id?: string | null;
 }
 
 interface ForumsListProps {
@@ -41,7 +45,6 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   const { profile } = useAuth();
   const { tenantId } = useTenant();
   const [subforums, setSubforums] = useState<Subforum[]>([]);
-  const [filteredSubforums, setFilteredSubforums] = useState<Subforum[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedSubforum, setSelectedSubforum] = useState<string | null>(initialSubforumId || null);
@@ -56,6 +59,12 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   const [editClientFor, setEditClientFor] = useState<Subforum | null>(null);
   const [showClientInfoFor, setShowClientInfoFor] = useState<Subforum | null>(null);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [pendingVencimientosCount, setPendingVencimientosCount] = useState<Map<string, number>>(new Map());
+  const [showVencimientosModal, setShowVencimientosModal] = useState<{ clientName: string; clientCuit: string; vencimientos: any[] } | null>(null);
+  const [showCreateTaskFromVencimiento, setShowCreateTaskFromVencimiento] = useState<{ clientName: string; vencimiento: any } | null>(null);
+  const [showCreateVencimientoFromVencimiento, setShowCreateVencimientoFromVencimiento] = useState<{ clientName: string; clientCuit: string; vencimiento: any } | null>(null);
+  const [selectedVencimientosForBulk, setSelectedVencimientosForBulk] = useState<Set<string>>(new Set());
+  const [creatingBulk, setCreatingBulk] = useState(false);
   
   // Filtros
   const [sortBy, setSortBy] = useState<'alphabetical' | 'activity' | 'none'>('alphabetical');
@@ -269,10 +278,13 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   };
 
   useEffect(() => {
-    loadSubforums();
-    loadPendingTasks();
-    loadFavorites();
-  }, [profile?.id]);
+    // Cargar datos en paralelo
+    Promise.all([
+      loadSubforums(),
+      loadPendingTasks(),
+      loadFavorites()
+    ]);
+  }, [profile?.id, tenantId]);
 
   const loadFavorites = async () => {
     if (!profile?.id || !tenantId) return;
@@ -296,7 +308,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
     }
   };
 
-  const toggleFavorite = async (subforumId: string, e: React.MouseEvent) => {
+  const toggleFavorite = useCallback(async (subforumId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!profile?.id || !tenantId) {
       alert('Error: No se pudo identificar el usuario o la empresa');
@@ -353,7 +365,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       console.error('Error al actualizar el favorito:', error);
       alert(`Error al actualizar el favorito: ${error?.message || 'Error desconocido'}`);
     }
-  };
+  }, [profile?.id, tenantId, favoriteIds]);
 
   // Verificar si hay un parámetro subforum en la URL después de cargar los subforos
   useEffect(() => {
@@ -430,17 +442,18 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   }, [subforums, onSubforumChange]);
 
   useEffect(() => {
-    // Recargar tareas pendientes cada 30 segundos
+    // Recargar tareas pendientes y vencimientos cada 30 segundos
     const interval = setInterval(() => {
       loadPendingTasks();
+      if (subforums.length > 0) {
+        loadPendingVencimientos(subforums);
+      }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [subforums.length]);
 
-  useEffect(() => {
-    filterSubforums();
-  }, [subforums, searchTerm, sortBy, sortOrder, filterByTasks, filterByFavorites, favoriteIds, pendingTasksCount]);
+  // Eliminado - ahora usamos useMemo para filteredSubforums
 
   const loadSubforums = async () => {
     if (!profile?.id) return;
@@ -490,46 +503,62 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       if (error) throw error;
 
       if (data) {
-        // Cargar favoritos si no están cargados
-        let currentFavoriteIds = favoriteIds;
-        if (currentFavoriteIds.size === 0 && profile?.id && tenantId) {
-          const { data: favData } = await supabase
-            .from('client_favorites')
-            .select('subforum_id')
-            .eq('user_id', profile.id)
-            .eq('tenant_id', tenantId);
+        const subforumIds = data.map(f => f.id);
+        
+        // Cargar favoritos y archivos en paralelo
+        const [favDataResult, messagesResult] = await Promise.all([
+          // Cargar favoritos si no están cargados
+          (async () => {
+            let currentFavoriteIds = favoriteIds;
+            if (currentFavoriteIds.size === 0 && profile?.id && tenantId) {
+              const { data: favData } = await supabase
+                .from('client_favorites')
+                .select('subforum_id')
+                .eq('user_id', profile.id)
+                .eq('tenant_id', tenantId);
 
-          if (favData) {
-            currentFavoriteIds = new Set(favData.map((fav: any) => fav.subforum_id));
-            setFavoriteIds(currentFavoriteIds);
-          }
+              if (favData) {
+                currentFavoriteIds = new Set(favData.map((fav: any) => fav.subforum_id));
+                setFavoriteIds(currentFavoriteIds);
+              }
+            }
+            return currentFavoriteIds;
+          })(),
+          // Cargar todos los mensajes de todos los subforums en una sola consulta
+          subforumIds.length > 0 ? supabase
+            .from('forum_messages')
+            .select('subforum_id, attachments')
+            .in('subforum_id', subforumIds) : Promise.resolve({ data: [], error: null })
+        ]);
+
+        const currentFavoriteIds = favDataResult;
+        const { data: allMessages } = messagesResult;
+
+        // Crear mapa de conteo de archivos por subforum_id
+        const fileCountMap = new Map<string, number>();
+        if (allMessages) {
+          allMessages.forEach((message: any) => {
+            const subforumId = message.subforum_id;
+            const attachments = message.attachments;
+            
+            if (attachments && Array.isArray(attachments)) {
+              const currentCount = fileCountMap.get(subforumId) || 0;
+              fileCountMap.set(subforumId, currentCount + attachments.length);
+            }
+          });
         }
 
-        const forumsWithCounts = await Promise.all(
-          data.map(async (forum) => {
-            // Contar archivos adjuntos en los mensajes
-            const { data: messages } = await supabase
-              .from('forum_messages')
-              .select('attachments')
-              .eq('subforum_id', forum.id);
-
-            // Contar el total de archivos en todos los mensajes
-            let fileCount = 0;
-            messages?.forEach((message: any) => {
-              if (message.attachments && Array.isArray(message.attachments)) {
-                fileCount += message.attachments.length;
-              }
-            });
-
-            return {
-              ...forum,
-              message_count: fileCount, // Ahora es cantidad de archivos
-              is_favorite: currentFavoriteIds.has(forum.id),
-            };
-          })
-        );
+        // Mapear los datos con los conteos
+        const forumsWithCounts = data.map((forum) => ({
+          ...forum,
+          message_count: fileCountMap.get(forum.id) || 0,
+          is_favorite: currentFavoriteIds.has(forum.id),
+        }));
 
         setSubforums(forumsWithCounts);
+        
+        // Recargar vencimientos después de cargar los subforums (en paralelo, no bloquea)
+        loadPendingVencimientos(forumsWithCounts);
       }
     } catch (error) {
       console.error('Error loading subforums:', error);
@@ -566,7 +595,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
     }
   };
 
-  const getPendingTasksForClient = async (clientName: string) => {
+  const getPendingTasksForClient = useCallback(async (clientName: string) => {
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -581,14 +610,438 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       console.error('Error fetching tasks for client:', error);
       return [];
     }
-  };
+  }, []);
 
-  const handleShowPendingTasks = async (clientName: string) => {
+  const handleShowPendingTasks = useCallback(async (clientName: string) => {
     const tasks = await getPendingTasksForClient(clientName);
     setShowPendingTasksModal({ clientName, tasks });
+  }, [getPendingTasksForClient]);
+
+  // Función para obtener el último dígito del CUIT
+  const getLastDigitOfCuit = (cuit: string | null | undefined): number | null => {
+    if (!cuit) return null;
+    // Remover guiones y espacios
+    const cleanCuit = cuit.replace(/[-\s]/g, '');
+    // Obtener el último carácter
+    const lastChar = cleanCuit[cleanCuit.length - 1];
+    const lastDigit = parseInt(lastChar, 10);
+    return isNaN(lastDigit) ? null : lastDigit;
   };
 
-  const filterSubforums = () => {
+  // Función para cargar vencimientos pendientes (optimizada)
+  const loadPendingVencimientos = async (clientes: Subforum[] = subforums) => {
+    if (!tenantId) return;
+
+    try {
+      // Obtener todos los clientes con CUIT
+      const clientesConCuit = clientes.filter(f => f.cuit);
+      if (clientesConCuit.length === 0) {
+        setPendingVencimientosCount(new Map());
+        return;
+      }
+
+      // Obtener todos los tipos de vencimientos únicos que necesitamos
+      const tiposVencimientosNecesarios = new Set<string>();
+      clientesConCuit.forEach(cliente => {
+        if (cliente.vencimientos_tipos && cliente.vencimientos_tipos.length > 0) {
+          cliente.vencimientos_tipos.forEach(tipo => tiposVencimientosNecesarios.add(tipo));
+        }
+      });
+
+      // Construir consulta optimizada
+      let query = supabase
+        .from('vencimientos')
+        .select('hoja_nombre, datos')
+        .eq('tenant_id', tenantId);
+
+      // Si todos los clientes tienen tipos específicos, filtrar en la BD
+      const todosTienenTipos = clientesConCuit.every(c => c.vencimientos_tipos && c.vencimientos_tipos.length > 0);
+      if (todosTienenTipos && tiposVencimientosNecesarios.size > 0) {
+        query = query.in('hoja_nombre', Array.from(tiposVencimientosNecesarios));
+      }
+
+      const { data: vencimientosData, error } = await query;
+
+      if (error) throw error;
+
+      // Obtener todas las tareas de los clientes para verificar cuáles están completadas
+      const clientNames = clientesConCuit.map(c => c.client_name).filter(Boolean);
+      const { data: tasksData } = await supabase
+        .from('tasks')
+        .select('id, title, status, client_name')
+        .eq('tenant_id', tenantId)
+        .in('client_name', clientNames)
+        .in('status', ['pending', 'in_progress', 'completed', 'cancelled']);
+
+      // Obtener todos los vencimientos gestionados completados de los clientes
+      const { data: vencimientosGestionData } = await supabase
+        .from('vencimientos_gestion')
+        .select('id, status, vencimiento_tipo, periodo, client_name')
+        .eq('tenant_id', tenantId)
+        .in('client_name', clientNames)
+        .in('status', ['completed']);
+
+      // Crear mapa de vencimientos pendientes por cliente
+      const vencimientosMap = new Map<string, number>();
+
+      clientesConCuit.forEach((cliente) => {
+        const lastDigit = getLastDigitOfCuit(cliente.cuit);
+        if (lastDigit === null) return;
+
+        const cuitColumn = `CUIT ${lastDigit}`;
+        let count = 0;
+
+        // Filtrar vencimientos según los tipos seleccionados para el cliente
+        let vencimientosFiltrados = vencimientosData || [];
+        if (cliente.vencimientos_tipos && cliente.vencimientos_tipos.length > 0) {
+          vencimientosFiltrados = vencimientosFiltrados.filter(v => 
+            cliente.vencimientos_tipos!.includes(v.hoja_nombre)
+          );
+        }
+
+        // Obtener tareas del cliente
+        const tareasDelCliente = tasksData?.filter(t => t.client_name === cliente.client_name) || [];
+        
+        // Obtener vencimientos gestionados del cliente
+        const vencimientosGestionDelCliente = vencimientosGestionData?.filter(vg => vg.client_name === cliente.client_name) || [];
+
+        // Contar vencimientos en las hojas filtradas (excluyendo los completados)
+        vencimientosFiltrados.forEach((vencimiento) => {
+          const datos = vencimiento.datos as any;
+          if (datos && datos[cuitColumn]) {
+            const fechaVencimiento = datos[cuitColumn];
+            // Si tiene fecha de vencimiento
+            if (fechaVencimiento && fechaVencimiento !== null && fechaVencimiento !== '') {
+              const periodo = datos.Periodo || datos.periodo || '-';
+              const hojaNombre = vencimiento.hoja_nombre;
+              
+              // Buscar si hay una tarea relacionada completada
+              const tareaCompletada = tareasDelCliente.find((task) => {
+                if (!task.title || task.status !== 'completed') return false;
+                const tituloLower = task.title.toLowerCase();
+                const hojaLower = hojaNombre.toLowerCase();
+                const periodoLower = periodo.toLowerCase();
+                
+                // Verificar si el título contiene el tipo de vencimiento y el período
+                return tituloLower.includes(hojaLower) && tituloLower.includes(periodoLower);
+              });
+
+              // Buscar si hay un vencimiento gestionado completado
+              const vencimientoGestionadoCompletado = vencimientosGestionDelCliente.find((vg) => {
+                return vg.vencimiento_tipo === hojaNombre && vg.periodo === periodo && vg.status === 'completed';
+              });
+
+              // Solo contar si NO tiene tarea completada Y NO tiene vencimiento gestionado completado
+              if (!tareaCompletada && !vencimientoGestionadoCompletado) {
+                count++;
+              }
+            }
+          }
+        });
+
+        if (count > 0) {
+          vencimientosMap.set(cliente.id, count);
+        }
+      });
+
+      setPendingVencimientosCount(vencimientosMap);
+    } catch (error) {
+      console.error('Error cargando vencimientos pendientes:', error);
+    }
+  };
+
+  // Función para obtener vencimientos de un cliente (optimizada)
+  const getVencimientosForClient = useCallback(async (clientCuit: string | null | undefined, clientName: string, vencimientosTipos?: string[] | null): Promise<any[]> => {
+    if (!tenantId || !clientCuit) return [];
+
+    const lastDigit = getLastDigitOfCuit(clientCuit);
+    if (lastDigit === null) return [];
+
+    try {
+      // Solo seleccionar los campos necesarios
+      let query = supabase
+        .from('vencimientos')
+        .select('hoja_nombre, datos')
+        .eq('tenant_id', tenantId);
+
+      // Si hay tipos de vencimientos seleccionados, filtrar por ellos
+      if (vencimientosTipos && vencimientosTipos.length > 0) {
+        query = query.in('hoja_nombre', vencimientosTipos);
+      }
+
+      const { data: vencimientosData, error } = await query;
+
+      if (error) throw error;
+
+      // Obtener vencimientos gestionados relacionados con este cliente
+      const { data: vencimientosGestionData } = await supabase
+        .from('vencimientos_gestion')
+        .select('id, title, status, vencimiento_tipo, periodo, client_name')
+        .eq('tenant_id', tenantId)
+        .eq('client_name', clientName);
+
+      const cuitColumn = `CUIT ${lastDigit}`;
+      const vencimientos: any[] = [];
+
+      if (vencimientosData) {
+        vencimientosData.forEach((vencimiento) => {
+          const datos = vencimiento.datos as any;
+          if (datos && datos[cuitColumn] && datos[cuitColumn] !== null && datos[cuitColumn] !== '') {
+            const periodo = datos.Periodo || datos.periodo || '-';
+            const hojaNombre = vencimiento.hoja_nombre;
+            
+            // Buscar vencimiento gestionado relacionado: debe coincidir el tipo y el período
+            const vencimientoGestionado = vencimientosGestionData?.find((vg) => {
+              return vg.vencimiento_tipo === hojaNombre && vg.periodo === periodo;
+            });
+
+            vencimientos.push({
+              hoja_nombre: hojaNombre,
+              periodo: periodo,
+              fecha_vencimiento: datos[cuitColumn],
+              datos_completos: datos,
+              vencimiento_gestion: vencimientoGestionado ? {
+                id: vencimientoGestionado.id,
+                status: vencimientoGestionado.status,
+                title: vencimientoGestionado.title
+              } : null,
+              // Mantener compatibilidad con código antiguo que busca "tarea"
+              tarea: vencimientoGestionado ? {
+                id: vencimientoGestionado.id,
+                status: vencimientoGestionado.status,
+                title: vencimientoGestionado.title
+              } : null
+            });
+          }
+        });
+      }
+
+      return vencimientos;
+    } catch (error) {
+      console.error('Error obteniendo vencimientos del cliente:', error);
+      return [];
+    }
+  }, [tenantId]);
+
+  const handleShowVencimientos = useCallback(async (clientName: string, clientCuit: string | null | undefined, vencimientosTipos?: string[] | null) => {
+    const vencimientos = await getVencimientosForClient(clientCuit, clientName, vencimientosTipos);
+    setShowVencimientosModal({ clientName, clientCuit: clientCuit || '', vencimientos });
+    setSelectedVencimientosForBulk(new Set()); // Limpiar selección al abrir modal
+  }, [getVencimientosForClient]);
+
+  // Suscripción en tiempo real para actualizar el modal de vencimientos cuando cambie el estado
+  useEffect(() => {
+    if (!showVencimientosModal || !tenantId) return;
+
+    const channel = supabase
+      .channel(`vencimientos-gestion-updates-${showVencimientosModal.clientName}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'vencimientos_gestion',
+          filter: `tenant_id=eq.${tenantId}`,
+        },
+        async (payload) => {
+          // Recargar los vencimientos del modal cuando se actualiza uno
+          const vencimientosActualizados = await getVencimientosForClient(
+            showVencimientosModal.clientCuit,
+            showVencimientosModal.clientName,
+            null
+          );
+          setShowVencimientosModal({
+            ...showVencimientosModal,
+            vencimientos: vencimientosActualizados
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [showVencimientosModal, tenantId, getVencimientosForClient]);
+
+  // Función para recargar los vencimientos del modal
+  const reloadVencimientosModal = useCallback(async () => {
+    if (!showVencimientosModal) return;
+    
+    const vencimientosActualizados = await getVencimientosForClient(
+      showVencimientosModal.clientCuit,
+      showVencimientosModal.clientName,
+      null
+    );
+    setShowVencimientosModal({
+      ...showVencimientosModal,
+      vencimientos: vencimientosActualizados
+    });
+  }, [showVencimientosModal, getVencimientosForClient]);
+
+  // Función para parsear fecha de vencimiento
+  const parseVencimientoDate = useCallback((fechaStr: string): string => {
+    if (!fechaStr) return '';
+    
+    const meses: { [key: string]: string } = {
+      'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04',
+      'may': '05', 'jun': '06', 'jul': '07', 'ago': '08',
+      'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
+    };
+    
+    try {
+      const parts = fechaStr.toLowerCase().trim().split('-');
+      if (parts.length >= 2) {
+        const dia = parts[0].padStart(2, '0');
+        const mesAbbr = parts[1].substring(0, 3);
+        const mes = meses[mesAbbr] || '01';
+        
+        let año = new Date().getFullYear().toString();
+        if (parts.length >= 3 && parts[2]) {
+          año = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+        }
+        
+        const fecha = new Date(`${año}-${mes}-${dia}`);
+        if (isNaN(fecha.getTime())) {
+          return '';
+        }
+        
+        return `${año}-${mes}-${dia}`;
+      }
+    } catch (e) {
+      console.error('Error parsing date:', e);
+    }
+    return '';
+  }, []);
+
+  // Función para crear vencimientos de forma masiva
+  const handleCreateBulkVencimientos = useCallback(async () => {
+    if (!profile || !tenantId || !showVencimientosModal) return;
+    if (selectedVencimientosForBulk.size === 0) return;
+
+    setCreatingBulk(true);
+
+    try {
+      // Obtener el cliente para buscar el usuario responsable
+      let responsableId: string | null = null;
+      if (showVencimientosModal.clientName || showVencimientosModal.clientCuit) {
+        let query = supabase
+          .from('subforums')
+          .select('vencimientos_responsable_id')
+          .eq('tenant_id', tenantId);
+        
+        if (showVencimientosModal.clientName) {
+          query = query.eq('client_name', showVencimientosModal.clientName);
+        } else if (showVencimientosModal.clientCuit) {
+          query = query.eq('cuit', showVencimientosModal.clientCuit);
+        }
+        
+        const { data: clienteData } = await query.limit(1).maybeSingle();
+        if (clienteData?.vencimientos_responsable_id) {
+          responsableId = clienteData.vencimientos_responsable_id;
+        }
+      }
+
+      // Filtrar vencimientos seleccionados que no tengan vencimiento gestionado
+      const vencimientosParaCrear = showVencimientosModal.vencimientos.filter(
+        (venc, idx) => selectedVencimientosForBulk.has(`${venc.hoja_nombre}-${venc.periodo}-${idx}`) && !venc.vencimiento_gestion && !venc.tarea
+      );
+
+      if (vencimientosParaCrear.length === 0) {
+        alert('No hay vencimientos seleccionados válidos para crear');
+        setCreatingBulk(false);
+        return;
+      }
+
+      // Crear todos los vencimientos
+      const vencimientosParaInsertar = vencimientosParaCrear.map(venc => {
+        const fechaVencimiento = parseVencimientoDate(venc.fecha_vencimiento);
+        const fechaVencimientoDate = fechaVencimiento ? new Date(fechaVencimiento).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        
+        return {
+          title: `Vencimiento ${venc.hoja_nombre} - ${venc.periodo}`,
+          description: `Vencimiento de ${venc.hoja_nombre} para el período ${venc.periodo}.\nFecha de vencimiento: ${venc.fecha_vencimiento}\nCliente: ${showVencimientosModal.clientName}`,
+          client_name: showVencimientosModal.clientName,
+          client_cuit: showVencimientosModal.clientCuit || null,
+          vencimiento_tipo: venc.hoja_nombre,
+          periodo: venc.periodo,
+          fecha_vencimiento: fechaVencimientoDate,
+          fecha_vencimiento_original: venc.fecha_vencimiento,
+          priority: 'medium' as const,
+          status: 'pending' as const,
+          created_by: profile.id,
+          tenant_id: tenantId
+        };
+      });
+
+      // Insertar en lotes
+      const batchSize = 50;
+      const vencimientosCreados: string[] = [];
+
+      for (let i = 0; i < vencimientosParaInsertar.length; i += batchSize) {
+        const batch = vencimientosParaInsertar.slice(i, i + batchSize);
+        const { data: vencimientosData, error: vencimientosError } = await supabase
+          .from('vencimientos_gestion')
+          .insert(batch)
+          .select('id');
+
+        if (vencimientosError) {
+          console.error('Error creando vencimientos en lote:', vencimientosError);
+          throw vencimientosError;
+        }
+
+        if (vencimientosData) {
+          vencimientosCreados.push(...vencimientosData.map(v => v.id));
+        }
+      }
+
+      // Si hay un usuario responsable, asignarlo automáticamente a todos los vencimientos creados
+      if (responsableId && vencimientosCreados.length > 0) {
+        const asignaciones = vencimientosCreados.map(vencimientoId => ({
+          vencimiento_id: vencimientoId,
+          assigned_to_user: responsableId,
+          assigned_by: profile.id,
+          tenant_id: tenantId
+        }));
+
+        // Insertar asignaciones en lotes
+        for (let i = 0; i < asignaciones.length; i += batchSize) {
+          const batch = asignaciones.slice(i, i + batchSize);
+          const { error: assignError } = await supabase
+            .from('vencimientos_gestion_assignments')
+            .insert(batch);
+
+          if (assignError) {
+            console.warn('Error asignando vencimientos al responsable:', assignError);
+          }
+        }
+      }
+
+      // Recargar vencimientos y limpiar selección
+      await loadPendingVencimientos(subforums);
+      setSelectedVencimientosForBulk(new Set());
+      setShowVencimientosModal(null);
+      
+      alert(`Se crearon ${vencimientosCreados.length} vencimientos exitosamente`);
+    } catch (error: any) {
+      console.error('Error creando vencimientos masivos:', error);
+      
+      // Mensaje de error más descriptivo
+      let errorMessage = 'Error al crear vencimientos';
+      
+      if (error.code === 'PGRST205' || error.code === 'PGRST116' || error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('schema cache')) {
+        errorMessage = '⚠️ La tabla vencimientos_gestion no existe o no está en el schema cache.\n\n📋 Pasos para solucionarlo:\n\n1. Ve a Supabase Dashboard → SQL Editor\n2. Ejecuta el archivo: 20250127000009_create_vencimientos_gestion_table.sql\n3. Espera 30-60 segundos\n4. Recarga esta página (F5)\n5. Intenta crear los vencimientos nuevamente\n\n💡 Si ya ejecutaste la migración, espera unos minutos para que el schema cache se actualice.';
+      } else if (error.message) {
+        errorMessage = `Error al crear vencimientos: ${error.message}`;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setCreatingBulk(false);
+    }
+  }, [profile, tenantId, showVencimientosModal, selectedVencimientosForBulk, parseVencimientoDate, subforums]);
+
+  // Memoizar el filtrado de subforums para evitar recálculos innecesarios
+  const filteredSubforums = useMemo(() => {
     let filtered = [...subforums];
 
     // Filtro por favoritos
@@ -598,11 +1051,12 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
 
     // Filtro por búsqueda de texto
     if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (forum) =>
-          forum.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          forum.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          forum.description?.toLowerCase().includes(searchTerm.toLowerCase())
+          forum.name.toLowerCase().includes(searchLower) ||
+          forum.client_name.toLowerCase().includes(searchLower) ||
+          forum.description?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -639,8 +1093,8 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
       return 0;
     });
 
-    setFilteredSubforums(filtered);
-  };
+    return filtered;
+  }, [subforums, searchTerm, sortBy, sortOrder, filterByTasks, filterByFavorites, favoriteIds, pendingTasksCount]);
 
   if (selectedSubforum) {
     return (
@@ -666,7 +1120,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
   }
 
   return (
-    <div>
+    <div className="pt-8 sm:pt-10 md:pt-12">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
         <div className="flex-1 min-w-0">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2 sm:gap-3">
@@ -945,7 +1399,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                       e.stopPropagation();
                       setShowFilesFor(forum);
                     }}
-                    className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
+                    className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:from-blue-200 hover:to-indigo-200 transition-colors cursor-pointer"
                     title="Ver archivos del cliente"
                   >
                     <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
@@ -955,7 +1409,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                       e.stopPropagation();
                       setShowClientInfoFor(forum);
                     }}
-                    className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200"
+                    className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center hover:from-blue-200 hover:to-indigo-200 transition-colors cursor-pointer"
                     title="Ver ficha del cliente"
                   >
                     <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
@@ -987,10 +1441,20 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                   <span className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 truncate max-w-full">
                     Cliente: {forum.client_name}
                   </span>
-                  <span className="text-[10px] sm:text-xs text-gray-400">
-                    {new Date(forum.created_at).toLocaleDateString('es-ES')}
-                  </span>
                 </div>
+                {/* Badge de Vencimientos Pendientes */}
+                {pendingVencimientosCount.get(forum.id) && pendingVencimientosCount.get(forum.id)! > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShowVencimientos(forum.client_name, forum.cuit, forum.vencimientos_tipos);
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg text-orange-700 dark:text-orange-300 text-xs sm:text-sm font-medium transition-colors duration-150 mt-2"
+                  >
+                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="truncate">{pendingVencimientosCount.get(forum.id)} vencimiento{pendingVencimientosCount.get(forum.id)! > 1 ? 's' : ''} pendiente{pendingVencimientosCount.get(forum.id)! > 1 ? 's' : ''}</span>
+                  </button>
+                )}
                 {/* Badge de Tareas Pendientes */}
                 {pendingTasksCount.get(forum.client_name) && pendingTasksCount.get(forum.client_name)! > 0 && (
                   <button
@@ -998,7 +1462,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                       e.stopPropagation();
                       handleShowPendingTasks(forum.client_name);
                     }}
-                    className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-700 text-xs sm:text-sm font-medium transition-colors mt-2"
+                    className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-xs sm:text-sm font-medium transition-colors duration-150 mt-2"
                   >
                     <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span className="truncate">{pendingTasksCount.get(forum.client_name)} tarea{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''} pendiente{pendingTasksCount.get(forum.client_name)! > 1 ? 's' : ''}</span>
@@ -1016,7 +1480,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Espacio de Trabajo</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vencimiento</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Archivos</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tareas</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
@@ -1026,7 +1490,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                   {filteredSubforums.map((forum) => (
                     <tr
                       key={forum.id}
-                      className="hover:bg-gray-50 dark:hover:bg-slate-700 transition cursor-pointer"
+                      className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors duration-150 cursor-pointer"
                       onClick={() => setSelectedSubforum(forum.id)}
                     >
                       <td className="px-4 py-4">
@@ -1037,7 +1501,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                                 e.stopPropagation();
                                 setShowFilesFor(forum);
                               }}
-                              className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30"
+                              className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg flex items-center justify-center transition-colors cursor-pointer hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30"
                               title="Ver archivos del cliente"
                             >
                               <FolderOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -1047,7 +1511,7 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                                 e.stopPropagation();
                                 setShowClientInfoFor(forum);
                               }}
-                              className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg flex items-center justify-center hover:scale-110 transition cursor-pointer hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30"
+                              className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg flex items-center justify-center transition-colors cursor-pointer hover:from-blue-200 hover:to-indigo-200 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30"
                               title="Ver ficha del cliente"
                             >
                               <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -1086,9 +1550,20 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
                         )}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {new Date(forum.created_at).toLocaleDateString('es-ES')}
-                        </div>
+                        {pendingVencimientosCount.get(forum.id) && pendingVencimientosCount.get(forum.id)! > 0 ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowVencimientos(forum.client_name, forum.cuit, forum.vencimientos_tipos);
+                            }}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg text-orange-700 dark:text-orange-300 text-xs font-medium transition-colors"
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{pendingVencimientosCount.get(forum.id)} pendiente{pendingVencimientosCount.get(forum.id)! > 1 ? 's' : ''}</span>
+                          </button>
+                        ) : (
+                          <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-white">
@@ -1296,6 +1771,239 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
         </div>
       )}
 
+      {/* Modal de Vencimientos Pendientes */}
+      {showVencimientosModal && (() => {
+        const canCreateTask = profile?.role === 'admin' || profile?.role === 'support';
+        
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-y-auto forums-scroll">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Vencimientos - {showVencimientosModal.clientName}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {showVencimientosModal.vencimientos.length} vencimiento{showVencimientosModal.vencimientos.length !== 1 ? 's' : ''} pendiente{showVencimientosModal.vencimientos.length !== 1 ? 's' : ''}
+                  </p>
+                  {showVencimientosModal.clientCuit && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      CUIT: {showVencimientosModal.clientCuit} (Último dígito: {getLastDigitOfCuit(showVencimientosModal.clientCuit)})
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {canCreateTask && selectedVencimientosForBulk.size > 0 && (
+                    <button
+                      onClick={handleCreateBulkVencimientos}
+                      disabled={creatingBulk}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {creatingBulk ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Creando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Layers className="w-4 h-4" />
+                          <span>Crear Masiva ({selectedVencimientosForBulk.size})</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowVencimientosModal(null);
+                      setSelectedVencimientosForBulk(new Set());
+                    }}
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            <div className="p-6">
+              {showVencimientosModal.vencimientos.length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No hay vencimientos pendientes para este cliente</p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Agrupar por hoja */}
+                  {(() => {
+                    const groupedByHoja = new Map<string, any[]>();
+                    showVencimientosModal.vencimientos.forEach((venc) => {
+                      const hoja = venc.hoja_nombre;
+                      if (!groupedByHoja.has(hoja)) {
+                        groupedByHoja.set(hoja, []);
+                      }
+                      groupedByHoja.get(hoja)!.push(venc);
+                    });
+
+                    return Array.from(groupedByHoja.entries()).map(([hojaNombre, vencimientos]) => (
+                      <div key={hojaNombre} className="border border-gray-200 dark:border-slate-700 rounded-lg p-4">
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-lg">
+                          {hojaNombre}
+                        </h3>
+                        <div className="space-y-2">
+                          {vencimientos.map((venc, idx) => {
+                            const getStatusBadge = (status: string | null | undefined) => {
+                              if (!status) return null;
+                              
+                              const statusConfig = {
+                                'pending': {
+                                  label: 'Pendiente',
+                                  className: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600',
+                                  icon: Clock
+                                },
+                                'in_progress': {
+                                  label: 'En Progreso',
+                                  className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                                  icon: Loader2
+                                },
+                                'completed': {
+                                  label: 'Completada',
+                                  className: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
+                                  icon: CheckCircle2
+                                },
+                                'cancelled': {
+                                  label: 'Cancelada',
+                                  className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700',
+                                  icon: X
+                                }
+                              };
+                              
+                              const config = statusConfig[status as keyof typeof statusConfig];
+                              if (!config) return null;
+                              
+                              const Icon = config.icon;
+                              
+                              return (
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${config.className}`}>
+                                  <Icon className={`w-3 h-3 ${status === 'in_progress' ? 'animate-spin' : ''}`} />
+                                  {config.label}
+                                </span>
+                              );
+                            };
+
+                            // Verificar si el usuario puede crear tareas (solo admin y support)
+                            const canCreateTask = profile?.role === 'admin' || profile?.role === 'support';
+                            const vencimientoKey = `${venc.hoja_nombre}-${venc.periodo}-${idx}`;
+                            const isSelected = selectedVencimientosForBulk.has(vencimientoKey);
+                            // Usar vencimiento_gestion si existe, sino usar tarea (compatibilidad)
+                            const vencimientoRelacionado = venc.vencimiento_gestion || venc.tarea;
+
+                            return (
+                              <div
+                                key={idx}
+                                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-150 ${
+                                  vencimientoRelacionado
+                                    ? vencimientoRelacionado.status === 'completed'
+                                      ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+                                      : vencimientoRelacionado.status === 'in_progress'
+                                      ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
+                                      : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600'
+                                    : canCreateTask
+                                      ? isSelected
+                                        ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700'
+                                        : 'bg-gray-50 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-gray-200 dark:border-slate-600 hover:border-blue-200 dark:hover:border-blue-800'
+                                      : 'bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600'
+                                }`}
+                              >
+                                {canCreateTask && !vencimientoRelacionado && (
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={(e) => {
+                                      const newSelection = new Set(selectedVencimientosForBulk);
+                                      if (e.target.checked) {
+                                        newSelection.add(vencimientoKey);
+                                      } else {
+                                        newSelection.delete(vencimientoKey);
+                                      }
+                                      setSelectedVencimientosForBulk(newSelection);
+                                    }}
+                                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer flex-shrink-0"
+                                  />
+                                )}
+                                <button
+                                  onClick={() => {
+                                    if (!vencimientoRelacionado && canCreateTask) {
+                                      setShowCreateVencimientoFromVencimiento({
+                                        clientName: showVencimientosModal.clientName,
+                                        clientCuit: showVencimientosModal.clientCuit || '',
+                                        vencimiento: venc
+                                      });
+                                      setShowVencimientosModal(null);
+                                    }
+                                  }}
+                                  className={`flex-1 flex items-center justify-between text-left group ${
+                                    vencimientoRelacionado || !canCreateTask ? 'cursor-default' : 'cursor-pointer'
+                                  }`}
+                                  disabled={!!vencimientoRelacionado || !canCreateTask}
+                                >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Calendar className={`w-4 h-4 transition-colors ${
+                                      vencimientoRelacionado
+                                        ? vencimientoRelacionado.status === 'completed'
+                                          ? 'text-green-600 dark:text-green-400'
+                                          : vencimientoRelacionado.status === 'in_progress'
+                                          ? 'text-blue-600 dark:text-blue-400'
+                                          : 'text-gray-600 dark:text-gray-400'
+                                        : 'text-orange-600 dark:text-orange-400 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                                    }`} />
+                                    <span className={`font-medium transition-colors ${
+                                      vencimientoRelacionado
+                                        ? vencimientoRelacionado.status === 'completed'
+                                          ? 'text-green-700 dark:text-green-300'
+                                          : vencimientoRelacionado.status === 'in_progress'
+                                          ? 'text-blue-700 dark:text-blue-300'
+                                          : 'text-gray-900 dark:text-white'
+                                        : 'text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300'
+                                    }`}>
+                                      {venc.periodo}
+                                    </span>
+                                    {vencimientoRelacionado && getStatusBadge(vencimientoRelacionado.status)}
+                                  </div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    Vencimiento: <span className={`font-semibold transition-colors ${
+                                      vencimientoRelacionado
+                                        ? vencimientoRelacionado.status === 'completed'
+                                          ? 'text-green-700 dark:text-green-300'
+                                          : vencimientoRelacionado.status === 'in_progress'
+                                          ? 'text-blue-700 dark:text-blue-300'
+                                          : 'text-orange-700 dark:text-orange-300'
+                                        : 'text-orange-700 dark:text-orange-300 group-hover:text-blue-700 dark:group-hover:text-blue-400'
+                                    }`}>{venc.fecha_vencimiento}</span>
+                                  </p>
+                                  {vencimientoRelacionado && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      {venc.vencimiento_gestion ? 'Vencimiento: ' : 'Tarea: '}{vencimientoRelacionado.title}
+                                    </p>
+                                  )}
+                                </div>
+                                  {!vencimientoRelacionado && canCreateTask && (
+                                    <div className="ml-3 text-xs text-orange-600 dark:text-orange-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                      <Calendar className="w-3.5 h-3.5" />
+                                      Crear vencimiento
+                                    </div>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
       {/* Modal de Asignación Masiva */}
       {showBulkAssignModal && (
         <BulkAssignUsersModal
@@ -1323,6 +2031,86 @@ export function ForumsList({ initialSubforumId, onSubforumChange }: ForumsListPr
           }}
         />
       )}
+
+      {/* Modal de Crear Vencimiento desde Vencimiento */}
+      {showCreateVencimientoFromVencimiento && (() => {
+        const { clientName, clientCuit, vencimiento } = showCreateVencimientoFromVencimiento;
+        
+        // Convertir fecha de vencimiento (formato: "18-feb" o "18-feb-2026") a formato de fecha para el input
+        const parseVencimientoDate = (fechaStr: string): string => {
+          if (!fechaStr) return '';
+          
+          // Mapeo de meses en español a números
+          const meses: { [key: string]: string } = {
+            'ene': '01', 'feb': '02', 'mar': '03', 'abr': '04',
+            'may': '05', 'jun': '06', 'jul': '07', 'ago': '08',
+            'sep': '09', 'oct': '10', 'nov': '11', 'dic': '12'
+          };
+          
+          try {
+            // Formato esperado: "18-feb" o "18-feb-2026"
+            const parts = fechaStr.toLowerCase().trim().split('-');
+            if (parts.length >= 2) {
+              const dia = parts[0].padStart(2, '0');
+              const mesAbbr = parts[1].substring(0, 3);
+              const mes = meses[mesAbbr] || '01';
+              
+              let año = new Date().getFullYear().toString();
+              if (parts.length >= 3 && parts[2]) {
+                año = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+              }
+              
+              const fecha = new Date(`${año}-${mes}-${dia}`);
+              if (isNaN(fecha.getTime())) {
+                return '';
+              }
+              
+              return `${año}-${mes}-${dia}`;
+            }
+          } catch (e) {
+            console.error('Error parsing date:', e);
+          }
+          return '';
+        };
+
+        const fechaVencimiento = parseVencimientoDate(vencimiento.fecha_vencimiento);
+        const tituloVencimiento = `Vencimiento ${vencimiento.hoja_nombre} - ${vencimiento.periodo}`;
+        const descripcionVencimiento = `Vencimiento de ${vencimiento.hoja_nombre} para el período ${vencimiento.periodo}.\nFecha de vencimiento: ${vencimiento.fecha_vencimiento}\nCliente: ${clientName}`;
+
+        return (
+          <CreateVencimientoModal
+            onClose={() => {
+              setShowCreateVencimientoFromVencimiento(null);
+              loadPendingVencimientos(subforums);
+            }}
+            onSuccess={async () => {
+              setShowCreateVencimientoFromVencimiento(null);
+              await loadPendingVencimientos(subforums);
+              
+              // Si el modal de vencimientos está abierto, recargarlo para mostrar el estado actualizado
+              if (showVencimientosModal) {
+                const vencimientosActualizados = await getVencimientosForClient(
+                  showVencimientosModal.clientCuit,
+                  showVencimientosModal.clientName,
+                  null
+                );
+                setShowVencimientosModal({
+                  ...showVencimientosModal,
+                  vencimientos: vencimientosActualizados
+                });
+              }
+            }}
+            initialClientName={clientName}
+            initialClientCuit={clientCuit}
+            initialVencimientoTipo={vencimiento.hoja_nombre}
+            initialPeriodo={vencimiento.periodo}
+            initialFechaVencimiento={fechaVencimiento}
+            initialFechaVencimientoOriginal={vencimiento.fecha_vencimiento}
+            initialTitle={tituloVencimiento}
+            initialDescription={descripcionVencimiento}
+          />
+        );
+      })()}
     </div>
   );
 }

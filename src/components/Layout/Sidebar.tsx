@@ -110,6 +110,7 @@ const menuItems: MenuItem[] = [
       { icon: FolderOpen, label: 'Clientes', view: 'forums', roles: ['admin', 'support', 'user'] },
       { icon: Clock, label: 'Carga de Horas', view: 'time-tracking', roles: ['admin', 'support', 'user'] },
       { icon: CheckSquare, label: 'Tareas', view: 'tasks', roles: ['admin', 'support', 'user'] },
+      { icon: Calendar, label: 'Vencimientos', view: 'vencimientos', roles: ['admin', 'support', 'user'] },
       { icon: Wrench, label: 'Herramientas', view: 'tools', roles: ['admin', 'support', 'user'] },
     ]
   },

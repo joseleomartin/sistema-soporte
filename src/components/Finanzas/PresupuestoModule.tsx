@@ -182,6 +182,7 @@ type Concept = {
   display_order: number;
   is_total: boolean;
   parent_concept_id?: string | null;
+  is_affected_by_ipc: boolean;
 };
 
 type Value = {
@@ -210,20 +211,20 @@ type Year = {
 // Conceptos por defecto
 const DEFAULT_CONCEPTS: Omit<Concept, 'id' | 'display_order'>[] = [
   // Ingresos
-  { name: 'Ingresos por Venta', concept_type: 'ingreso', is_total: false },
-  { name: 'Otros Ingresos', concept_type: 'ingreso', is_total: false },
-  { name: 'IVA', concept_type: 'ingreso', is_total: false },
-  { name: 'Ingresos Totales', concept_type: 'ingreso', is_total: true },
+  { name: 'Ingresos por Venta', concept_type: 'ingreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'Otros Ingresos', concept_type: 'ingreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'IVA', concept_type: 'ingreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'Ingresos Totales', concept_type: 'ingreso', is_total: true, is_affected_by_ipc: false },
   
   // Egresos
-  { name: 'Sueldos', concept_type: 'egreso', is_total: false },
-  { name: 'CCSS', concept_type: 'egreso', is_total: false },
-  { name: 'SAC', concept_type: 'egreso', is_total: false },
-  { name: 'CCSS SAC', concept_type: 'egreso', is_total: false },
-  { name: 'Sueldos Socios', concept_type: 'egreso', is_total: false },
-  { name: 'Costos de Estructura', concept_type: 'egreso', is_total: false },
-  { name: 'Costos Financieros', concept_type: 'egreso', is_total: false },
-  { name: 'Egresos Totales', concept_type: 'egreso', is_total: true },
+  { name: 'Sueldos', concept_type: 'egreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'CCSS', concept_type: 'egreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'SAC', concept_type: 'egreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'CCSS SAC', concept_type: 'egreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'Sueldos Socios', concept_type: 'egreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'Costos de Estructura', concept_type: 'egreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'Costos Financieros', concept_type: 'egreso', is_total: false, is_affected_by_ipc: true },
+  { name: 'Egresos Totales', concept_type: 'egreso', is_total: true, is_affected_by_ipc: false },
 ];
 
 export function PresupuestoModule() {
@@ -244,6 +245,7 @@ export function PresupuestoModule() {
   const [addingConcept, setAddingConcept] = useState(false);
   const [newConceptName, setNewConceptName] = useState('');
   const [newConceptType, setNewConceptType] = useState<'ingreso' | 'egreso'>('ingreso');
+  const [newConceptAffectedByIPC, setNewConceptAffectedByIPC] = useState(true);
   
   // Estados para editar nombres
   const [editingConceptId, setEditingConceptId] = useState<string | null>(null);
@@ -266,6 +268,13 @@ export function PresupuestoModule() {
     return (conceptId: string, month: number, presupuestoBase: number): number => {
       if (presupuestoBase === 0) return 0;
       
+      // Verificar si el concepto está afectado por IPC
+      const concept = concepts.find(c => c.id === conceptId);
+      if (!concept || !concept.is_affected_by_ipc) {
+        // Si no está afectado por IPC, devolver el valor base sin ajustes
+        return presupuestoBase;
+      }
+      
       // Obtener IPC acumulativo desde enero hasta el mes actual
       let cumulativeMultiplier = 1;
       for (let m = 1; m <= month; m++) {
@@ -279,7 +288,7 @@ export function PresupuestoModule() {
       const result = presupuestoBase * cumulativeMultiplier;
       return result;
     };
-  }, [ipcValues]);
+  }, [ipcValues, concepts]);
 
   // Calcular totales
   const totals = useMemo(() => {
@@ -436,6 +445,7 @@ export function PresupuestoModule() {
         name: concept.name,
         concept_type: concept.concept_type,
         is_total: concept.is_total,
+        is_affected_by_ipc: concept.is_affected_by_ipc,
         display_order: index + 1,
       }));
 
@@ -767,6 +777,7 @@ export function PresupuestoModule() {
       display_order: maxOrder + 1,
       is_total: false,
       parent_concept_id: null,
+      is_affected_by_ipc: newConceptAffectedByIPC,
     };
 
     // Actualizar estado local inmediatamente
@@ -774,6 +785,7 @@ export function PresupuestoModule() {
     const conceptNameToSave = trimmedName;
     setAddingConcept(false);
     setNewConceptName('');
+    setNewConceptAffectedByIPC(true);
 
     // Sincronizar con base de datos en segundo plano
     try {
@@ -785,6 +797,7 @@ export function PresupuestoModule() {
           concept_type: newConceptType,
           display_order: maxOrder + 1,
           is_total: false,
+          is_affected_by_ipc: newConceptAffectedByIPC,
         })
         .select()
         .single();
@@ -905,10 +918,70 @@ export function PresupuestoModule() {
           <tbody>
             {/* INGRESOS */}
             <tr className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800">
-              <td colSpan={24} className="p-2 font-bold text-white text-sm border-b-2 border-blue-800 dark:border-blue-900">
-                <div className="flex items-center gap-2">
+              <td colSpan={1} className="p-2 font-bold text-white text-sm border-b-2 border-blue-800 dark:border-blue-900 sticky left-0 z-20 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 min-w-[200px]">
+                <div className="flex items-center gap-3">
                   <span>INGRESOS</span>
+                  {addingConcept && newConceptType === 'ingreso' ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newConceptName}
+                        onChange={(e) => setNewConceptName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddConcept();
+                          } else if (e.key === 'Escape') {
+                            setAddingConcept(false);
+                            setNewConceptName('');
+                            setNewConceptAffectedByIPC(true);
+                          }
+                        }}
+                        placeholder="Nombre de la nueva subcategoría"
+                        className="px-3 py-1.5 border border-white/30 rounded-lg bg-white/10 text-white placeholder:text-white/70 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+                        autoFocus
+                      />
+                      <label className="flex items-center gap-2 px-2 py-1.5 text-sm text-white whitespace-nowrap bg-white/10 rounded-lg">
+                        <input
+                          type="checkbox"
+                          checked={newConceptAffectedByIPC}
+                          onChange={(e) => setNewConceptAffectedByIPC(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-white/50 rounded focus:ring-white/50 bg-white/20"
+                        />
+                        <span className="text-xs">Afectado por IPC</span>
+                      </label>
+                      <button
+                        onClick={handleAddConcept}
+                        className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        Agregar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setAddingConcept(false);
+                          setNewConceptName('');
+                          setNewConceptAffectedByIPC(true);
+                        }}
+                        className="px-4 py-1.5 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setNewConceptType('ingreso');
+                        setNewConceptAffectedByIPC(true);
+                        setAddingConcept(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-white hover:bg-white/20 rounded-lg transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Agregar subcategoría</span>
+                    </button>
+                  )}
                 </div>
+              </td>
+              <td colSpan={38} className="p-2 font-bold text-white text-sm border-b-2 border-blue-800 dark:border-blue-900 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800">
               </td>
             </tr>
 
@@ -917,8 +990,8 @@ export function PresupuestoModule() {
               const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
               
               return (
-                <tr key={concept.id} className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
-                  <td className="p-3 sticky left-0 bg-gray-50 dark:bg-slate-700/30 z-10 border-r-2 border-gray-300 dark:border-slate-600 font-medium">
+                <tr key={concept.id} className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                  <td className="p-3 sticky left-0 bg-gray-50 dark:bg-slate-800 z-10 border-r-2 border-gray-300 dark:border-slate-600 font-medium">
                     <div className="flex items-center gap-2">
                       {editingConceptId === concept.id ? (
                         <input
@@ -976,6 +1049,50 @@ export function PresupuestoModule() {
                           >
                             {concept.name}
                           </span>
+                          <label className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={concept.is_affected_by_ipc}
+                              onChange={async (e) => {
+                                const newValue = e.target.checked;
+                                
+                                // Actualizar estado local inmediatamente (optimistic update)
+                                setConcepts(prev => prev.map(c => 
+                                  c.id === concept.id 
+                                    ? { ...c, is_affected_by_ipc: newValue }
+                                    : c
+                                ));
+
+                                // Sincronizar con base de datos en segundo plano
+                                try {
+                                  const { error } = await supabase
+                                    .from('presupuesto_concepts')
+                                    .update({ is_affected_by_ipc: newValue })
+                                    .eq('id', concept.id);
+
+                                  if (error) throw error;
+                                } catch (error: any) {
+                                  // Revertir cambio local si falla
+                                  setConcepts(prev => prev.map(c => 
+                                    c.id === concept.id 
+                                      ? { ...c, is_affected_by_ipc: !newValue }
+                                      : c
+                                  ));
+                                  
+                                  setAlertModal({
+                                    isOpen: true,
+                                    title: 'Error',
+                                    message: error.message || 'Error al actualizar concepto',
+                                    type: 'error',
+                                  });
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              title={concept.is_affected_by_ipc ? "Afectado por IPC" : "No afectado por IPC"}
+                            />
+                            <span className="text-[10px]">IPC</span>
+                          </label>
                           <button
                             onClick={() => handleDeleteConcept(concept.id)}
                             className="p-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
@@ -987,7 +1104,7 @@ export function PresupuestoModule() {
                       )}
                     </div>
                   </td>
-                  <td className="p-1.5 text-right bg-gray-50 dark:bg-slate-700/30 border-r-2 border-gray-300 dark:border-slate-600">
+                  <td className="p-1.5 text-right bg-gray-50 dark:bg-slate-800 border-r-2 border-gray-300 dark:border-slate-600">
                     <input
                       type="text"
                       inputMode="decimal"
@@ -1037,13 +1154,13 @@ export function PresupuestoModule() {
                     return (
                       <React.Fragment key={month.num}>
                         {/* Columna Presupuesto (calculado con IPC) */}
-                        <td className="p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
+                        <td className="p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800">
                           <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
                             {formatNumber(presupuestoAjustado)}
                           </div>
                         </td>
                         {/* Columna Real (input editable) */}
-                        <td className="p-1.5 text-right bg-white dark:bg-slate-800">
+                        <td className="p-1.5 text-right bg-white dark:bg-slate-900">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1106,65 +1223,14 @@ export function PresupuestoModule() {
               );
             })}
 
-            {/* Botón para agregar nueva subcategoría de Ingresos */}
-            <tr className="border-b-2 border-blue-200 dark:border-blue-800">
-              <td colSpan={24} className="p-3 bg-blue-50 dark:bg-blue-900/10">
-                {addingConcept && newConceptType === 'ingreso' ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newConceptName}
-                      onChange={(e) => setNewConceptName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddConcept();
-                        } else if (e.key === 'Escape') {
-                          setAddingConcept(false);
-                          setNewConceptName('');
-                        }
-                      }}
-                      placeholder="Nombre de la nueva subcategoría"
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleAddConcept}
-                      className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
-                    >
-                      Agregar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAddingConcept(false);
-                        setNewConceptName('');
-                      }}
-                      className="px-4 py-2 bg-gray-500 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setNewConceptType('ingreso');
-                      setAddingConcept(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="text-sm font-medium">Agregar subcategoría de Ingresos</span>
-                  </button>
-                )}
-              </td>
-            </tr>
 
             {/* Totales de Ingresos */}
             {ingresosTotales.map(concept => (
-              <tr key={concept.id} className="bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 border-t-4 border-green-400 dark:border-green-600">
-                <td className="p-2 font-bold text-green-900 dark:text-green-200 text-xs sticky left-0 bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 z-10 border-r-2 border-green-400 dark:border-green-600">
+              <tr key={concept.id} className="bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 border-t-4 border-green-400 dark:border-green-600">
+                <td className="p-2 font-bold text-green-900 dark:text-green-200 text-xs sticky left-0 bg-gradient-to-r from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 z-10 border-r-2 border-green-400 dark:border-green-600">
                   {concept.name}
                 </td>
-                <td className="p-2 bg-green-100 dark:bg-green-900/20 border-r-2 border-green-300 dark:border-green-700"></td>
+                <td className="p-2 bg-green-100 dark:bg-green-900 border-r-2 border-green-300 dark:border-green-700"></td>
                 {MONTHS.map(month => {
                   // Calcular totales de presupuesto ajustado y real para este mes
                   let totalPresupuestoAjustado = 0;
@@ -1188,13 +1254,13 @@ export function PresupuestoModule() {
                   
                   return (
                     <React.Fragment key={month.num}>
-                      <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs border-l-2 border-green-300 dark:border-green-700 bg-green-100 dark:bg-green-900/20">
+                      <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs border-l-2 border-green-300 dark:border-green-700 bg-green-100 dark:bg-green-900">
                         {formatNumber(totalPresupuestoAjustado)}
                       </td>
-                      <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs bg-green-100 dark:bg-green-900/20">
+                      <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs bg-green-100 dark:bg-green-900">
                         {formatNumber(totalReal)}
                       </td>
-                      <td className="p-1.5 text-right font-bold bg-green-100 dark:bg-green-900/20 border-r border-green-300 dark:border-green-700">
+                      <td className="p-1.5 text-right font-bold bg-green-100 dark:bg-green-900 border-r border-green-300 dark:border-green-700">
                         <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                           diferenciaPorcentual === null 
                             ? 'text-gray-400 dark:text-gray-500'
@@ -1213,7 +1279,7 @@ export function PresupuestoModule() {
                     </React.Fragment>
                   );
                 })}
-                <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs bg-green-200 dark:bg-green-900/40 border-l-2 border-green-400 dark:border-green-600">
+                <td className="p-1.5 text-right font-bold text-green-900 dark:text-green-200 text-xs bg-green-200 dark:bg-green-800 border-l-2 border-green-400 dark:border-green-600">
                   {formatNumber(
                     MONTHS.reduce((sum, month) => sum + (totals.ingresosByMonth[month.num] || 0), 0)
                   )}
@@ -1223,10 +1289,70 @@ export function PresupuestoModule() {
 
             {/* EGRESOS */}
             <tr className="bg-gradient-to-r from-red-600 to-red-700 dark:from-red-700 dark:to-red-800">
-              <td colSpan={24} className="p-1.5 font-bold text-white text-xs border-b-2 border-red-800 dark:border-red-900">
-                <div className="flex items-center gap-2">
+              <td colSpan={1} className="p-1.5 font-bold text-white text-xs border-b-2 border-red-800 dark:border-red-900 sticky left-0 z-20 bg-gradient-to-r from-red-600 to-red-700 dark:from-red-700 dark:to-red-800 min-w-[200px]">
+                <div className="flex items-center gap-3">
                   <span>EGRESOS</span>
+                  {addingConcept && newConceptType === 'egreso' ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newConceptName}
+                        onChange={(e) => setNewConceptName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddConcept();
+                          } else if (e.key === 'Escape') {
+                            setAddingConcept(false);
+                            setNewConceptName('');
+                            setNewConceptAffectedByIPC(true);
+                          }
+                        }}
+                        placeholder="Nombre de la nueva subcategoría"
+                        className="px-3 py-1.5 border border-white/30 rounded-lg bg-white/10 text-white placeholder:text-white/70 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+                        autoFocus
+                      />
+                      <label className="flex items-center gap-2 px-2 py-1.5 text-sm text-white whitespace-nowrap bg-white/10 rounded-lg">
+                        <input
+                          type="checkbox"
+                          checked={newConceptAffectedByIPC}
+                          onChange={(e) => setNewConceptAffectedByIPC(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-white/50 rounded focus:ring-white/50 bg-white/20"
+                        />
+                        <span className="text-xs">Afectado por IPC</span>
+                      </label>
+                      <button
+                        onClick={handleAddConcept}
+                        className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        Agregar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setAddingConcept(false);
+                          setNewConceptName('');
+                          setNewConceptAffectedByIPC(true);
+                        }}
+                        className="px-4 py-1.5 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setNewConceptType('egreso');
+                        setNewConceptAffectedByIPC(true);
+                        setAddingConcept(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-white hover:bg-white/20 rounded-lg transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Agregar subcategoría</span>
+                    </button>
+                  )}
                 </div>
+              </td>
+              <td colSpan={38} className="p-1.5 font-bold text-white text-xs border-b-2 border-red-800 dark:border-red-900 bg-gradient-to-r from-red-600 to-red-700 dark:from-red-700 dark:to-red-800">
               </td>
             </tr>
 
@@ -1235,8 +1361,8 @@ export function PresupuestoModule() {
               const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
               
               return (
-                <tr key={concept.id} className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
-                  <td className="p-2 sticky left-0 bg-gray-50 dark:bg-slate-700/30 z-10 border-r-2 border-gray-300 dark:border-slate-600 font-medium">
+                <tr key={concept.id} className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                  <td className="p-2 sticky left-0 bg-gray-50 dark:bg-slate-800 z-10 border-r-2 border-gray-300 dark:border-slate-600 font-medium">
                     <div className="flex items-center gap-2">
                       {editingConceptId === concept.id ? (
                         <input
@@ -1294,6 +1420,50 @@ export function PresupuestoModule() {
                           >
                             {concept.name}
                           </span>
+                          <label className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={concept.is_affected_by_ipc}
+                              onChange={async (e) => {
+                                const newValue = e.target.checked;
+                                
+                                // Actualizar estado local inmediatamente (optimistic update)
+                                setConcepts(prev => prev.map(c => 
+                                  c.id === concept.id 
+                                    ? { ...c, is_affected_by_ipc: newValue }
+                                    : c
+                                ));
+
+                                // Sincronizar con base de datos en segundo plano
+                                try {
+                                  const { error } = await supabase
+                                    .from('presupuesto_concepts')
+                                    .update({ is_affected_by_ipc: newValue })
+                                    .eq('id', concept.id);
+
+                                  if (error) throw error;
+                                } catch (error: any) {
+                                  // Revertir cambio local si falla
+                                  setConcepts(prev => prev.map(c => 
+                                    c.id === concept.id 
+                                      ? { ...c, is_affected_by_ipc: !newValue }
+                                      : c
+                                  ));
+                                  
+                                  setAlertModal({
+                                    isOpen: true,
+                                    title: 'Error',
+                                    message: error.message || 'Error al actualizar concepto',
+                                    type: 'error',
+                                  });
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                              title={concept.is_affected_by_ipc ? "Afectado por IPC" : "No afectado por IPC"}
+                            />
+                            <span className="text-[10px]">IPC</span>
+                          </label>
                           <button
                             onClick={() => handleDeleteConcept(concept.id)}
                             className="p-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
@@ -1305,7 +1475,7 @@ export function PresupuestoModule() {
                       )}
                     </div>
                   </td>
-                  <td className="p-1.5 text-right bg-gray-50 dark:bg-slate-700/30 border-r-2 border-gray-300 dark:border-slate-600">
+                  <td className="p-1.5 text-right bg-gray-50 dark:bg-slate-800 border-r-2 border-gray-300 dark:border-slate-600">
                     <input
                       type="text"
                       inputMode="decimal"
@@ -1355,13 +1525,13 @@ export function PresupuestoModule() {
                     return (
                       <React.Fragment key={month.num}>
                         {/* Columna Presupuesto (calculado con IPC) */}
-                        <td className="p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
+                        <td className="p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800">
                           <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
                             {formatNumber(Math.abs(presupuestoAjustado))}
                           </div>
                         </td>
                         {/* Columna Real (input editable) */}
-                        <td className="p-1.5 text-right bg-white dark:bg-slate-800">
+                        <td className="p-1.5 text-right bg-white dark:bg-slate-900">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1389,7 +1559,7 @@ export function PresupuestoModule() {
                           />
                         </td>
                         {/* Columna Diferencia % */}
-                        <td className="p-1.5 text-right border-r border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
+                        <td className="p-1.5 text-right border-r border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800">
                           <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                             diferenciaPorcentual === null 
                               ? 'text-gray-400 dark:text-gray-500'
@@ -1425,65 +1595,14 @@ export function PresupuestoModule() {
               );
             })}
 
-            {/* Botón para agregar nueva subcategoría de Egresos */}
-            <tr className="border-b-2 border-red-200 dark:border-red-800">
-              <td colSpan={24} className="p-3 bg-red-50 dark:bg-red-900/10">
-                {addingConcept && newConceptType === 'egreso' ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newConceptName}
-                      onChange={(e) => setNewConceptName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddConcept();
-                        } else if (e.key === 'Escape') {
-                          setAddingConcept(false);
-                          setNewConceptName('');
-                        }
-                      }}
-                      placeholder="Nombre de la nueva subcategoría"
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleAddConcept}
-                      className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
-                    >
-                      Agregar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAddingConcept(false);
-                        setNewConceptName('');
-                      }}
-                      className="px-4 py-2 bg-gray-500 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setNewConceptType('egreso');
-                      setAddingConcept(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="text-sm font-medium">Agregar subcategoría de Egresos</span>
-                  </button>
-                )}
-              </td>
-            </tr>
 
             {/* Totales de Egresos */}
             {egresosTotales.map(concept => (
-              <tr key={concept.id} className="bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 border-t-4 border-red-400 dark:border-red-600">
-                <td className="p-2 font-bold text-red-900 dark:text-red-200 text-xs sticky left-0 bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30 z-10 border-r-2 border-red-400 dark:border-red-600">
+              <tr key={concept.id} className="bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 border-t-4 border-red-400 dark:border-red-600">
+                <td className="p-2 font-bold text-red-900 dark:text-red-200 text-xs sticky left-0 bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 z-10 border-r-2 border-red-400 dark:border-red-600">
                   {concept.name}
                 </td>
-                <td className="p-2 bg-red-100 dark:bg-red-900/20 border-r-2 border-red-300 dark:border-red-700"></td>
+                <td className="p-2 bg-red-100 dark:bg-red-900 border-r-2 border-red-300 dark:border-red-700"></td>
                 {MONTHS.map(month => {
                   // Calcular totales de presupuesto ajustado y real para este mes
                   let totalPresupuestoAjustado = 0;
@@ -1507,13 +1626,13 @@ export function PresupuestoModule() {
                   
                   return (
                     <React.Fragment key={month.num}>
-                      <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs border-l-2 border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900/20">
+                      <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs border-l-2 border-red-300 dark:border-red-700 bg-red-100 dark:bg-red-900">
                         {formatNumber(Math.abs(totalPresupuestoAjustado))}
                       </td>
-                      <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs bg-red-100 dark:bg-red-900/20">
+                      <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs bg-red-100 dark:bg-red-900">
                         {formatNumber(Math.abs(totalReal))}
                       </td>
-                      <td className="p-1.5 text-right font-bold bg-red-100 dark:bg-red-900/20 border-r border-red-300 dark:border-red-700">
+                      <td className="p-1.5 text-right font-bold bg-red-100 dark:bg-red-900 border-r border-red-300 dark:border-red-700">
                         <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                           diferenciaPorcentual === null 
                             ? 'text-gray-400 dark:text-gray-500'
@@ -1532,7 +1651,7 @@ export function PresupuestoModule() {
                     </React.Fragment>
                   );
                 })}
-                <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs bg-red-200 dark:bg-red-900/40 border-l-2 border-red-400 dark:border-red-600">
+                <td className="p-1.5 text-right font-bold text-red-900 dark:text-red-200 text-xs bg-red-200 dark:bg-red-800 border-l-2 border-red-400 dark:border-red-600">
                   {formatNumber(
                     Math.abs(MONTHS.reduce((sum, month) => sum + (totals.egresosByMonth[month.num] || 0), 0))
                   )}
@@ -1541,11 +1660,11 @@ export function PresupuestoModule() {
             ))}
 
             {/* Superávit | Déficit */}
-            <tr className="bg-yellow-50 dark:bg-yellow-900/20 border-t-4 border-gray-400">
-              <td className="p-2 font-bold text-xs text-gray-900 dark:text-white sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 z-10 border-r border-gray-200 dark:border-slate-600">
+            <tr className="bg-yellow-50 dark:bg-yellow-900 border-t-4 border-gray-400">
+              <td className="p-2 font-bold text-xs text-gray-900 dark:text-white sticky left-0 bg-yellow-50 dark:bg-yellow-900 z-10 border-r border-gray-200 dark:border-slate-600">
                 Superávit | Déficit
               </td>
-              <td className="p-2 bg-yellow-50 dark:bg-yellow-900/20 border-r-2 border-gray-300 dark:border-slate-600"></td>
+              <td className="p-2 bg-yellow-50 dark:bg-yellow-900 border-r-2 border-gray-300 dark:border-slate-600"></td>
               {MONTHS.map(month => {
                 // Calcular superávit/déficit usando la misma lógica que totals
                 let ingresosPresupuesto = 0;
@@ -1580,13 +1699,13 @@ export function PresupuestoModule() {
                 
                 return (
                   <React.Fragment key={month.num}>
-                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-slate-600 bg-yellow-50 dark:bg-yellow-900/20">
+                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-slate-600 bg-yellow-50 dark:bg-yellow-900">
                       {formatNumber(superavitPresupuesto)}
                     </td>
-                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-yellow-50 dark:bg-yellow-900/20">
+                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-yellow-50 dark:bg-yellow-900">
                       {formatNumber(superavitReal)}
                     </td>
-                    <td className="p-1.5 text-right font-bold bg-yellow-50 dark:bg-yellow-900/20 border-r border-gray-300 dark:border-slate-600">
+                    <td className="p-1.5 text-right font-bold bg-yellow-50 dark:bg-yellow-900 border-r border-gray-300 dark:border-slate-600">
                       <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                         diferenciaPorcentual === null 
                           ? 'text-gray-400 dark:text-gray-500'
@@ -1605,17 +1724,17 @@ export function PresupuestoModule() {
                   </React.Fragment>
                 );
               })}
-              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-yellow-100 dark:bg-yellow-900/30 border-l-2 border-gray-400 dark:border-slate-500">
+              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-yellow-100 dark:bg-yellow-800 border-l-2 border-gray-400 dark:border-slate-500">
                 {formatNumber(totals.acumulado)}
               </td>
             </tr>
 
             {/* Acumulado */}
-            <tr className="bg-blue-50 dark:bg-blue-900/20 border-t-2 border-gray-300">
-              <td className="p-2 font-bold text-xs text-gray-900 dark:text-white sticky left-0 bg-blue-50 dark:bg-blue-900/20 z-10 border-r border-gray-200 dark:border-slate-600">
+            <tr className="bg-blue-50 dark:bg-blue-900 border-t-2 border-gray-300">
+              <td className="p-2 font-bold text-xs text-gray-900 dark:text-white sticky left-0 bg-blue-50 dark:bg-blue-900 z-10 border-r border-gray-200 dark:border-slate-600">
                 Acumulado
               </td>
-              <td className="p-2 bg-blue-50 dark:bg-blue-900/20 border-r-2 border-gray-300 dark:border-slate-600"></td>
+              <td className="p-2 bg-blue-50 dark:bg-blue-900 border-r-2 border-gray-300 dark:border-slate-600"></td>
               {MONTHS.map((month, index) => {
                 // Calcular acumulado usando la misma lógica que totals
                 let acumuladoPresupuesto = 0;
@@ -1656,13 +1775,13 @@ export function PresupuestoModule() {
                 
                 return (
                   <React.Fragment key={month.num}>
-                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-slate-600 bg-blue-50 dark:bg-blue-900/20">
+                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white border-l-2 border-gray-300 dark:border-slate-600 bg-blue-50 dark:bg-blue-900">
                       {formatNumber(acumuladoPresupuesto)}
                     </td>
-                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-blue-50 dark:bg-blue-900/20">
+                    <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-blue-50 dark:bg-blue-900">
                       {formatNumber(acumuladoReal)}
                     </td>
-                    <td className="p-1.5 text-right font-bold bg-blue-50 dark:bg-blue-900/20 border-r border-gray-300 dark:border-slate-600">
+                    <td className="p-1.5 text-right font-bold bg-blue-50 dark:bg-blue-900 border-r border-gray-300 dark:border-slate-600">
                       <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                         diferenciaPorcentual === null 
                           ? 'text-gray-400 dark:text-gray-500'
@@ -1681,7 +1800,7 @@ export function PresupuestoModule() {
                   </React.Fragment>
                 );
               })}
-              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-900/30 border-l-2 border-gray-400 dark:border-slate-500">
+              <td className="p-1.5 text-right font-bold text-xs text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-800 border-l-2 border-gray-400 dark:border-slate-500">
                 {formatNumber(totals.acumulado)}
               </td>
             </tr>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, Search, CheckCircle, AlertCircle, Building2, X, Plus, Trash2 } from 'lucide-react';
+import { Users, Search, CheckCircle, AlertCircle, Building2, X, Plus, Trash2, RotateCcw } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -28,6 +28,8 @@ export function UserManagement() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [userToRestore, setUserToRestore] = useState<User | null>(null);
 
   useEffect(() => {
     let heartbeatInterval: NodeJS.Timeout | null = null;
@@ -241,6 +243,15 @@ export function UserManagement() {
     }
   };
 
+  const isDeletedUser = (email: string) => {
+    return email.startsWith('deleted_') && email.endsWith('@deleted.local');
+  };
+
+  const handleRestoreClick = (user: User) => {
+    setUserToRestore(user);
+    setShowRestoreModal(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 sm:h-64">
@@ -382,14 +393,27 @@ export function UserManagement() {
                     </td>
                     {profile?.role === 'admin' && (
                       <td className="px-4 lg:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleDeleteUser(user.id, user.full_name)}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          title="Eliminar usuario"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span className="hidden lg:inline">Eliminar</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {isDeletedUser(user.email) ? (
+                            <button
+                              onClick={() => handleRestoreClick(user)}
+                              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                              title="Restaurar usuario"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span className="hidden lg:inline">Restaurar</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteUser(user.id, user.full_name)}
+                              className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                              title="Eliminar usuario"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span className="hidden lg:inline">Eliminar</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -478,14 +502,25 @@ export function UserManagement() {
 
                 {profile?.role === 'admin' && (
                   <div>
-                    <button
-                      onClick={() => handleDeleteUser(user.id, user.full_name)}
-                      className="w-full mt-2 inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800"
-                      title="Eliminar usuario"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Eliminar Usuario
-                    </button>
+                    {isDeletedUser(user.email) ? (
+                      <button
+                        onClick={() => handleRestoreClick(user)}
+                        className="w-full mt-2 inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors border border-green-200 dark:border-green-800"
+                        title="Restaurar usuario"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Restaurar Usuario
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleDeleteUser(user.id, user.full_name)}
+                        className="w-full mt-2 inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors border border-red-200 dark:border-red-800"
+                        title="Eliminar usuario"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar Usuario
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -502,6 +537,17 @@ export function UserManagement() {
             setSelectedUser(null);
           }}
           onUpdate={loadUsers}
+        />
+      )}
+
+      {showRestoreModal && userToRestore && (
+        <RestoreUserModal
+          user={userToRestore}
+          onClose={() => {
+            setShowRestoreModal(false);
+            setUserToRestore(null);
+          }}
+          onSuccess={loadUsers}
         />
       )}
     </div>
@@ -696,6 +742,199 @@ function AssignAreasModal({ user, onClose, onUpdate }: {
             className="px-3 sm:px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm sm:text-base w-full sm:w-auto"
           >
             Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Modal para restaurar usuarios eliminados
+function RestoreUserModal({ user, onClose, onSuccess }: {
+  user: User;
+  onClose: () => void;
+  onSuccess?: () => void;
+}) {
+  const { profile } = useAuth();
+  const [originalEmail, setOriginalEmail] = useState('');
+  const [originalFullName, setOriginalFullName] = useState('');
+  const [originalRole, setOriginalRole] = useState<'admin' | 'support' | 'user'>('user');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleRestore = async () => {
+    if (!originalEmail || !originalEmail.includes('@')) {
+      setMessage({ type: 'error', text: 'Por favor ingresa un email válido' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    if (!profile || profile.role !== 'admin') {
+      setMessage({ type: 'error', text: 'Solo los administradores pueden restaurar usuarios' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      console.log('🔄 Intentando restaurar usuario:', { userId: user.id, originalEmail });
+      
+      const { error } = await supabase.rpc('restore_user', {
+        user_uuid: user.id,
+        original_email: originalEmail,
+        original_full_name: originalFullName || null,
+        original_role: originalRole
+      });
+
+      if (error) {
+        console.error('❌ Error al restaurar usuario:', error);
+        throw error;
+      }
+
+      console.log('✅ Usuario restaurado exitosamente');
+      setMessage({ type: 'success', text: 'Usuario restaurado correctamente. El usuario podrá iniciar sesión nuevamente, pero necesitará restablecer su contraseña.' });
+      
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+        onClose();
+      }, 2000);
+    } catch (error: any) {
+      console.error('Error restoring user:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.message || 'Error al restaurar el usuario. Verifica tus permisos y que el email no esté en uso.' 
+      });
+      setLoading(false);
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white dark:bg-slate-800 rounded-none sm:rounded-xl shadow-xl max-w-md w-full h-auto overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-slate-700">
+          <div className="flex-1 min-w-0 pr-2">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Restaurar Usuario</h3>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 truncate">ID: {user.id}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-300 transition-colors flex-shrink-0"
+          >
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+        </div>
+
+        {/* Mensajes */}
+        {message && (
+          <div className={`mx-4 sm:mx-6 mt-3 sm:mt-4 rounded-lg p-2.5 sm:p-3 flex items-start gap-2 ${
+            message.type === 'success' 
+              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50' 
+              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50'
+          }`}>
+            {message.type === 'success' ? (
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            )}
+            <p className={`text-xs sm:text-sm ${message.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+              {message.text}
+            </p>
+          </div>
+        )}
+
+        {/* Contenido */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Email Original <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={originalEmail}
+              onChange={(e) => setOriginalEmail(e.target.value)}
+              placeholder="usuario@ejemplo.com"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+              required
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Ingresa el email original del usuario antes de ser eliminado
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Nombre Completo
+            </label>
+            <input
+              type="text"
+              value={originalFullName}
+              onChange={(e) => setOriginalFullName(e.target.value)}
+              placeholder="Nombre Completo del Usuario"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Opcional: Nombre completo a restaurar
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Rol
+            </label>
+            <select
+              value={originalRole}
+              onChange={(e) => setOriginalRole(e.target.value as 'admin' | 'support' | 'user')}
+              className={`w-full px-3 py-2 text-sm font-medium rounded-lg border-0 ${
+                originalRole === 'admin' ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' :
+                originalRole === 'support' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' :
+                'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <option value="user">Usuario</option>
+              <option value="support">Soporte</option>
+              <option value="admin">Admin</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Rol que tendrá el usuario al ser restaurado
+            </p>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3">
+            <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
+              <strong>Nota importante:</strong> El usuario necesitará usar "Olvidé mi contraseña" para restablecer su contraseña y poder iniciar sesión nuevamente.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200 dark:border-slate-700">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-3 sm:px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleRestore}
+            disabled={loading || !originalEmail}
+            className="px-3 sm:px-4 py-2 text-white bg-green-600 dark:bg-green-500 rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Restaurando...</span>
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-4 h-4" />
+                <span>Restaurar Usuario</span>
+              </>
+            )}
           </button>
         </div>
       </div>
