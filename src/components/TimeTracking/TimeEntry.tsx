@@ -91,7 +91,7 @@ export function TimeEntry() {
   }, [timeEntries, searchTerm]);
 
   const loadClients = async () => {
-    if (!profile?.id) return;
+    if (!profile?.id || !profile?.tenant_id) return;
 
     try {
       let data;
@@ -103,7 +103,8 @@ export function TimeEntry() {
           .from('subforum_permissions')
           .select('subforum_id')
           .eq('user_id', profile.id)
-          .eq('can_view', true);
+          .eq('can_view', true)
+          .eq('tenant_id', profile.tenant_id); // Filtrar por tenant_id
 
         if (permError) throw permError;
 
@@ -118,15 +119,17 @@ export function TimeEntry() {
           .from('subforums')
           .select('id, name')
           .in('id', subforumIds)
+          .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id
           .order('name');
 
         data = result.data;
         error = result.error;
       } else {
-        // Para admin/support, obtener todos los clientes
+        // Para admin/support, obtener todos los clientes del tenant
         const result = await supabase
           .from('subforums')
           .select('id, name')
+          .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id
           .order('name');
 
         data = result.data;
@@ -137,6 +140,7 @@ export function TimeEntry() {
       setClients(data || []);
     } catch (error) {
       console.error('Error loading clients:', error);
+      setClients([]); // Asegurar que se establezca un array vacío en caso de error
     }
   };
 
