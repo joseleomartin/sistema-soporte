@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plus, ExternalLink, Loader2 } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Plus, ExternalLink, Loader2, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTenant } from '../../contexts/TenantContext';
@@ -40,11 +40,53 @@ export function ProfessionalNews() {
     image_url: '',
     tags: '',
   });
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isAdmin = profile?.role === 'admin';
+
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingItem(null);
+    setError(null);
+    setForm({
+      title: '',
+      description: '',
+      url: '',
+      image_url: '',
+      tags: '',
+    });
+    setSelectedImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     fetchNews();
   }, []);
+
+  // Cerrar modal con tecla Escape
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showForm) {
+        resetForm();
+      }
+    };
+
+    if (showForm) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevenir scroll del body cuando el modal está abierto
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showForm]);
 
   const fetchNews = async () => {
     try {
@@ -76,24 +118,109 @@ export function ProfessionalNews() {
       .slice(0, 5);
   };
 
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      setError('Por favor, selecciona una imagen válida (JPEG, PNG, GIF, WebP o SVG)');
+      return;
+    }
+
+    // Validar tamaño (5MB)
+    if (file.size > 5242880) {
+      setError('La imagen no puede ser mayor a 5MB');
+      return;
+    }
+
+    setSelectedImageFile(file);
+    setError(null);
+    // Limpiar URL cuando se selecciona un archivo
+    handleChange('image_url', '');
+
+    // Crear preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeSelectedImage = () => {
+    setSelectedImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!selectedImageFile || !profile?.id) return null;
+
+    try {
+      setUploadingImage(true);
+      const fileExt = selectedImageFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${profile.id}/${fileName}`;
+
+      // Subir a storage
+      const { error: uploadError } = await supabase.storage
+        .from('professional-news-images')
+        .upload(filePath, selectedImageFile);
+
+      if (uploadError) throw uploadError;
+
+      // Obtener URL pública
+      const { data } = supabase.storage
+        .from('professional-news-images')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error: any) {
+      console.error('Error al subir imagen:', error);
+      throw new Error(`Error al subir imagen: ${error?.message || 'Error desconocido'}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.url || !form.title) return;
 
     try {
       setSubmitting(true);
+      setError(null);
 
       const { data: authUser } = await supabase.auth.getUser();
       const createdBy = authUser.user?.id || profile?.id || null;
 
       const tagsArray = parseTags(form.tags);
 
-      let data: ProfessionalNewsItem | null = null;
-      let error;
+      // Si hay una imagen seleccionada, subirla primero
+      let finalImageUrl = form.image_url;
+      if (selectedImageFile) {
+        const uploadedUrl = await uploadImage();
+        if (uploadedUrl) {
+          finalImageUrl = uploadedUrl;
+        } else {
+          throw new Error('No se pudo subir la imagen');
+        }
+      }
 
       if (!tenantId) {
         throw new Error('No se pudo identificar el tenant. Por favor, recarga la página.');
       }
+
+      let data: ProfessionalNewsItem | null = null;
+      let error;
 
       if (editingItem) {
         const result = await supabase
@@ -102,7 +229,7 @@ export function ProfessionalNews() {
             title: form.title,
             description: form.description || null,
             url: form.url,
-            image_url: form.image_url || null,
+            image_url: finalImageUrl || null,
             tags: tagsArray.length ? tagsArray : null,
             tenant_id: tenantId,
           })
@@ -118,7 +245,7 @@ export function ProfessionalNews() {
             title: form.title,
             description: form.description || null,
             url: form.url,
-            image_url: form.image_url || null,
+            image_url: finalImageUrl || null,
             tags: tagsArray.length ? tagsArray : null,
             created_by: createdBy,
             tenant_id: tenantId,
@@ -140,16 +267,7 @@ export function ProfessionalNews() {
         });
       }
 
-      setForm({
-        title: '',
-        description: '',
-        url: '',
-        image_url: '',
-        tags: '',
-      });
-      setEditingItem(null);
-      setShowForm(false);
-      setError(null);
+      resetForm();
     } catch (error: any) {
       console.error('Error al guardar novedad profesional:', error);
       const errorMessage = error?.message || error?.details || error?.hint || 'Error desconocido al guardar la novedad profesional';
@@ -171,6 +289,8 @@ export function ProfessionalNews() {
         .map((t) => (t.startsWith('#') ? t.substring(1) : t))
         .join(' '),
     });
+    setSelectedImageFile(null);
+    setImagePreview(item.image_url || null);
     setShowForm(true);
   };
 
@@ -229,126 +349,207 @@ export function ProfessionalNews() {
       </div>
 
       {showForm && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-            {editingItem ? 'Editar novedad profesional' : 'Agregar novedad profesional'}
-          </h2>
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-              <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Link de redirección *
-                </label>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://www.somosemagroup.com/..."
-                  value={form.url}
-                  onChange={(e) => handleChange('url', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Título *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Monotributo Unificado CABA: AGIP actualiza montos a ingresar en 2026"
-                  value={form.title}
-                  onChange={(e) => handleChange('title', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Descripción (opcional)
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Resumen breve de la novedad para que el equipo sepa de qué se trata."
-                  value={form.description}
-                  onChange={(e) => handleChange('description', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Imagen (URL opcional)
-                </label>
-                <input
-                  type="url"
-                  placeholder="Si la dejás vacía, mostraremos una tarjeta con fondo de color."
-                  value={form.image_url}
-                  onChange={(e) => handleChange('image_url', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                  Idealmente podés pegar la URL de la imagen principal de la nota (por ejemplo la de AGIP).
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Hashtags (opcional)
-              </label>
-              <input
-                type="text"
-                placeholder="#agip #monotributo o separados por coma: agip, monotributo"
-                value={form.tags}
-                onChange={(e) => handleChange('tags', e.target.value)}
-                className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                Podés escribir hasta 5 hashtags. Se mostrarán como chips amarillos en la tarjeta.
-              </p>
-            </div>
-
-            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-2">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              resetForm();
+            }
+          }}
+        >
+          <div 
+            className="bg-white dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 sm:px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                {editingItem ? 'Editar novedad profesional' : 'Agregar novedad profesional'}
+              </h2>
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingItem(null);
-                  setError(null);
-                  setForm({
-                    title: '',
-                    description: '',
-                    url: '',
-                    image_url: '',
-                    tags: '',
-                  });
-                }}
-                className="px-3 sm:px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
               >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-500 text-white text-xs sm:text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
-                    <span>Guardando...</span>
-                  </>
-                ) : (
-                  'Guardar novedad'
-                )}
+                <X className="w-5 h-5" />
               </button>
             </div>
-          </form>
+            <div className="p-4 sm:p-6">
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                  <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+                </div>
+              )}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Sección 1: Información básica */}
+                <div className="space-y-4">
+                  <div className="border-b border-gray-200 dark:border-slate-700 pb-2">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Información básica</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Título *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Monotributo Unificado CABA: AGIP actualiza montos a ingresar en 2026"
+                        value={form.title}
+                        onChange={(e) => handleChange('title', e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Link de redirección *
+                      </label>
+                      <input
+                        type="url"
+                        required
+                        placeholder="https://www.somosemagroup.com/..."
+                        value={form.url}
+                        onChange={(e) => handleChange('url', e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Descripción (opcional)
+                      </label>
+                      <textarea
+                        rows={4}
+                        placeholder="Resumen breve de la novedad para que el equipo sepa de qué se trata."
+                        value={form.description}
+                        onChange={(e) => handleChange('description', e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección 2: Imagen */}
+                <div className="space-y-4">
+                  <div className="border-b border-gray-200 dark:border-slate-700 pb-2">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Imagen</h3>
+                  </div>
+                  
+                  {/* Preview de imagen */}
+                  {imagePreview && (
+                    <div className="relative">
+                      <div className="relative w-full">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-48 sm:h-56 object-cover rounded-lg border-2 border-gray-300 dark:border-slate-600 shadow-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeSelectedImage}
+                          className="absolute top-3 right-3 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
+                          title="Eliminar imagen"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Opción 1: Cargar archivo */}
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                        onChange={handleImageFileSelect}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer text-sm font-medium transition-all"
+                      >
+                        <Upload className="w-5 h-5" />
+                        {selectedImageFile ? 'Cambiar imagen' : 'Cargar desde archivo'}
+                      </label>
+                    </div>
+
+                    {/* Opción 2: URL */}
+                    <div>
+                      <input
+                        type="url"
+                        placeholder="Pegar URL de imagen"
+                        value={selectedImageFile ? '' : form.image_url}
+                        onChange={(e) => {
+                          if (!selectedImageFile) {
+                            const url = e.target.value;
+                            handleChange('image_url', url);
+                            setImagePreview(url || null);
+                            if (url) {
+                              setSelectedImageFile(null);
+                            }
+                          }
+                        }}
+                        disabled={!!selectedImageFile}
+                        className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Podés cargar una imagen desde tu computadora o pegar una URL. Máximo 5MB. Formatos: JPEG, PNG, GIF, WebP, SVG.
+                  </p>
+                </div>
+
+                {/* Sección 3: Hashtags */}
+                <div className="space-y-4">
+                  <div className="border-b border-gray-200 dark:border-slate-700 pb-2">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Hashtags (opcional)</h3>
+                  </div>
+                  
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="#agip #monotributo o separados por coma: agip, monotributo"
+                      value={form.tags}
+                      onChange={(e) => handleChange('tags', e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Podés escribir hasta 5 hashtags. Se mostrarán como chips amarillos en la tarjeta.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botones de acción */}
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting || uploadingImage}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 dark:bg-blue-500 text-white text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  >
+                    {(submitting || uploadingImage) ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>{uploadingImage ? 'Subiendo imagen...' : 'Guardando...'}</span>
+                      </>
+                    ) : (
+                      'Guardar novedad'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 
