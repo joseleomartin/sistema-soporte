@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, X, Settings } from 'lucide-react';
+import { Plus, Trash2, X, Settings, Calendar } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../contexts/TenantContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -183,6 +183,7 @@ type Concept = {
   is_total: boolean;
   parent_concept_id?: string | null;
   is_affected_by_ipc: boolean;
+  active_months?: number[] | null;
 };
 
 type Value = {
@@ -242,14 +243,20 @@ export function PresupuestoModule() {
   const [showIpcModal, setShowIpcModal] = useState(false);
   
   // Estados para agregar conceptos
-  const [addingConcept, setAddingConcept] = useState(false);
+  const [showAddConceptModal, setShowAddConceptModal] = useState(false);
   const [newConceptName, setNewConceptName] = useState('');
   const [newConceptType, setNewConceptType] = useState<'ingreso' | 'egreso'>('ingreso');
   const [newConceptAffectedByIPC, setNewConceptAffectedByIPC] = useState(true);
+  const [newConceptActiveMonths, setNewConceptActiveMonths] = useState<number[]>([]);
+  const [newConceptBaseValue, setNewConceptBaseValue] = useState('');
   
   // Estados para editar nombres
   const [editingConceptId, setEditingConceptId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  
+  // Estado para modal de selección de meses
+  const [monthsModalConceptId, setMonthsModalConceptId] = useState<string | null>(null);
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
 
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
@@ -263,21 +270,60 @@ export function PresupuestoModule() {
     type: 'info',
   });
 
+  // Verificar si un concepto está activo en un mes específico
+  const isConceptActiveInMonth = (concept: Concept, month: number): boolean => {
+    // Si no tiene active_months o está vacío, está activo en todos los meses
+    if (!concept.active_months || concept.active_months.length === 0) {
+      return true;
+    }
+    // Verificar si el mes está en el array de meses activos
+    return concept.active_months.includes(month);
+  };
+
+  // Obtener el mes base de un concepto (donde se guarda el presupuesto base)
+  const getBaseMonth = (concept: Concept): number => {
+    // Si tiene meses activos, el mes base es el primer mes activo
+    if (concept.active_months && concept.active_months.length > 0) {
+      return concept.active_months.sort((a, b) => a - b)[0];
+    }
+    // Si no, el mes base es enero (mes 1)
+    return 1;
+  };
+
   // Calcular valores con IPC aplicado
   const calculateValueWithIPC = useMemo(() => {
     return (conceptId: string, month: number, presupuestoBase: number): number => {
       if (presupuestoBase === 0) return 0;
       
-      // Verificar si el concepto está afectado por IPC
+      // Verificar si el concepto está activo en este mes
       const concept = concepts.find(c => c.id === conceptId);
-      if (!concept || !concept.is_affected_by_ipc) {
+      if (!concept || !isConceptActiveInMonth(concept, month)) {
+        // Si no está activo en este mes, devolver 0
+        return 0;
+      }
+      
+      // Verificar si el concepto está afectado por IPC
+      if (!concept.is_affected_by_ipc) {
         // Si no está afectado por IPC, devolver el valor base sin ajustes
         return presupuestoBase;
       }
       
-      // Obtener IPC acumulativo desde enero hasta el mes actual
+      // Determinar desde qué mes calcular el IPC acumulativo
+      let startMonth = 1; // Por defecto desde enero
+      
+      // Si el concepto tiene meses activos definidos, calcular desde el primer mes activo
+      // Esto permite que conceptos que comienzan en meses específicos (ej: febrero, marzo)
+      // tengan su IPC calculado desde ese mes, no desde enero
+      if (concept.active_months && concept.active_months.length > 0) {
+        const sortedActiveMonths = [...concept.active_months].sort((a, b) => a - b);
+        startMonth = sortedActiveMonths[0]; // Primer mes activo
+      }
+      
+      // Calcular IPC acumulativo desde el mes de inicio hasta el mes actual
+      // El IPC se aplica desde el mes siguiente al inicio (si comienza en febrero, 
+      // el IPC de febrero se aplica, y en marzo se acumula febrero + marzo)
       let cumulativeMultiplier = 1;
-      for (let m = 1; m <= month; m++) {
+      for (let m = startMonth; m <= month; m++) {
         const ipc = ipcValues.find(i => i.month === m);
         if (ipc && ipc.ipc_percentage !== null && ipc.ipc_percentage !== undefined) {
           // Aplicar IPC incluso si es 0 (para mantener consistencia)
@@ -304,8 +350,14 @@ export function PresupuestoModule() {
       concepts.forEach(concept => {
         if (concept.is_total) return;
         
-        // Obtener el presupuesto base del mes 1 (enero)
-        const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
+        // Verificar si el concepto está activo en este mes
+        if (!isConceptActiveInMonth(concept, month.num)) {
+          return; // Saltar este concepto si no está activo en este mes
+        }
+        
+        // Obtener el presupuesto base del mes correspondiente
+        const baseMonth = getBaseMonth(concept);
+        const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === baseMonth)?.presupuesto || 0;
         
         // Obtener el valor real del mes actual (si existe)
         const valueCurrentMonth = values.find(v => v.concept_id === concept.id && v.month === month.num);
@@ -761,14 +813,97 @@ export function PresupuestoModule() {
     }
   };
 
+  // Abrir modal de selección de meses
+  const handleOpenMonthsModal = (concept: Concept) => {
+    setMonthsModalConceptId(concept.id);
+    setSelectedMonths(concept.active_months || []);
+  };
+
+  // Guardar meses activos
+  const handleSaveActiveMonths = async () => {
+    if (!monthsModalConceptId) return;
+
+    const monthsToSave = selectedMonths.length === 0 ? null : selectedMonths.sort((a, b) => a - b);
+
+    // Actualizar estado local inmediatamente
+    setConcepts(prev => prev.map(c => 
+      c.id === monthsModalConceptId 
+        ? { ...c, active_months: monthsToSave }
+        : c
+    ));
+
+    // Sincronizar con base de datos
+    try {
+      const { error } = await supabase
+        .from('presupuesto_concepts')
+        .update({ active_months: monthsToSave })
+        .eq('id', monthsModalConceptId);
+
+      if (error) throw error;
+
+      setMonthsModalConceptId(null);
+      setSelectedMonths([]);
+    } catch (error: any) {
+      // Revertir cambio local si falla
+      const concept = concepts.find(c => c.id === monthsModalConceptId);
+      setConcepts(prev => prev.map(c => 
+        c.id === monthsModalConceptId 
+          ? { ...c, active_months: concept?.active_months || null }
+          : c
+      ));
+      
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: error.message || 'Error al actualizar meses activos',
+        type: 'error',
+      });
+    }
+  };
+
+  // Toggle mes en selección
+  const toggleMonth = (month: number) => {
+    setSelectedMonths(prev => {
+      if (prev.includes(month)) {
+        return prev.filter(m => m !== month);
+      } else {
+        return [...prev, month].sort((a, b) => a - b);
+      }
+    });
+  };
+
+  // Seleccionar todos los meses
+  const selectAllMonths = () => {
+    setSelectedMonths(MONTHS.map(m => m.num));
+  };
+
+  // Deseleccionar todos los meses
+  const deselectAllMonths = () => {
+    setSelectedMonths([]);
+  };
+
+  // Abrir modal para agregar concepto
+  const handleOpenAddConceptModal = (type: 'ingreso' | 'egreso') => {
+    setNewConceptType(type);
+    setNewConceptName('');
+    setNewConceptAffectedByIPC(true);
+    setNewConceptActiveMonths([]);
+    setNewConceptBaseValue('');
+    setShowAddConceptModal(true);
+  };
+
   // Agregar concepto
   const handleAddConcept = async () => {
     const trimmedName = newConceptName.trim();
-    if (!trimmedName || !tenant?.id) return;
+    if (!trimmedName || !tenant?.id || !currentYear) return;
 
     const maxOrder = concepts.length > 0 
       ? Math.max(...concepts.map(c => c.display_order))
       : 0;
+
+    const activeMonthsToSave = newConceptActiveMonths.length === 0 
+      ? null 
+      : [...newConceptActiveMonths].sort((a, b) => a - b);
 
     const newConcept: Concept = {
       id: `temp-${Date.now()}`,
@@ -778,14 +913,17 @@ export function PresupuestoModule() {
       is_total: false,
       parent_concept_id: null,
       is_affected_by_ipc: newConceptAffectedByIPC,
+      active_months: activeMonthsToSave,
     };
 
     // Actualizar estado local inmediatamente
     setConcepts(prev => [...prev, newConcept]);
     const conceptNameToSave = trimmedName;
-    setAddingConcept(false);
+    setShowAddConceptModal(false);
     setNewConceptName('');
     setNewConceptAffectedByIPC(true);
+    setNewConceptActiveMonths([]);
+    setNewConceptBaseValue('');
 
     // Sincronizar con base de datos en segundo plano
     try {
@@ -798,6 +936,7 @@ export function PresupuestoModule() {
           display_order: maxOrder + 1,
           is_total: false,
           is_affected_by_ipc: newConceptAffectedByIPC,
+          active_months: activeMonthsToSave,
         })
         .select()
         .single();
@@ -808,9 +947,51 @@ export function PresupuestoModule() {
       if (data) {
         setConcepts(prev => prev.map(c => 
           c.id === newConcept.id 
-            ? { ...c, id: data.id }
+            ? { ...c, id: data.id, active_months: data.active_months }
             : c
         ));
+
+        // Si se proporcionó un valor base, guardarlo en el mes correspondiente
+        if (newConceptBaseValue.trim()) {
+          const baseValue = parseFormattedNumber(newConceptBaseValue);
+          if (baseValue !== 0) {
+            const adjustedValue = newConceptType === 'egreso' && baseValue > 0 
+              ? -baseValue 
+              : baseValue;
+
+            // Determinar en qué mes guardar el valor base
+            // Si hay meses activos definidos, guardar en el primer mes activo
+            // Si no, guardar en enero (mes 1)
+            let baseMonth = 1;
+            if (activeMonthsToSave && activeMonthsToSave.length > 0) {
+              baseMonth = activeMonthsToSave[0];
+            }
+
+            const { error: valueError } = await supabase
+              .from('presupuesto_values')
+              .insert({
+                year_id: currentYear.id,
+                concept_id: data.id,
+                tenant_id: tenant.id,
+                month: baseMonth,
+                presupuesto: adjustedValue,
+              });
+
+            if (valueError) {
+              console.error('Error al guardar valor base:', valueError);
+            } else {
+              // Actualizar estado local de valores
+              setValues(prev => [...prev, {
+                id: `temp-value-${Date.now()}`,
+                year_id: currentYear.id,
+                concept_id: data.id,
+                month: baseMonth,
+                presupuesto: adjustedValue,
+                real: null,
+              }]);
+            }
+          }
+        }
       }
     } catch (error: any) {
       // Revertir cambio local si falla
@@ -823,6 +1004,17 @@ export function PresupuestoModule() {
         type: 'error',
       });
     }
+  };
+
+  // Toggle mes en selección para nuevo concepto
+  const toggleNewConceptMonth = (month: number) => {
+    setNewConceptActiveMonths(prev => {
+      if (prev.includes(month)) {
+        return prev.filter(m => m !== month);
+      } else {
+        return [...prev, month].sort((a, b) => a - b);
+      }
+    });
   };
 
   if (loading) {
@@ -876,7 +1068,7 @@ export function PresupuestoModule() {
               <th rowSpan={2} className="p-2 text-center font-bold text-gray-900 dark:text-white min-w-[160px] bg-gray-100 dark:bg-slate-700 border-r-2 border-gray-300 dark:border-slate-600">
                 <div className="flex flex-col">
                   <span className="text-xs">Presupuesto</span>
-                  <span className="text-[10px] font-normal text-gray-500 dark:text-gray-400 mt-0.5">Base (Enero)</span>
+                  <span className="text-[10px] font-normal text-gray-500 dark:text-gray-400 mt-0.5">Base (Mes Inicio)</span>
                 </div>
               </th>
               {MONTHS.map(month => (
@@ -921,64 +1113,13 @@ export function PresupuestoModule() {
               <td colSpan={1} className="p-2 font-bold text-white text-sm border-b-2 border-blue-800 dark:border-blue-900 sticky left-0 z-20 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 min-w-[200px]">
                 <div className="flex items-center gap-3">
                   <span>INGRESOS</span>
-                  {addingConcept && newConceptType === 'ingreso' ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={newConceptName}
-                        onChange={(e) => setNewConceptName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleAddConcept();
-                          } else if (e.key === 'Escape') {
-                            setAddingConcept(false);
-                            setNewConceptName('');
-                            setNewConceptAffectedByIPC(true);
-                          }
-                        }}
-                        placeholder="Nombre de la nueva subcategoría"
-                        className="px-3 py-1.5 border border-white/30 rounded-lg bg-white/10 text-white placeholder:text-white/70 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-                        autoFocus
-                      />
-                      <label className="flex items-center gap-2 px-2 py-1.5 text-sm text-white whitespace-nowrap bg-white/10 rounded-lg">
-                        <input
-                          type="checkbox"
-                          checked={newConceptAffectedByIPC}
-                          onChange={(e) => setNewConceptAffectedByIPC(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-white/50 rounded focus:ring-white/50 bg-white/20"
-                        />
-                        <span className="text-xs">Afectado por IPC</span>
-                      </label>
-                      <button
-                        onClick={handleAddConcept}
-                        className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                      >
-                        Agregar
-                      </button>
-                      <button
-                        onClick={() => {
-                          setAddingConcept(false);
-                          setNewConceptName('');
-                          setNewConceptAffectedByIPC(true);
-                        }}
-                        className="px-4 py-1.5 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setNewConceptType('ingreso');
-                        setNewConceptAffectedByIPC(true);
-                        setAddingConcept(true);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-white hover:bg-white/20 rounded-lg transition-colors text-sm"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Agregar subcategoría</span>
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleOpenAddConceptModal('ingreso')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-white hover:bg-white/20 rounded-lg transition-colors text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Agregar subcategoría</span>
+                  </button>
                 </div>
               </td>
               <td colSpan={38} className="p-2 font-bold text-white text-sm border-b-2 border-blue-800 dark:border-blue-900 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800">
@@ -986,8 +1127,9 @@ export function PresupuestoModule() {
             </tr>
 
             {ingresosConcepts.map(concept => {
-              // Obtener el presupuesto base del mes 1 (enero)
-              const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
+              // Obtener el presupuesto base del mes correspondiente (primer mes activo o enero)
+              const baseMonth = getBaseMonth(concept);
+              const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === baseMonth)?.presupuesto || 0;
               
               return (
                 <tr key={concept.id} className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
@@ -1094,6 +1236,24 @@ export function PresupuestoModule() {
                             <span className="text-[10px]">IPC</span>
                           </label>
                           <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenMonthsModal(concept);
+                            }}
+                            className={`p-1 rounded transition-colors ${
+                              concept.active_months && concept.active_months.length > 0 && concept.active_months.length < 12
+                                ? 'text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                            title={
+                              concept.active_months && concept.active_months.length > 0 && concept.active_months.length < 12
+                                ? `Activo en ${concept.active_months.length} meses - Click para editar`
+                                : "Activo en todos los meses - Click para editar"
+                            }
+                          >
+                            <Calendar className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => handleDeleteConcept(concept.id)}
                             className="p-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                             title="Eliminar subcategoría"
@@ -1111,7 +1271,8 @@ export function PresupuestoModule() {
                       value={editingInputs[`presupuesto_${concept.id}_0`] !== undefined
                         ? editingInputs[`presupuesto_${concept.id}_0`]
                         : (() => {
-                            const val = values.find(v => v.concept_id === concept.id && v.month === 1);
+                            const baseMonth = getBaseMonth(concept);
+                            const val = values.find(v => v.concept_id === concept.id && v.month === baseMonth);
                             return val?.presupuesto ? formatNumberForInput(val.presupuesto) : '';
                           })()}
                       onChange={(e) => {
@@ -1122,7 +1283,8 @@ export function PresupuestoModule() {
                         }));
                       }}
                       onBlur={(e) => {
-                        handleUpdatePresupuesto(concept.id, 1, e.target.value);
+                        const baseMonth = getBaseMonth(concept);
+                        handleUpdatePresupuesto(concept.id, baseMonth, e.target.value);
                         setEditingInputs(prev => {
                           const newState = { ...prev };
                           delete newState[`presupuesto_${concept.id}_0`];
@@ -1131,9 +1293,17 @@ export function PresupuestoModule() {
                       }}
                       className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs text-right font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       placeholder="$0.00"
+                      title={(() => {
+                        const baseMonth = getBaseMonth(concept);
+                        const monthName = MONTHS.find(m => m.num === baseMonth)?.fullName || 'Enero';
+                        return `Presupuesto base para ${monthName}`;
+                      })()}
                     />
                   </td>
                   {MONTHS.map(month => {
+                    // Verificar si el concepto está activo en este mes
+                    const isActive = isConceptActiveInMonth(concept, month.num);
+                    
                     // Calcular presupuesto ajustado con IPC
                     const presupuestoAjustado = calculateValueWithIPC(concept.id, month.num, presupuestoBase);
                     
@@ -1154,20 +1324,34 @@ export function PresupuestoModule() {
                     return (
                       <React.Fragment key={month.num}>
                         {/* Columna Presupuesto (calculado con IPC) */}
-                        <td className="p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800">
-                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                        <td className={`p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 ${
+                          isActive 
+                            ? 'bg-gray-50 dark:bg-slate-800' 
+                            : 'bg-gray-100 dark:bg-slate-900 opacity-50'
+                        }`}>
+                          <div className={`text-xs font-semibold ${
+                            isActive 
+                              ? 'text-gray-800 dark:text-gray-200' 
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}>
                             {formatNumber(presupuestoAjustado)}
                           </div>
                         </td>
                         {/* Columna Real (input editable) */}
-                        <td className="p-1.5 text-right bg-white dark:bg-slate-900">
+                        <td className={`p-1.5 text-right ${
+                          isActive 
+                            ? 'bg-white dark:bg-slate-900' 
+                            : 'bg-gray-100 dark:bg-slate-900 opacity-50'
+                        }`}>
                           <input
                             type="text"
                             inputMode="decimal"
+                            disabled={!isActive}
                             value={editingInputs[inputKeyReal] !== undefined
                               ? editingInputs[inputKeyReal]
                               : real !== null ? formatNumberForInput(real) : ''}
                             onChange={(e) => {
+                              if (!isActive) return;
                               const formatted = formatNumberWhileTyping(e.target.value);
                               setEditingInputs(prev => ({
                                 ...prev,
@@ -1175,6 +1359,7 @@ export function PresupuestoModule() {
                               }));
                             }}
                             onBlur={(e) => {
+                              if (!isActive) return;
                               handleUpdateReal(concept.id, month.num, e.target.value);
                               setEditingInputs(prev => {
                                 const newState = { ...prev };
@@ -1182,14 +1367,24 @@ export function PresupuestoModule() {
                                 return newState;
                               });
                             }}
-                            className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs text-right font-medium focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all"
-                            placeholder="Ingresar real"
+                            className={`w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-white text-xs text-right font-medium transition-all ${
+                              isActive
+                                ? 'bg-white dark:bg-slate-700 focus:ring-1 focus:ring-green-500 focus:border-green-500'
+                                : 'bg-gray-100 dark:bg-slate-800 cursor-not-allowed'
+                            }`}
+                            placeholder={isActive ? "Ingresar real" : "Inactivo"}
                           />
                         </td>
                         {/* Columna Diferencia % */}
-                        <td className="p-1.5 text-right border-r border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/30">
+                        <td className={`p-1.5 text-right border-r border-gray-300 dark:border-slate-600 ${
+                          isActive 
+                            ? 'bg-gray-50 dark:bg-slate-700/30' 
+                            : 'bg-gray-100 dark:bg-slate-900 opacity-50'
+                        }`}>
                           <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                            diferenciaPorcentual === null 
+                            !isActive
+                              ? 'text-gray-400 dark:text-gray-500'
+                              : diferenciaPorcentual === null 
                               ? 'text-gray-400 dark:text-gray-500'
                               : diferenciaPorcentual > 0
                               ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
@@ -1197,7 +1392,9 @@ export function PresupuestoModule() {
                               ? 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
                               : 'text-gray-600 dark:text-gray-400'
                           }`}>
-                            {diferenciaPorcentual !== null 
+                            {!isActive 
+                              ? '-'
+                              : diferenciaPorcentual !== null 
                               ? `${diferenciaPorcentual >= 0 ? '+' : ''}${diferenciaPorcentual.toFixed(2)}%`
                               : '-'
                             }
@@ -1237,7 +1434,13 @@ export function PresupuestoModule() {
                   let totalReal = 0;
                   
                   ingresosConcepts.forEach(ingresoConcept => {
-                    const presupuestoBase = values.find(v => v.concept_id === ingresoConcept.id && v.month === 1)?.presupuesto || 0;
+                    // Verificar si el concepto está activo en este mes
+                    if (!isConceptActiveInMonth(ingresoConcept, month.num)) {
+                      return;
+                    }
+                    
+                    const baseMonth = getBaseMonth(ingresoConcept);
+                    const presupuestoBase = values.find(v => v.concept_id === ingresoConcept.id && v.month === baseMonth)?.presupuesto || 0;
                     const presupuestoAjustado = calculateValueWithIPC(ingresoConcept.id, month.num, presupuestoBase);
                     totalPresupuestoAjustado += presupuestoAjustado;
                     
@@ -1292,64 +1495,13 @@ export function PresupuestoModule() {
               <td colSpan={1} className="p-1.5 font-bold text-white text-xs border-b-2 border-red-800 dark:border-red-900 sticky left-0 z-20 bg-gradient-to-r from-red-600 to-red-700 dark:from-red-700 dark:to-red-800 min-w-[200px]">
                 <div className="flex items-center gap-3">
                   <span>EGRESOS</span>
-                  {addingConcept && newConceptType === 'egreso' ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={newConceptName}
-                        onChange={(e) => setNewConceptName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleAddConcept();
-                          } else if (e.key === 'Escape') {
-                            setAddingConcept(false);
-                            setNewConceptName('');
-                            setNewConceptAffectedByIPC(true);
-                          }
-                        }}
-                        placeholder="Nombre de la nueva subcategoría"
-                        className="px-3 py-1.5 border border-white/30 rounded-lg bg-white/10 text-white placeholder:text-white/70 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-                        autoFocus
-                      />
-                      <label className="flex items-center gap-2 px-2 py-1.5 text-sm text-white whitespace-nowrap bg-white/10 rounded-lg">
-                        <input
-                          type="checkbox"
-                          checked={newConceptAffectedByIPC}
-                          onChange={(e) => setNewConceptAffectedByIPC(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-white/50 rounded focus:ring-white/50 bg-white/20"
-                        />
-                        <span className="text-xs">Afectado por IPC</span>
-                      </label>
-                      <button
-                        onClick={handleAddConcept}
-                        className="px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                      >
-                        Agregar
-                      </button>
-                      <button
-                        onClick={() => {
-                          setAddingConcept(false);
-                          setNewConceptName('');
-                          setNewConceptAffectedByIPC(true);
-                        }}
-                        className="px-4 py-1.5 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setNewConceptType('egreso');
-                        setNewConceptAffectedByIPC(true);
-                        setAddingConcept(true);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-white hover:bg-white/20 rounded-lg transition-colors text-sm"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Agregar subcategoría</span>
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleOpenAddConceptModal('egreso')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-white hover:bg-white/20 rounded-lg transition-colors text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Agregar subcategoría</span>
+                  </button>
                 </div>
               </td>
               <td colSpan={38} className="p-1.5 font-bold text-white text-xs border-b-2 border-red-800 dark:border-red-900 bg-gradient-to-r from-red-600 to-red-700 dark:from-red-700 dark:to-red-800">
@@ -1357,8 +1509,9 @@ export function PresupuestoModule() {
             </tr>
 
             {egresosConcepts.map(concept => {
-              // Obtener el presupuesto base del mes 1 (enero)
-              const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
+              // Obtener el presupuesto base del mes correspondiente (primer mes activo o enero)
+              const baseMonth = getBaseMonth(concept);
+              const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === baseMonth)?.presupuesto || 0;
               
               return (
                 <tr key={concept.id} className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
@@ -1465,6 +1618,24 @@ export function PresupuestoModule() {
                             <span className="text-[10px]">IPC</span>
                           </label>
                           <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenMonthsModal(concept);
+                            }}
+                            className={`p-1 rounded transition-colors ${
+                              concept.active_months && concept.active_months.length > 0 && concept.active_months.length < 12
+                                ? 'text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            }`}
+                            title={
+                              concept.active_months && concept.active_months.length > 0 && concept.active_months.length < 12
+                                ? `Activo en ${concept.active_months.length} meses - Click para editar`
+                                : "Activo en todos los meses - Click para editar"
+                            }
+                          >
+                            <Calendar className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => handleDeleteConcept(concept.id)}
                             className="p-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                             title="Eliminar subcategoría"
@@ -1482,7 +1653,8 @@ export function PresupuestoModule() {
                       value={editingInputs[`presupuesto_${concept.id}_0`] !== undefined
                         ? editingInputs[`presupuesto_${concept.id}_0`]
                         : (() => {
-                            const val = values.find(v => v.concept_id === concept.id && v.month === 1);
+                            const baseMonth = getBaseMonth(concept);
+                            const val = values.find(v => v.concept_id === concept.id && v.month === baseMonth);
                             return val?.presupuesto ? formatNumberForInput(Math.abs(val.presupuesto)) : '';
                           })()}
                       onChange={(e) => {
@@ -1493,8 +1665,9 @@ export function PresupuestoModule() {
                         }));
                       }}
                       onBlur={(e) => {
+                        const baseMonth = getBaseMonth(concept);
                         const numValue = parseFormattedNumber(e.target.value);
-                        handleUpdatePresupuesto(concept.id, 1, numValue > 0 ? `-${numValue}` : e.target.value);
+                        handleUpdatePresupuesto(concept.id, baseMonth, numValue > 0 ? `-${numValue}` : e.target.value);
                         setEditingInputs(prev => {
                           const newState = { ...prev };
                           delete newState[`presupuesto_${concept.id}_0`];
@@ -1503,9 +1676,17 @@ export function PresupuestoModule() {
                       }}
                       className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs text-right font-medium focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
                       placeholder="$0.00"
+                      title={(() => {
+                        const baseMonth = getBaseMonth(concept);
+                        const monthName = MONTHS.find(m => m.num === baseMonth)?.fullName || 'Enero';
+                        return `Presupuesto base para ${monthName}`;
+                      })()}
                     />
                   </td>
                   {MONTHS.map(month => {
+                    // Verificar si el concepto está activo en este mes
+                    const isActive = isConceptActiveInMonth(concept, month.num);
+                    
                     // Calcular presupuesto ajustado con IPC (para egresos, es negativo)
                     const presupuestoAjustado = calculateValueWithIPC(concept.id, month.num, presupuestoBase);
                     
@@ -1525,20 +1706,34 @@ export function PresupuestoModule() {
                     return (
                       <React.Fragment key={month.num}>
                         {/* Columna Presupuesto (calculado con IPC) */}
-                        <td className="p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800">
-                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                        <td className={`p-1.5 text-right border-l-2 border-gray-300 dark:border-slate-600 ${
+                          isActive 
+                            ? 'bg-gray-50 dark:bg-slate-800' 
+                            : 'bg-gray-100 dark:bg-slate-900 opacity-50'
+                        }`}>
+                          <div className={`text-xs font-semibold ${
+                            isActive 
+                              ? 'text-gray-800 dark:text-gray-200' 
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}>
                             {formatNumber(Math.abs(presupuestoAjustado))}
                           </div>
                         </td>
                         {/* Columna Real (input editable) */}
-                        <td className="p-1.5 text-right bg-white dark:bg-slate-900">
+                        <td className={`p-1.5 text-right ${
+                          isActive 
+                            ? 'bg-white dark:bg-slate-900' 
+                            : 'bg-gray-100 dark:bg-slate-900 opacity-50'
+                        }`}>
                           <input
                             type="text"
                             inputMode="decimal"
+                            disabled={!isActive}
                             value={editingInputs[inputKeyReal] !== undefined
                               ? editingInputs[inputKeyReal]
                               : real !== null ? formatNumberForInput(Math.abs(real)) : ''}
                             onChange={(e) => {
+                              if (!isActive) return;
                               const formatted = formatNumberWhileTyping(e.target.value);
                               setEditingInputs(prev => ({
                                 ...prev,
@@ -1546,6 +1741,7 @@ export function PresupuestoModule() {
                               }));
                             }}
                             onBlur={(e) => {
+                              if (!isActive) return;
                               const numValue = parseFormattedNumber(e.target.value);
                               handleUpdateReal(concept.id, month.num, numValue > 0 ? `-${numValue}` : e.target.value);
                               setEditingInputs(prev => {
@@ -1554,14 +1750,24 @@ export function PresupuestoModule() {
                                 return newState;
                               });
                             }}
-                            className="w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-xs text-right font-medium focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-all"
-                            placeholder="Ingresar real"
+                            className={`w-full px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-white text-xs text-right font-medium transition-all ${
+                              isActive
+                                ? 'bg-white dark:bg-slate-700 focus:ring-1 focus:ring-red-500 focus:border-red-500'
+                                : 'bg-gray-100 dark:bg-slate-800 cursor-not-allowed'
+                            }`}
+                            placeholder={isActive ? "Ingresar real" : "Inactivo"}
                           />
                         </td>
                         {/* Columna Diferencia % */}
-                        <td className="p-1.5 text-right border-r border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800">
+                        <td className={`p-1.5 text-right border-r border-gray-300 dark:border-slate-600 ${
+                          isActive 
+                            ? 'bg-gray-50 dark:bg-slate-800' 
+                            : 'bg-gray-100 dark:bg-slate-900 opacity-50'
+                        }`}>
                           <div className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                            diferenciaPorcentual === null 
+                            !isActive
+                              ? 'text-gray-400 dark:text-gray-500'
+                              : diferenciaPorcentual === null 
                               ? 'text-gray-400 dark:text-gray-500'
                               : diferenciaPorcentual > 0
                               ? 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
@@ -1569,7 +1775,9 @@ export function PresupuestoModule() {
                               ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
                               : 'text-gray-600 dark:text-gray-400'
                           }`}>
-                            {diferenciaPorcentual !== null 
+                            {!isActive 
+                              ? '-'
+                              : diferenciaPorcentual !== null 
                               ? `${diferenciaPorcentual >= 0 ? '+' : ''}${diferenciaPorcentual.toFixed(2)}%`
                               : '-'
                             }
@@ -1609,7 +1817,13 @@ export function PresupuestoModule() {
                   let totalReal = 0;
                   
                   egresosConcepts.forEach(egresoConcept => {
-                    const presupuestoBase = values.find(v => v.concept_id === egresoConcept.id && v.month === 1)?.presupuesto || 0;
+                    // Verificar si el concepto está activo en este mes
+                    if (!isConceptActiveInMonth(egresoConcept, month.num)) {
+                      return;
+                    }
+                    
+                    const baseMonth = getBaseMonth(egresoConcept);
+                    const presupuestoBase = values.find(v => v.concept_id === egresoConcept.id && v.month === baseMonth)?.presupuesto || 0;
                     const presupuestoAjustado = calculateValueWithIPC(egresoConcept.id, month.num, presupuestoBase);
                     totalPresupuestoAjustado += presupuestoAjustado;
                     
@@ -1675,7 +1889,13 @@ export function PresupuestoModule() {
                 concepts.forEach(concept => {
                   if (concept.is_total) return;
                   
-                  const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
+                  // Verificar si el concepto está activo en este mes
+                  if (!isConceptActiveInMonth(concept, month.num)) {
+                    return;
+                  }
+                  
+                  const baseMonth = getBaseMonth(concept);
+                  const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === baseMonth)?.presupuesto || 0;
                   const presupuestoAjustado = calculateValueWithIPC(concept.id, month.num, presupuestoBase);
                   const valueCurrentMonth = values.find(v => v.concept_id === concept.id && v.month === month.num);
                   const real = valueCurrentMonth?.real !== null && valueCurrentMonth?.real !== undefined 
@@ -1749,7 +1969,13 @@ export function PresupuestoModule() {
                   concepts.forEach(concept => {
                     if (concept.is_total) return;
                     
-                    const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === 1)?.presupuesto || 0;
+                    // Verificar si el concepto está activo en este mes
+                    if (!isConceptActiveInMonth(concept, m.num)) {
+                      return;
+                    }
+                    
+                    const baseMonth = getBaseMonth(concept);
+                    const presupuestoBase = values.find(v => v.concept_id === concept.id && v.month === baseMonth)?.presupuesto || 0;
                     const presupuestoAjustado = calculateValueWithIPC(concept.id, m.num, presupuestoBase);
                     const valueCurrentMonth = values.find(v => v.concept_id === concept.id && v.month === m.num);
                     const real = valueCurrentMonth?.real !== null && valueCurrentMonth?.real !== undefined 
@@ -1807,6 +2033,231 @@ export function PresupuestoModule() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal para agregar nuevo concepto */}
+      {showAddConceptModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                Agregar Nueva Subcategoría - {newConceptType === 'ingreso' ? 'Ingreso' : 'Egreso'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAddConceptModal(false);
+                  setNewConceptName('');
+                  setNewConceptAffectedByIPC(true);
+                  setNewConceptActiveMonths([]);
+                  setNewConceptBaseValue('');
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Nombre del concepto */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Nombre de la subcategoría *
+                </label>
+                <input
+                  type="text"
+                  value={newConceptName}
+                  onChange={(e) => setNewConceptName(e.target.value)}
+                  placeholder="Ej: Aguinaldo, Bonos, etc."
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+
+              {/* Afectado por IPC */}
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newConceptAffectedByIPC}
+                    onChange={(e) => setNewConceptAffectedByIPC(e.target.checked)}
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Afectado por IPC (Índice de Precios al Consumidor)
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-8">
+                  Si está marcado, el valor se ajustará automáticamente según el IPC mensual configurado.
+                </p>
+              </div>
+
+              {/* Meses activos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Meses en los que aplica (opcional)
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Selecciona los meses en los que esta categoría debe impactar. Si no seleccionas ningún mes, se aplicará a todos los meses del año.
+                </p>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    onClick={() => setNewConceptActiveMonths(MONTHS.map(m => m.num))}
+                    className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Seleccionar Todos
+                  </button>
+                  <button
+                    onClick={() => setNewConceptActiveMonths([])}
+                    className="px-3 py-1.5 text-xs bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Deseleccionar Todos
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {MONTHS.map(month => (
+                    <button
+                      key={month.num}
+                      onClick={() => toggleNewConceptMonth(month.num)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        newConceptActiveMonths.includes(month.num)
+                          ? 'bg-purple-600 text-white hover:bg-purple-700'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      {month.fullName}
+                    </button>
+                  ))}
+                </div>
+                {newConceptActiveMonths.length > 0 && (
+                  <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">
+                    Seleccionados: {newConceptActiveMonths.length} mes{newConceptActiveMonths.length !== 1 ? 'es' : ''}
+                  </p>
+                )}
+              </div>
+
+              {/* Valor base (opcional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Presupuesto Base {newConceptActiveMonths.length > 0 ? `- ${MONTHS.find(m => m.num === newConceptActiveMonths.sort((a, b) => a - b)[0])?.fullName || 'Enero'}` : '- Enero'} (opcional)
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  {newConceptActiveMonths.length > 0 
+                    ? `El valor base se guardará en ${MONTHS.find(m => m.num === newConceptActiveMonths.sort((a, b) => a - b)[0])?.fullName || 'Enero'} (primer mes activo). El IPC se aplicará desde ese mes.`
+                    : 'Puedes establecer el valor presupuestado base ahora, o hacerlo después desde la tabla. Si seleccionas meses activos, el valor base se guardará en el primer mes seleccionado.'}
+                </p>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={newConceptBaseValue}
+                  onChange={(e) => {
+                    const formatted = formatNumberWhileTyping(e.target.value);
+                    setNewConceptBaseValue(formatted);
+                  }}
+                  placeholder="$0.00"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-slate-700">
+                <button
+                  onClick={() => {
+                    setShowAddConceptModal(false);
+                    setNewConceptName('');
+                    setNewConceptAffectedByIPC(true);
+                    setNewConceptActiveMonths([]);
+                    setNewConceptBaseValue('');
+                  }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddConcept}
+                  disabled={!newConceptName.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  Agregar Subcategoría
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de selección de meses */}
+      {monthsModalConceptId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                Seleccionar Meses Activos
+              </h3>
+              <button
+                onClick={() => {
+                  setMonthsModalConceptId(null);
+                  setSelectedMonths([]);
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Selecciona los meses en los que esta categoría debe impactar en el presupuesto. 
+                  Si no seleccionas ningún mes, se aplicará a todos los meses del año.
+                </p>
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={selectAllMonths}
+                    className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Seleccionar Todos
+                  </button>
+                  <button
+                    onClick={deselectAllMonths}
+                    className="px-3 py-1.5 text-xs bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Deseleccionar Todos
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-6">
+                {MONTHS.map(month => (
+                  <button
+                    key={month.num}
+                    onClick={() => toggleMonth(month.num)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedMonths.includes(month.num)
+                        ? 'bg-purple-600 text-white hover:bg-purple-700'
+                        : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600'
+                    }`}
+                  >
+                    {month.fullName}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setMonthsModalConceptId(null);
+                    setSelectedMonths([]);
+                  }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveActiveMonths}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de IPC */}
       {showIpcModal && (

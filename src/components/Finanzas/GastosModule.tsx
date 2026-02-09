@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, GripVertical } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../contexts/TenantContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -186,6 +186,10 @@ export function GastosModule() {
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingSubItemId, setEditingSubItemId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  // Estados para drag and drop de sub-items
+  const [draggedSubItemId, setDraggedSubItemId] = useState<string | null>(null);
+  const [draggedSubItemCategoryId, setDraggedSubItemCategoryId] = useState<string | null>(null);
 
   const [alertModal, setAlertModal] = useState<{
     isOpen: boolean;
@@ -608,6 +612,131 @@ export function GastosModule() {
     }
   };
 
+  // Handlers para drag and drop de sub-items
+  const handleSubItemDragStart = (e: React.DragEvent, subItemId: string, categoryId: string) => {
+    setDraggedSubItemId(subItemId);
+    setDraggedSubItemCategoryId(categoryId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSubItemDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleSubItemDrop = async (e: React.DragEvent, targetSubItemId: string | null, categoryId: string) => {
+    e.preventDefault();
+    
+    if (!draggedSubItemId || !draggedSubItemCategoryId) {
+      setDraggedSubItemId(null);
+      setDraggedSubItemCategoryId(null);
+      return;
+    }
+
+    // Si se está soltando en el mismo sub-item, no hacer nada
+    if (targetSubItemId && draggedSubItemId === targetSubItemId) {
+      setDraggedSubItemId(null);
+      setDraggedSubItemCategoryId(null);
+      return;
+    }
+
+    const targetCategory = categories.find(c => c.id === categoryId);
+    if (!targetCategory) {
+      setDraggedSubItemId(null);
+      setDraggedSubItemCategoryId(null);
+      return;
+    }
+
+    const draggedSubItem = categories
+      .flatMap(c => c.sub_items)
+      .find(si => si.id === draggedSubItemId);
+    
+    if (!draggedSubItem) {
+      setDraggedSubItemId(null);
+      setDraggedSubItemCategoryId(null);
+      return;
+    }
+
+    const isMovingToDifferentCategory = draggedSubItemCategoryId !== categoryId;
+    const targetCategorySubItems = [...targetCategory.sub_items]
+      .filter(si => si.id !== draggedSubItemId) // Excluir el item arrastrado si ya está en esta categoría
+      .sort((a, b) => a.display_order - b.display_order);
+
+    let newOrder: SubItem[];
+
+    if (targetSubItemId) {
+      // Se está soltando sobre otro sub-item
+      const targetIndex = targetCategorySubItems.findIndex(si => si.id === targetSubItemId);
+      
+      if (targetIndex === -1) {
+        // Si no se encuentra el target (puede pasar si se mueve entre categorías), agregar al final
+        newOrder = [...targetCategorySubItems, draggedSubItem];
+      } else {
+        newOrder = [...targetCategorySubItems];
+        newOrder.splice(targetIndex, 0, draggedSubItem);
+      }
+    } else {
+      // Se está soltando en el header de la categoría (al inicio)
+      newOrder = [draggedSubItem, ...targetCategorySubItems];
+    }
+
+    try {
+      // Si se está moviendo a otra categoría, actualizar el category_id
+      if (isMovingToDifferentCategory) {
+        await supabase
+          .from('gastos_concepts')
+          .update({ category_id: categoryId })
+          .eq('id', draggedSubItemId);
+      }
+
+      // Actualizar display_order de todos los sub-items en la categoría destino
+      await Promise.all(
+        newOrder.map((subItem, index) =>
+          supabase
+            .from('gastos_concepts')
+            .update({ display_order: index + 1 })
+            .eq('id', subItem.id)
+        )
+      );
+
+      // Si se movió de categoría, también necesitamos actualizar los display_order de la categoría origen
+      if (isMovingToDifferentCategory) {
+        const sourceCategory = categories.find(c => c.id === draggedSubItemCategoryId);
+        if (sourceCategory) {
+          const remainingSubItems = sourceCategory.sub_items
+            .filter(si => si.id !== draggedSubItemId)
+            .sort((a, b) => a.display_order - b.display_order);
+          
+          await Promise.all(
+            remainingSubItems.map((subItem, index) =>
+              supabase
+                .from('gastos_concepts')
+                .update({ display_order: index + 1 })
+                .eq('id', subItem.id)
+            )
+          );
+        }
+      }
+
+      await loadData();
+    } catch (error: any) {
+      setAlertModal({
+        isOpen: true,
+        title: 'Error',
+        message: error.message || 'Error al mover subcategoría',
+        type: 'error',
+      });
+    }
+
+    setDraggedSubItemId(null);
+    setDraggedSubItemCategoryId(null);
+  };
+
+  const handleSubItemDragEnd = () => {
+    setDraggedSubItemId(null);
+    setDraggedSubItemCategoryId(null);
+  };
+
   // Actualizar valor
   const handleUpdateValue = async (subItemId: string, month: number, newValue: string) => {
     if (!tenant?.id) return;
@@ -784,8 +913,20 @@ export function GastosModule() {
             {categories.map(category => (
               <React.Fragment key={category.id}>
                 {/* Header de categoría */}
-                <tr className="border-b-2 border-gray-300 dark:border-slate-600">
-                  <td className="p-2 bg-blue-50 dark:bg-blue-900/20 font-bold text-blue-900 dark:text-blue-300 sticky left-0 z-10">
+                <tr 
+                  className={`border-b-2 border-gray-300 dark:border-slate-600 ${
+                    draggedSubItemId && draggedSubItemCategoryId !== category.id 
+                      ? 'bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400' 
+                      : ''
+                  }`}
+                  onDragOver={handleSubItemDragOver}
+                  onDrop={(e) => handleSubItemDrop(e, null, category.id)}
+                >
+                  <td className={`p-2 font-bold text-blue-900 dark:text-blue-300 sticky left-0 z-10 ${
+                    draggedSubItemId && draggedSubItemCategoryId !== category.id
+                      ? 'bg-blue-100 dark:bg-blue-900/40'
+                      : 'bg-blue-50 dark:bg-blue-900/20'
+                  }`}>
                     <div className="flex items-center gap-2">
                       {editingCategoryId === category.id ? (
                         <input
@@ -840,16 +981,49 @@ export function GastosModule() {
                     </div>
                   </td>
                   {MONTHS.map(() => (
-                    <td key={Math.random()} className="p-2 bg-blue-50 dark:bg-blue-900/20"></td>
+                    <td 
+                      key={Math.random()} 
+                      className={`p-2 ${
+                        draggedSubItemId && draggedSubItemCategoryId !== category.id
+                          ? 'bg-blue-100 dark:bg-blue-900/40'
+                          : 'bg-blue-50 dark:bg-blue-900/20'
+                      }`}
+                    ></td>
                   ))}
-                  <td className="p-2 bg-blue-50 dark:bg-blue-900/20"></td>
+                  <td className={`p-2 ${
+                    draggedSubItemId && draggedSubItemCategoryId !== category.id
+                      ? 'bg-blue-100 dark:bg-blue-900/40'
+                      : 'bg-blue-50 dark:bg-blue-900/20'
+                  }`}></td>
                 </tr>
 
                 {/* Sub-items */}
-                {category.sub_items.map(subItem => (
-                  <tr key={subItem.id} className="border-b border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-900/20">
+                {category.sub_items
+                  .sort((a, b) => a.display_order - b.display_order)
+                  .map(subItem => (
+                  <tr 
+                    key={subItem.id} 
+                    draggable
+                    onDragStart={(e) => handleSubItemDragStart(e, subItem.id, category.id)}
+                    onDragOver={handleSubItemDragOver}
+                    onDrop={(e) => handleSubItemDrop(e, subItem.id, category.id)}
+                    onDragEnd={handleSubItemDragEnd}
+                    className={`border-b border-gray-200 dark:border-slate-700 bg-yellow-50 dark:bg-yellow-900/20 ${
+                      draggedSubItemId === subItem.id 
+                        ? 'opacity-50' 
+                        : draggedSubItemId && draggedSubItemCategoryId !== category.id
+                        ? 'bg-yellow-100 dark:bg-yellow-900/40 border-2 border-blue-400'
+                        : 'cursor-move hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
+                    }`}
+                  >
                     <td className="p-3 sticky left-0 bg-yellow-50 dark:bg-yellow-900/20 z-10">
                       <div className="flex items-center gap-2">
+                        <div 
+                          className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                          title="Arrastra para reordenar"
+                        >
+                          <GripVertical className="w-4 h-4" />
+                        </div>
                         {editingSubItemId === subItem.id ? (
                           <input
                             type="text"
