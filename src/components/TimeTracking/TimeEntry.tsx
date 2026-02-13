@@ -94,47 +94,12 @@ export function TimeEntry() {
     if (!profile?.id || !profile?.tenant_id) return;
 
     try {
-      let data;
-      let error;
-
-      if (profile.role === 'user') {
-        // Para usuarios normales, obtener solo los clientes asignados
-        const { data: permData, error: permError } = await supabase
-          .from('subforum_permissions')
-          .select('subforum_id')
-          .eq('user_id', profile.id)
-          .eq('can_view', true)
-          .eq('tenant_id', profile.tenant_id); // Filtrar por tenant_id
-
-        if (permError) throw permError;
-
-        const subforumIds = permData?.map((p) => p.subforum_id) || [];
-
-        if (subforumIds.length === 0) {
-          setClients([]);
-          return;
-        }
-
-        const result = await supabase
-          .from('subforums')
-          .select('id, name')
-          .in('id', subforumIds)
-          .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id
-          .order('name');
-
-        data = result.data;
-        error = result.error;
-      } else {
-        // Para admin/support, obtener todos los clientes del tenant
-        const result = await supabase
-          .from('subforums')
-          .select('id, name')
-          .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id
-          .order('name');
-
-        data = result.data;
-        error = result.error;
-      }
+      // Obtener todos los clientes del tenant para todos los usuarios
+      const { data, error } = await supabase
+        .from('subforums')
+        .select('id, name')
+        .eq('tenant_id', profile.tenant_id) // Filtrar por tenant_id
+        .order('name');
 
       if (error) throw error;
       setClients(data || []);
